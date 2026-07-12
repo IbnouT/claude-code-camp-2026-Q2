@@ -4,3 +4,15 @@
 # Environment / secrets
 .env
 .env.local
+
+# macOS
+.DS_Store
+
+# Package directories — never commit
+node_modules/
+__pycache__/
+.venv/
+
+# Generated world data for the preview app
+week0_explore/preview/data/world/*
+!week0_explore/preview/data/world/.keep
