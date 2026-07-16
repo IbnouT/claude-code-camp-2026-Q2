@@ -22,11 +22,13 @@ Sonnet completed both goals in minutes. It reused one connection script, correct
 
 Neither model updated the memory files during play. Sonnet wrote them only at the end, including connection notes on the exact traps Haiku kept relearning.
 
+Neither model read unrelated repository files. Both stayed inside the experiment folder for the whole run.
+
 Sonnet knows this stock world from training. It identified the warrior guild on sight and confirmed afterwards that it has the general layout memorized. These results overstate what to expect on a private world.
 
 ### Technical Conclusions
 
-The login and connection flow is deterministic. Making the model rediscover it every run is wasted tokens, a script should own it.
+The login and connection flow is deterministic. Making the model rediscover it every run is wasted tokens, a script should own it, and a dedicated SDK around the game connection is the dependable form of that. An MCP server could expose such an SDK as tools to the agent, we have not tested this.
 
 Memory by instruction does not happen. If we want memory the loop has to force the reads and writes, and whether markdown files can hold real world state is still untested, no run got far enough.
 
