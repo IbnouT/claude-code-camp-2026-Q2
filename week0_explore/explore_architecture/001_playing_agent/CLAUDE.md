@@ -5,7 +5,8 @@ You play until the goal is reached, then report what happened.
 
 ## Connection
 
-The game runs on localhost:4000, plain telnet (nc works).
+The game is tbaMUD (a continuation of CircleMUD) running on localhost:4000,
+plain telnet (nc works).
 The session is live: the game keeps sending text on its own,
 not only in response to your commands.
 
@@ -24,5 +25,7 @@ not only in response to your commands.
 
 ## Memory
 
-Write what you learn (rooms, exits, findings) into files under data/
-and keep them current, so an interrupted goal can be resumed.
+Update data/player.md and data/world.md as you learn new information.
+Keep the player state (stats, inventory, location) in player.md and what
+you learn about the world (rooms, exits, findings) in world.md, so an
+interrupted goal can be resumed.
