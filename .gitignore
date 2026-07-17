@@ -17,5 +17,5 @@ __pycache__/
 week0_explore/preview/data/world/*
 !week0_explore/preview/data/world/.keep
 
-# Claude Code local permission settings
-.claude/settings.local.json
+# Claude Code local configuration at repo root (settings, local wiring)
+/.claude/
