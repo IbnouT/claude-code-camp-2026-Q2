@@ -12,8 +12,14 @@ Usage:
     mud_session.py status             # is the session alive? last prompt? goals?
     mud_session.py log [-n N]         # tail the full session transcript
     mud_session.py stop               # quit the game and shut down
-    mud_session.py goal "..."         # record a long-term goal in data/player.md
+    mud_session.py goal "..."         # add a free-form note/goal to data/player.md
     mud_session.py memory             # print data/player.md and data/world.md
+    mud_session.py plan set "..."     # set the long-term goal of the plan
+    mud_session.py plan add "..." [--check "level>=7"]   # append a subtask
+    mud_session.py plan done          # mark current subtask done, advance
+    mud_session.py plan show          # plan with live condition checks
+    mud_session.py persona "..."      # set the play style (persona) to apply
+    mud_session.py find <terms>       # search everything the memory knows
 
 Memory: the daemon auto-maintains data/player.md (vitals, character, events,
 goals) and data/world.md (room map) in the directory the session was started
@@ -73,8 +79,91 @@ MEM_STATE = os.path.join(MEM_DIR, ".mud_memory.json")
 GOALS_HEADER = "## Goals & notes (edit freely — this section is never auto-overwritten)"
 AUTO_MARKER = ("<!-- AUTO — everything below is rewritten in real time by "
                "mud_session.py; edits below this line are lost -->")
-DEFAULT_GOALS = ('- (no goals yet — add lines here, or run: '
-                 'mud_session.py goal "reach level 7")')
+DEFAULT_GOALS = ('- (no notes yet — add lines here, or run: '
+                 'mud_session.py goal "...insight...")')
+
+# The plan (goal, ordered subtasks, persona) lives in its own file, owned by
+# the CLI subcommands; the daemon only reads it, so there is no write conflict.
+PLAN_FILE = os.path.join(MEM_DIR, "plan.json")
+
+
+def load_plan():
+    try:
+        with open(PLAN_FILE) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {"goal": "", "persona": "", "subtasks": []}
+
+
+def save_plan(plan):
+    os.makedirs(MEM_DIR, exist_ok=True)
+    tmp = PLAN_FILE + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(plan, f, indent=1)
+    os.replace(tmp, PLAN_FILE)
+
+
+CHECK_NUM_RE = re.compile(r"(level|gold|xp|hp|mana|moves)\s*(>=|<=|==|=|>|<)\s*(\d+)$")
+_OPS = {">=": lambda a, b: a >= b, "<=": lambda a, b: a <= b,
+        ">": lambda a, b: a > b, "<": lambda a, b: a < b,
+        "=": lambda a, b: a == b, "==": lambda a, b: a == b}
+
+
+def eval_check(check, tracker):
+    """Verify a subtask condition against tracked game state.
+
+    Returns (met, detail): met is True/False, or None when the state needed
+    to verify is not known yet. Supported checks:
+      level>=N gold>=N xp>=N hp>=N mana>=N moves>=N   (any comparator)
+      item:<substring>   -- carrying it (as of the last `inventory`)
+      room:<substring>   -- current room title contains it
+    """
+    check = check.strip()
+    m = CHECK_NUM_RE.match(check)
+    if m:
+        key, op, want = m.group(1), m.group(2), int(m.group(3))
+        cur = None
+        if key in ("hp", "mana", "moves") and tracker.vitals:
+            cur = tracker.vitals[("hp", "mana", "moves").index(key)]
+        elif key in ("level", "gold", "xp"):
+            cur = tracker.char.get(key)
+        if cur is None:
+            return None, "%s unknown yet (run `cmd score`)" % key
+        met = _OPS[op](int(cur), want)
+        return met, "%s is %s, need %s%s" % (key, cur, op, want)
+    if check.startswith("item:"):
+        want = check[5:].strip().lower()
+        if tracker.carrying is None:
+            return None, "inventory not seen yet (run `cmd inventory`)"
+        met = any(want in it.lower() for it in tracker.carrying)
+        return met, ("carrying '%s'" % want) if met else \
+            "'%s' not in last inventory" % want
+    if check.startswith("room:"):
+        want = check[5:].strip().lower()
+        cur = tracker.current_room or ""
+        met = want in cur.lower()
+        return met, "current room is %s" % (cur or "(unknown)")
+    return None, "unrecognized check %r" % check
+
+
+def plan_status(tracker):
+    """One-line summary of the current subtask + its condition, for surfacing."""
+    plan = load_plan()
+    subs = plan.get("subtasks", [])
+    pending = [(i, s) for i, s in enumerate(subs) if not s.get("done")]
+    if not plan.get("goal") and not subs:
+        return None
+    if not pending:
+        return "Plan '%s': ALL %d steps done" % (plan.get("goal", "?"), len(subs))
+    i, s = pending[0]
+    line = "Plan '%s' — step %d/%d: %s" % (
+        plan.get("goal", "?"), i + 1, len(subs), s["text"])
+    if s.get("check"):
+        met, detail = eval_check(s["check"], tracker)
+        state = {True: "MET — advance with `plan done`",
+                 False: "UNMET", None: "UNVERIFIED"}[met]
+        line += "\n  check [%s]: %s (%s)" % (s["check"], state, detail)
+    return line
 
 PROMPT_INLINE_RE = re.compile(r"\d+H \d+M \d+V[^\n]*?> ")
 VITALS_RE = re.compile(r"(\d+)H (\d+)M (\d+)V")
@@ -95,6 +184,8 @@ EXP_RE = re.compile(r"You receive (\d+) experience|You receive your share of exp
 LEVEL_RE = re.compile(r"You rise a level!")
 DEATH_RE = re.compile(r"^You are dead!")
 NOWAY_RE = re.compile(r"Alas, you cannot go that way")
+DARK_RE = re.compile(r"It is pitch black")
+INV_WORDS = {"i", "inv", "inventory"}
 
 
 def read_goals():
@@ -114,15 +205,24 @@ class MemoryTracker:
 
     def __init__(self):
         os.makedirs(MEM_DIR, exist_ok=True)
-        self.rooms = {}           # title -> {"exits": str, "links": {}, "here": []}
-        self.char = {}
+        self.rooms = {}           # key -> {"exits", "links", "here", "shop",
+        self.char = {}            #         "signs", "hazards"}
         self.events = []
         self.current_room = None
         self.vitals = None        # (hp, mana, moves) from the latest prompt
+        self.carrying = None      # list, as of the last `inventory`
+        self.trail = []           # recent moves: "south: A -> B"
+        self.kills_xp = []        # xp numbers of recent kills
+        self.deaths = 0
+        self.gold_hist = []       # gold values seen in `score`, in order
+        self.moves_hist = []      # V values from recent prompts
+        self._gold_session_base = None
         self._linebuf = ""
         self._recent = []         # recent lines, for room-title walk-back
         self._pending_move = None
         self._collect_room = None
+        self._capture = None      # {"kind","arg","lines"} for list/read/inventory
+        self._prompt_pending = False
         self._dirty = False
         try:                      # reload memory from previous sessions
             with open(MEM_STATE) as f:
@@ -131,16 +231,35 @@ class MemoryTracker:
             self.char = st.get("char", {})
             self.events = st.get("events", [])
             self.current_room = st.get("current_room")
+            self.carrying = st.get("carrying")
+            self.trail = st.get("trail", [])
+            self.kills_xp = st.get("kills_xp", [])
+            self.deaths = st.get("deaths", 0)
+            self.gold_hist = st.get("gold_hist", [])
         except (OSError, ValueError):
             pass
 
     # -- hooks called by the Mud object -------------------------------------
     def sent(self, line):
         try:
-            word = line.strip().lower().split(" ")[0] if line.strip() else ""
+            self._end_capture()
+            parts = line.strip().lower().split()
+            word = parts[0] if parts else ""
+            arg = " ".join(parts[1:])
             self._pending_move = DIRECTIONS.get(word)
             self._collect_room = None
             self._recent.append("\x00SENT")
+            # some responses are worth capturing verbatim into memory
+            if word in INV_WORDS:
+                self._capture = {"kind": "inventory", "arg": "", "lines": []}
+            elif word == "list":
+                self._capture = {"kind": "shop", "arg": arg, "lines": []}
+            elif word in ("read", "examine") and arg:
+                self._capture = {"kind": "sign", "arg": arg, "lines": []}
+            elif word == "look" and arg and arg not in DIRECTIONS \
+                    and any(w in arg for w in ("sign", "board", "note",
+                                               "plaque", "inscription")):
+                self._capture = {"kind": "sign", "arg": arg, "lines": []}
         except Exception:
             pass
 
@@ -156,6 +275,9 @@ class MemoryTracker:
         def _prompt(m):           # prompts carry vitals and act as line breaks
             v = VITALS_RE.search(m.group(0))
             self.vitals = (v.group(1), v.group(2), v.group(3))
+            self.moves_hist.append(int(v.group(3)))
+            del self.moves_hist[:-30]
+            self._prompt_pending = True
             self._dirty = True
             return "\n"
 
@@ -163,12 +285,19 @@ class MemoryTracker:
         while "\n" in self._linebuf:
             line, self._linebuf = self._linebuf.split("\n", 1)
             self._line(line.rstrip())
+        if self._prompt_pending:  # the response is complete: close any capture
+            self._prompt_pending = False
+            self._end_capture()
         self.flush()
 
     # -- per-line parsing -----------------------------------------------------
     def _line(self, line):
         self._recent.append(line)
         del self._recent[:-40]
+
+        if self._capture is not None and line.strip():
+            if len(self._capture["lines"]) < 25:
+                self._capture["lines"].append(line.strip())
 
         if self._collect_room is not None:      # room contents after the exits line
             if not line.strip():
@@ -186,6 +315,18 @@ class MemoryTracker:
         if NOWAY_RE.search(line):
             self._pending_move = None
             return
+        if DARK_RE.search(line):                # moved into an unlit room
+            if self._pending_move and self.current_room in self.rooms:
+                self._hazard(self.current_room,
+                             "darkness through %s (bring a light source)"
+                             % self._pending_move)
+                self.trail.append("%s: %s → (darkness)"
+                                  % (self._pending_move, self.current_room))
+                del self.trail[:-15]
+            self.current_room = None            # position unknown until lit room
+            self._pending_move = None
+            self._dirty = True
+            return
         m = KILL_RE.match(line.strip())
         if m and not line.startswith("You are"):
             self._event("Killed %s" % m.group(1).strip())
@@ -193,6 +334,9 @@ class MemoryTracker:
         m = EXP_RE.search(line)
         if m:
             xp = m.group(1) or "shared"
+            if m.group(1):
+                self.kills_xp.append(int(m.group(1)))
+                del self.kills_xp[:-10]
             if self.events and self.events[-1].startswith("Killed") \
                     and "xp)" not in self.events[-1]:
                 self.events[-1] += " (+%s xp)" % xp
@@ -205,6 +349,9 @@ class MemoryTracker:
             self._event("LEVEL UP! Now level %s" % self.char.get("level", "?"))
             return
         if DEATH_RE.match(line.strip()):
+            self.deaths += 1
+            if self.current_room in self.rooms:
+                self._hazard(self.current_room, "a death occurred here")
             self._event("DIED near %s — respawned at the temple; corpse (with "
                         "gear) left behind" % (self.current_room or "?"))
             return
@@ -215,7 +362,70 @@ class MemoryTracker:
             m = rx.search(line)
             if m:
                 self.char.update(zip(keys, m.groups()))
+                if rx is SCORE_XP_RE:
+                    gold = int(m.group(2))
+                    if self._gold_session_base is None:
+                        self._gold_session_base = gold
+                    if not self.gold_hist or self.gold_hist[-1] != gold:
+                        self.gold_hist.append(gold)
+                        del self.gold_hist[:-10]
                 self._dirty = True
+
+    def _hazard(self, room_key, text):
+        hz = self.rooms[room_key].setdefault("hazards", [])
+        if text not in hz:
+            hz.append(text)
+            self._dirty = True
+
+    def _end_capture(self):
+        cap, self._capture = self._capture, None
+        if not cap or not cap["lines"]:
+            return
+        if cap["kind"] == "inventory":
+            lines = [l for l in cap["lines"]
+                     if l not in ("You are carrying:", "Nothing.")]
+            self.carrying = [re.sub(r"^\(\s*\d+\)\s*", "", l) for l in lines]
+        elif cap["kind"] == "shop" and self.current_room in self.rooms:
+            # only keep it if it looks like a price table, not an error message
+            if any(re.search(r"\d", l) for l in cap["lines"]):
+                self.rooms[self.current_room]["shop"] = cap["lines"]
+        elif cap["kind"] == "sign" and self.current_room in self.rooms:
+            text = " ".join(cap["lines"])[:300]
+            if "You do not see that" in text or "does not seem to" in text:
+                return
+            signs = self.rooms[self.current_room].setdefault("signs", [])
+            signs[:] = [s for s in signs if not s.startswith(cap["arg"] + ":")]
+            signs.append("%s: %s" % (cap["arg"], text))
+            del signs[:-5]
+        self._dirty = True
+
+    @staticmethod
+    def _base(key):
+        """Room key without a ' (2)' disambiguation suffix."""
+        return re.sub(r" \(\d+\)$", "", key)
+
+    def _room_key(self, title, exits):
+        """Map a seen title to a room key, keeping same-titled rooms apart.
+
+        Identity heuristics, in order of trust: the map link we just followed;
+        staying in the current room (a re-look, possibly with a door now open);
+        an existing same-title room with identical exits; otherwise it's a new
+        room and gets a numbered variant key.
+        """
+        if self._pending_move and self.current_room in self.rooms:
+            dest = self.rooms[self.current_room]["links"].get(self._pending_move)
+            if dest and dest in self.rooms and self._base(dest) == title:
+                return dest
+        if not self._pending_move and self.current_room \
+                and self._base(self.current_room) == title:
+            return self.current_room
+        variants = [k for k in self.rooms if self._base(k) == title]
+        for k in variants:
+            if self.rooms[k]["exits"] == exits:
+                return k
+        if not variants:
+            return title
+        return "%s (%d)" % (title, len(variants) + 1)
 
     def _room(self, exits):
         # title = first non-blank line after the last blank/[SENT] boundary
@@ -230,17 +440,24 @@ class MemoryTracker:
             if self._recent[i].strip():
                 title = self._recent[i].strip()
                 break
-        if not title or len(title) > 60:
+        # real room titles are short and never end in sentence punctuation --
+        # this keeps event lines ("The dog leaves west.") out of the map
+        if (not title or len(title) > 60 or title[-1] in ".!?,;:'\""
+                or title.startswith("You ")):
             self._pending_move = None
             return
-        room = self.rooms.setdefault(title, {"exits": exits, "links": {}, "here": []})
+        key = self._room_key(title, exits)
+        room = self.rooms.setdefault(key, {"exits": exits, "links": {}, "here": []})
         room["exits"] = exits
         room["here"] = []
-        self._collect_room = title
+        self._collect_room = key
         if (self._pending_move and self.current_room
-                and self.current_room != title and self.current_room in self.rooms):
-            self.rooms[self.current_room]["links"][self._pending_move] = title
-        self.current_room = title
+                and self.current_room != key and self.current_room in self.rooms):
+            self.rooms[self.current_room]["links"][self._pending_move] = key
+            self.trail.append("%s: %s → %s"
+                              % (self._pending_move, self.current_room, key))
+            del self.trail[:-15]
+        self.current_room = key
         self._pending_move = None
         self._dirty = True
 
@@ -266,8 +483,47 @@ class MemoryTracker:
         with open(tmp, "w") as f:
             json.dump({"rooms": self.rooms, "char": self.char,
                        "events": self.events,
-                       "current_room": self.current_room}, f, indent=1)
+                       "current_room": self.current_room,
+                       "carrying": self.carrying, "trail": self.trail,
+                       "kills_xp": self.kills_xp, "deaths": self.deaths,
+                       "gold_hist": self.gold_hist}, f, indent=1)
         os.replace(tmp, MEM_STATE)
+
+    def _signals(self):
+        """Small computed block: trends the agent should reason from."""
+        out = []
+        if self.kills_xp:
+            n = self.kills_xp[-5:]
+            avg = sum(n) / len(n)
+            out.append("Avg XP/kill (last %d): %.0f" % (len(n), avg))
+            tnl = self.char.get("xp_to_next")
+            if tnl and avg > 0:
+                out.append("XP to next level: %s → ~%d more kills at this rate"
+                           % (tnl, -(-int(tnl) // int(avg))))
+        elif self.char.get("xp_to_next"):
+            out.append("XP to next level: %s (no measured kills yet)"
+                       % self.char["xp_to_next"])
+        if len(self.moves_hist) >= 2:
+            delta = self.moves_hist[-1] - self.moves_hist[0]
+            out.append("Moves: %d now, %+d over the last %d prompts"
+                       % (self.moves_hist[-1], delta, len(self.moves_hist)))
+        if self.gold_hist:
+            base = self._gold_session_base
+            cur = self.gold_hist[-1]
+            trend = " (%+d this session)" % (cur - base) if base is not None else ""
+            out.append("Gold: %d%s" % (cur, trend))
+        out.append("Deaths recorded: %d" % self.deaths)
+        untried = sum(len(self._untried(k)) for k in self.rooms)
+        out.append("Frontier: %d untried exits across %d mapped rooms"
+                   % (untried, len(self.rooms)))
+        return "\n".join("- " + s for s in out)
+
+    def _untried(self, key):
+        """Exit directions of a room not yet followed to a known destination."""
+        r = self.rooms[key]
+        exits = [DIRECTIONS.get(e.strip("()").lower())
+                 for e in r["exits"].split()]
+        return [e for e in exits if e and e not in r.get("links", {})]
 
     def _write_player(self):
         c = self.char
@@ -283,14 +539,50 @@ class MemoryTracker:
                         % (c["xp"], c.get("xp_to_next", "?"), c.get("gold", "?")))
         charline = "\n".join(bits) or "(unknown — run `cmd score` once)"
         events = "\n".join("- " + e for e in self.events) or "- (nothing yet)"
+        plan = load_plan()
+        persona = plan.get("persona") or \
+            '(none set — set one with: mud_session.py persona "...")'
+        plan_lines = []
+        if plan.get("goal") or plan.get("subtasks"):
+            plan_lines.append("Goal: %s" % (plan.get("goal") or "(unset)"))
+            cur_found = False
+            for i, s in enumerate(plan.get("subtasks", [])):
+                mark = "x" if s.get("done") else " "
+                line = "%d. [%s] %s" % (i + 1, mark, s["text"])
+                if not s.get("done") and not cur_found:
+                    cur_found = True
+                    line += "   ← CURRENT"
+                    if s.get("check"):
+                        met, detail = eval_check(s["check"], self)
+                        state = {True: "MET", False: "UNMET",
+                                 None: "UNVERIFIED"}[met]
+                        line += "\n   check [%s]: %s — %s" \
+                                % (s["check"], state, detail)
+                elif s.get("check"):
+                    line += "  (check: %s)" % s["check"]
+                plan_lines.append(line)
+        plan_block = "\n".join(plan_lines) or \
+            '(no plan — create one with: mud_session.py plan set "..." ' \
+            'then plan add "..." --check "level>=N")'
+        if self.carrying is None:
+            carrying = "(not seen yet — run `cmd inventory`)"
+        elif not self.carrying:
+            carrying = "(nothing)"
+        else:
+            carrying = "\n".join("- " + c for c in self.carrying)
         body = (
             "# Player memory — %s@%s:%d\n\n%s\n%s\n\n%s\n\n"
+            "## Persona (apply this style to every decision)\n%s\n\n"
+            "## Plan (managed via `plan` subcommands)\n%s\n\n"
             "## Vitals (live, from the game prompt)\n%s\n\n"
             "## Character (from the last `score`)\n%s\n\n"
-            "## Current location\n%s — map and exits in world.md\n\n"
+            "## Signals (computed — watch these, adapt strategy)\n%s\n\n"
+            "## Carrying (as of the last `inventory`)\n%s\n\n"
+            "## Current location\n%s — map, frontier and hazards in world.md\n\n"
             "## Recent events (oldest first)\n%s\n"
             % (USER, HOST, PORT, GOALS_HEADER, read_goals(), AUTO_MARKER,
-               vit, charline, self.current_room or "(unknown)", events))
+               persona, plan_block, vit, charline, self._signals(), carrying,
+               self.current_room or "(unknown)", events))
         tmp = PLAYER_MD + ".tmp"
         with open(tmp, "w") as f:
             f.write(body)
@@ -307,9 +599,28 @@ class MemoryTracker:
             lines.append("- Exits: %s" % r["exits"])
             for d, dest in r["links"].items():
                 lines.append("- %s → %s" % (d, dest))
+            for hz in r.get("hazards", []):
+                lines.append("- ⚠ %s" % hz)
+            if r.get("shop"):
+                lines.append("- Shop stock (from `list`): "
+                             + " | ".join(r["shop"]))
+            for sg in r.get("signs", []):
+                lines.append('- Sign — %s' % sg)
             if r["here"]:
                 lines.append("- Last seen here: " + " | ".join(r["here"]))
             lines.append("")
+        frontier = [(k, self._untried(k)) for k in self.rooms]
+        frontier = [(k, u) for k, u in frontier if u]
+        lines.append("## Frontier — untried exits (explore these)")
+        if frontier:
+            for k, u in frontier:
+                lines.append("- %s: %s" % (k, ", ".join(u)))
+        else:
+            lines.append("- (none — every known exit has been followed)")
+        lines.append("")
+        lines.append("## Trail — recent moves (oldest first)")
+        lines += ["- " + t for t in self.trail] or ["- (no moves yet)"]
+        lines.append("")
         tmp = WORLD_MD + ".tmp"
         with open(tmp, "w") as f:
             f.write("\n".join(lines))
@@ -561,7 +872,9 @@ def handle(conn, mud):
                  "uptime_s": round(time.time() - mud.started_at, 1),
                  "transcript": TRANSCRIPT, "memory": MEM_DIR,
                  "room": mud.tracker.current_room,
-                 "rooms_mapped": len(mud.tracker.rooms)}
+                 "rooms_mapped": len(mud.tracker.rooms),
+                 "plan": plan_status(mud.tracker),
+                 "persona": load_plan().get("persona", "")}
     elif op == "stop":
         mud.send_line("quit")               # in-game quit drops to the menu...
         deadline = time.time() + 3
@@ -646,9 +959,19 @@ def main():
     p = sub.add_parser("log", help="tail the session transcript")
     p.add_argument("-n", type=int, default=40)
     sub.add_parser("stop", help="quit the game and stop the session")
-    p = sub.add_parser("goal", help="add a long-term goal to data/player.md")
-    p.add_argument("words", nargs="+", help='e.g.: goal "reach level 7"')
+    p = sub.add_parser("goal", help="add a free-form note/goal to data/player.md")
+    p.add_argument("words", nargs="+", help='e.g.: goal "guard too strong at lvl 3"')
     sub.add_parser("memory", help="print data/player.md and data/world.md")
+    p = sub.add_parser("plan", help="manage the long-term plan (set/add/done/show)")
+    p.add_argument("action", nargs="?", default="show",
+                   choices=["set", "add", "done", "show"])
+    p.add_argument("words", nargs="*")
+    p.add_argument("--check", help='verifiable condition, e.g. "level>=7", '
+                                   '"item:lamp", "gold>=120", "room:temple"')
+    p = sub.add_parser("persona", help="set or show the play style to apply")
+    p.add_argument("words", nargs="*")
+    p = sub.add_parser("find", help="search rooms, shops, signs, events, plan")
+    p.add_argument("words", nargs="+")
     args = ap.parse_args()
 
     if args.op == "start":
@@ -674,7 +997,13 @@ def main():
         print("[memory: %s — %d rooms mapped so far; consult player.md & "
               "world.md before deciding what to do]"
               % (MEM_DIR, len(mud.tracker.rooms)))
-        print("[goals]\n%s" % read_goals())
+        persona = load_plan().get("persona")
+        if persona:
+            print("[persona] %s" % persona)
+        ps = plan_status(mud.tracker)
+        if ps:
+            print("[plan] %s" % ps)
+        print("[notes]\n%s" % read_goals())
 
     elif args.op == "cmd":
         r = rpc({"op": "send", "line": " ".join(args.words),
@@ -705,7 +1034,11 @@ def main():
               % (r.get("room") or "(unknown)", r.get("rooms_mapped", 0)))
         print("Transcript:  %s" % r["transcript"])
         print("Memory:      %s" % r.get("memory", MEM_DIR))
-        print("Goals:\n%s" % read_goals())
+        if r.get("persona"):
+            print("Persona:     %s" % r["persona"])
+        if r.get("plan"):
+            print(r["plan"])
+        print("Notes:\n%s" % read_goals())
 
     elif args.op == "log":
         if not os.path.exists(TRANSCRIPT):
@@ -745,6 +1078,88 @@ def main():
                 print(open(path).read().rstrip())
             except OSError:
                 print("(not created yet — start a session first)")
+
+    elif args.op == "plan":
+        plan = load_plan()
+        text = " ".join(args.words)
+        if args.action == "set":
+            if not text:
+                sys.exit('Usage: plan set "the long-term goal"')
+            plan["goal"] = text
+            plan["subtasks"] = []
+            save_plan(plan)
+            print("Plan goal set: %s\nNow add ordered steps with: "
+                  'plan add "..." [--check "level>=N"]' % text)
+        elif args.action == "add":
+            if not text:
+                sys.exit('Usage: plan add "subtask" [--check "item:lamp"]')
+            plan.setdefault("subtasks", []).append(
+                {"text": text, "check": args.check, "done": False})
+            save_plan(plan)
+            print("Added step %d: %s%s"
+                  % (len(plan["subtasks"]), text,
+                     " (check: %s)" % args.check if args.check else ""))
+        elif args.action == "done":
+            pending = [s for s in plan.get("subtasks", []) if not s.get("done")]
+            if not pending:
+                sys.exit("Nothing to mark done.")
+            pending[0]["done"] = True
+            save_plan(plan)
+            print("Done: %s" % pending[0]["text"])
+            print("Reflect: record what you learned with `goal \"...\"`, "
+                  "then check the next step.")
+        # always show the plan with a live evaluation afterwards
+        print(plan_status(MemoryTracker()) or "(no plan yet)")
+
+    elif args.op == "persona":
+        plan = load_plan()
+        if args.words:
+            plan["persona"] = " ".join(args.words)
+            save_plan(plan)
+            print("Persona set: %s" % plan["persona"])
+        else:
+            print(plan.get("persona") or "(no persona set)")
+
+    elif args.op == "find":
+        term = " ".join(args.words).lower()
+        t = MemoryTracker()
+        hits = []
+        for key, r in t.rooms.items():
+            fields = ([("room", key), ("exits", r["exits"])]
+                      + [("links", "%s → %s" % (d, dst))
+                         for d, dst in r.get("links", {}).items()]
+                      + [("hazard", h) for h in r.get("hazards", [])]
+                      + [("shop", s) for s in r.get("shop", [])]
+                      + [("sign", s) for s in r.get("signs", [])]
+                      + [("seen", s) for s in r.get("here", [])])
+            for kind, val in fields:
+                if term in val.lower() or term in key.lower():
+                    hits.append("%s @ %s: %s" % (kind, key, val))
+        for e in t.events:
+            if term in e.lower():
+                hits.append("event: %s" % e)
+        for c in (t.carrying or []):
+            if term in c.lower():
+                hits.append("carrying: %s" % c)
+        plan = load_plan()
+        for s in plan.get("subtasks", []):
+            if term in s["text"].lower():
+                hits.append("plan step: %s" % s["text"])
+        for note in read_goals().splitlines():
+            if term in note.lower():
+                hits.append("note: %s" % note.strip("- "))
+        seen = set()
+        hits = [h for h in hits if not (h in seen or seen.add(h))]
+        print("\n".join(hits[:40]) or "(no matches in memory)")
+        try:                       # the transcript remembers what memory doesn't
+            tlines = [l.rstrip() for l in open(TRANSCRIPT)
+                      if term in l.lower()]
+            if tlines:
+                print("--- transcript (last %d of %d matching lines) ---"
+                      % (min(5, len(tlines)), len(tlines)))
+                print("\n".join(tlines[-5:]))
+        except OSError:
+            pass
 
 
 if __name__ == "__main__":

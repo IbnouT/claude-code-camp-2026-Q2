@@ -1,0 +1,26 @@
+{
+ "goal": "Defeat the Massive Minotaur in the Newbie Zone",
+ "persona": "balanced: probe shallowly before committing, flee at 50% health, gather intel first, experiment cheaply",
+ "subtasks": [
+  {
+   "text": "Explore Newbie Zone and locate the Massive Minotaur",
+   "check": "item:map",
+   "done": true
+  },
+  {
+   "text": "Hunt small creatures to reach level 3",
+   "check": "level>=3",
+   "done": false
+  },
+  {
+   "text": "Hunt medium creatures to reach level 5",
+   "check": "level>=5",
+   "done": false
+  },
+  {
+   "text": "Defeat the Massive Minotaur",
+   "check": "level>=6",
+   "done": false
+  }
+ ]
+}

@@ -1,0 +1,389 @@
+{
+ "rooms": {
+  "The Temple Of Midgaard": {
+   "exits": "n e s w d",
+   "links": {
+    "north": "By The Temple Altar",
+    "south": "The Temple Square",
+    "west": "The Reading Room"
+   },
+   "here": [
+    "An automatic teller machine has been installed in the wall here."
+   ]
+  },
+  "By The Temple Altar": {
+   "exits": "n s",
+   "links": {
+    "north": "Behind The Temple Altar",
+    "south": "The Temple Of Midgaard"
+   },
+   "here": []
+  },
+  "Behind The Temple Altar": {
+   "exits": "n s",
+   "links": {
+    "north": "The Great Field Of Midgaard",
+    "south": "By The Temple Altar"
+   },
+   "here": []
+  },
+  "The Great Field Of Midgaard": {
+   "exits": "n s",
+   "links": {
+    "north": "The Great Field Of Midgaard (2)",
+    "south": "Behind The Temple Altar"
+   },
+   "here": []
+  },
+  "The Great Field Of Midgaard (2)": {
+   "exits": "n e s w",
+   "links": {
+    "east": "The Entrance To The Newbie Zone",
+    "west": "The Dirt Path",
+    "south": "The Great Field Of Midgaard",
+    "north": "The Great Field Of Midgaard (3)"
+   },
+   "here": [],
+   "hazards": [
+    "darkness through west (bring a light source)"
+   ]
+  },
+  "The Entrance To The Newbie Zone": {
+   "exits": "n w",
+   "links": {
+    "north": "The Beginning Of The Passage",
+    "west": "The Great Field Of Midgaard (2)"
+   },
+   "here": [
+    "The corpse of Dummy is lying here."
+   ],
+   "hazards": [
+    "a death occurred here"
+   ]
+  },
+  "The Beginning Of The Passage": {
+   "exits": "e s",
+   "links": {
+    "east": "The Dirty Hallway",
+    "south": "The Entrance To The Newbie Zone"
+   },
+   "here": [
+    "A handful of gold coins is lying here.",
+    "A bright green newbie vest is lying here looking for a body to hug.",
+    "( 2) A tiny pile of gold coins is lying here.",
+    "A dagger with a long thin blade is here."
+   ]
+  },
+  "The Dirty Hallway": {
+   "exits": "e (s) w",
+   "links": {
+    "east": "A Nexus",
+    "west": "The Beginning Of The Passage"
+   },
+   "here": [
+    "The newbie monster stands here looking confused.  Kill him!  Kill him!"
+   ],
+   "hazards": [
+    "a death occurred here"
+   ]
+  },
+  "A Nexus": {
+   "exits": "(n) (e) s w",
+   "links": {
+    "west": "The Dirty Hallway",
+    "south": "More Of The Hallway"
+   },
+   "here": [],
+   "hazards": [
+    "darkness through north (bring a light source)"
+   ]
+  },
+  "More Of The Hallway": {
+   "exits": "n s (w)",
+   "links": {
+    "south": "Another Corner",
+    "west": "A Small Room",
+    "north": "A Nexus"
+   },
+   "here": [
+    "A bright green newbie vest is lying here looking for a body to hug.",
+    "The newbie monster stands here looking confused.  Kill him!  Kill him!",
+    "The newbie monster stands here looking confused.  Kill him!  Kill him!"
+   ]
+  },
+  "Another Corner": {
+   "exits": "n (e) w",
+   "links": {
+    "west": "A Brighter Hallway",
+    "north": "More Of The Hallway"
+   },
+   "here": [
+    "A tiny pile of gold coins is lying here."
+   ]
+  },
+  "A Brighter Hallway": {
+   "exits": "e w",
+   "links": {
+    "west": "The End Of The Passage",
+    "east": "Another Corner"
+   },
+   "here": [
+    "A handful of gold coins is lying here.",
+    "A tiny pile of gold coins is lying here."
+   ]
+  },
+  "The End Of The Passage": {
+   "exits": "e w",
+   "links": {
+    "west": "An Open Field By The Great Field",
+    "east": "A Brighter Hallway"
+   },
+   "here": []
+  },
+  "An Open Field By The Great Field": {
+   "exits": "n e",
+   "links": {
+    "north": "The Great Field Of Midgaard (2)"
+   },
+   "here": []
+  },
+  "The Dirt Path": {
+   "exits": "e w",
+   "links": {
+    "east": "The Great Field Of Midgaard (2)"
+   },
+   "here": []
+  },
+  "A Nexus (2)": {
+   "exits": "n (e) s w",
+   "links": {
+    "south": "More Of The Hallway"
+   },
+   "here": [],
+   "hazards": [
+    "darkness through north (bring a light source)"
+   ]
+  },
+  "A Small Room": {
+   "exits": "(n) e (d)",
+   "links": {
+    "east": "More Of The Hallway (2)",
+    "north": "The Dirty Hallway (2)"
+   },
+   "here": [
+    "The corpse of the creepy crawler is lying here.",
+    "The newbie monster stands here looking confused.  Kill him!  Kill him!",
+    "The Newbie Guard is here wondering where that dragon went."
+   ]
+  },
+  "More Of The Hallway (2)": {
+   "exits": "n s w",
+   "links": {
+    "north": "A Nexus (2)"
+   },
+   "here": [
+    "A bright green newbie vest is lying here looking for a body to hug."
+   ]
+  },
+  "The Dirty Hallway (2)": {
+   "exits": "e s w",
+   "links": {
+    "west": "The Beginning Of The Passage"
+   },
+   "here": [
+    "The corpse of the creepy crawler is lying here.",
+    "The newbie monster stands here looking confused.  Kill him!  Kill him!"
+   ]
+  },
+  "A Small Room (2)": {
+   "exits": "n e (d)",
+   "links": {
+    "north": "The Dirty Hallway (2)"
+   },
+   "here": [
+    "The corpse of the creepy crawler is lying here.",
+    "The corpse of the newbie monster is lying here.",
+    "The Newbie Guard is here wondering where that dragon went."
+   ]
+  },
+  "The Great Field Of Midgaard (3)": {
+   "exits": "s",
+   "links": {
+    "south": "The Great Field Of Midgaard (2)"
+   },
+   "here": []
+  },
+  "The Temple Square": {
+   "exits": "n e s w",
+   "links": {
+    "south": "Market Square",
+    "north": "The Temple Of Midgaard",
+    "west": "The Entrance To The Clerics' Guild",
+    "east": "The Entrance Hall Of The Grunting Boar Inn"
+   },
+   "here": [
+    "A large fountain carved from blue-streaked marble is here, bubbling merrily."
+   ]
+  },
+  "Market Square": {
+   "exits": "n e s w",
+   "links": {
+    "east": "Main Street",
+    "west": "Main Street",
+    "north": "The Temple Square"
+   },
+   "here": [
+    "A janitor is walking around, cleaning up.",
+    "A cityguard stands here.",
+    "A cityguard stands here."
+   ]
+  },
+  "Main Street": {
+   "exits": "n e s w",
+   "links": {
+    "east": "Market Square",
+    "west": "Market Square",
+    "north": "The Bakery"
+   },
+   "here": []
+  },
+  "Inside The East Gate Of Midgaard": {
+   "exits": "e s w",
+   "links": {
+    "east": "Outside The East Gate Of Midgaard",
+    "west": "Main Street"
+   },
+   "here": [
+    "A cityguard is here, guarding the gate.",
+    "A cityguard is here, guarding the gate.",
+    "A cityguard is here, guarding the gate.",
+    "A cityguard is here, guarding the gate.",
+    "A cityguard is here, guarding the gate."
+   ]
+  },
+  "Outside The East Gate Of Midgaard": {
+   "exits": "e w",
+   "links": {
+    "west": "Inside The East Gate Of Midgaard"
+   },
+   "here": []
+  },
+  "The Bakery": {
+   "exits": "s",
+   "links": {
+    "south": "Main Street"
+   },
+   "here": [
+    "The baker looks at you calmly, wiping flour from his face with one hand."
+   ]
+  },
+  "The Reading Room": {
+   "exits": "e",
+   "links": {
+    "east": "The Temple Of Midgaard"
+   },
+   "here": [
+    "A strange device labeled \"teleporter\" was left here.",
+    "A large bulletin board is mounted on a wall here.",
+    "This saleswoman is laden with gadgets and gizmos that are outrageously priced."
+   ]
+  },
+  "The Entrance To The Clerics' Guild": {
+   "exits": "n e",
+   "links": {
+    "east": "The Temple Square"
+   },
+   "here": [
+    "An automatic teller machine has been installed in the wall here.",
+    "A Peacekeeper is standing here, ready to jump in at the first sign of trouble.",
+    "A knight templar is guarding the entrance."
+   ]
+  },
+  "The Entrance Hall Of The Grunting Boar Inn": {
+   "exits": "n e w u",
+   "links": {
+    "east": "The Grunting Boar",
+    "north": "The Post Office"
+   },
+   "here": []
+  },
+  "The Grunting Boar": {
+   "exits": "w",
+   "links": {
+    "west": "The Entrance Hall Of The Grunting Boar Inn"
+   },
+   "here": [
+    "A singing, happy Drunk.",
+    "A singing, happy Drunk.",
+    "A singing, happy Drunk.",
+    "A bartender watches you calmly, while he skillfully mixes a drink."
+   ]
+  },
+  "The Post Office": {
+   "exits": "s",
+   "links": {},
+   "here": [
+    "The head postmaster is standing here, waiting to help you with your mail."
+   ]
+  }
+ },
+ "char": {
+  "max_hp": "21",
+  "max_mana": "100",
+  "max_moves": "85",
+  "xp": "436",
+  "gold": "0",
+  "xp_to_next": "1564",
+  "rank": "Dummy the Swordpupil",
+  "level": "1"
+ },
+ "events": [
+  "Killed The creepy crawler (+34 xp)",
+  "Killed The newbie monster (+153 xp)",
+  "Killed The creepy crawler (+34 xp)",
+  "Killed The newbie monster (+149 xp)",
+  "Killed The creepy crawler (+36 xp)",
+  "Killed The creepy crawler (+34 xp)",
+  "Killed The newbie monster (+154 xp)",
+  "Killed The creepy crawler (+33 xp)",
+  "DIED near The Entrance To The Newbie Zone \u2014 respawned at the temple; corpse (with gear) left behind",
+  "Killed The newbie monster (+308 xp)",
+  "DIED near The Dirty Hallway \u2014 respawned at the temple; corpse (with gear) left behind"
+ ],
+ "current_room": "The Post Office",
+ "carrying": [],
+ "trail": [
+  "west: The Dirty Hallway \u2192 The Beginning Of The Passage",
+  "east: The Beginning Of The Passage \u2192 The Dirty Hallway",
+  "north: The Temple Of Midgaard \u2192 By The Temple Altar",
+  "south: By The Temple Altar \u2192 The Temple Of Midgaard",
+  "west: The Temple Of Midgaard \u2192 The Reading Room",
+  "east: The Reading Room \u2192 The Temple Of Midgaard",
+  "north: The Temple Of Midgaard \u2192 By The Temple Altar",
+  "south: By The Temple Altar \u2192 The Temple Of Midgaard",
+  "south: The Temple Of Midgaard \u2192 The Temple Square",
+  "west: The Temple Square \u2192 The Entrance To The Clerics' Guild",
+  "east: The Entrance To The Clerics' Guild \u2192 The Temple Square",
+  "east: The Temple Square \u2192 The Entrance Hall Of The Grunting Boar Inn",
+  "east: The Entrance Hall Of The Grunting Boar Inn \u2192 The Grunting Boar",
+  "west: The Grunting Boar \u2192 The Entrance Hall Of The Grunting Boar Inn",
+  "north: The Entrance Hall Of The Grunting Boar Inn \u2192 The Post Office"
+ ],
+ "kills_xp": [
+  34,
+  153,
+  34,
+  149,
+  36,
+  34,
+  154,
+  33,
+  308
+ ],
+ "deaths": 2,
+ "gold_hist": [
+  0,
+  20,
+  0
+ ]
+}
