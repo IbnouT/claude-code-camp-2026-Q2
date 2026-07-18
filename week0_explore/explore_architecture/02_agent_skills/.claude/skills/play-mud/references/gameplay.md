@@ -49,6 +49,8 @@ Movement costs V (moves); rest to recover it.
 | `cast '<spell>' <target>` | Casters; quotes around the spell name matter |
 | `rescue <player>`, `assist <player>` | Group combat |
 | `wimpy <hp>` | Auto-flee below this HP |
+| `practice` | At your guildmaster: list your skills and remaining practice sessions |
+| `practice <skill>` | At your guildmaster: spend a session to improve a skill. This is training, NOT using the skill — never attack the guildmaster |
 
 Death drops your corpse (with your gear) where you died; you respawn at the
 temple. `get all corpse` after returning.

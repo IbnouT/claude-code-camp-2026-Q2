@@ -1,0 +1,182 @@
+{
+ "rooms": {
+  "The Temple Square": {
+   "exits": "n e s w",
+   "links": {
+    "north": "The Temple Of Midgaard"
+   },
+   "here": [
+    "A large fountain carved from blue-streaked marble is here, bubbling merrily."
+   ]
+  },
+  "The Temple Of Midgaard": {
+   "exits": "n e s w d",
+   "links": {
+    "north": "By The Temple Altar"
+   },
+   "here": [
+    "An automatic teller machine has been installed in the wall here."
+   ]
+  },
+  "By The Temple Altar": {
+   "exits": "n s",
+   "links": {
+    "north": "Behind The Temple Altar"
+   },
+   "here": []
+  },
+  "Behind The Temple Altar": {
+   "exits": "n s",
+   "links": {
+    "north": "The Great Field Of Midgaard"
+   },
+   "here": []
+  },
+  "The Great Field Of Midgaard": {
+   "exits": "n e s w",
+   "links": {
+    "east": "The Entrance To The Newbie Zone",
+    "west": "The Dirt Path"
+   },
+   "here": []
+  },
+  "The Entrance To The Newbie Zone": {
+   "exits": "n w",
+   "links": {
+    "north": "The Beginning Of The Passage"
+   },
+   "here": []
+  },
+  "The Beginning Of The Passage": {
+   "exits": "e s",
+   "links": {
+    "east": "The Dirty Hallway",
+    "south": "The Entrance To The Newbie Zone"
+   },
+   "here": [
+    "The corpse of the creepy crawler is lying here.",
+    "Someone's little pet dragon has gotten loose, and is sniffing about here."
+   ]
+  },
+  "The Dirty Hallway": {
+   "exits": "e s w",
+   "links": {
+    "east": "A Nexus",
+    "south": "A Small Room",
+    "west": "The Beginning Of The Passage"
+   },
+   "here": [
+    "A bright green newbie vest is lying here looking for a body to hug."
+   ]
+  },
+  "A Nexus": {
+   "exits": "(n) (e) s w",
+   "links": {
+    "south": "More Of The Hallway",
+    "west": "The Dirty Hallway"
+   },
+   "here": []
+  },
+  "More Of The Hallway": {
+   "exits": "n s (w)",
+   "links": {
+    "south": "Another Corner",
+    "north": "A Nexus"
+   },
+   "here": [
+    "A bright green newbie vest is lying here looking for a body to hug.",
+    "The corpse of the creepy crawler is lying here.",
+    "A funny little imp-like thing (a quasit perhaps?) is sneaking about here."
+   ]
+  },
+  "Another Corner": {
+   "exits": "n (e) w",
+   "links": {
+    "west": "A Brighter Hallway",
+    "east": "The Alchemist's Room",
+    "north": "More Of The Hallway"
+   },
+   "here": []
+  },
+  "A Brighter Hallway": {
+   "exits": "e w",
+   "links": {
+    "west": "The creepy crawler leaves west.",
+    "east": "Another Corner"
+   },
+   "here": [
+    "Someone's pet dragon has escaped and left his collar here.",
+    "A bright green newbie vest is lying here looking for a body to hug.",
+    "The newbie monster stands here looking confused.  Kill him!  Kill him!"
+   ]
+  },
+  "The creepy crawler leaves west.": {
+   "exits": "e w",
+   "links": {
+    "west": "An Open Field By The Great Field"
+   },
+   "here": [
+    "A creepy little crawling thing is scuttling along the floor at your feet."
+   ]
+  },
+  "An Open Field By The Great Field": {
+   "exits": "n e",
+   "links": {
+    "north": "The Great Field Of Midgaard"
+   },
+   "here": []
+  },
+  "The Dirt Path": {
+   "exits": "e w",
+   "links": {
+    "west": "This zone is above your recommended level.",
+    "east": "The Great Field Of Midgaard"
+   },
+   "here": []
+  },
+  "This zone is above your recommended level.": {
+   "exits": "e w",
+   "links": {
+    "east": "The Dirt Path"
+   },
+   "here": []
+  },
+  "A Small Room": {
+   "exits": "n (e) d",
+   "links": {
+    "north": "The Dirty Hallway"
+   },
+   "here": [
+    "( 2) A bright newbie helm is hoping a loose head will wander by. ..It has a soft glowing aura!",
+    "The newbie monster stands here looking confused.  Kill him!  Kill him!",
+    "The Newbie Guard is here wondering where that dragon went."
+   ]
+  },
+  "The Alchemist's Room": {
+   "exits": "(n) w d",
+   "links": {
+    "west": "Another Corner"
+   },
+   "here": [
+    "A funny little imp-like thing (a quasit perhaps?) is sneaking about here.",
+    "The newbie monster stands here looking confused.  Kill him!  Kill him!",
+    "The Newbie Alchemist is here trying to make something."
+   ]
+  }
+ },
+ "char": {
+  "max_hp": "21",
+  "max_mana": "100",
+  "max_moves": "85",
+  "xp": "119",
+  "gold": "0",
+  "xp_to_next": "1881",
+  "rank": "Dummy the Swordpupil",
+  "level": "1"
+ },
+ "events": [
+  "Killed The creepy crawler (+35 xp)",
+  "Killed The creepy crawler (+34 xp)"
+ ],
+ "current_room": "The Alchemist's Room"
+}
