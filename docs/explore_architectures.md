@@ -37,3 +37,38 @@ Completion claims from the agent cannot be trusted. We caught false successes on
 The gap between Haiku and Sonnet is the model, not the architecture, but running a strong model on errands is not cost effective. The point of a better architecture is to make the small model dependable: owned connection, enforced memory, external verification.
 
 This level is usable for trivial goals with a strong model. It is not a fit for our agent's actual job.
+
+
+## 2. Agent skills
+
+One step up from the agent file is a skill: instructions bundled with their own scripts, loadable by most coding harnesses and agent SDKs. At this level we can finally give the agent code.
+
+We had the agent generate a Play MUD skill whose script owns the connection and the login, which is the fix our level 1 conclusions asked for. We ran the same goals with the same models as level 1 so we can compare. Then we extended the skill twice and gave it a longer goal, level up enough to defeat the Massive Minotaur in the Newbie Zone, on Haiku both times.
+
+The first extension makes the script update the memory files in real time from the game output. The second adds a plan file with conditions the script can check, a persona, and signals computed from the collected data like experience per kill and unexplored exits.
+
+### Technical Observations
+
+The generated skill connected and played reliably from the first run. No model wrote its own telnet code again and Haiku completed the bakery goal on the first try. The connection problems from level 1 are gone.
+
+On the guild goal Haiku read practicing skills as fighting the guildmaster, attacked it and died. When the model does not know a game rule it guesses, and we find out after the damage. We can patch each rule into the skill reference once we see it fail, but on a world the model has never seen in training there will be many of these, so it needs a cheaper way to learn rules than dying.
+
+The real-time memory worked. The files were updated on disk while the game was played and the model used the map to navigate back instead of re-exploring. But keying rooms by their title corrupted the map as soon as two rooms had the same name. The game text gives no stable identity for a room, we had to infer it from exits and connections, and the markdown ended up as a readable view over a structured store. For an agent whose whole job is mapping a world, plain markdown notes will not be enough.
+
+On the first minotaur run the model made a sensible plan, level up first, then descend. Then it descended at level one anyway and got stuck in a dark maze. A plan written in prose does not constrain anything. When we moved the plan into a file with conditions the script can verify, like a level reached or an item held, the rerun turned back at the warning sign instead of pushing on. But the model also wrote one condition that tested nothing, so I think goals and their checks have to come from outside the model.
+
+These failures are the same places a human beginner struggles in this game, darkness and fights above your level, the difference is a human learns after one death.
+
+The persona and the signals were both ignored. The model set a persona itself and then did not follow it in a single fight, and the signals were computed on every memory read and never used in a decision. It is not that the model cannot use its data. When it was blocked by darkness it searched its memory, remembered a glowing helm and went to get it as a light source. It is that nothing at this level makes it look at the data at the moment it decides. A loop we own could inject the plan status, the persona and the signals into every call, so no decision is taken without them. Whether persona should even be text, or just rules in code like flee under a health threshold, is open.
+
+The character died twice and lost its equipment in the corpses, and the model never connected the losses to the deaths. Our memory records events but not consequences. Maybe the state needs cause links, a death entry pointing to the corpse and what was lost. Maybe the loop should simply tell the model after a death what it cost. We have not tested either.
+
+Long goals are expensive here because every combat round goes through the model. Halfway through, the model spawned a background subagent on its own to do the grinding, which I read as the agent telling us the same thing the cost does: grinding is a fixed fight and rest cycle and should be code, with the model called only at decision points like a new room, low health, or a plan step done.
+
+### Technical Conclusions
+
+Skills work well. Everything we moved into the script, connection, login, memory upkeep, plan checking, became dependable, even on the small model. The ideas that stayed as text for the model to read, persona, signals, plans in prose, are the ones that failed.
+
+So the limit of this level is attention, not knowledge. We cannot make the model read the right data at the right moment from inside a skill, and we cannot see or change the harness loop that decides what the model gets. We need our own loop: inject the state into every call, verify goals in code, link consequences to causes, and run repetition as code.
+
+We skip the subagent and workflow platform levels. One character on one connection gives nothing to parallelize, and they do not give us the loop either. Next we build the loop.

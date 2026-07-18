@@ -19,3 +19,6 @@ week0_explore/preview/data/world/*
 
 # Claude Code local configuration at repo root (settings, local wiring)
 /.claude/
+
+# Claude Code local permission settings (created per-folder when running experiments)
+settings.local.json
