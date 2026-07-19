@@ -1,5 +1,470 @@
 {
  "rooms": {
+  "The Common Square": {
+   "exits": "n e s w",
+   "links": {
+    "north": "Market Square",
+    "east": "The Dark Alley",
+    "south": "The Dump",
+    "west": "The Eastern End Of Poor Alley"
+   },
+   "here": [
+    "A tiny pile of gold coins is lying here.",
+    "A rather dubious looking piece of meat is on the ground here."
+   ],
+   "peeks": {
+    "north": "Market Square",
+    "east": "The Dark Alley",
+    "south": "The Dump",
+    "west": "The Eastern End Of Poor Alley"
+   }
+  },
+  "Market Square": {
+   "exits": "n e s w",
+   "links": {
+    "east": "Main Street",
+    "south": "The Common Square",
+    "north": "The Temple Square",
+    "west": "Main Street"
+   },
+   "here": [],
+   "peeks": {
+    "north": "The Temple Square",
+    "east": "Main Street",
+    "south": "The Common Square",
+    "west": "Main Street"
+   }
+  },
+  "Main Street": {
+   "exits": "n e s w",
+   "links": {
+    "north": "The Bakery",
+    "west": "Market Square",
+    "east": "Market Square",
+    "south": "The Armory"
+   },
+   "here": [
+    "A Peacekeeper is standing here, ready to jump in at the first sign of trouble."
+   ],
+   "peeks": {
+    "north": "The General Store",
+    "east": "Main Street",
+    "south": "The Pet Shop",
+    "west": "Market Square"
+   },
+   "shop": [
+    "##   Available   Item                                               Cost",
+    "----------------------------------------------------------------------------",
+    "1)  Unlimited   A danish pastry                                       7",
+    "2)  Unlimited   A bread                                              15",
+    "3)  Unlimited   A waybread                                           76"
+   ]
+  },
+  "The General Store": {
+   "exits": "s",
+   "links": {
+    "south": "Main Street"
+   },
+   "here": [
+    "A grocer stands at the counter, with a slightly impatient look on his face."
+   ],
+   "signs": [
+    "note: The note reads: List  - Show which various items are in the store. Buy   - Buy an item. Value - The shopkeeper will (free of charge) tell how much he will pay for your item. Sell  - Sell an item."
+   ],
+   "shop": [
+    "##   Available   Item                                               Cost",
+    "----------------------------------------------------------------------------",
+    "1)  Unlimited   A cashcard                                         1628",
+    "2)  Unlimited   A box                                                81",
+    "3)  Unlimited   A bag                                                32",
+    "4)  Unlimited   A lantern                                            81",
+    "5)  Unlimited   A torch                                              16"
+   ]
+  },
+  "The Dark Alley": {
+   "exits": "e s w",
+   "links": {
+    "east": "The Dark Alley At The Levee",
+    "west": "The Common Square",
+    "south": "The Entrance Hall To The Guild Of Thieves"
+   },
+   "here": [
+    "( 3) The corpse of the mercenary is lying here.",
+    "The corpse of the cityguard is lying here.",
+    "A little pile of gold coins is lying here.",
+    "A small sword lies here.",
+    "A Peacekeeper is standing here, ready to jump in at the first sign of trouble."
+   ],
+   "peeks": {
+    "east": "The Dark Alley At The Levee",
+    "south": "The Entrance Hall To The Guild Of Thieves",
+    "west": "The Common Square"
+   }
+  },
+  "The Dark Alley At The Levee": {
+   "exits": "e s w",
+   "links": {
+    "south": "The Levee",
+    "west": "The Dark Alley"
+   },
+   "here": []
+  },
+  "The Levee": {
+   "exits": "n s",
+   "links": {
+    "north": "The Dark Alley At The Levee"
+   },
+   "here": [
+    "A retired captain stands here, selling boats."
+   ],
+   "peeks": {
+    "north": "The Dark Alley At The Levee",
+    "south": "On The River"
+   }
+  },
+  "The Dump": {
+   "exits": "n d",
+   "links": {
+    "north": "The Common Square",
+    "down": "The Quadruple Junction Under The Dump"
+   },
+   "here": []
+  },
+  "The Eastern End Of Poor Alley": {
+   "exits": "e s w",
+   "links": {
+    "south": "Grubby Inn",
+    "west": "Poor Alley",
+    "east": "The Common Square"
+   },
+   "here": [
+    "A rather dubious looking piece of meat is on the ground here.",
+    "A beastly fido is mucking through the garbage looking for food here."
+   ],
+   "peeks": {
+    "east": "The Common Square",
+    "south": "Grubby Inn",
+    "west": "Poor Alley"
+   }
+  },
+  "Grubby Inn": {
+   "exits": "n",
+   "links": {
+    "north": "The Eastern End Of Poor Alley"
+   },
+   "here": [
+    "A beggar is here, asking for a few coins.",
+    "Filthy is standing here, eager to serve you a special drink."
+   ],
+   "shop": [
+    "##   Available   Item                                               Cost",
+    "----------------------------------------------------------------------------",
+    "1)  Unlimited   A bottle of local speciality                         28",
+    "2)  Unlimited   A bottle of firebreather                             70"
+   ]
+  },
+  "Poor Alley": {
+   "exits": "e w",
+   "links": {
+    "west": "Wall Road",
+    "east": "The Eastern End Of Poor Alley"
+   },
+   "here": [
+    "A tiny pile of gold coins is lying here.",
+    "A rather dubious looking piece of meat is on the ground here.",
+    "A Peacekeeper is standing here, ready to jump in at the first sign of trouble.",
+    "A Peacekeeper is standing here, ready to jump in at the first sign of trouble.",
+    "A beggar is here, asking for a few coins."
+   ],
+   "peeks": {
+    "east": "The Eastern End Of Poor Alley",
+    "west": "Wall Road"
+   }
+  },
+  "Wall Road": {
+   "exits": "n e s",
+   "links": {
+    "south": "Wall Road (2)",
+    "east": "Poor Alley",
+    "north": "Wall Road (2)"
+   },
+   "here": [
+    "A tiny pile of gold coins is lying here.",
+    "The Mayor is standing here."
+   ],
+   "signs": [
+    "letters: It says 'Who watches the watchmen?  '"
+   ]
+  },
+  "Wall Road (2)": {
+   "exits": "n s",
+   "links": {
+    "south": "On The Bridge",
+    "north": "Inside The West Gate Of Midgaard"
+   },
+   "here": [
+    "A cityguard stands here."
+   ]
+  },
+  "On The Bridge": {
+   "exits": "n s",
+   "links": {
+    "north": "Wall Road (2)"
+   },
+   "here": []
+  },
+  "The Temple Square": {
+   "exits": "n e s w",
+   "links": {
+    "east": "The Entrance Hall Of The Grunting Boar Inn",
+    "south": "Market Square",
+    "west": "The Entrance To The Clerics' Guild",
+    "north": "The Temple Of Midgaard"
+   },
+   "here": [
+    "A large fountain carved from blue-streaked marble is here, bubbling merrily."
+   ]
+  },
+  "The Entrance Hall Of The Grunting Boar Inn": {
+   "exits": "n e w u",
+   "links": {
+    "east": "The Grunting Boar",
+    "west": "The Temple Square"
+   },
+   "here": []
+  },
+  "The Grunting Boar": {
+   "exits": "w",
+   "links": {
+    "west": "The Entrance Hall Of The Grunting Boar Inn"
+   },
+   "here": [
+    "A janitor is walking around, cleaning up.",
+    "A singing, happy Drunk.",
+    "A singing, happy Drunk.",
+    "A singing, happy Drunk.",
+    "A bartender watches you calmly, while he skillfully mixes a drink."
+   ],
+   "signs": [
+    "sign: The sign reads: Free instructions provided by the Grunting Boar Inn. Buy  - Buy something (drinkable) from the bartender. List - The bartender will show you all the different drinks and specialties, and tell the price of each."
+   ],
+   "shop": [
+    "##   Available   Item                                               Cost",
+    "----------------------------------------------------------------------------",
+    "1)  Unlimited   A bottle of local speciality                         23",
+    "2)  Unlimited   A bottle of firebreather                             59",
+    "3)  Unlimited   A bottle of ale                                      11",
+    "4)  Unlimited   A bottle of beer                                     23",
+    "5)  Unlimited   A barrel of beer                                    358"
+   ],
+   "peeks": {
+    "west": "The Entrance Hall Of The Grunting Boar Inn"
+   }
+  },
+  "The Quadruple Junction Under The Dump": {
+   "exits": "n e s w u",
+   "links": {
+    "north": "The Triple Junction",
+    "east": "The Pit",
+    "south": "A Triple Junction"
+   },
+   "here": [],
+   "peeks": {
+    "up": "The Dump"
+   }
+  },
+  "The Triple Junction": {
+   "exits": "e s w",
+   "links": {
+    "east": "The Sewer Pipe Bend"
+   },
+   "here": []
+  },
+  "The Sewer Pipe Bend": {
+   "exits": "n w",
+   "links": {
+    "north": "A Bend In The Sewer Pipe"
+   },
+   "here": []
+  },
+  "A Bend In The Sewer Pipe": {
+   "exits": "s w",
+   "links": {
+    "west": "The Sewer Junction"
+   },
+   "here": []
+  },
+  "The Sewer Junction": {
+   "exits": "n e w",
+   "links": {
+    "north": "A Junction"
+   },
+   "here": []
+  },
+  "A Junction": {
+   "exits": "n s w",
+   "links": {
+    "north": "Another Intersection",
+    "west": "A Muddy Intersection"
+   },
+   "here": []
+  },
+  "Another Intersection": {
+   "exits": "n e s",
+   "links": {
+    "north": "The Sewer",
+    "south": "A Junction"
+   },
+   "here": [
+    "( 3) The corpse of the small Spider is lying here.",
+    "( 3) The corpse of the small bat is lying here."
+   ]
+  },
+  "The Sewer": {
+   "exits": "e s w",
+   "links": {
+    "east": "The Round Room"
+   },
+   "here": []
+  },
+  "The Round Room": {
+   "exits": "e",
+   "links": {
+    "east": "The Small Room"
+   },
+   "here": []
+  },
+  "The Small Room": {
+   "exits": "e s",
+   "links": {
+    "south": "The Sewer Pipe"
+   },
+   "here": []
+  },
+  "The Sewer Pipe": {
+   "exits": "n s",
+   "links": {
+    "south": "The Grand Sewer"
+   },
+   "here": []
+  },
+  "The Grand Sewer": {
+   "exits": "n e s",
+   "links": {
+    "south": "The South End Of The Grand Pipe"
+   },
+   "here": []
+  },
+  "The South End Of The Grand Pipe": {
+   "exits": "n (w)",
+   "links": {
+    "west": "The Pool In The Sewer"
+   },
+   "here": []
+  },
+  "The Pool In The Sewer": {
+   "exits": "n e",
+   "links": {
+    "north": "The Sewer Room"
+   },
+   "here": [
+    "The small hairy Spider is here, busy with its web.",
+    "The small hairy Spider is here, busy with its web."
+   ],
+   "peeks": {
+    "north": "The Sewer Room",
+    "east": "The South End Of The Grand Pipe"
+   }
+  },
+  "The Sewer Room": {
+   "exits": "n s",
+   "links": {
+    "north": "The Sewer Room (2)"
+   },
+   "here": []
+  },
+  "The Sewer Room (2)": {
+   "exits": "s w",
+   "links": {
+    "west": "The Three Way Junction"
+   },
+   "here": [
+    "The small hairy Spider is here, busy with its web."
+   ]
+  },
+  "The Three Way Junction": {
+   "exits": "e s w",
+   "links": {
+    "west": "Another Intersection"
+   },
+   "here": [
+    "The corpse of the small Spider is lying here.",
+    "The small Spider is here, fighting YOU!"
+   ]
+  },
+  "A Muddy Intersection": {
+   "exits": "n e s",
+   "links": {
+    "south": "The Sewer Junction (2)",
+    "north": "The Muddy Sewer Bend"
+   },
+   "here": []
+  },
+  "The Muddy Sewer": {
+   "exits": "n w",
+   "links": {
+    "west": "A Muddy Intersection"
+   },
+   "here": []
+  },
+  "The Muddy Sewer Bend": {
+   "exits": "s w",
+   "links": {
+    "west": "The Muddy Sewer Junction"
+   },
+   "here": []
+  },
+  "The Muddy Sewer Junction": {
+   "exits": "n e s",
+   "links": {
+    "south": "The Mudhole"
+   },
+   "here": []
+  },
+  "The Mudhole": {
+   "exits": "n d",
+   "links": {
+    "down": "Under The Mudhole"
+   },
+   "here": []
+  },
+  "Under The Mudhole": {
+   "exits": "e",
+   "links": {
+    "east": "A Muddy Bend In The Sewer System"
+   },
+   "here": []
+  },
+  "A Muddy Bend In The Sewer System": {
+   "exits": "s w",
+   "links": {
+    "south": "A Junction In The Sewer Pipes",
+    "west": "Under The Mudhole"
+   },
+   "here": [
+    "The horrifying Mudmonster is sitting here.",
+    "The horrifying Mudmonster is sitting here."
+   ]
+  },
+  "A Junction In The Sewer Pipes": {
+   "exits": "n e w",
+   "links": {
+    "west": "Under The Dark Pit",
+    "north": "A Muddy Bend In The Sewer System",
+    "east": "An Odd Intersection"
+   },
+   "here": []
+  },
   "The Temple Of Midgaard": {
    "exits": "n e s w d",
    "links": {
@@ -14,259 +479,79 @@
   "By The Temple Altar": {
    "exits": "n s",
    "links": {
-    "north": "Behind The Temple Altar",
-    "south": "The Temple Of Midgaard"
+    "south": "The Temple Of Midgaard",
+    "north": "Behind The Temple Altar"
    },
    "here": []
   },
-  "Behind The Temple Altar": {
-   "exits": "n s",
-   "links": {
-    "north": "The Great Field Of Midgaard",
-    "south": "By The Temple Altar"
-   },
-   "here": []
-  },
-  "The Great Field Of Midgaard": {
-   "exits": "n s",
-   "links": {
-    "north": "The Great Field Of Midgaard (2)",
-    "south": "Behind The Temple Altar"
-   },
-   "here": []
-  },
-  "The Great Field Of Midgaard (2)": {
-   "exits": "n e s w",
-   "links": {
-    "east": "The Entrance To The Newbie Zone",
-    "west": "The Dirt Path",
-    "south": "The Great Field Of Midgaard",
-    "north": "The Great Field Of Midgaard (3)"
-   },
-   "here": [],
-   "hazards": [
-    "darkness through west (bring a light source)"
-   ]
-  },
-  "The Entrance To The Newbie Zone": {
-   "exits": "n w",
-   "links": {
-    "north": "The Beginning Of The Passage",
-    "west": "The Great Field Of Midgaard (2)"
-   },
-   "here": [
-    "The corpse of Dummy is lying here."
-   ],
-   "hazards": [
-    "a death occurred here"
-   ]
-  },
-  "The Beginning Of The Passage": {
-   "exits": "e s",
-   "links": {
-    "east": "The Dirty Hallway",
-    "south": "The Entrance To The Newbie Zone"
-   },
-   "here": [
-    "A handful of gold coins is lying here.",
-    "A bright green newbie vest is lying here looking for a body to hug.",
-    "( 2) A tiny pile of gold coins is lying here.",
-    "A dagger with a long thin blade is here."
-   ]
-  },
-  "The Dirty Hallway": {
-   "exits": "e (s) w",
-   "links": {
-    "east": "A Nexus",
-    "west": "The Beginning Of The Passage"
-   },
-   "here": [
-    "The newbie monster stands here looking confused.  Kill him!  Kill him!"
-   ],
-   "hazards": [
-    "a death occurred here"
-   ]
-  },
-  "A Nexus": {
-   "exits": "(n) (e) s w",
-   "links": {
-    "west": "The Dirty Hallway",
-    "south": "More Of The Hallway"
-   },
-   "here": [],
-   "hazards": [
-    "darkness through north (bring a light source)"
-   ]
-  },
-  "More Of The Hallway": {
-   "exits": "n s (w)",
-   "links": {
-    "south": "Another Corner",
-    "west": "A Small Room",
-    "north": "A Nexus"
-   },
-   "here": [
-    "A bright green newbie vest is lying here looking for a body to hug.",
-    "The newbie monster stands here looking confused.  Kill him!  Kill him!",
-    "The newbie monster stands here looking confused.  Kill him!  Kill him!"
-   ]
-  },
-  "Another Corner": {
-   "exits": "n (e) w",
-   "links": {
-    "west": "A Brighter Hallway",
-    "north": "More Of The Hallway"
-   },
-   "here": [
-    "A tiny pile of gold coins is lying here."
-   ]
-  },
-  "A Brighter Hallway": {
-   "exits": "e w",
-   "links": {
-    "west": "The End Of The Passage",
-    "east": "Another Corner"
-   },
-   "here": [
-    "A handful of gold coins is lying here.",
-    "A tiny pile of gold coins is lying here."
-   ]
-  },
-  "The End Of The Passage": {
-   "exits": "e w",
-   "links": {
-    "west": "An Open Field By The Great Field",
-    "east": "A Brighter Hallway"
-   },
-   "here": []
-  },
-  "An Open Field By The Great Field": {
+  "The Entrance To The Clerics' Guild": {
    "exits": "n e",
    "links": {
-    "north": "The Great Field Of Midgaard (2)"
+    "east": "The Temple Square"
+   },
+   "here": [
+    "An automatic teller machine has been installed in the wall here.",
+    "A knight templar is guarding the entrance."
+   ]
+  },
+  "The Pit": {
+   "exits": "w d",
+   "links": {
+    "down": "Under The Pit"
    },
    "here": []
   },
-  "The Dirt Path": {
-   "exits": "e w",
+  "Under The Pit": {
+   "exits": "w",
    "links": {
-    "east": "The Great Field Of Midgaard (2)"
+    "west": "An Odd Intersection"
    },
    "here": []
   },
-  "A Nexus (2)": {
-   "exits": "n (e) s w",
+  "An Odd Intersection": {
+   "exits": "n e w",
    "links": {
-    "south": "More Of The Hallway"
-   },
-   "here": [],
-   "hazards": [
-    "darkness through north (bring a light source)"
-   ]
-  },
-  "A Small Room": {
-   "exits": "(n) e (d)",
-   "links": {
-    "east": "More Of The Hallway (2)",
-    "north": "The Dirty Hallway (2)"
-   },
-   "here": [
-    "The corpse of the creepy crawler is lying here.",
-    "The newbie monster stands here looking confused.  Kill him!  Kill him!",
-    "The Newbie Guard is here wondering where that dragon went."
-   ]
-  },
-  "More Of The Hallway (2)": {
-   "exits": "n s w",
-   "links": {
-    "north": "A Nexus (2)"
-   },
-   "here": [
-    "A bright green newbie vest is lying here looking for a body to hug."
-   ]
-  },
-  "The Dirty Hallway (2)": {
-   "exits": "e s w",
-   "links": {
-    "west": "The Beginning Of The Passage"
-   },
-   "here": [
-    "The corpse of the creepy crawler is lying here.",
-    "The newbie monster stands here looking confused.  Kill him!  Kill him!"
-   ]
-  },
-  "A Small Room (2)": {
-   "exits": "n e (d)",
-   "links": {
-    "north": "The Dirty Hallway (2)"
-   },
-   "here": [
-    "The corpse of the creepy crawler is lying here.",
-    "The corpse of the newbie monster is lying here.",
-    "The Newbie Guard is here wondering where that dragon went."
-   ]
-  },
-  "The Great Field Of Midgaard (3)": {
-   "exits": "s",
-   "links": {
-    "south": "The Great Field Of Midgaard (2)"
+    "west": "A Junction In The Sewer Pipes",
+    "east": "Under The Pit",
+    "north": "The Southwestern Corner Of The Ledge"
    },
    "here": []
   },
-  "The Temple Square": {
-   "exits": "n e s w",
+  "Under The Dark Pit": {
+   "exits": "e u d",
    "links": {
-    "south": "Market Square",
-    "north": "The Temple Of Midgaard",
-    "west": "The Entrance To The Clerics' Guild",
-    "east": "The Entrance Hall Of The Grunting Boar Inn"
-   },
-   "here": [
-    "A large fountain carved from blue-streaked marble is here, bubbling merrily."
-   ]
-  },
-  "Market Square": {
-   "exits": "n e s w",
-   "links": {
-    "east": "Main Street",
-    "west": "Main Street",
-    "north": "The Temple Square"
-   },
-   "here": [
-    "A janitor is walking around, cleaning up.",
-    "A cityguard stands here.",
-    "A cityguard stands here."
-   ]
-  },
-  "Main Street": {
-   "exits": "n e s w",
-   "links": {
-    "east": "Market Square",
-    "west": "Market Square",
-    "north": "The Bakery"
+    "down": "Cave Entrance",
+    "east": "A Junction In The Sewer Pipes"
    },
    "here": []
   },
-  "Inside The East Gate Of Midgaard": {
-   "exits": "e s w",
+  "The Armory": {
+   "exits": "n",
    "links": {
-    "east": "Outside The East Gate Of Midgaard",
-    "west": "Main Street"
+    "north": "Main Street"
    },
    "here": [
-    "A cityguard is here, guarding the gate.",
-    "A cityguard is here, guarding the gate.",
-    "A cityguard is here, guarding the gate.",
-    "A cityguard is here, guarding the gate.",
-    "A cityguard is here, guarding the gate."
+    "An armorer stands here displaying his new (and previously owned) armors."
+   ],
+   "shop": [
+    "##   Available   Item                                               Cost",
+    "----------------------------------------------------------------------------",
+    "1)  Unlimited   A pair of leather sleeves                            97",
+    "2)  Unlimited   A pair of bronze sleeves                            228",
+    "3)  Unlimited   A pair of leather pants                             195",
+    "4)  Unlimited   A pair of bronze leggings                           456",
+    "5)  Unlimited   A leather cap                                       195",
+    "6)  Unlimited   A bronze helmet                                     456",
+    "7)  Unlimited   A pair of leather gloves                             97",
+    "8)  Unlimited   A pair of bronze gauntlets                          228",
+    "9)  Unlimited   A bronze breast plate                               912",
+    "10)  Unlimited   A scale mail jacket                                1302",
+    "11)  Unlimited   A studded leather jacket                            651",
+    "12)  Unlimited   A leather jacket                                    260",
+    "13)  Unlimited   A shield                                            130",
+    "14)  Unlimited   A chain mail shirt                                  325",
+    "15)  Unlimited   A breast plate                                      234"
    ]
-  },
-  "Outside The East Gate Of Midgaard": {
-   "exits": "e w",
-   "links": {
-    "west": "Inside The East Gate Of Midgaard"
-   },
-   "here": []
   },
   "The Bakery": {
    "exits": "s",
@@ -277,6 +562,562 @@
     "The baker looks at you calmly, wiping flour from his face with one hand."
    ]
   },
+  "Cave Entrance": {
+   "exits": "n u",
+   "links": {
+    "north": "Cave Tunnel",
+    "up": "Under The Dark Pit"
+   },
+   "here": [],
+   "signs": [
+    "writing: The writing says 'BEWARE adventurer!  '"
+   ]
+  },
+  "Cave Tunnel": {
+   "exits": "n s",
+   "links": {
+    "north": "Cave Room",
+    "south": "Cave Entrance"
+   },
+   "here": []
+  },
+  "Cave Room": {
+   "exits": "e s w",
+   "links": {
+    "east": "The Cave T-Cross",
+    "south": "Cave Tunnel"
+   },
+   "here": []
+  },
+  "The Cave T-Cross": {
+   "exits": "e s w",
+   "links": {
+    "east": "The Cave Turning-Point",
+    "south": "The Long Tunnel",
+    "west": "Cave Room"
+   },
+   "here": []
+  },
+  "The Cave Turning-Point": {
+   "exits": "s w",
+   "links": {
+    "south": "The Secret Room"
+   },
+   "here": []
+  },
+  "The Secret Room": {
+   "exits": "n s",
+   "links": {
+    "south": "The Mudhole (2)"
+   },
+   "here": []
+  },
+  "The Mudhole (2)": {
+   "exits": "n w",
+   "links": {
+    "west": "A Tunnel",
+    "north": "The Secret Room (2)"
+   },
+   "here": [],
+   "peeks": {
+    "north": "The Secret Room"
+   }
+  },
+  "A Tunnel": {
+   "exits": "n e s",
+   "links": {
+    "north": "The Long Tunnel",
+    "south": "The Hot Room",
+    "east": "The Mudhole (2)"
+   },
+   "here": []
+  },
+  "The Long Tunnel": {
+   "exits": "n s",
+   "links": {
+    "north": "The Cave T-Cross",
+    "south": "A Tunnel"
+   },
+   "here": []
+  },
+  "The Hot Room": {
+   "exits": "n w",
+   "links": {
+    "west": "The Small Room (2)",
+    "north": "A Tunnel"
+   },
+   "here": []
+  },
+  "The Small Room (2)": {
+   "exits": "e w",
+   "links": {
+    "west": "The Stalagmite Cave",
+    "east": "The Hot Room"
+   },
+   "here": []
+  },
+  "The Stalagmite Cave": {
+   "exits": "n e s",
+   "links": {
+    "north": "The Stalagmite T-Cross",
+    "south": "The Stalagmite Tunnel",
+    "east": "The Small Room (2)"
+   },
+   "here": [],
+   "peeks": {
+    "north": "The Stalagmite T-Cross"
+   }
+  },
+  "The Stalagmite T-Cross": {
+   "exits": "n e s",
+   "links": {
+    "north": "The Square Lair",
+    "east": "The Blind End Room",
+    "south": "The Stalagmite Cave"
+   },
+   "here": []
+  },
+  "The Square Lair": {
+   "exits": "n s w",
+   "links": {
+    "north": "The Square Lair (2)",
+    "south": "The Stalagmite T-Cross",
+    "west": "The Lair End"
+   },
+   "here": [],
+   "peeks": {
+    "south": "The Stalagmite T-Cross"
+   }
+  },
+  "The Square Lair (2)": {
+   "exits": "(e) s w",
+   "links": {
+    "west": "The Square Lair (3)"
+   },
+   "here": [],
+   "signs": [
+    "sign: The sign says 'Gods of War I call you, my sword is by my side, I seek a light free from all false pride' Reyemle Grug..."
+   ]
+  },
+  "The Square Lair (3)": {
+   "exits": "n e s",
+   "links": {
+    "north": "The North Tunnel",
+    "south": "The Lair End"
+   },
+   "here": [
+    "Jones is standing here glaring at you."
+   ],
+   "signs": [
+    "sign: The sign says 'I'm wandering around in a everlasting tale, seeking the light to regain my pride Corama..."
+   ]
+  },
+  "The North Tunnel": {
+   "exits": "n s w",
+   "links": {
+    "north": "The L-Shaped Room",
+    "south": "The Square Lair (3)",
+    "west": "The Entrance To The Lair"
+   },
+   "here": []
+  },
+  "The L-Shaped Room": {
+   "exits": "e s",
+   "links": {
+    "east": "The Circular Hall",
+    "south": "The North Tunnel"
+   },
+   "here": []
+  },
+  "The Circular Hall": {
+   "exits": "(n) (e) (s) w",
+   "links": {
+    "west": "The L-Shaped Room"
+   },
+   "here": [
+    "Herald is standing here looking confused at you."
+   ]
+  },
+  "The Lair End": {
+   "exits": "n e",
+   "links": {
+    "east": "The Square Lair",
+    "north": "The Square Lair (3)"
+   },
+   "here": []
+  },
+  "The Blind End Room": {
+   "exits": "(n) w",
+   "links": {
+    "west": "The Stalagmite T-Cross"
+   },
+   "here": []
+  },
+  "The Stalagmite Tunnel": {
+   "exits": "n w",
+   "links": {
+    "west": "The Spongy Room",
+    "north": "The Stalagmite Cave"
+   },
+   "here": []
+  },
+  "The Spongy Room": {
+   "exits": "e w",
+   "links": {
+    "west": "The Pool",
+    "east": "The Stalagmite Tunnel"
+   },
+   "here": []
+  },
+  "The Pool": {
+   "exits": "n e w",
+   "links": {
+    "east": "The Spongy Room"
+   },
+   "here": []
+  },
+  "The Secret Room (2)": {
+   "exits": "n s",
+   "links": {
+    "north": "The Cave Turning-Point (2)"
+   },
+   "here": []
+  },
+  "The Cave Turning-Point (2)": {
+   "exits": "s w",
+   "links": {
+    "west": "The Cave T-Cross"
+   },
+   "here": []
+  },
+  "The Southwestern Corner Of The Ledge": {
+   "exits": "n e s (d)",
+   "links": {
+    "north": "The Narrow Ledge",
+    "south": "An Odd Intersection"
+   },
+   "here": []
+  },
+  "The Narrow Ledge": {
+   "exits": "n e s",
+   "links": {
+    "south": "The Southwestern Corner Of The Ledge"
+   },
+   "here": [],
+   "peeks": {
+    "east": "Mid-Air"
+   }
+  },
+  "The Entrance To The Lair": {
+   "exits": "n e s",
+   "links": {
+    "north": "A Dark Tunnel",
+    "south": "The North-Eastern Part Of The Basilisk's Cave"
+   },
+   "here": []
+  },
+  "A Dark Tunnel": {
+   "exits": "n s",
+   "links": {
+    "south": "The Entrance To The Lair"
+   },
+   "here": [
+    "The guardian naga looks kindly at you.",
+    "The guardian naga looks kindly at you."
+   ]
+  },
+  "The North-Eastern Part Of The Basilisk's Cave": {
+   "exits": "n s w",
+   "links": {
+    "north": "The Entrance To The Lair"
+   },
+   "here": [
+    "The scaled basilisk crawls towards you slowly."
+   ]
+  },
+  "A Triple Junction": {
+   "exits": "n e w",
+   "links": {
+    "east": "The Junction Going Three Ways",
+    "west": "The Ordinary Junction"
+   },
+   "here": []
+  },
+  "The Junction Going Three Ways": {
+   "exits": "n e w",
+   "links": {
+    "east": "The Junction",
+    "north": "The Sewer Entrance"
+   },
+   "here": []
+  },
+  "The Junction": {
+   "exits": "n e w",
+   "links": {
+    "east": "The Dark Passageway",
+    "north": "The Sewers",
+    "west": "The Junction Going Three Ways"
+   },
+   "here": []
+  },
+  "The Dark Passageway": {
+   "exits": "n e w",
+   "links": {
+    "east": "The Watery Sewer Bend",
+    "west": "The Junction"
+   },
+   "here": []
+  },
+  "The Watery Sewer Bend": {
+   "exits": "n w",
+   "links": {
+    "north": "The Watery Sewer",
+    "west": "The Dark Passageway"
+   },
+   "here": []
+  },
+  "The Watery Sewer": {
+   "exits": "n s",
+   "links": {
+    "north": "The Watery Sewer Junction",
+    "south": "The Watery Sewer Bend"
+   },
+   "here": []
+  },
+  "The Watery Sewer Junction": {
+   "exits": "n e s",
+   "links": {
+    "east": "A Ledge By A Dark Pool",
+    "south": "The Watery Sewer"
+   },
+   "here": []
+  },
+  "A Ledge By A Dark Pool": {
+   "exits": "n w d",
+   "links": {
+    "down": "The Fissure Under The Ledge",
+    "north": "A Ledge By A Dark Pool (2)"
+   },
+   "here": []
+  },
+  "The Fissure Under The Ledge": {
+   "exits": "u d",
+   "links": {
+    "down": "The Edge Of The Water",
+    "up": "A Ledge By A Dark Pool"
+   },
+   "here": []
+  },
+  "The Edge Of The Water": {
+   "exits": "u",
+   "links": {
+    "up": "The Fissure Under The Ledge"
+   },
+   "here": []
+  },
+  "A Ledge By A Dark Pool (2)": {
+   "exits": "s w",
+   "links": {
+    "west": "The Watery Sewer Junction"
+   },
+   "here": []
+  },
+  "The Sewers": {
+   "exits": "s",
+   "links": {
+    "south": "The Junction"
+   },
+   "here": []
+  },
+  "The Sewer Entrance": {
+   "exits": "n s",
+   "links": {
+    "north": "The Shaft"
+   },
+   "here": []
+  },
+  "The Shaft": {
+   "exits": "s d",
+   "links": {
+    "down": "Under The Shaft"
+   },
+   "here": [
+    "The small bat is sleeping here.",
+    "The small bat is sleeping here."
+   ]
+  },
+  "Under The Shaft": {
+   "exits": "w u",
+   "links": {
+    "west": "The Narrow Eastern Ledge"
+   },
+   "here": []
+  },
+  "The Narrow Eastern Ledge": {
+   "exits": "e s w",
+   "links": {
+    "south": "The Southeastern Corner Of The Ledge"
+   },
+   "here": []
+  },
+  "The Southeastern Corner Of The Ledge": {
+   "exits": "n w (d)",
+   "links": {
+    "west": "The Broad Ledge"
+   },
+   "here": []
+  },
+  "The Broad Ledge": {
+   "exits": "n e s w",
+   "links": {
+    "east": "The Southeastern Corner Of The Ledge"
+   },
+   "here": []
+  },
+  "The Ordinary Junction": {
+   "exits": "n e w",
+   "links": {
+    "west": "A Bend In The Sewer Pipe (2)",
+    "north": "The Sewer Junction (3)"
+   },
+   "here": []
+  },
+  "A Bend In The Sewer Pipe (2)": {
+   "exits": "n e",
+   "links": {
+    "north": "The Sewer Junction (2)",
+    "east": "The Ordinary Junction"
+   },
+   "here": []
+  },
+  "The Sewer Junction (2)": {
+   "exits": "n e s w",
+   "links": {
+    "north": "A Muddy Intersection",
+    "south": "A Bend In The Sewer Pipe (2)"
+   },
+   "here": []
+  },
+  "The Sewer Junction (3)": {
+   "exits": "n s w",
+   "links": {
+    "north": "The Ordinary Bend"
+   },
+   "here": []
+  },
+  "The Ordinary Bend": {
+   "exits": "e s",
+   "links": {
+    "east": "A Quiet Pipe Junction"
+   },
+   "here": []
+  },
+  "A Quiet Pipe Junction": {
+   "exits": "n e w",
+   "links": {
+    "north": "The Muddy Sewer Pipe"
+   },
+   "here": []
+  },
+  "The Muddy Sewer Pipe": {
+   "exits": "e s w",
+   "links": {},
+   "here": []
+  },
+  "The Entrance Hall To The Guild Of Thieves": {
+   "exits": "n e",
+   "links": {
+    "north": "The Dark Alley"
+   },
+   "here": [
+    "An automatic teller machine has been installed in the wall here."
+   ]
+  },
+  "Inside The West Gate Of Midgaard": {
+   "exits": "e s (w)",
+   "links": {
+    "east": "Main Street"
+   },
+   "here": [
+    "A cityguard is here, guarding the gate.",
+    "A cityguard is here, guarding the gate.",
+    "A cityguard is here, guarding the gate.",
+    "A cityguard is here, guarding the gate.",
+    "A cityguard is here, guarding the gate."
+   ]
+  },
+  "Behind The Temple Altar": {
+   "exits": "n s",
+   "links": {
+    "north": "The Great Field Of Midgaard"
+   },
+   "here": []
+  },
+  "The Great Field Of Midgaard": {
+   "exits": "n s",
+   "links": {
+    "north": "The Great Field Of Midgaard (2)"
+   },
+   "here": []
+  },
+  "The Great Field Of Midgaard (2)": {
+   "exits": "n e s w",
+   "links": {
+    "east": "The Entrance To The Newbie Zone",
+    "north": "The Great Field Of Midgaard (3)",
+    "west": "The Dirt Path"
+   },
+   "here": []
+  },
+  "The Entrance To The Newbie Zone": {
+   "exits": "n w",
+   "links": {
+    "west": "The Great Field Of Midgaard (2)",
+    "north": "The Beginning Of The Passage"
+   },
+   "here": [
+    "Someone's pet dragon has escaped and left his collar here."
+   ]
+  },
+  "The Great Field Of Midgaard (3)": {
+   "exits": "s",
+   "links": {
+    "south": "The Great Field Of Midgaard (2)"
+   },
+   "here": []
+  },
+  "The Dirt Path": {
+   "exits": "e w",
+   "links": {
+    "west": "The Great Chessboard Of Midgaard"
+   },
+   "here": []
+  },
+  "The Great Chessboard Of Midgaard": {
+   "exits": "e w",
+   "links": {
+    "west": "A White Square"
+   },
+   "here": []
+  },
+  "A White Square": {
+   "exits": "e s w",
+   "links": {
+    "west": "A Black Square",
+    "north": "A Black Square"
+   },
+   "here": [
+    "The Black King stands here."
+   ]
+  },
+  "A Black Square": {
+   "exits": "n e s w",
+   "links": {
+    "west": "A White Square",
+    "north": "A White Square"
+   },
+   "here": []
+  },
   "The Reading Room": {
    "exits": "e",
    "links": {
@@ -286,104 +1127,552 @@
     "A strange device labeled \"teleporter\" was left here.",
     "A large bulletin board is mounted on a wall here.",
     "This saleswoman is laden with gadgets and gizmos that are outrageously priced."
+   ],
+   "signs": [
+    "board: This is a bulletin board.  Usage: READ/REMOVE <messg #>, WRITE <header>. You will need to look at the board to save your message. There are 1 messages on the board. 1  : Mon Jul 13 2026 (Dummy)      :: helloworld"
+   ],
+   "shop": [
+    "##   Available   Item                                               Cost",
+    "----------------------------------------------------------------------------",
+    "1)  Unlimited   The teleporter                                       13"
    ]
   },
-  "The Entrance To The Clerics' Guild": {
-   "exits": "n e",
+  "The Beginning Of The Passage": {
+   "exits": "e s",
    "links": {
-    "east": "The Temple Square"
+    "east": "The Dirty Hallway"
    },
    "here": [
-    "An automatic teller machine has been installed in the wall here.",
-    "A Peacekeeper is standing here, ready to jump in at the first sign of trouble.",
-    "A knight templar is guarding the entrance."
+    "( 2) A bright green newbie vest is lying here looking for a body to hug."
    ]
   },
-  "The Entrance Hall Of The Grunting Boar Inn": {
-   "exits": "n e w u",
+  "The Dirty Hallway": {
+   "exits": "e s w",
    "links": {
-    "east": "The Grunting Boar",
-    "north": "The Post Office"
+    "east": "A Nexus",
+    "south": "A Small Room (2)"
+   },
+   "here": [
+    "A shiny newbie dagger is lying here looking for a back to stab. ..It has a soft glowing aura!",
+    "The corpse of the newbie monster is lying here.",
+    "A creepy little crawling thing is scuttling along the floor at your feet."
+   ]
+  },
+  "A Nexus": {
+   "exits": "(n) (e) s w",
+   "links": {
+    "south": "More Of The Hallway",
+    "west": "The Dirty Hallway",
+    "north": "A Bright Hallway"
+   },
+   "here": [],
+   "peeks": {
+    "north": "The door is closed.",
+    "east": "The door is closed.",
+    "south": "More Of The Hallway",
+    "west": "The Dirty Hallway"
+   }
+  },
+  "More Of The Hallway": {
+   "exits": "n s (w)",
+   "links": {
+    "west": "A Small Room"
+   },
+   "here": [
+    "( 2) A bright green newbie vest is lying here looking for a body to hug.",
+    "The newbie monster stands here looking confused.  Kill him!  Kill him!",
+    "A creepy little crawling thing is scuttling along the floor at your feet."
+   ]
+  },
+  "A Small Room": {
+   "exits": "(n) e (d)",
+   "links": {
+    "north": "The Dirty Hallway (2)"
+   },
+   "here": [
+    "A shiny newbie dagger is lying here looking for a back to stab. ..It has a soft glowing aura!",
+    "The newbie monster stands here looking confused.  Kill him!  Kill him!",
+    "The Newbie Guard is here wondering where that dragon went."
+   ]
+  },
+  "The Dirty Hallway (2)": {
+   "exits": "e s w",
+   "links": {
+    "west": "The Beginning Of The Passage",
+    "east": "A Nexus"
+   },
+   "here": [
+    "A shiny newbie dagger is lying here looking for a back to stab. ..It has a soft glowing aura!",
+    "The newbie monster stands here looking confused.  Kill him!  Kill him!"
+   ]
+  },
+  "A Bright Hallway": {
+   "exits": "n s",
+   "links": {
+    "north": "The Statue's Room"
+   },
+   "here": [
+    "( 2) A shiny newbie dagger is lying here looking for a back to stab. ..It has a soft glowing aura!",
+    "( 6) A bright green newbie vest is lying here looking for a body to hug.",
+    "A bright newbie helm is hoping a loose head will wander by. ..It has a soft glowing aura!",
+    "( 2) Someone's pet dragon has escaped and left his collar here.",
+    "A newbie is here annoying the hell out of you."
+   ],
+   "signs": [
+    "design: It appears to be the Crest of the Harlequin Guild."
+   ]
+  },
+  "The Statue's Room": {
+   "exits": "e s",
+   "links": {
+    "east": "The Hallway"
+   },
+   "here": [
+    "A newbie is here looking terribly confused.",
+    "A funny little imp-like thing (a quasit perhaps?) is sneaking about here."
+   ],
+   "signs": [
+    "plaque: It says: Maynard, Death Jester of the Harlequins"
+   ]
+  },
+  "The Hallway": {
+   "exits": "e w",
+   "links": {
+    "east": "The North Stairs"
    },
    "here": []
   },
-  "The Grunting Boar": {
-   "exits": "w",
+  "The North Stairs": {
+   "exits": "s w u",
    "links": {
-    "west": "The Entrance Hall Of The Grunting Boar Inn"
+    "south": "The South Stairs"
    },
    "here": [
-    "A singing, happy Drunk.",
-    "A singing, happy Drunk.",
-    "A singing, happy Drunk.",
-    "A bartender watches you calmly, while he skillfully mixes a drink."
+    "A shiny newbie dagger is lying here looking for a back to stab. ..It has a soft glowing aura!",
+    "A funny little imp-like thing (a quasit perhaps?) is sneaking about here.",
+    "A newbie is here wandering about aimlessly.",
+    "A creepy little crawling thing is scuttling along the floor at your feet."
    ]
   },
-  "The Post Office": {
-   "exits": "s",
-   "links": {},
+  "The South Stairs": {
+   "exits": "n s w u",
+   "links": {
+    "west": "A Bright Hallway (2)",
+    "south": "A Narrow Passage",
+    "up": "The Balcony"
+   },
    "here": [
-    "The head postmaster is standing here, waiting to help you with your mail."
+    "A shiny newbie dagger is lying here looking for a back to stab. ..It has a soft glowing aura!",
+    "The corpse of the talkative newbie is lying here."
    ]
+  },
+  "A Bright Hallway (2)": {
+   "exits": "e (w)",
+   "links": {
+    "east": "The South Stairs"
+   },
+   "here": [
+    "A newbie is here annoying the hell out of you."
+   ]
+  },
+  "A Narrow Passage": {
+   "exits": "n (s)",
+   "links": {
+    "south": "The Alchemist's Room"
+   },
+   "here": []
+  },
+  "The Alchemist's Room": {
+   "exits": "n (w) d",
+   "links": {
+    "down": "The Entrance"
+   },
+   "here": [
+    "The corpse of the zombiefied newbie is lying here.",
+    "The Newbie Alchemist is here trying to make something."
+   ],
+   "signs": [
+    "sign: The sign next to the stairs says: If you are below level 7 and alone, or below level 4 then bugger off!  Or else don't blame me if you die..."
+   ]
+  },
+  "The Entrance": {
+   "exits": "n s w u",
+   "links": {
+    "south": "A Turn In The Passage",
+    "west": "A Passage",
+    "north": "A Crossing Of Corridors"
+   },
+   "here": [],
+   "peeks": {
+    "up": "The Alchemist's Room"
+   }
+  },
+  "A Turn In The Passage": {
+   "exits": "n e",
+   "links": {
+    "east": "A Branch To The South",
+    "north": "The Entrance"
+   },
+   "here": []
+  },
+  "A Branch To The South": {
+   "exits": "e s w",
+   "links": {
+    "east": "Yet Another Corner",
+    "south": "A Large Room (2)",
+    "west": "A Turn In The Passage"
+   },
+   "here": []
+  },
+  "Yet Another Corner": {
+   "exits": "n w",
+   "links": {
+    "north": "An Intersection Of Passages",
+    "west": "A Branch To The South"
+   },
+   "here": []
+  },
+  "An Intersection Of Passages": {
+   "exits": "n s w",
+   "links": {
+    "north": "A Branching Passage",
+    "west": "Another Corner",
+    "south": "Yet Another Corner"
+   },
+   "here": []
+  },
+  "A Branching Passage": {
+   "exits": "n s w",
+   "links": {
+    "north": "Another Turn",
+    "south": "An Intersection Of Passages",
+    "west": "The Red Room"
+   },
+   "here": [
+    "( 2) A little pile of gold coins is lying here."
+   ]
+  },
+  "Another Turn": {
+   "exits": "s w",
+   "links": {
+    "west": "A Corner In The Hallway",
+    "south": "A Branching Passage"
+   },
+   "here": []
+  },
+  "A Corner In The Hallway": {
+   "exits": "e s",
+   "links": {
+    "south": "A Crossing Of Corridors",
+    "east": "Another Turn"
+   },
+   "here": []
+  },
+  "A Crossing Of Corridors": {
+   "exits": "n e s w",
+   "links": {
+    "south": "The Entrance",
+    "north": "A Corner In The Hallway",
+    "west": "A Long East-West Passage",
+    "east": "A Corner Room"
+   },
+   "here": []
+  },
+  "A Passage": {
+   "exits": "n e s",
+   "links": {
+    "north": "A Large Room",
+    "south": "A Large Room (3)"
+   },
+   "here": [
+    "A funny little imp-like thing (a quasit perhaps?) is sneaking about here."
+   ]
+  },
+  "A Large Room": {
+   "exits": "e s",
+   "links": {
+    "east": "A Long East-West Passage",
+    "south": "A Passage"
+   },
+   "here": [
+    "A funny little imp-like thing (a quasit perhaps?) is sneaking about here."
+   ]
+  },
+  "A Long East-West Passage": {
+   "exits": "e w",
+   "links": {
+    "east": "A Crossing Of Corridors",
+    "west": "A Large Room"
+   },
+   "here": [
+    "The corpse of the quasit is lying here."
+   ]
+  },
+  "Another Corner": {
+   "exits": "n e",
+   "links": {
+    "north": "A T-Intersection In The Passage",
+    "east": "An Intersection Of Passages"
+   },
+   "here": []
+  },
+  "A T-Intersection In The Passage": {
+   "exits": "e s w",
+   "links": {
+    "west": "A Turn In The Passage (2)",
+    "south": "Another Corner",
+    "east": "Another Corner (2)"
+   },
+   "here": [
+    "The corpse of the zombiefied newbie is lying here.",
+    "The corpse of the massive Minotaur is lying here."
+   ]
+  },
+  "A Turn In The Passage (2)": {
+   "exits": "e s",
+   "links": {
+    "south": "The Red Room",
+    "east": "A T-Intersection In The Passage"
+   },
+   "here": []
+  },
+  "The Red Room": {
+   "exits": "n e d",
+   "links": {
+    "north": "A Turn In The Passage (2)",
+    "down": "The Great Field Of Midgaard (2)",
+    "east": "A Branching Passage"
+   },
+   "here": []
+  },
+  "Another Corner (2)": {
+   "exits": "s w",
+   "links": {
+    "west": "A T-Intersection In The Passage"
+   },
+   "here": []
+  },
+  "A Large Room (2)": {
+   "exits": "n w",
+   "links": {
+    "west": "A Large Room (3)",
+    "north": "A Branch To The South"
+   },
+   "here": [],
+   "signs": [
+    "words: The writing appears to say 'beware the Minotaur...  '"
+   ]
+  },
+  "A Large Room (3)": {
+   "exits": "n e",
+   "links": {
+    "north": "A Passage",
+    "east": "A Large Room (2)"
+   },
+   "here": []
+  },
+  "A Small Room (2)": {
+   "exits": "n e (d)",
+   "links": {
+    "down": "The Dark Pit"
+   },
+   "here": [
+    "A shiny newbie dagger is lying here looking for a back to stab. ..It has a soft glowing aura!",
+    "A creepy little crawling thing is scuttling along the floor at your feet.",
+    "The newbie monster stands here looking confused.  Kill him!  Kill him!",
+    "The Newbie Guard is here wondering where that dragon went."
+   ]
+  },
+  "The Dark Pit": {
+   "exits": "u",
+   "links": {
+    "up": "A Small Room (3)"
+   },
+   "here": [
+    "Someone's little pet dragon has gotten loose, and is sniffing about here.",
+    "The big, ugly pit-beast is standing here sizing you up."
+   ],
+   "peeks": {
+    "up": "A Small Room"
+   }
+  },
+  "A Small Room (3)": {
+   "exits": "n e d",
+   "links": {
+    "east": "More Of The Hallway (2)"
+   },
+   "here": [
+    "A shiny newbie dagger is lying here looking for a back to stab. ..It has a soft glowing aura!",
+    "The corpse of the newbie monster is lying here.",
+    "Someone's little pet dragon has gotten loose, and is sniffing about here.",
+    "The Newbie Guard is here wondering where that dragon went."
+   ]
+  },
+  "More Of The Hallway (2)": {
+   "exits": "n s w",
+   "links": {
+    "south": "Another Corner (3)"
+   },
+   "here": [
+    "( 2) A bright green newbie vest is lying here looking for a body to hug.",
+    "The corpse of the newbie monster is lying here."
+   ]
+  },
+  "Another Corner (3)": {
+   "exits": "n (e) w",
+   "links": {
+    "west": "A Brighter Hallway",
+    "east": "The Alchemist's Room (2)"
+   },
+   "here": []
+  },
+  "A Brighter Hallway": {
+   "exits": "e w",
+   "links": {
+    "east": "Another Corner (3)"
+   },
+   "here": []
+  },
+  "The Alchemist's Room (2)": {
+   "exits": "n w d",
+   "links": {
+    "north": "A Narrow Passage (2)"
+   },
+   "here": [
+    "The Newbie Alchemist is here trying to make something."
+   ]
+  },
+  "A Narrow Passage (2)": {
+   "exits": "n s",
+   "links": {
+    "north": "The South Stairs"
+   },
+   "here": []
+  },
+  "The Balcony": {
+   "exits": "n d",
+   "links": {
+    "north": "The Balcony (2)",
+    "down": "The South Stairs"
+   },
+   "here": [
+    "The corpse of the smart newbie is lying here."
+   ]
+  },
+  "The Balcony (2)": {
+   "exits": "s d",
+   "links": {
+    "south": "The Balcony"
+   },
+   "here": [
+    "A creepy little crawling thing is scuttling along the floor at your feet."
+   ]
+  },
+  "A Corner Room": {
+   "exits": "n w",
+   "links": {
+    "north": "Another Corner (2)"
+   },
+   "here": []
   }
  },
  "char": {
-  "max_hp": "21",
+  "max_hp": "97",
   "max_mana": "100",
-  "max_moves": "85",
-  "xp": "436",
-  "gold": "0",
-  "xp_to_next": "1564",
-  "rank": "Dummy the Swordpupil",
-  "level": "1"
+  "max_moves": "98",
+  "xp": "81287",
+  "gold": "768",
+  "xp_to_next": "43713",
+  "rank": "Dummy the Veteran",
+  "level": "7"
  },
  "events": [
-  "Killed The creepy crawler (+34 xp)",
-  "Killed The newbie monster (+153 xp)",
-  "Killed The creepy crawler (+34 xp)",
-  "Killed The newbie monster (+149 xp)",
-  "Killed The creepy crawler (+36 xp)",
-  "Killed The creepy crawler (+34 xp)",
-  "Killed The newbie monster (+154 xp)",
-  "Killed The creepy crawler (+33 xp)",
-  "DIED near The Entrance To The Newbie Zone \u2014 respawned at the temple; corpse (with gear) left behind",
-  "Killed The newbie monster (+308 xp)",
-  "DIED near The Dirty Hallway \u2014 respawned at the temple; corpse (with gear) left behind"
+  "Killed The small bat (+33 xp)",
+  "Killed The small bat (+33 xp)",
+  "Killed The mercenary (+833 xp)",
+  "Killed The mercenary (+843 xp)",
+  "Killed The mercenary (+833 xp)",
+  "Killed The cityguard (+5092 xp)",
+  "LEVEL UP! Now level 7",
+  "Killed The mercenary (+835 xp)",
+  "Killed The mercenary (+833 xp)",
+  "Killed The zombiefied newbie (+533 xp)",
+  "Killed The zombiefied newbie (+538 xp)",
+  "Killed The smart newbie (+833 xp)",
+  "Killed The zombiefied newbie (+533 xp)",
+  "Killed The zombiefied newbie (+538 xp)",
+  "Killed The zombiefied newbie (+533 xp)",
+  "Killed The zombiefied newbie (+533 xp)",
+  "Killed The quasit (+300 xp)",
+  "Killed The newbie monster (+138 xp)",
+  "Killed The newbie monster (+235 xp)",
+  "Killed The annoying newbie (+133 xp)",
+  "Killed The newbie monster (+133 xp)",
+  "Killed The pit beast (+833 xp)",
+  "Killed The zombiefied newbie (+533 xp)",
+  "Killed The smart newbie (+849 xp)",
+  "Killed The talkative newbie (+300 xp)",
+  "Killed The annoying newbie (+133 xp)",
+  "Killed The zombiefied newbie (+540 xp)",
+  "Killed The massive Minotaur (+1668 xp)",
+  "Killed The zombiefied newbie (+533 xp)",
+  "Killed The zombiefied newbie (+540 xp)"
  ],
- "current_room": "The Post Office",
- "carrying": [],
+ "current_room": "A T-Intersection In The Passage",
+ "carrying": [
+  "a dagger",
+  "a bright green newbie vest",
+  "a shiny newbie dagger ..It has a soft glowing aura!",
+  "some cool newbie leggings",
+  "some cool newbie sleeves",
+  "a glowing newbie mace ..It has a soft glowing aura!",
+  "a wee little key",
+  "a small sword",
+  "the teleporter",
+  "a warhammer",
+  "a bright newbie helm ..It has a soft glowing aura!"
+ ],
  "trail": [
-  "west: The Dirty Hallway \u2192 The Beginning Of The Passage",
-  "east: The Beginning Of The Passage \u2192 The Dirty Hallway",
-  "north: The Temple Of Midgaard \u2192 By The Temple Altar",
-  "south: By The Temple Altar \u2192 The Temple Of Midgaard",
-  "west: The Temple Of Midgaard \u2192 The Reading Room",
-  "east: The Reading Room \u2192 The Temple Of Midgaard",
-  "north: The Temple Of Midgaard \u2192 By The Temple Altar",
-  "south: By The Temple Altar \u2192 The Temple Of Midgaard",
-  "south: The Temple Of Midgaard \u2192 The Temple Square",
-  "west: The Temple Square \u2192 The Entrance To The Clerics' Guild",
-  "east: The Entrance To The Clerics' Guild \u2192 The Temple Square",
-  "east: The Temple Square \u2192 The Entrance Hall Of The Grunting Boar Inn",
-  "east: The Entrance Hall Of The Grunting Boar Inn \u2192 The Grunting Boar",
-  "west: The Grunting Boar \u2192 The Entrance Hall Of The Grunting Boar Inn",
-  "north: The Entrance Hall Of The Grunting Boar Inn \u2192 The Post Office"
+  "north: The Alchemist's Room (2) \u2192 A Narrow Passage (2)",
+  "north: A Narrow Passage (2) \u2192 The South Stairs",
+  "up: The South Stairs \u2192 The Balcony",
+  "north: The Balcony \u2192 The Balcony (2)",
+  "south: The Balcony (2) \u2192 The Balcony",
+  "down: The Balcony \u2192 The South Stairs",
+  "west: The South Stairs \u2192 A Bright Hallway (2)",
+  "east: A Bright Hallway (2) \u2192 The South Stairs",
+  "south: The South Stairs \u2192 A Narrow Passage",
+  "south: A Narrow Passage \u2192 The Alchemist's Room",
+  "down: The Alchemist's Room \u2192 The Entrance",
+  "north: The Entrance \u2192 A Crossing Of Corridors",
+  "east: A Crossing Of Corridors \u2192 A Corner Room",
+  "north: A Corner Room \u2192 Another Corner (2)",
+  "west: Another Corner (2) \u2192 A T-Intersection In The Passage"
  ],
  "kills_xp": [
-  34,
-  153,
-  34,
-  149,
-  36,
-  34,
-  154,
-  33,
-  308
+  133,
+  833,
+  533,
+  849,
+  300,
+  133,
+  540,
+  1668,
+  533,
+  540
  ],
- "deaths": 2,
+ "deaths": 0,
  "gold_hist": [
-  0,
-  20,
-  0
- ]
+  409,
+  449,
+  509,
+  59,
+  69,
+  119,
+  148,
+  218,
+  348,
+  768
+ ],
+ "thought": "VICTORY! Defeated the Massive Minotaur at level 7, ending the fight at 83% HP. Goal complete."
 }

@@ -42,6 +42,7 @@ prompt appears**, not for a fixed time, ANSI-stripped, and the pager
 | `persona "<style>"` | Set the play style (risk appetite, exploration style) to apply everywhere. |
 | `find <terms>` | Search all memory: rooms, links, shops, signs, hazards, events, notes, transcript. |
 | `goal "<note>"` | Append a free-form insight/note to player.md (the reflection tool). |
+| `thought "<one line>"` | Voice your current intent (shown live to anyone observing the session). |
 | `memory` | Print both memory files — the quickest way to load them into context. |
 | `log [-n N]` | Tail the raw session transcript. |
 | `stop` | Quit the game and shut the daemon down. |
@@ -79,7 +80,10 @@ shallower, and banks gold; a bold one accepts thinner margins.
 
 1. **Gather information early and cheaply.** `look` at things, `read` every
    sign, `list` in every shop, `consider` before every fight, `inventory`
-   after every change. Each of these costs almost nothing and lands in memory
+   after every change — and run `cmd exits` in each new room: it names every
+   destination without walking there, and the tracker records those names on
+   the map (world.md shows them as `⇢ unvisited`), so you navigate by name
+   instead of blindly. Each of these costs almost nothing and lands in memory
    permanently — the value compounds. An unread sign is a future dead end.
 2. **When blocked, correlate memory before improvising.** Stuck at a locked
    door, a dark passage, a too-strong monster? `find key`, `find lamp`,
@@ -105,11 +109,19 @@ shallower, and banks gold; a bold one accepts thinner margins.
 6. **Manage movement and gold as budgets.** Every step costs moves; getting
    stranded at 0V is a real failure mode. Plan routes with the map instead of
    wandering, keep a reserve for the way back, and spend gold against plan
-   checks, not impulse.
+   checks, not impulse. And remember: **carried gold dies with you** — it goes
+   into your corpse. Bank the surplus at an ATM/bank (`deposit <n>`; your map
+   remembers where — `find atm`) whenever you're holding more than shopping
+   money, and always before entering dangerous territory.
 7. **Reflect at each plan step.** When you `plan done`, spend one moment:
    what did this step teach? Record it with `goal "..."` if the tracker
    couldn't have seen it. If your approach keeps failing, change the persona,
    not just the tactic.
+8. **Narrate your intent.** Whenever your intention changes — new target, new
+   destination, a retreat, a purchase — voice it first in one line:
+   `thought "hunting rats until level 3"`. Like a pilot calling maneuvers,
+   this makes the session observable from outside (a live map watches it);
+   your reasoning otherwise exists nowhere but in your head.
 
 ## Mechanics worth knowing
 
@@ -117,10 +129,18 @@ shallower, and banks gold; a bold one accepts thinner margins.
   movement. Watch H during fights; flee early per your persona.
 - **Combat is asynchronous**: `cmd kill <target>` returns the first round;
   poll `recv --wait 3` to watch rounds until it ends.
+- **While resting, poll `cmd score` every 20–30s** — vitals only update when
+  the game prints a prompt, so this is how you (and anyone observing) see HP
+  climb and know when you're fit to continue.
+- **Kills are auto-looted**: `start` enables the game's `autoloot`/`autogold`
+  toggles, so corpses empty into your inventory. Still check `inventory`
+  after fights and grab floor items — loot funds everything you buy.
 - **Death** drops your corpse (with gear) where you died; you respawn at the
   starting temple. The death is logged as an event and a ⚠ hazard on the room.
 - For the game's command vocabulary (movement, items, shops, communication),
-  read [references/gameplay.md](references/gameplay.md).
+  read [references/gameplay.md](references/gameplay.md). Beyond that, **the
+  game documents itself**: `cmd commands` lists everything, `cmd help <x>`
+  explains it — consult them instead of guessing syntax.
 
 ## Session facts
 

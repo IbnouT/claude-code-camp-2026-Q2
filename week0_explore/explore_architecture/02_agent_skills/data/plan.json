@@ -1,25 +1,35 @@
 {
- "goal": "Defeat the Massive Minotaur in the Newbie Zone",
- "persona": "balanced: probe shallowly before committing, flee at 50% health, gather intel first, experiment cheaply",
+ "goal": "Defeat the Massive Minotaur",
+ "persona": "Efficient grinder: fight anything near my level, avoid trivial kills that waste time, avoid fights I'd likely lose, retreat below 30% HP, always carry a light before going underground.",
  "subtasks": [
   {
-   "text": "Explore Newbie Zone and locate the Massive Minotaur",
-   "check": "item:map",
+   "text": "Scout the city, eat/drink, learn shops and sewers entrance",
+   "check": "item:lamp",
    "done": true
   },
   {
-   "text": "Hunt small creatures to reach level 3",
-   "check": "level>=3",
-   "done": false
+   "text": "Level up to 4-5 hunting the sewers (vermin swarms good XP) with a light source",
+   "check": "level>=4",
+   "done": true
   },
   {
-   "text": "Hunt medium creatures to reach level 5",
-   "check": "level>=5",
-   "done": false
+   "text": "Consider the Massive Minotaur, gear up if needed, then engage",
+   "check": "level>=4",
+   "done": true
   },
   {
-   "text": "Defeat the Massive Minotaur",
-   "check": "level>=6",
+   "text": "Push further to level 7 for a safer margin before engaging the Massive Minotaur",
+   "check": "level>=7",
+   "done": true
+  },
+  {
+   "text": "Search for and locate the Massive Minotaur",
+   "check": "room:Minotaur",
+   "done": true
+  },
+  {
+   "text": "Engage and defeat the Massive Minotaur",
+   "check": "room:Minotaur",
    "done": false
   }
  ]

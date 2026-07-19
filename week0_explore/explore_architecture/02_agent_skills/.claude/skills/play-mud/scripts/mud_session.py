@@ -186,6 +186,10 @@ DEATH_RE = re.compile(r"^You are dead!")
 NOWAY_RE = re.compile(r"Alas, you cannot go that way")
 DARK_RE = re.compile(r"It is pitch black")
 INV_WORDS = {"i", "inv", "inventory"}
+# `exits` command output: "North - The Temple Hallway" (case varies by server)
+PEEK_RE = re.compile(
+    r"^(north|northeast|northwest|south|southeast|southwest|east|west|up|down)"
+    r"\s*-\s*(.+)$", re.IGNORECASE)
 
 
 def read_goals():
@@ -211,6 +215,8 @@ class MemoryTracker:
         self.current_room = None
         self.vitals = None        # (hp, mana, moves) from the latest prompt
         self.carrying = None      # list, as of the last `inventory`
+        self.thought = ""         # the agent's voiced one-line intent
+        self.thought_at = None    # when it was voiced (epoch)
         self.trail = []           # recent moves: "south: A -> B"
         self.kills_xp = []        # xp numbers of recent kills
         self.deaths = 0
@@ -252,6 +258,8 @@ class MemoryTracker:
             # some responses are worth capturing verbatim into memory
             if word in INV_WORDS:
                 self._capture = {"kind": "inventory", "arg": "", "lines": []}
+            elif word == "exits":
+                self._capture = {"kind": "exits", "arg": "", "lines": []}
             elif word == "list":
                 self._capture = {"kind": "shop", "arg": arg, "lines": []}
             elif word in ("read", "examine") and arg:
@@ -381,7 +389,25 @@ class MemoryTracker:
         cap, self._capture = self._capture, None
         if not cap or not cap["lines"]:
             return
-        if cap["kind"] == "inventory":
+        if cap["kind"] == "exits" and self.current_room in self.rooms:
+            # destinations named without walking there -> "peeks" enrich the map
+            room = self.rooms[self.current_room]
+            seen = {}
+            for l in cap["lines"]:
+                m = PEEK_RE.match(l)
+                if m and "Too dark" not in m.group(2):
+                    seen[m.group(1).lower()] = m.group(2).strip()
+            # sanity check: if the game contradicts a walked link, our idea of
+            # "current room" is stale (e.g. session ended mid-fight) -- storing
+            # these would attach another room's exits to this one. Discard.
+            links = room.get("links", {})
+            if any(d in links and links[d] != dest for d, dest in seen.items()):
+                self._event("Position drift detected (exits disagree with the "
+                            "map near %s) — peeks discarded; `look` to resync"
+                            % self.current_room)
+            elif seen:
+                room.setdefault("peeks", {}).update(seen)
+        elif cap["kind"] == "inventory":
             lines = [l for l in cap["lines"]
                      if l not in ("You are carrying:", "Nothing.")]
             self.carrying = [re.sub(r"^\(\s*\d+\)\s*", "", l) for l in lines]
@@ -486,7 +512,9 @@ class MemoryTracker:
                        "current_room": self.current_room,
                        "carrying": self.carrying, "trail": self.trail,
                        "kills_xp": self.kills_xp, "deaths": self.deaths,
-                       "gold_hist": self.gold_hist}, f, indent=1)
+                       "gold_hist": self.gold_hist,
+                       "thought": self.thought,
+                       "thought_at": self.thought_at}, f, indent=1)
         os.replace(tmp, MEM_STATE)
 
     def _signals(self):
@@ -599,6 +627,10 @@ class MemoryTracker:
             lines.append("- Exits: %s" % r["exits"])
             for d, dest in r["links"].items():
                 lines.append("- %s → %s" % (d, dest))
+            for d, dest in r.get("peeks", {}).items():
+                if d not in r["links"]:
+                    lines.append("- %s ⇢ %s (seen via `exits`, not visited)"
+                                 % (d, dest))
             for hz in r.get("hazards", []):
                 lines.append("- ⚠ %s" % hz)
             if r.get("shop"):
@@ -614,7 +646,10 @@ class MemoryTracker:
         lines.append("## Frontier — untried exits (explore these)")
         if frontier:
             for k, u in frontier:
-                lines.append("- %s: %s" % (k, ", ".join(u)))
+                peeks = self.rooms[k].get("peeks", {})
+                parts = [d + (" ⇢ " + peeks[d] if d in peeks else "")
+                         for d in u]
+                lines.append("- %s: %s" % (k, ", ".join(parts)))
         else:
             lines.append("- (none — every known exit has been followed)")
         lines.append("")
@@ -792,7 +827,22 @@ class Mud:
             raise SessionError(
                 "Logged in but never saw the game prompt.\nLast output:\n%s"
                 % self.text[-500:])
-        return self.consume()
+        intro = self.consume()
+        # session hygiene the player shouldn't have to remember: loot kills.
+        # These are toggles, so check the response and re-send if we just
+        # switched an already-on setting off.
+        for tog in ("autoloot", "autogold"):
+            try:
+                self.send_line(tog)
+                self.wait_prompt(5)
+                out = self.consume().lower()
+                if "disabled" in out or "no longer" in out:
+                    self.send_line(tog)   # it was already on; switch it back
+                    self.wait_prompt(5)
+                    self.consume()
+            except Exception:
+                pass
+        return intro
 
     def close(self):
         self.alive = False
@@ -866,6 +916,12 @@ def handle(conn, mud):
             mud._auto_page()
         reply = {"ok": True, "text": mud.consume(), "prompt": mud.last_prompt,
                  "alive": mud.alive}
+    elif op == "thought":
+        mud.tracker.thought = str(req.get("text", ""))[:200]
+        mud.tracker.thought_at = time.time()
+        mud.tracker._dirty = True
+        mud.tracker.flush()
+        reply = {"ok": True}
     elif op == "status":
         reply = {"ok": True, "alive": mud.alive, "host": HOST, "port": PORT,
                  "user": USER, "prompt": mud.last_prompt,
@@ -972,6 +1028,8 @@ def main():
     p.add_argument("words", nargs="*")
     p = sub.add_parser("find", help="search rooms, shops, signs, events, plan")
     p.add_argument("words", nargs="+")
+    p = sub.add_parser("thought", help="voice your current one-line intent")
+    p.add_argument("words", nargs="+", help='e.g.: thought "hunting rats until level 3"')
     args = ap.parse_args()
 
     if args.op == "start":
@@ -1119,6 +1177,13 @@ def main():
             print("Persona set: %s" % plan["persona"])
         else:
             print(plan.get("persona") or "(no persona set)")
+
+    elif args.op == "thought":
+        r = rpc({"op": "thought", "text": " ".join(args.words)})
+        if not r.get("ok"):
+            sys.exit("thought not recorded: %s (restart the session to pick "
+                     "up new code)" % r.get("error"))
+        print("thought: %s" % " ".join(args.words))
 
     elif args.op == "find":
         term = " ".join(args.words).lower()
