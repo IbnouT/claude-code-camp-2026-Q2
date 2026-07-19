@@ -32,6 +32,7 @@ We also test everything on a small model (Haiku), because the agent will need lo
 - We extended the skill so the model can set a persona for how it plays, write a plan whose conditions the script can verify, and get signals computed from its own play, like experience per kill. The verified plan worked, the model stopped at a danger it would earlier have walked into. The persona and the signals did not, the model set the persona itself and never followed it, and never read a signal before making a decision.
 - When leveling up required a long run of repetitive fighting, the model launched a background subagent by itself to do the grinding. Cost also grew with every fight, since each combat round is a model call.
 - Full detail in [explore_architectures.md](../explore_architectures.md)
+- A live viewer built over the session's files (map, vitals, activity) exposed gaps faster than reading the files, and several skill improvements came from watching. Details in [explore_architectures.md](../explore_architectures.md).
 
 ## Technical Conclusions
 
@@ -40,6 +41,7 @@ We also test everything on a small model (Haiku), because the agent will need lo
 - The markdown hypothesis held. World state needs identity and structure, plain files cannot carry it.
 - New uncertainties set aside for weeks 1 and 2: whether putting the plan, persona, and signals directly into every model call fixes attention, whether consequences like a death and what it cost should be linked in the state or raised by the loop, and whether repetition can run as code with the model called only at decision points.
 - Subagents and workflow platforms were skipped, one character on one connection gives them nothing to improve.
+- Watching the agent found what to fix at no token cost, since all state was already on disk. The custom loop should keep its state on disk for the same reason.
 
 ## Key Takeaway
 

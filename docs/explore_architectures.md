@@ -72,3 +72,28 @@ Skills work well. Everything we moved into the script, connection, login, memory
 So the limit of this level is attention, not knowledge. We cannot make the model read the right data at the right moment from inside a skill, and we cannot see or change the harness loop that decides what the model gets. We need our own loop: inject the state into every call, verify goals in code, link consequences to causes, and run repetition as code.
 
 We skip the subagent and workflow platform levels. One character on one connection gives nothing to parallelize, and they do not give us the loop either. Next we build the loop.
+
+
+## 3. Watching the agent play
+
+We built a live viewer (week0_explore/visualizer) for the play sessions of the level 2 skill: the agent's memory drawn as a map that grows during play, plus vitals, plan state, and current activity. It only reads files the skill's session already writes, so it costs no tokens and the agent is not aware of it.
+
+### Technical Observations
+
+All the data the viewer needs was already on disk: the memory store, the plan file, the session transcript. What the agent is doing (fighting, resting, shopping) is derived from the transcript.
+
+Watching the play exposed gaps faster than reading the files, and each one became a skill improvement. The agent walked into rooms knowing nothing about them, so the skill now records the destinations the exits command names without walking there. It left corpses unlooted and carried gold into dangerous areas, so it gained autoloot and a banking rule. Combat reflexes moved to game settings, the game runs fight rounds itself, so the model only decides to engage, continue, flee, or rest, and a fight costs two or three model calls instead of one per round.
+
+The viewer hit the room identity problem again: rooms sharing a name collided on the map. Titles cannot identify rooms, so the viewer resolves identity from the server's own world files, localizing the agent on the real map by replaying its session. The playing agent keeps only its discovered knowledge.
+
+We first asked the model to write a one-line intent for the viewer. It forgot, like it forgot the persona. Reading its narration from the session log worked instead.
+
+Given the one fact it could not find, the minotaur's location, the agent completed the challenge at level seven with zero deaths.
+
+### Technical Conclusions
+
+Watching the agent is how we found what to fix, and it cost nothing because all state lives on disk. The custom loop should keep its state on disk for the same reason.
+
+Derive state from what the agent produces, do not depend on it reporting. True for memory, true for intent.
+
+The last blocker was knowledge. One supplied fact completed the challenge, so on a private world the loop's exploration and memory must be able to produce such facts.
