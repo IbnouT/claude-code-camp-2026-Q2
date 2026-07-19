@@ -33,7 +33,8 @@ The game is then live on `telnet localhost 4000`.
 ## Structure
 
 - `week0_explore/` — MUD infrastructure, exploration notes, architecture
-  experiments, the play-mud skill
+  experiments, the play-mud skill, and a realtime viewer for watching the
+  agent play (`visualizer/`)
 - `week1_baseline/` — first working agent (week 1)
 - `week2_capable/` — the capable agent (week 2)
 - `docs/` — technical documentation and the weekly journal

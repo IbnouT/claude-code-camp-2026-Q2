@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+/* Design tokens — dark mission-control theme.
+   Values are the validated dark-mode palette from the dataviz reference:
+   surfaces/ink/status used unchanged, by role. */
+:root {
+  color-scheme: dark;
+  --plane: #0d0d0d;
+  --surface: #1a1a19;
+  --surface-2: #222220;
+  --ink: #ffffff;
+  --ink-2: #c3c2b7;
+  --ink-3: #898781;
+  --grid: #2c2c2a;
+  --hairline: rgba(255, 255, 255, 0.1);
+  --accent: #3987e5;      /* agent / current room / mana  (series blue, dark) */
+  --aqua: #199e70;        /* moves */
+  --gold: #c98500;        /* gold  (series yellow, dark) */
+  --good: #0ca30c;
+  --warning: #fab219;
+  --serious: #ec835a;
+  --critical: #d03b3b;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  background: var(--plane);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  overflow: hidden;
+}
+
+/* dotted grid backdrop for the map plane */
+.map-plane {
+  background-image: radial-gradient(var(--grid) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.6); opacity: 0.45; }
+}
+.agent-dot { animation: pulse-dot 1.6s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.8; }
+}
+.frontier-stub { animation: breathe 2.6s ease-in-out infinite; }
+
+@keyframes draw-in {
+  from { stroke-dashoffset: var(--len, 200); }
+  to { stroke-dashoffset: 0; }
+}
+.link-draw {
+  stroke-dasharray: var(--len, 200);
+  animation: draw-in 0.55s ease-out forwards;
+}
+
+@keyframes hb {
+  0% { box-shadow: 0 0 0 0 rgba(57, 135, 229, 0.55); }
+  100% { box-shadow: 0 0 0 9px rgba(57, 135, 229, 0); }
+}
+.heartbeat-live { animation: hb 1s ease-out infinite; }
+
+@keyframes caret-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+.thought-caret { animation: caret-blink 1.1s step-end infinite; }
+
+.bar-fill { transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.4s; }
+
+.room-glow { filter: drop-shadow(0 0 7px rgba(57, 135, 229, 0.75)); }
+.hazard-glow { filter: drop-shadow(0 0 5px rgba(250, 178, 25, 0.5)); }
+.death-glow { filter: drop-shadow(0 0 6px rgba(208, 59, 59, 0.6)); }
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-thumb { background: var(--grid); border-radius: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
