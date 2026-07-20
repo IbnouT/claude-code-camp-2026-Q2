@@ -9,8 +9,8 @@
     "west": "The Eastern End Of Poor Alley"
    },
    "here": [
-    "A tiny pile of gold coins is lying here.",
-    "A rather dubious looking piece of meat is on the ground here."
+    "A rather dubious looking piece of meat is on the ground here.",
+    "A janitor is walking around, cleaning up."
    ],
    "peeks": {
     "north": "Market Square",
@@ -38,14 +38,12 @@
   "Main Street": {
    "exits": "n e s w",
    "links": {
-    "north": "The Bakery",
+    "north": "The General Store",
     "west": "Market Square",
-    "east": "Market Square",
-    "south": "The Armory"
+    "east": "Inside The East Gate Of Midgaard (2)",
+    "south": "The Entrance Hall To The Guild Of Swordsmen"
    },
-   "here": [
-    "A Peacekeeper is standing here, ready to jump in at the first sign of trouble."
-   ],
+   "here": [],
    "peeks": {
     "north": "The General Store",
     "east": "Main Street",
@@ -89,11 +87,14 @@
     "south": "The Entrance Hall To The Guild Of Thieves"
    },
    "here": [
-    "( 3) The corpse of the mercenary is lying here.",
-    "The corpse of the cityguard is lying here.",
-    "A little pile of gold coins is lying here.",
-    "A small sword lies here.",
-    "A Peacekeeper is standing here, ready to jump in at the first sign of trouble."
+    "A long sword has been left here.",
+    "( 3) A small sword lies here.",
+    "A janitor is walking around, cleaning up.",
+    "A janitor is walking around, cleaning up.",
+    "A mercenary is waiting for a job here.",
+    "A mercenary is waiting for a job here.",
+    "A mercenary is waiting for a job here.",
+    "A mercenary is waiting for a job here."
    ],
    "peeks": {
     "east": "The Dark Alley At The Levee",
@@ -105,22 +106,33 @@
    "exits": "e s w",
    "links": {
     "south": "The Levee",
-    "west": "The Dark Alley"
+    "west": "The Dark Alley",
+    "east": "The Eastern End Of The Alley"
    },
-   "here": []
+   "here": [
+    "A Peacekeeper is standing here, ready to jump in at the first sign of trouble."
+   ]
   },
   "The Levee": {
    "exits": "n s",
    "links": {
-    "north": "The Dark Alley At The Levee"
+    "north": "The Dark Alley At The Levee",
+    "south": "On The River"
    },
    "here": [
+    "The corpse of the Peacekeeper is lying here.",
     "A retired captain stands here, selling boats."
    ],
    "peeks": {
     "north": "The Dark Alley At The Levee",
     "south": "On The River"
-   }
+   },
+   "shop": [
+    "##   Available   Item                                               Cost",
+    "----------------------------------------------------------------------------",
+    "1)  Unlimited   A canoe                                            1302",
+    "2)  Unlimited   A raft                                              521"
+   ]
   },
   "The Dump": {
    "exits": "n d",
@@ -170,10 +182,7 @@
     "east": "The Eastern End Of Poor Alley"
    },
    "here": [
-    "A tiny pile of gold coins is lying here.",
     "A rather dubious looking piece of meat is on the ground here.",
-    "A Peacekeeper is standing here, ready to jump in at the first sign of trouble.",
-    "A Peacekeeper is standing here, ready to jump in at the first sign of trouble.",
     "A beggar is here, asking for a few coins."
    ],
    "peeks": {
@@ -188,10 +197,7 @@
     "east": "Poor Alley",
     "north": "Wall Road (2)"
    },
-   "here": [
-    "A tiny pile of gold coins is lying here.",
-    "The Mayor is standing here."
-   ],
+   "here": [],
    "signs": [
     "letters: It says 'Who watches the watchmen?  '"
    ]
@@ -199,12 +205,10 @@
   "Wall Road (2)": {
    "exits": "n s",
    "links": {
-    "south": "On The Bridge",
-    "north": "Inside The West Gate Of Midgaard"
+    "south": "Wall Road",
+    "north": "Wall Road"
    },
-   "here": [
-    "A cityguard stands here."
-   ]
+   "here": []
   },
   "On The Bridge": {
    "exits": "n s",
@@ -222,14 +226,17 @@
     "north": "The Temple Of Midgaard"
    },
    "here": [
-    "A large fountain carved from blue-streaked marble is here, bubbling merrily."
+    "A large fountain carved from blue-streaked marble is here, bubbling merrily.",
+    "A Peacekeeper is standing here, ready to jump in at the first sign of trouble."
    ]
   },
   "The Entrance Hall Of The Grunting Boar Inn": {
    "exits": "n e w u",
    "links": {
     "east": "The Grunting Boar",
-    "west": "The Temple Square"
+    "west": "The Temple Square",
+    "north": "The Post Office",
+    "up": "The Reception"
    },
    "here": []
   },
@@ -239,7 +246,6 @@
     "west": "The Entrance Hall Of The Grunting Boar Inn"
    },
    "here": [
-    "A janitor is walking around, cleaning up.",
     "A singing, happy Drunk.",
     "A singing, happy Drunk.",
     "A singing, happy Drunk.",
@@ -473,7 +479,8 @@
     "west": "The Reading Room"
    },
    "here": [
-    "An automatic teller machine has been installed in the wall here."
+    "An automatic teller machine has been installed in the wall here.",
+    "Admin the Implementress is standing here."
    ]
   },
   "By The Temple Altar": {
@@ -531,26 +538,40 @@
     "north": "Main Street"
    },
    "here": [
+    "A small sword lies here.",
+    "A long sword has been left here.",
+    "A shiny newbie dagger is lying here looking for a back to stab. ..It has a soft glowing aura!",
+    "A pair of leather gloves is lying on the ground.",
+    "A pair of leather sleeves is lying on the ground.",
     "An armorer stands here displaying his new (and previously owned) armors."
    ],
    "shop": [
     "##   Available   Item                                               Cost",
     "----------------------------------------------------------------------------",
-    "1)  Unlimited   A pair of leather sleeves                            97",
-    "2)  Unlimited   A pair of bronze sleeves                            228",
-    "3)  Unlimited   A pair of leather pants                             195",
-    "4)  Unlimited   A pair of bronze leggings                           456",
-    "5)  Unlimited   A leather cap                                       195",
-    "6)  Unlimited   A bronze helmet                                     456",
-    "7)  Unlimited   A pair of leather gloves                             97",
-    "8)  Unlimited   A pair of bronze gauntlets                          228",
-    "9)  Unlimited   A bronze breast plate                               912",
-    "10)  Unlimited   A scale mail jacket                                1302",
-    "11)  Unlimited   A studded leather jacket                            651",
-    "12)  Unlimited   A leather jacket                                    260",
-    "13)  Unlimited   A shield                                            130",
-    "14)  Unlimited   A chain mail shirt                                  325",
-    "15)  Unlimited   A breast plate                                      234"
+    "1)          1   A large round shield                                390",
+    "2)          1   A bright newbie helm                                  1",
+    "3)          2   Some cool newbie sleeves                            521",
+    "4)          2   Some cool newbie leggings                           260",
+    "5)          2   A bright green newbie vest                            1",
+    "6)  Unlimited   A pair of leather sleeves                            97",
+    "7)  Unlimited   A pair of bronze sleeves                            228",
+    "8)  Unlimited   A pair of leather pants                             195",
+    "9)  Unlimited   A pair of bronze leggings                           456",
+    "10)  Unlimited   A leather cap                                       195",
+    "11)  Unlimited   A bronze helmet                                     456",
+    "12)  Unlimited   A pair of leather gloves                             97",
+    "13)  Unlimited   A pair of bronze gauntlets                          228",
+    "14)  Unlimited   A bronze breast plate                               912",
+    "15)  Unlimited   A scale mail jacket                                1302",
+    "16)  Unlimited   A studded leather jacket                            651",
+    "17)  Unlimited   A leather jacket                                    260",
+    "18)  Unlimited   A shield                                            130",
+    "[ Return to continue, (q)uit, (r)efresh, (b)ack, or page number (1/2) ] 19)  Unlimited   A chain mail shirt                                  325",
+    "20)  Unlimited   A breast plate                                      234"
+   ],
+   "signs": [
+    "mace: You see nothing special.. ..It has a soft glowing aura!",
+    "flail: You see nothing special.."
    ]
   },
   "The Bakery": {
@@ -559,7 +580,15 @@
     "south": "Main Street"
    },
    "here": [
+    "( 3) A small sword lies here.",
     "The baker looks at you calmly, wiping flour from his face with one hand."
+   ],
+   "shop": [
+    "##   Available   Item                                               Cost",
+    "----------------------------------------------------------------------------",
+    "1)  Unlimited   A danish pastry                                       7",
+    "2)  Unlimited   A bread                                              15",
+    "3)  Unlimited   A waybread                                           76"
    ]
   },
   "Cave Entrance": {
@@ -1030,13 +1059,15 @@
     "north": "The Dark Alley"
    },
    "here": [
+    "A small sword lies here.",
     "An automatic teller machine has been installed in the wall here."
    ]
   },
   "Inside The West Gate Of Midgaard": {
    "exits": "e s (w)",
    "links": {
-    "east": "Main Street"
+    "east": "Main Street",
+    "south": "Wall Road (2)"
    },
    "here": [
     "A cityguard is here, guarding the gate.",
@@ -1049,14 +1080,16 @@
   "Behind The Temple Altar": {
    "exits": "n s",
    "links": {
-    "north": "The Great Field Of Midgaard"
+    "north": "The Great Field Of Midgaard",
+    "south": "By The Temple Altar"
    },
    "here": []
   },
   "The Great Field Of Midgaard": {
    "exits": "n s",
    "links": {
-    "north": "The Great Field Of Midgaard (2)"
+    "north": "The Great Field Of Midgaard (2)",
+    "south": "Behind The Temple Altar"
    },
    "here": []
   },
@@ -1065,7 +1098,8 @@
    "links": {
     "east": "The Entrance To The Newbie Zone",
     "north": "The Great Field Of Midgaard (3)",
-    "west": "The Dirt Path"
+    "west": "The Dirt Path",
+    "south": "The Great Field Of Midgaard"
    },
    "here": []
   },
@@ -1098,23 +1132,30 @@
    "links": {
     "west": "A White Square"
    },
-   "here": []
+   "here": [],
+   "hazards": [
+    "darkness through east (bring a light source)"
+   ]
   },
   "A White Square": {
-   "exits": "e s w",
+   "exits": "e s",
    "links": {
     "west": "A Black Square",
-    "north": "A Black Square"
+    "north": "A Black Square",
+    "east": "A Black Square (2)",
+    "south": "A Black Square"
    },
    "here": [
-    "The Black King stands here."
+    "The corpse of the Black Rook is lying here."
    ]
   },
   "A Black Square": {
-   "exits": "n e s w",
+   "exits": "n e s",
    "links": {
     "west": "A White Square",
-    "north": "A White Square"
+    "north": "A White Square",
+    "east": "A White Square (3)",
+    "south": "A White Square (4)"
    },
    "here": []
   },
@@ -1574,105 +1615,1145 @@
     "north": "Another Corner (2)"
    },
    "here": []
+  },
+  "On The River": {
+   "exits": "n e w",
+   "links": {
+    "west": "On The River (2)",
+    "north": "The Levee"
+   },
+   "here": []
+  },
+  "On The River (2)": {
+   "exits": "e w",
+   "links": {
+    "east": "On The River",
+    "west": "Under The Bridge"
+   },
+   "here": []
+  },
+  "The Entrance Hall To The Guild Of Swordsmen": {
+   "exits": "n e",
+   "links": {
+    "east": "The Bar Of Swordsmen",
+    "north": "Main Street"
+   },
+   "here": [
+    "An automatic teller machine has been installed in the wall here.",
+    "A janitor is walking around, cleaning up.",
+    "A knight is guarding the entrance."
+   ]
+  },
+  "The Bar Of Swordsmen": {
+   "exits": "s w",
+   "links": {
+    "south": "The Tournament And Practice Yard",
+    "west": "The Entrance Hall To The Guild Of Swordsmen"
+   },
+   "here": [
+    "A large, sociable bulletin board is mounted on a wall here.",
+    "A waiter is here."
+   ]
+  },
+  "The Tournament And Practice Yard": {
+   "exits": "n d",
+   "links": {
+    "down": "The Sewers",
+    "north": "The Bar Of Swordsmen"
+   },
+   "here": []
+  },
+  "Inside The East Gate Of Midgaard": {
+   "exits": "e s w",
+   "links": {
+    "west": "Main Street"
+   },
+   "here": [
+    "A cityguard is here, guarding the gate.",
+    "A cityguard is here, guarding the gate.",
+    "A cityguard is here, guarding the gate.",
+    "A cityguard is here, guarding the gate.",
+    "A cityguard is here, guarding the gate."
+   ]
+  },
+  "The Weapon Shop": {
+   "exits": "s",
+   "links": {
+    "south": "Main Street"
+   },
+   "here": [
+    "A shiny newbie dagger is lying here looking for a back to stab. ..It has a soft glowing aura!",
+    "A weaponsmith is standing here."
+   ],
+   "shop": [
+    "##   Available   Item                                               Cost",
+    "----------------------------------------------------------------------------",
+    "1)  Unlimited   A flail                                             882",
+    "2)  Unlimited   A warhammer                                          70",
+    "3)  Unlimited   A wooden club                                        16",
+    "4)  Unlimited   A long sword                                        846",
+    "5)  Unlimited   A small sword                                        84",
+    "6)  Unlimited   A dagger                                             14"
+   ]
+  },
+  "Under The Bridge": {
+   "exits": "e w",
+   "links": {
+    "west": "On The Swift Flowing River"
+   },
+   "here": []
+  },
+  "On The Swift Flowing River": {
+   "exits": "e w",
+   "links": {
+    "west": "The Riverbank"
+   },
+   "here": []
+  },
+  "The Riverbank": {
+   "exits": "n e w",
+   "links": {
+    "north": "On The River Bank In The Deep, Dark Forest",
+    "west": "The Twisty Part Of The River"
+   },
+   "here": []
+  },
+  "On The River Bank In The Deep, Dark Forest": {
+   "exits": "n s w",
+   "links": {
+    "north": "A Small Path In The Deep, Dark Forest"
+   },
+   "here": [
+    "A large, gray wolf is here, glaring hungrily at you."
+   ]
+  },
+  "A Small Path In The Deep, Dark Forest": {
+   "exits": "n s",
+   "links": {
+    "north": "A Small Path In The Deep, Dark Forest (2)"
+   },
+   "here": [
+    "A large toadstool grows nearby.",
+    "A vicious warg is here, snarling angrily at you."
+   ]
+  },
+  "A Small Path In The Deep, Dark Forest (2)": {
+   "exits": "s w",
+   "links": {
+    "west": "A Junction In The Deep, Dark Forest"
+   },
+   "here": []
+  },
+  "A Junction In The Deep, Dark Forest": {
+   "exits": "n e w",
+   "links": {
+    "west": "A Small Path In The Deep, Dark Forest (3)"
+   },
+   "here": []
+  },
+  "A Small Path In The Deep, Dark Forest (3)": {
+   "exits": "e s",
+   "links": {
+    "south": "A Junction On The River Bank In The Deep, Dark Forest"
+   },
+   "here": [
+    "A large toadstool grows nearby."
+   ]
+  },
+  "A Small Path In The Deep, Dark Forest (4)": {
+   "exits": "n w",
+   "links": {
+    "west": "A Junction In The Deep, Dark Forest"
+   },
+   "here": []
+  },
+  "A Junction On The River Bank In The Deep, Dark Forest": {
+   "exits": "n e w",
+   "links": {
+    "west": "A Small Path On The River Bank In The Deep, Dark Forest"
+   },
+   "here": []
+  },
+  "A Small Path On The River Bank In The Deep, Dark Forest": {
+   "exits": "n e",
+   "links": {
+    "north": "A Narrow Trail Through The Deep, Dark Forest"
+   },
+   "here": [
+    "A long, gray branch rests heavily on the ground."
+   ]
+  },
+  "A Narrow Trail Through The Deep, Dark Forest": {
+   "exits": "n s w",
+   "links": {
+    "west": "A Narrow Trail Through The Deep, Dark Forest (2)"
+   },
+   "here": []
+  },
+  "A Narrow Trail Through The Deep, Dark Forest (2)": {
+   "exits": "e w",
+   "links": {
+    "west": "A Dusty Trail In The Deep, Dark Forest"
+   },
+   "here": []
+  },
+  "A Dusty Trail In The Deep, Dark Forest": {
+   "exits": "n e",
+   "links": {
+    "north": "A Dusty Trail In The Deep, Dark Forest (2)"
+   },
+   "here": []
+  },
+  "A Dusty Trail In The Deep, Dark Forest (2)": {
+   "exits": "e s w",
+   "links": {
+    "east": "Outside A Cave In The Deep, Dark Forest",
+    "west": "At The End Of The Trail Through The Deep, Dark Forest"
+   },
+   "here": [
+    "The corpse of the ferocious warg is lying here."
+   ]
+  },
+  "Outside A Cave In The Deep, Dark Forest": {
+   "exits": "n w",
+   "links": {
+    "north": "The Cave Of The Green Dragon",
+    "west": "A Dusty Trail In The Deep, Dark Forest (2)"
+   },
+   "here": []
+  },
+  "The Cave Of The Green Dragon": {
+   "exits": "s",
+   "links": {
+    "south": "Outside A Cave In The Deep, Dark Forest"
+   },
+   "here": [
+    "A large round shield has been left here."
+   ]
+  },
+  "At The End Of The Trail Through The Deep, Dark Forest": {
+   "exits": "n e",
+   "links": {
+    "north": "On The Narrow Trail"
+   },
+   "here": []
+  },
+  "On The Narrow Trail": {
+   "exits": "n s",
+   "links": {
+    "north": "In The Forest"
+   },
+   "here": [
+    "A large, black wolf is here, glaring hungrily at you."
+   ]
+  },
+  "In The Forest": {
+   "exits": "e s w",
+   "links": {
+    "east": "In The Forest (2)"
+   },
+   "here": []
+  },
+  "In The Forest (2)": {
+   "exits": "e w",
+   "links": {},
+   "here": []
+  },
+  "The Twisty Part Of The River": {
+   "exits": "e s",
+   "links": {
+    "south": "The Scenic Route"
+   },
+   "here": []
+  },
+  "The Scenic Route": {
+   "exits": "e w",
+   "links": {
+    "west": "The Swift River Delta"
+   },
+   "here": []
+  },
+  "The Swift River Delta": {
+   "exits": "n e s w",
+   "links": {
+    "west": "Near The Rocks",
+    "north": "The North Channel"
+   },
+   "here": []
+  },
+  "Near The Rocks": {
+   "exits": "e s",
+   "links": {
+    "south": "The South River Delta"
+   },
+   "here": []
+  },
+  "The South River Delta": {
+   "exits": "n e s w",
+   "links": {
+    "south": "The Pier",
+    "east": "The Swift River Delta"
+   },
+   "here": []
+  },
+  "The Pier": {
+   "exits": "n w",
+   "links": {
+    "west": "Mired In Seaweed",
+    "north": "The South River Delta"
+   },
+   "here": [],
+   "peeks": {
+    "north": "The South River Delta",
+    "west": "Mired In Seaweed"
+   }
+  },
+  "Mired In Seaweed": {
+   "exits": "n e w",
+   "links": {
+    "west": "The Last Stop",
+    "east": "The Pier"
+   },
+   "here": [
+    "( 2) The corpse of the sea hag is lying here."
+   ]
+  },
+  "The Last Stop": {
+   "exits": "n e",
+   "links": {
+    "north": "The Beach Head",
+    "east": "Mired In Seaweed"
+   },
+   "here": [],
+   "peeks": {
+    "north": "The Beach Head",
+    "east": "Mired In Seaweed"
+   }
+  },
+  "The Beach Head": {
+   "exits": "s",
+   "links": {
+    "south": "The Last Stop"
+   },
+   "here": [
+    "A pair of boots sit here in a puddle of water.",
+    "A crusty looking crab is crawling around here searching for food.",
+    "A crusty looking crab is crawling around here searching for food.",
+    "A crusty looking crab is crawling around here searching for food."
+   ]
+  },
+  "The North Channel": {
+   "exits": "n s w",
+   "links": {
+    "north": "The North Channel (2)"
+   },
+   "here": []
+  },
+  "The North Channel (2)": {
+   "exits": "e s w",
+   "links": {
+    "west": "Near The Isle"
+   },
+   "here": []
+  },
+  "Near The Isle": {
+   "exits": "e s",
+   "links": {
+    "south": "The Lane Of The Lying"
+   },
+   "here": []
+  },
+  "The Lane Of The Lying": {
+   "exits": "n s",
+   "links": {
+    "south": "The First Trial Of Minos"
+   },
+   "here": [],
+   "signs": [
+    "sign: A sign beside the dark cave opening reads: WARNING! Only fools and dead people pass this way. The tests of Minos, our glorious ruler, await."
+   ]
+  },
+  "The First Trial Of Minos": {
+   "exits": "e",
+   "links": {
+    "east": "The Second Trial Of Minos"
+   },
+   "here": []
+  },
+  "The Second Trial Of Minos": {
+   "exits": "s",
+   "links": {
+    "south": "The Third Trial Of Minos"
+   },
+   "here": [
+    "A little pile of gold coins is lying here.",
+    "A dark minotaur shield has been left here.",
+    "The greatest swordsman in the land is standing here with a sneer on his face.",
+    "The greatest swordsman in the land is standing here with a sneer on his face."
+   ]
+  },
+  "The Third Trial Of Minos": {
+   "exits": "e",
+   "links": {
+    "east": "The Fourth Trial Of Minos"
+   },
+   "here": [
+    "The Mummy of Rabscuttle wanders here, hands aloft, walking towards you."
+   ]
+  },
+  "The Fourth Trial Of Minos": {
+   "exits": "s",
+   "links": {
+    "south": "The Fifth Trial Of Minos"
+   },
+   "here": [
+    "A giant lizard is here."
+   ]
+  },
+  "The Fifth Trial Of Minos": {
+   "exits": "e",
+   "links": {},
+   "here": [
+    "General Woundwort, the dark demon of Minos, awaits to maul you to shreds."
+   ]
+  },
+  "Inside The West Gate Of Midgaard (2)": {
+   "exits": "e s w",
+   "links": {
+    "east": "Main Street"
+   },
+   "here": [
+    "A cityguard stands here.",
+    "A cityguard is here, guarding the gate.",
+    "A cityguard is here, guarding the gate.",
+    "A cityguard is here, guarding the gate.",
+    "A cityguard is here, guarding the gate.",
+    "A cityguard is here, guarding the gate."
+   ]
+  },
+  "The Magic Shop": {
+   "exits": "s",
+   "links": {
+    "south": "Main Street"
+   },
+   "here": [
+    "A wizard walks around behind the counter, talking to himself."
+   ],
+   "shop": [
+    "##   Available   Item                                               Cost",
+    "----------------------------------------------------------------------------",
+    "1)  Unlimited   A gnarled staff                                     874",
+    "2)  Unlimited   A gray wand of invisibility                         499",
+    "3)  Unlimited   A scroll of recall                                  249",
+    "4)  Unlimited   A yellow potion of see invisible                    499",
+    "5)  Unlimited   A scroll of identify                               6242"
+   ]
+  },
+  "The Eastern End Of The Alley": {
+   "exits": "s w",
+   "links": {
+    "west": "The Dark Alley At The Levee",
+    "south": "The Deserted Warehouse"
+   },
+   "here": [],
+   "signs": [
+    "breast plate: You see nothing special.."
+   ]
+  },
+  "Outside The East Gate Of Midgaard": {
+   "exits": "e w",
+   "links": {},
+   "here": []
+  },
+  "The Entrance To The Mages' Guild": {
+   "exits": "n s",
+   "links": {
+    "north": "Main Street"
+   },
+   "here": [
+    "An automatic teller machine has been installed in the wall here.",
+    "A sorcerer is guarding the entrance."
+   ]
+  },
+  "The Post Office": {
+   "exits": "s",
+   "links": {
+    "south": "The Entrance Hall Of The Grunting Boar Inn"
+   },
+   "here": [
+    "The head postmaster is standing here, waiting to help you with your mail."
+   ],
+   "signs": [
+    "sign: ********************************************************** *                                                        * *    Mail Instructions:                                  * *                                                        * *      To send a note to someone:                        * *    "
+   ]
+  },
+  "The Reception": {
+   "exits": "n d",
+   "links": {
+    "down": "The Entrance Hall Of The Grunting Boar Inn"
+   },
+   "here": [
+    "An automatic teller machine has been installed in the wall here.",
+    "A receptionist is standing behind the counter here, smiling at you."
+   ],
+   "signs": [
+    "sign: Rooms are expensive but good!  You may: Offer - get an offer on a room - Time is in real life days. Rent  - Rent a room (saves your stuff, and quits the game), minimum charge is one day. MY WAY OR THE HIGHWAY PAY YOUR RENT! WE WON'T THINK TWICE BEFORE KICKING YOU OUT."
+   ]
+  },
+  "The Deserted Warehouse": {
+   "exits": "n",
+   "links": {
+    "north": "The Eastern End Of The Alley"
+   },
+   "here": [
+    "An oozing green gelatinous blob is here, sucking in bits of debris.",
+    "A sailor stands here, waiting to help you."
+   ]
+  },
+  "Inside The East Gate Of Midgaard (2)": {
+   "exits": "(e) s w",
+   "links": {
+    "south": "Ye Olde Water Shoppe",
+    "west": "Main Street"
+   },
+   "here": [
+    "A cityguard is here, guarding the gate.",
+    "A cityguard is here, guarding the gate.",
+    "A cityguard is here, guarding the gate.",
+    "A cityguard is here, guarding the gate.",
+    "A cityguard is here, guarding the gate."
+   ]
+  },
+  "The Pet Shop": {
+   "exits": "n",
+   "links": {
+    "north": "Main Street"
+   },
+   "here": [
+    "There is a Pet Shop Boy standing here cuddling something furry in his hands."
+   ]
+  },
+  "A Black Square (2)": {
+   "exits": "e s w",
+   "links": {
+    "west": "A White Square",
+    "east": "A White Square (2)"
+   },
+   "here": [
+    "A long sword has been left here.",
+    "( 2) A small sword lies here."
+   ],
+   "hazards": [
+    "a death occurred here"
+   ]
+  },
+  "A White Square (2)": {
+   "exits": "e s",
+   "links": {
+    "east": "A Black Square (3)",
+    "west": "A Black Square (3)",
+    "south": "A Black Square"
+   },
+   "here": [],
+   "signs": [
+    "bishop staff: You see nothing special.. ..It has a soft glowing aura!"
+   ]
+  },
+  "A Black Square (3)": {
+   "exits": "e s w",
+   "links": {
+    "east": "A White Square (2)",
+    "west": "A White Square (2)"
+   },
+   "here": [
+    "A long sword has been left here.",
+    "( 2) A small sword lies here."
+   ]
+  },
+  "Temple Hannah Market Place": {
+   "exits": "n e s",
+   "links": {},
+   "here": [
+    "A big temple guard is here."
+   ]
+  },
+  "A White Square (3)": {
+   "exits": "n e s w",
+   "links": {
+    "west": "A Black Square",
+    "east": "A Black Square (4)",
+    "south": "A Black Square (5)"
+   },
+   "here": [],
+   "signs": [
+    "lance: You see nothing special.. ..It emits a faint humming sound!"
+   ]
+  },
+  "A White Square (4)": {
+   "exits": "n e s",
+   "links": {
+    "south": "A Black Square",
+    "east": "A White Square (6)"
+   },
+   "here": []
+  },
+  "A Black Square (4)": {
+   "exits": "n e s w",
+   "links": {
+    "east": "A White Square (3)"
+   },
+   "here": []
+  },
+  "A Black Square (5)": {
+   "exits": "n s w",
+   "links": {
+    "south": "A White Square (5)"
+   },
+   "here": []
+  },
+  "A White Square (5)": {
+   "exits": "n e s w",
+   "links": {
+    "east": "The Great Chessboard Of Midgaard"
+   },
+   "here": []
+  },
+  "Ye Olde Water Shoppe": {
+   "exits": "n",
+   "links": {
+    "north": "Inside The East Gate Of Midgaard (2)"
+   },
+   "here": [
+    "A janitor is walking around, cleaning up.",
+    "Wally the Watermaster is standing behind the counter."
+   ]
+  },
+  "A White Square (6)": {
+   "exits": "n e w",
+   "links": {
+    "east": "A Black Square (6)"
+   },
+   "here": [
+    "A finely crafted newbie mace is waiting for a worthy owner. ..It has a soft glowing aura!",
+    "A long sword has been left here.",
+    "Here stands a magnificent knight of the light realm."
+   ]
+  },
+  "A Black Square (6)": {
+   "exits": "n e w",
+   "links": {
+    "east": "A White Square (7)"
+   },
+   "here": [
+    "The White King stands here."
+   ],
+   "signs": [
+    "key: You see nothing special.. (invisible)"
+   ]
+  },
+  "A White Square (7)": {
+   "exits": "n e w (d)",
+   "links": {
+    "east": "A Black Square (6)"
+   },
+   "here": [
+    "The White Queen stands here."
+   ]
+  },
+  "[ 3661] A Black Square[ NOBITS ][ City ]": {
+   "exits": "n e w",
+   "links": {
+    "west": "[ 3660] A White Square[ NOBITS ][ City ]"
+   },
+   "here": [
+    "[65535] The corpse of the White King is lying here.",
+    "[3040] A breast plate is lying on the ground.",
+    "[3076] A leather cap is lying on the ground.",
+    "[3087] A brown leather cape was abandoned on the floor",
+    "[3042] A small wooden shield is lying on the ground.",
+    "[3086] A pair of leather sleeves is lying on the ground."
+   ]
+  },
+  "[ 3660] A White Square[ NOBITS ][ City ]": {
+   "exits": "n e w (d)",
+   "links": {
+    "down": "[ 3666] The White Treasury[ DARK INDOORS PRIVATE ][ Inside ]"
+   },
+   "here": []
+  },
+  "[ 3666] The White Treasury[ DARK INDOORS PRIVATE ][ Inside ]": {
+   "exits": "u",
+   "links": {
+    "up": "[ 3660] A White Square[ NOBITS ][ City ] (2)"
+   },
+   "here": []
+  },
+  "[ 3660] A White Square[ NOBITS ][ City ] (2)": {
+   "exits": "n e w d",
+   "links": {
+    "north": "[ 3652] A Black Square[ NOBITS ][ City ]"
+   },
+   "here": []
+  },
+  "[ 3652] A Black Square[ NOBITS ][ City ]": {
+   "exits": "n e s w",
+   "links": {
+    "north": "[ 3644] A White Square[ NOBITS ][ City ]"
+   },
+   "here": [
+    "[3601] You see a pawn standing here waiting for orders."
+   ]
+  },
+  "[ 3644] A White Square[ NOBITS ][ City ]": {
+   "exits": "n e s w",
+   "links": {
+    "north": "[ 3636] A Black Square[ NOBITS ][ City ]"
+   },
+   "here": []
+  },
+  "[ 3636] A Black Square[ NOBITS ][ City ]": {
+   "exits": "n e s w",
+   "links": {
+    "north": "[ 3628] A White Square[ NOBITS ][ City ]"
+   },
+   "here": []
+  },
+  "[ 3628] A White Square[ NOBITS ][ City ]": {
+   "exits": "n e s w",
+   "links": {
+    "north": "[ 3620] A Black Square[ NOBITS ][ City ]"
+   },
+   "here": []
+  },
+  "[ 3620] A Black Square[ NOBITS ][ City ]": {
+   "exits": "n e s w",
+   "links": {
+    "north": "[ 3612] A White Square[ NOBITS ][ City ]"
+   },
+   "here": []
+  },
+  "[ 3612] A White Square[ NOBITS ][ City ]": {
+   "exits": "n e s w",
+   "links": {
+    "north": "[ 3604] A Black Square[ NOBITS ][ City ]"
+   },
+   "here": [
+    "[3600] You see a pawn standing here waiting for orders."
+   ]
+  },
+  "[ 3604] A Black Square[ NOBITS ][ City ]": {
+   "exits": "e s w (d)",
+   "links": {
+    "down": "[ 3665] The Black Treasury[ DARK INDOORS PRIVATE ][ Inside ]"
+   },
+   "here": [
+    "[18606] A shiny newbie dagger is lying here looking for a back to stab. ..It has a soft glowing aura!",
+    "[18603] A bright newbie helm is hoping a loose head will wander by. ..It has a soft glowing aura!",
+    "[18602] A bright green newbie vest is lying here looking for a body to hug."
+   ]
+  },
+  "[ 3665] The Black Treasury[ DARK INDOORS PRIVATE ][ Inside ]": {
+   "exits": "u",
+   "links": {
+    "up": "[ 3604] A Black Square[ NOBITS ][ City ] (2)"
+   },
+   "here": [
+    "[3616] There are a LOT of coins here."
+   ]
+  },
+  "[ 3604] A Black Square[ NOBITS ][ City ] (2)": {
+   "exits": "e s w d",
+   "links": {
+    "east": "[ 3605] A White Square[ NOBITS ][ City ]"
+   },
+   "here": [
+    "[18606] A shiny newbie dagger is lying here looking for a back to stab. ..It has a soft glowing aura!",
+    "[18603] A bright newbie helm is hoping a loose head will wander by. ..It has a soft glowing aura!",
+    "[18602] A bright green newbie vest is lying here looking for a body to hug."
+   ]
+  },
+  "[ 3605] A White Square[ NOBITS ][ City ]": {
+   "exits": "e s w",
+   "links": {
+    "east": "[ 3606] A Black Square[ NOBITS ][ City ]"
+   },
+   "here": [
+    "[3612] The Sceptre of the Black King lies here, collecting dust. (invisible) ..It emits a faint humming sound!",
+    "[3614] There is a sinister black key lying here. (invisible)"
+   ]
+  },
+  "[ 3606] A Black Square[ NOBITS ][ City ]": {
+   "exits": "e s w",
+   "links": {
+    "east": "[ 3607] A White Square[ NOBITS ][ City ]",
+    "west": "[ 3605] A White Square[ NOBITS ][ City ]"
+   },
+   "here": [
+    "[3606] A dark priest stands here."
+   ]
+  },
+  "[ 3607] A White Square[ NOBITS ][ City ]": {
+   "exits": "e s w",
+   "links": {
+    "east": "[ 3608] A Black Square[ NOBITS ][ City ]",
+    "west": "[ 3606] A Black Square[ NOBITS ][ City ]"
+   },
+   "here": [
+    "[3604] Here stands a magnificent knight of the dark realm."
+   ]
+  },
+  "[ 3608] A Black Square[ NOBITS ][ City ]": {
+   "exits": "s w",
+   "links": {
+    "west": "[ 3607] A White Square[ NOBITS ][ City ]",
+    "south": "[ 3616] A White Square[ NOBITS ][ City ]"
+   },
+   "here": [
+    "[65535] The corpse of the Black Rook is lying here."
+   ]
+  },
+  "[ 3616] A White Square[ NOBITS ][ City ]": {
+   "exits": "n s w",
+   "links": {
+    "south": "[ 3624] A Black Square[ NOBITS ][ City ]",
+    "north": "[ 3608] A Black Square[ NOBITS ][ City ]"
+   },
+   "here": [
+    "[3600] You see a pawn standing here waiting for orders."
+   ]
+  },
+  "[ 3624] A Black Square[ NOBITS ][ City ]": {
+   "exits": "n s w",
+   "links": {
+    "south": "[ 3632] A White Square[ NOBITS ][ City ]",
+    "north": "[ 3616] A White Square[ NOBITS ][ City ]"
+   },
+   "here": []
+  },
+  "[ 3632] A White Square[ NOBITS ][ City ]": {
+   "exits": "n e s w",
+   "links": {
+    "north": "[ 3624] A Black Square[ NOBITS ][ City ]",
+    "south": "[ 3640] A Black Square[ NOBITS ][ City ]"
+   },
+   "here": []
+  },
+  "[ 3640] A Black Square[ NOBITS ][ City ]": {
+   "exits": "n s w",
+   "links": {
+    "south": "[ 3648] A White Square[ NOBITS ][ City ]"
+   },
+   "here": []
+  },
+  "[ 3648] A White Square[ NOBITS ][ City ]": {
+   "exits": "n s w",
+   "links": {
+    "south": "[ 3656] A Black Square[ NOBITS ][ City ]"
+   },
+   "here": []
+  },
+  "[ 3656] A Black Square[ NOBITS ][ City ]": {
+   "exits": "n s w",
+   "links": {
+    "south": "[ 3664] A White Square[ NOBITS ][ City ]"
+   },
+   "here": [
+    "[3601] You see a pawn standing here waiting for orders."
+   ]
+  },
+  "[ 3664] A White Square[ NOBITS ][ City ]": {
+   "exits": "n w",
+   "links": {
+    "north": "[ 3656] A Black Square[ NOBITS ][ City ]",
+    "west": "[ 3663] A Black Square[ NOBITS ][ City ]"
+   },
+   "here": [
+    "[65535] The corpse of the White Rook is lying here."
+   ]
+  },
+  "[ 3663] A Black Square[ NOBITS ][ City ]": {
+   "exits": "n e w",
+   "links": {
+    "west": "[ 3662] A White Square[ NOBITS ][ City ]"
+   },
+   "here": [
+    "[3605] Here stands a magnificent knight of the light realm."
+   ]
+  },
+  "[ 3662] A White Square[ NOBITS ][ City ]": {
+   "exits": "n e w",
+   "links": {},
+   "here": [
+    "[3607] A light priest stands here."
+   ]
+  },
+  "[28468] A north-south street in Ghenna.[ DARK ][ City ]": {
+   "exits": "n s w",
+   "links": {
+    "south": "[ 3005] The Temple Square[ * ][ City ]"
+   },
+   "here": [
+    "[28409] *A Death Knight stands here, lowering at you."
+   ]
+  },
+  "[ 3005] The Temple Square[ * ][ City ]": {
+   "exits": "n e s w",
+   "links": {
+    "south": "[ 3014] Market Square[ * ][ City ]"
+   },
+   "here": [
+    "[3035] A large fountain carved from blue-streaked marble is here, bubbling merrily.",
+    "[3059] [T3009] A Peacekeeper is standing here, ready to jump in at the first sign of trouble."
+   ],
+   "peeks": {
+    "north": "[ 3003] The Bar Of Divination",
+    "east": "[ 3005] The Temple Square"
+   }
+  },
+  "[ 3014] Market Square[ * ][ City ]": {
+   "exits": "n e s w",
+   "links": {
+    "east": "[ 3015] Main Street[ * ][ City ]",
+    "north": "[ 3005] The Temple Square[ * ][ City ]",
+    "south": "[ 3025] The Common Square[ * ][ City ]",
+    "west": "[ 3013] Main Street[ * ][ City ]"
+   },
+   "here": []
+  },
+  "[ 3015] Main Street[ * ][ City ]": {
+   "exits": "n e s w",
+   "links": {
+    "east": "[ 3016] Main Street[ * ][ City ]",
+    "north": "[ 3010] The General Store[ INDOORS NO_MAGIC * ][ Inside ]",
+    "west": "[ 3014] Market Square[ * ][ City ]"
+   },
+   "here": [
+    "[3061] [T3011] A janitor is walking around, cleaning up."
+   ]
+  },
+  "[ 3016] Main Street[ * ][ City ]": {
+   "exits": "n e s w",
+   "links": {
+    "north": "[ 3011] The Weapon Shop[ INDOORS NO_MAGIC * ][ Inside ]",
+    "west": "[ 3015] Main Street[ * ][ City ]"
+   },
+   "here": []
+  },
+  "[ 3011] The Weapon Shop[ INDOORS NO_MAGIC * ][ Inside ]": {
+   "exits": "s",
+   "links": {
+    "south": "[ 3016] Main Street[ * ][ City ]"
+   },
+   "here": [
+    "[18606] A shiny newbie dagger is lying here looking for a back to stab. ..It has a soft glowing aura!",
+    "[3066] [T3010] An odif yltsaeb is here, walking backwards.",
+    "[3003] A weaponsmith is standing here."
+   ]
+  },
+  "[ 3010] The General Store[ INDOORS NO_MAGIC * ][ Inside ]": {
+   "exits": "s",
+   "links": {
+    "south": "[ 3015] Main Street[ * ][ City ]"
+   },
+   "here": [
+    "[3002] A grocer stands at the counter, with a slightly impatient look on his face."
+   ]
+  },
+  "[ 3025] The Common Square[ * ][ City ]": {
+   "exits": "n e s w",
+   "links": {
+    "north": "[ 3014] Market Square[ * ][ City ]"
+   },
+   "here": [
+    "[3015] A rather dubious looking piece of meat is on the ground here.",
+    "[3059] [T3009] A Peacekeeper is standing here, ready to jump in at the first sign of trouble."
+   ],
+   "peeks": {
+    "north": "[ 3014] Market Square",
+    "east": "[ 3026] The Dark Alley",
+    "south": "[ 3030] The Dump",
+    "west": "[ 3024] The Eastern End Of Poor Alley"
+   }
+  },
+  "[ 3013] Main Street[ * ][ City ]": {
+   "exits": "n e s w",
+   "links": {
+    "west": "[ 3012] Main Street[ * ][ City ]",
+    "east": "[ 3014] Market Square[ * ][ City ]",
+    "north": "[ 3009] The Bakery[ INDOORS NO_MAGIC * ][ Inside ]",
+    "south": "[ 3020] The Armory[ INDOORS NO_MAGIC * ][ Inside ]"
+   },
+   "here": [
+    "[3061] [T3011] A janitor is walking around, cleaning up."
+   ],
+   "peeks": {
+    "north": "[ 3009] The Bakery",
+    "east": "[ 3014] Market Square",
+    "south": "[ 3020] The Armory",
+    "west": "[ 3012] Main Street"
+   }
+  },
+  "[ 3012] Main Street[ * ][ City ]": {
+   "exits": "n e s w",
+   "links": {
+    "east": "[ 3013] Main Street[ * ][ City ]",
+    "west": "[ 3040] Inside The West Gate Of Midgaard[ * ][ City ]",
+    "north": "[ 3033] The Magic Shop[ INDOORS NO_MAGIC * ][ Inside ]"
+   },
+   "here": [
+    "[3062] [T3010] A beastly fido is mucking through the garbage looking for food here.",
+    "[3062] [T3010] A beastly fido is mucking through the garbage looking for food here."
+   ],
+   "peeks": {
+    "north": "[ 3033] The Magic Shop",
+    "east": "[ 3013] Main Street",
+    "south": "[ 3017] The Entrance To The Mages' Guild",
+    "west": "[ 3040] Inside The West Gate Of Midgaard"
+   }
+  },
+  "[ 3009] The Bakery[ INDOORS NO_MAGIC * ][ Inside ]": {
+   "exits": "s",
+   "links": {
+    "south": "[ 3013] Main Street[ * ][ City ]"
+   },
+   "here": [
+    "( 3) [3021] A small sword lies here.",
+    "[3001] The baker looks at you calmly, wiping flour from his face with one hand."
+   ]
+  },
+  "[ 3020] The Armory[ INDOORS NO_MAGIC * ][ Inside ]": {
+   "exits": "n",
+   "links": {
+    "north": "[ 3013] Main Street[ * ][ City ]"
+   },
+   "here": [
+    "[3021] A small sword lies here.",
+    "[3022] A long sword has been left here.",
+    "[18606] A shiny newbie dagger is lying here looking for a back to stab. ..It has a soft glowing aura!",
+    "[3071] A pair of leather gloves is lying on the ground.",
+    "[3086] A pair of leather sleeves is lying on the ground.",
+    "[3004] An armorer stands here displaying his new (and previously owned) armors."
+   ]
+  },
+  "[ 3040] Inside The West Gate Of Midgaard[ * ][ City ]": {
+   "exits": "e s w",
+   "links": {
+    "east": "[ 3012] Main Street[ * ][ City ]"
+   },
+   "here": [
+    "[3067] [T3009] A cityguard is here, guarding the gate.",
+    "[3067] [T3009] A cityguard is here, guarding the gate.",
+    "[3067] [T3009] A cityguard is here, guarding the gate.",
+    "[3067] [T3009] A cityguard is here, guarding the gate.",
+    "[3067] [T3009] A cityguard is here, guarding the gate."
+   ]
+  },
+  "[ 3033] The Magic Shop[ INDOORS NO_MAGIC * ][ Inside ]": {
+   "exits": "s",
+   "links": {},
+   "here": [
+    "[3000] A wizard walks around behind the counter, talking to himself."
+   ]
   }
  },
  "char": {
-  "max_hp": "97",
+  "max_hp": "438",
   "max_mana": "100",
-  "max_moves": "98",
-  "xp": "81287",
-  "gold": "768",
-  "xp_to_next": "43713",
-  "rank": "Dummy the Veteran",
-  "level": "7"
+  "max_moves": "153",
+  "xp": "10000000",
+  "gold": "9599",
+  "xp_to_next": "565849",
+  "rank": "Dummy the Implementor",
+  "level": "34"
  },
  "events": [
-  "Killed The small bat (+33 xp)",
-  "Killed The small bat (+33 xp)",
-  "Killed The mercenary (+833 xp)",
-  "Killed The mercenary (+843 xp)",
-  "Killed The mercenary (+833 xp)",
-  "Killed The cityguard (+5092 xp)",
-  "LEVEL UP! Now level 7",
-  "Killed The mercenary (+835 xp)",
-  "Killed The mercenary (+833 xp)",
-  "Killed The zombiefied newbie (+533 xp)",
-  "Killed The zombiefied newbie (+538 xp)",
-  "Killed The smart newbie (+833 xp)",
-  "Killed The zombiefied newbie (+533 xp)",
-  "Killed The zombiefied newbie (+538 xp)",
-  "Killed The zombiefied newbie (+533 xp)",
-  "Killed The zombiefied newbie (+533 xp)",
-  "Killed The quasit (+300 xp)",
-  "Killed The newbie monster (+138 xp)",
-  "Killed The newbie monster (+235 xp)",
-  "Killed The annoying newbie (+133 xp)",
-  "Killed The newbie monster (+133 xp)",
-  "Killed The pit beast (+833 xp)",
-  "Killed The zombiefied newbie (+533 xp)",
-  "Killed The smart newbie (+849 xp)",
-  "Killed The talkative newbie (+300 xp)",
-  "Killed The annoying newbie (+133 xp)",
-  "Killed The zombiefied newbie (+540 xp)",
-  "Killed The massive Minotaur (+1668 xp)",
-  "Killed The zombiefied newbie (+533 xp)",
-  "Killed The zombiefied newbie (+540 xp)"
+  "Killed The swordsman (+1643 xp)",
+  "Killed The swordsman (+1650 xp)",
+  "Killed The Mummy of Rabscuttle (+4567 xp)",
+  "Killed The Peacekeeper (+18286 xp)",
+  "Killed The Peacekeeper (+18661 xp)",
+  "Killed The Peacekeeper (+19213 xp)",
+  "DIED near A Black Square (2) \u2014 respawned at the temple; corpse (with gear) left behind",
+  "Killed The Black Knight (+90452 xp)",
+  "Killed The White Knight (+23580 xp)",
+  "Killed The Peacekeeper (+12385 xp)",
+  "Killed The Black Knight (+15310 xp)",
+  "Killed The Black Rook (+61936 xp)",
+  "Killed The Black Bishop (+39834 xp)",
+  "LEVEL UP! Now level 18",
+  "Killed The Black Queen (+64570 xp)",
+  "Killed The Black King (+71432 xp)",
+  "Killed The White Rook (+26918 xp)",
+  "Killed The White Knight (+11192 xp)",
+  "Killed The White Bishop (+21300 xp)",
+  "Killed The White Queen (+33194 xp)",
+  "Killed The White King (+37430 xp)",
+  "Killed The Black Bishop (+20084 xp)",
+  "Killed The Black Knight (+11423 xp)",
+  "Killed The Black Rook (+27439 xp)",
+  "Killed The White Rook",
+  "Killed The White Knight (+10800 xp)",
+  "Killed The White Bishop (+19528 xp)",
+  "Killed The knight (+37082 xp)",
+  "Killed The knight templar (+37057 xp)",
+  "Killed The sorcerer (+37252 xp)"
  ],
- "current_room": "A T-Intersection In The Passage",
+ "current_room": "[ 3033] The Magic Shop[ INDOORS NO_MAGIC * ][ Inside ]",
  "carrying": [
-  "a dagger",
-  "a bright green newbie vest",
-  "a shiny newbie dagger ..It has a soft glowing aura!",
-  "some cool newbie leggings",
-  "some cool newbie sleeves",
-  "a glowing newbie mace ..It has a soft glowing aura!",
-  "a wee little key",
-  "a small sword",
-  "the teleporter",
-  "a warhammer",
-  "a bright newbie helm ..It has a soft glowing aura!"
+  "[3612] the Black King's Sceptre (invisible) ..It emits a faint humming sound!",
+  "[3614] the Key to the Black Treasury (invisible)",
+  "[3615] the Key to the White Treasury (invisible)",
+  "[3083] a leather ring",
+  "[3037] a candle",
+  "[3613] the White King's Sceptre (invisible) ..It emits a faint humming sound!",
+  "[3061] a canoe",
+  "[3006] [TRIGS] the teleporter",
+  "[909] a pair of boots",
+  "[3011] a danish pastry"
  ],
  "trail": [
-  "north: The Alchemist's Room (2) \u2192 A Narrow Passage (2)",
-  "north: A Narrow Passage (2) \u2192 The South Stairs",
-  "up: The South Stairs \u2192 The Balcony",
-  "north: The Balcony \u2192 The Balcony (2)",
-  "south: The Balcony (2) \u2192 The Balcony",
-  "down: The Balcony \u2192 The South Stairs",
-  "west: The South Stairs \u2192 A Bright Hallway (2)",
-  "east: A Bright Hallway (2) \u2192 The South Stairs",
-  "south: The South Stairs \u2192 A Narrow Passage",
-  "south: A Narrow Passage \u2192 The Alchemist's Room",
-  "down: The Alchemist's Room \u2192 The Entrance",
-  "north: The Entrance \u2192 A Crossing Of Corridors",
-  "east: A Crossing Of Corridors \u2192 A Corner Room",
-  "north: A Corner Room \u2192 Another Corner (2)",
-  "west: Another Corner (2) \u2192 A T-Intersection In The Passage"
+  "east: [ 3014] Market Square[ * ][ City ] \u2192 [ 3015] Main Street[ * ][ City ]",
+  "east: [ 3015] Main Street[ * ][ City ] \u2192 [ 3016] Main Street[ * ][ City ]",
+  "north: [ 3016] Main Street[ * ][ City ] \u2192 [ 3011] The Weapon Shop[ INDOORS NO_MAGIC * ][ Inside ]",
+  "south: [ 3011] The Weapon Shop[ INDOORS NO_MAGIC * ][ Inside ] \u2192 [ 3016] Main Street[ * ][ City ]",
+  "west: [ 3016] Main Street[ * ][ City ] \u2192 [ 3015] Main Street[ * ][ City ]",
+  "west: [ 3015] Main Street[ * ][ City ] \u2192 [ 3014] Market Square[ * ][ City ]",
+  "west: [ 3014] Market Square[ * ][ City ] \u2192 [ 3013] Main Street[ * ][ City ]",
+  "north: [ 3013] Main Street[ * ][ City ] \u2192 [ 3009] The Bakery[ INDOORS NO_MAGIC * ][ Inside ]",
+  "south: [ 3009] The Bakery[ INDOORS NO_MAGIC * ][ Inside ] \u2192 [ 3013] Main Street[ * ][ City ]",
+  "south: [ 3013] Main Street[ * ][ City ] \u2192 [ 3020] The Armory[ INDOORS NO_MAGIC * ][ Inside ]",
+  "north: [ 3020] The Armory[ INDOORS NO_MAGIC * ][ Inside ] \u2192 [ 3013] Main Street[ * ][ City ]",
+  "west: [ 3013] Main Street[ * ][ City ] \u2192 [ 3012] Main Street[ * ][ City ]",
+  "west: [ 3012] Main Street[ * ][ City ] \u2192 [ 3040] Inside The West Gate Of Midgaard[ * ][ City ]",
+  "east: [ 3040] Inside The West Gate Of Midgaard[ * ][ City ] \u2192 [ 3012] Main Street[ * ][ City ]",
+  "north: [ 3012] Main Street[ * ][ City ] \u2192 [ 3033] The Magic Shop[ INDOORS NO_MAGIC * ][ Inside ]"
  ],
  "kills_xp": [
-  133,
-  833,
-  533,
-  849,
-  300,
-  133,
-  540,
-  1668,
-  533,
-  540
+  33194,
+  37430,
+  20084,
+  11423,
+  27439,
+  10800,
+  19528,
+  37082,
+  37057,
+  37252
  ],
- "deaths": 0,
+ "deaths": 1,
  "gold_hist": [
-  409,
-  449,
-  509,
-  59,
-  69,
-  119,
-  148,
-  218,
-  348,
-  768
+  1828,
+  2248,
+  2538,
+  2838,
+  3838,
+  4838,
+  5528,
+  6218,
+  7496,
+  9599
  ],
- "thought": "VICTORY! Defeated the Massive Minotaur at level 7, ending the fight at 83% HP. Goal complete."
+ "conditions": [],
+ "thought": "",
+ "thought_at": null
 }

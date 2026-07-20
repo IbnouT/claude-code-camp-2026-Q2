@@ -1,7 +1,7 @@
 # World map — auto-updated in real time by mud_session.py
 _Don't edit by hand (notes belong in player.md). `links` are observed one-way passages._
 
-Current room: **A T-Intersection In The Passage**
+Current room: **[ 3033] The Magic Shop[ INDOORS NO_MAGIC * ][ Inside ]**
 
 ## The Common Square
 - Exits: n e s w
@@ -9,7 +9,7 @@ Current room: **A T-Intersection In The Passage**
 - east → The Dark Alley
 - south → The Dump
 - west → The Eastern End Of Poor Alley
-- Last seen here: A tiny pile of gold coins is lying here. | A rather dubious looking piece of meat is on the ground here.
+- Last seen here: A rather dubious looking piece of meat is on the ground here. | A janitor is walking around, cleaning up.
 
 ## Market Square
 - Exits: n e s w
@@ -20,12 +20,11 @@ Current room: **A T-Intersection In The Passage**
 
 ## Main Street
 - Exits: n e s w
-- north → The Bakery
+- north → The General Store
 - west → Market Square
-- east → Market Square
-- south → The Armory
+- east → Inside The East Gate Of Midgaard (2)
+- south → The Entrance Hall To The Guild Of Swordsmen
 - Shop stock (from `list`): ##   Available   Item                                               Cost | ---------------------------------------------------------------------------- | 1)  Unlimited   A danish pastry                                       7 | 2)  Unlimited   A bread                                              15 | 3)  Unlimited   A waybread                                           76
-- Last seen here: A Peacekeeper is standing here, ready to jump in at the first sign of trouble.
 
 ## The General Store
 - Exits: s
@@ -39,18 +38,21 @@ Current room: **A T-Intersection In The Passage**
 - east → The Dark Alley At The Levee
 - west → The Common Square
 - south → The Entrance Hall To The Guild Of Thieves
-- Last seen here: ( 3) The corpse of the mercenary is lying here. | The corpse of the cityguard is lying here. | A little pile of gold coins is lying here. | A small sword lies here. | A Peacekeeper is standing here, ready to jump in at the first sign of trouble.
+- Last seen here: A long sword has been left here. | ( 3) A small sword lies here. | A janitor is walking around, cleaning up. | A janitor is walking around, cleaning up. | A mercenary is waiting for a job here. | A mercenary is waiting for a job here. | A mercenary is waiting for a job here. | A mercenary is waiting for a job here.
 
 ## The Dark Alley At The Levee
 - Exits: e s w
 - south → The Levee
 - west → The Dark Alley
+- east → The Eastern End Of The Alley
+- Last seen here: A Peacekeeper is standing here, ready to jump in at the first sign of trouble.
 
 ## The Levee
 - Exits: n s
 - north → The Dark Alley At The Levee
-- south ⇢ On The River (seen via `exits`, not visited)
-- Last seen here: A retired captain stands here, selling boats.
+- south → On The River
+- Shop stock (from `list`): ##   Available   Item                                               Cost | ---------------------------------------------------------------------------- | 1)  Unlimited   A canoe                                            1302 | 2)  Unlimited   A raft                                              521
+- Last seen here: The corpse of the Peacekeeper is lying here. | A retired captain stands here, selling boats.
 
 ## The Dump
 - Exits: n d
@@ -74,7 +76,7 @@ Current room: **A T-Intersection In The Passage**
 - Exits: e w
 - west → Wall Road
 - east → The Eastern End Of Poor Alley
-- Last seen here: A tiny pile of gold coins is lying here. | A rather dubious looking piece of meat is on the ground here. | A Peacekeeper is standing here, ready to jump in at the first sign of trouble. | A Peacekeeper is standing here, ready to jump in at the first sign of trouble. | A beggar is here, asking for a few coins.
+- Last seen here: A rather dubious looking piece of meat is on the ground here. | A beggar is here, asking for a few coins.
 
 ## Wall Road
 - Exits: n e s
@@ -82,13 +84,11 @@ Current room: **A T-Intersection In The Passage**
 - east → Poor Alley
 - north → Wall Road (2)
 - Sign — letters: It says 'Who watches the watchmen?  '
-- Last seen here: A tiny pile of gold coins is lying here. | The Mayor is standing here.
 
 ## Wall Road (2)
 - Exits: n s
-- south → On The Bridge
-- north → Inside The West Gate Of Midgaard
-- Last seen here: A cityguard stands here.
+- south → Wall Road
+- north → Wall Road
 
 ## On The Bridge
 - Exits: n s
@@ -100,19 +100,21 @@ Current room: **A T-Intersection In The Passage**
 - south → Market Square
 - west → The Entrance To The Clerics' Guild
 - north → The Temple Of Midgaard
-- Last seen here: A large fountain carved from blue-streaked marble is here, bubbling merrily.
+- Last seen here: A large fountain carved from blue-streaked marble is here, bubbling merrily. | A Peacekeeper is standing here, ready to jump in at the first sign of trouble.
 
 ## The Entrance Hall Of The Grunting Boar Inn
 - Exits: n e w u
 - east → The Grunting Boar
 - west → The Temple Square
+- north → The Post Office
+- up → The Reception
 
 ## The Grunting Boar
 - Exits: w
 - west → The Entrance Hall Of The Grunting Boar Inn
 - Shop stock (from `list`): ##   Available   Item                                               Cost | ---------------------------------------------------------------------------- | 1)  Unlimited   A bottle of local speciality                         23 | 2)  Unlimited   A bottle of firebreather                             59 | 3)  Unlimited   A bottle of ale                                      11 | 4)  Unlimited   A bottle of beer                                     23 | 5)  Unlimited   A barrel of beer                                    358
 - Sign — sign: The sign reads: Free instructions provided by the Grunting Boar Inn. Buy  - Buy something (drinkable) from the bartender. List - The bartender will show you all the different drinks and specialties, and tell the price of each.
-- Last seen here: A janitor is walking around, cleaning up. | A singing, happy Drunk. | A singing, happy Drunk. | A singing, happy Drunk. | A bartender watches you calmly, while he skillfully mixes a drink.
+- Last seen here: A singing, happy Drunk. | A singing, happy Drunk. | A singing, happy Drunk. | A bartender watches you calmly, while he skillfully mixes a drink.
 
 ## The Quadruple Junction Under The Dump
 - Exits: n e s w u
@@ -234,7 +236,7 @@ Current room: **A T-Intersection In The Passage**
 - north → By The Temple Altar
 - south → The Temple Square
 - west → The Reading Room
-- Last seen here: An automatic teller machine has been installed in the wall here.
+- Last seen here: An automatic teller machine has been installed in the wall here. | Admin the Implementress is standing here.
 
 ## By The Temple Altar
 - Exits: n s
@@ -268,13 +270,16 @@ Current room: **A T-Intersection In The Passage**
 ## The Armory
 - Exits: n
 - north → Main Street
-- Shop stock (from `list`): ##   Available   Item                                               Cost | ---------------------------------------------------------------------------- | 1)  Unlimited   A pair of leather sleeves                            97 | 2)  Unlimited   A pair of bronze sleeves                            228 | 3)  Unlimited   A pair of leather pants                             195 | 4)  Unlimited   A pair of bronze leggings                           456 | 5)  Unlimited   A leather cap                                       195 | 6)  Unlimited   A bronze helmet                                     456 | 7)  Unlimited   A pair of leather gloves                             97 | 8)  Unlimited   A pair of bronze gauntlets                          228 | 9)  Unlimited   A bronze breast plate                               912 | 10)  Unlimited   A scale mail jacket                                1302 | 11)  Unlimited   A studded leather jacket                            651 | 12)  Unlimited   A leather jacket                                    260 | 13)  Unlimited   A shield                                            130 | 14)  Unlimited   A chain mail shirt                                  325 | 15)  Unlimited   A breast plate                                      234
-- Last seen here: An armorer stands here displaying his new (and previously owned) armors.
+- Shop stock (from `list`): ##   Available   Item                                               Cost | ---------------------------------------------------------------------------- | 1)          1   A large round shield                                390 | 2)          1   A bright newbie helm                                  1 | 3)          2   Some cool newbie sleeves                            521 | 4)          2   Some cool newbie leggings                           260 | 5)          2   A bright green newbie vest                            1 | 6)  Unlimited   A pair of leather sleeves                            97 | 7)  Unlimited   A pair of bronze sleeves                            228 | 8)  Unlimited   A pair of leather pants                             195 | 9)  Unlimited   A pair of bronze leggings                           456 | 10)  Unlimited   A leather cap                                       195 | 11)  Unlimited   A bronze helmet                                     456 | 12)  Unlimited   A pair of leather gloves                             97 | 13)  Unlimited   A pair of bronze gauntlets                          228 | 14)  Unlimited   A bronze breast plate                               912 | 15)  Unlimited   A scale mail jacket                                1302 | 16)  Unlimited   A studded leather jacket                            651 | 17)  Unlimited   A leather jacket                                    260 | 18)  Unlimited   A shield                                            130 | [ Return to continue, (q)uit, (r)efresh, (b)ack, or page number (1/2) ] 19)  Unlimited   A chain mail shirt                                  325 | 20)  Unlimited   A breast plate                                      234
+- Sign — mace: You see nothing special.. ..It has a soft glowing aura!
+- Sign — flail: You see nothing special..
+- Last seen here: A small sword lies here. | A long sword has been left here. | A shiny newbie dagger is lying here looking for a back to stab. ..It has a soft glowing aura! | A pair of leather gloves is lying on the ground. | A pair of leather sleeves is lying on the ground. | An armorer stands here displaying his new (and previously owned) armors.
 
 ## The Bakery
 - Exits: s
 - south → Main Street
-- Last seen here: The baker looks at you calmly, wiping flour from his face with one hand.
+- Shop stock (from `list`): ##   Available   Item                                               Cost | ---------------------------------------------------------------------------- | 1)  Unlimited   A danish pastry                                       7 | 2)  Unlimited   A bread                                              15 | 3)  Unlimited   A waybread                                           76
+- Last seen here: ( 3) A small sword lies here. | The baker looks at you calmly, wiping flour from his face with one hand.
 
 ## Cave Entrance
 - Exits: n u
@@ -550,26 +555,30 @@ Current room: **A T-Intersection In The Passage**
 ## The Entrance Hall To The Guild Of Thieves
 - Exits: n e
 - north → The Dark Alley
-- Last seen here: An automatic teller machine has been installed in the wall here.
+- Last seen here: A small sword lies here. | An automatic teller machine has been installed in the wall here.
 
 ## Inside The West Gate Of Midgaard
 - Exits: e s (w)
 - east → Main Street
+- south → Wall Road (2)
 - Last seen here: A cityguard is here, guarding the gate. | A cityguard is here, guarding the gate. | A cityguard is here, guarding the gate. | A cityguard is here, guarding the gate. | A cityguard is here, guarding the gate.
 
 ## Behind The Temple Altar
 - Exits: n s
 - north → The Great Field Of Midgaard
+- south → By The Temple Altar
 
 ## The Great Field Of Midgaard
 - Exits: n s
 - north → The Great Field Of Midgaard (2)
+- south → Behind The Temple Altar
 
 ## The Great Field Of Midgaard (2)
 - Exits: n e s w
 - east → The Entrance To The Newbie Zone
 - north → The Great Field Of Midgaard (3)
 - west → The Dirt Path
+- south → The Great Field Of Midgaard
 
 ## The Entrance To The Newbie Zone
 - Exits: n w
@@ -588,17 +597,22 @@ Current room: **A T-Intersection In The Passage**
 ## The Great Chessboard Of Midgaard
 - Exits: e w
 - west → A White Square
+- ⚠ darkness through east (bring a light source)
 
 ## A White Square
-- Exits: e s w
+- Exits: e s
 - west → A Black Square
 - north → A Black Square
-- Last seen here: The Black King stands here.
+- east → A Black Square (2)
+- south → A Black Square
+- Last seen here: The corpse of the Black Rook is lying here.
 
 ## A Black Square
-- Exits: n e s w
+- Exits: n e s
 - west → A White Square
 - north → A White Square
+- east → A White Square (3)
+- south → A White Square (4)
 
 ## The Reading Room
 - Exits: e
@@ -846,11 +860,553 @@ Current room: **A T-Intersection In The Passage**
 - Exits: n w
 - north → Another Corner (2)
 
+## On The River
+- Exits: n e w
+- west → On The River (2)
+- north → The Levee
+
+## On The River (2)
+- Exits: e w
+- east → On The River
+- west → Under The Bridge
+
+## The Entrance Hall To The Guild Of Swordsmen
+- Exits: n e
+- east → The Bar Of Swordsmen
+- north → Main Street
+- Last seen here: An automatic teller machine has been installed in the wall here. | A janitor is walking around, cleaning up. | A knight is guarding the entrance.
+
+## The Bar Of Swordsmen
+- Exits: s w
+- south → The Tournament And Practice Yard
+- west → The Entrance Hall To The Guild Of Swordsmen
+- Last seen here: A large, sociable bulletin board is mounted on a wall here. | A waiter is here.
+
+## The Tournament And Practice Yard
+- Exits: n d
+- down → The Sewers
+- north → The Bar Of Swordsmen
+
+## Inside The East Gate Of Midgaard
+- Exits: e s w
+- west → Main Street
+- Last seen here: A cityguard is here, guarding the gate. | A cityguard is here, guarding the gate. | A cityguard is here, guarding the gate. | A cityguard is here, guarding the gate. | A cityguard is here, guarding the gate.
+
+## The Weapon Shop
+- Exits: s
+- south → Main Street
+- Shop stock (from `list`): ##   Available   Item                                               Cost | ---------------------------------------------------------------------------- | 1)  Unlimited   A flail                                             882 | 2)  Unlimited   A warhammer                                          70 | 3)  Unlimited   A wooden club                                        16 | 4)  Unlimited   A long sword                                        846 | 5)  Unlimited   A small sword                                        84 | 6)  Unlimited   A dagger                                             14
+- Last seen here: A shiny newbie dagger is lying here looking for a back to stab. ..It has a soft glowing aura! | A weaponsmith is standing here.
+
+## Under The Bridge
+- Exits: e w
+- west → On The Swift Flowing River
+
+## On The Swift Flowing River
+- Exits: e w
+- west → The Riverbank
+
+## The Riverbank
+- Exits: n e w
+- north → On The River Bank In The Deep, Dark Forest
+- west → The Twisty Part Of The River
+
+## On The River Bank In The Deep, Dark Forest
+- Exits: n s w
+- north → A Small Path In The Deep, Dark Forest
+- Last seen here: A large, gray wolf is here, glaring hungrily at you.
+
+## A Small Path In The Deep, Dark Forest
+- Exits: n s
+- north → A Small Path In The Deep, Dark Forest (2)
+- Last seen here: A large toadstool grows nearby. | A vicious warg is here, snarling angrily at you.
+
+## A Small Path In The Deep, Dark Forest (2)
+- Exits: s w
+- west → A Junction In The Deep, Dark Forest
+
+## A Junction In The Deep, Dark Forest
+- Exits: n e w
+- west → A Small Path In The Deep, Dark Forest (3)
+
+## A Small Path In The Deep, Dark Forest (3)
+- Exits: e s
+- south → A Junction On The River Bank In The Deep, Dark Forest
+- Last seen here: A large toadstool grows nearby.
+
+## A Small Path In The Deep, Dark Forest (4)
+- Exits: n w
+- west → A Junction In The Deep, Dark Forest
+
+## A Junction On The River Bank In The Deep, Dark Forest
+- Exits: n e w
+- west → A Small Path On The River Bank In The Deep, Dark Forest
+
+## A Small Path On The River Bank In The Deep, Dark Forest
+- Exits: n e
+- north → A Narrow Trail Through The Deep, Dark Forest
+- Last seen here: A long, gray branch rests heavily on the ground.
+
+## A Narrow Trail Through The Deep, Dark Forest
+- Exits: n s w
+- west → A Narrow Trail Through The Deep, Dark Forest (2)
+
+## A Narrow Trail Through The Deep, Dark Forest (2)
+- Exits: e w
+- west → A Dusty Trail In The Deep, Dark Forest
+
+## A Dusty Trail In The Deep, Dark Forest
+- Exits: n e
+- north → A Dusty Trail In The Deep, Dark Forest (2)
+
+## A Dusty Trail In The Deep, Dark Forest (2)
+- Exits: e s w
+- east → Outside A Cave In The Deep, Dark Forest
+- west → At The End Of The Trail Through The Deep, Dark Forest
+- Last seen here: The corpse of the ferocious warg is lying here.
+
+## Outside A Cave In The Deep, Dark Forest
+- Exits: n w
+- north → The Cave Of The Green Dragon
+- west → A Dusty Trail In The Deep, Dark Forest (2)
+
+## The Cave Of The Green Dragon
+- Exits: s
+- south → Outside A Cave In The Deep, Dark Forest
+- Last seen here: A large round shield has been left here.
+
+## At The End Of The Trail Through The Deep, Dark Forest
+- Exits: n e
+- north → On The Narrow Trail
+
+## On The Narrow Trail
+- Exits: n s
+- north → In The Forest
+- Last seen here: A large, black wolf is here, glaring hungrily at you.
+
+## In The Forest
+- Exits: e s w
+- east → In The Forest (2)
+
+## In The Forest (2)
+- Exits: e w
+
+## The Twisty Part Of The River
+- Exits: e s
+- south → The Scenic Route
+
+## The Scenic Route
+- Exits: e w
+- west → The Swift River Delta
+
+## The Swift River Delta
+- Exits: n e s w
+- west → Near The Rocks
+- north → The North Channel
+
+## Near The Rocks
+- Exits: e s
+- south → The South River Delta
+
+## The South River Delta
+- Exits: n e s w
+- south → The Pier
+- east → The Swift River Delta
+
+## The Pier
+- Exits: n w
+- west → Mired In Seaweed
+- north → The South River Delta
+
+## Mired In Seaweed
+- Exits: n e w
+- west → The Last Stop
+- east → The Pier
+- Last seen here: ( 2) The corpse of the sea hag is lying here.
+
+## The Last Stop
+- Exits: n e
+- north → The Beach Head
+- east → Mired In Seaweed
+
+## The Beach Head
+- Exits: s
+- south → The Last Stop
+- Last seen here: A pair of boots sit here in a puddle of water. | A crusty looking crab is crawling around here searching for food. | A crusty looking crab is crawling around here searching for food. | A crusty looking crab is crawling around here searching for food.
+
+## The North Channel
+- Exits: n s w
+- north → The North Channel (2)
+
+## The North Channel (2)
+- Exits: e s w
+- west → Near The Isle
+
+## Near The Isle
+- Exits: e s
+- south → The Lane Of The Lying
+
+## The Lane Of The Lying
+- Exits: n s
+- south → The First Trial Of Minos
+- Sign — sign: A sign beside the dark cave opening reads: WARNING! Only fools and dead people pass this way. The tests of Minos, our glorious ruler, await.
+
+## The First Trial Of Minos
+- Exits: e
+- east → The Second Trial Of Minos
+
+## The Second Trial Of Minos
+- Exits: s
+- south → The Third Trial Of Minos
+- Last seen here: A little pile of gold coins is lying here. | A dark minotaur shield has been left here. | The greatest swordsman in the land is standing here with a sneer on his face. | The greatest swordsman in the land is standing here with a sneer on his face.
+
+## The Third Trial Of Minos
+- Exits: e
+- east → The Fourth Trial Of Minos
+- Last seen here: The Mummy of Rabscuttle wanders here, hands aloft, walking towards you.
+
+## The Fourth Trial Of Minos
+- Exits: s
+- south → The Fifth Trial Of Minos
+- Last seen here: A giant lizard is here.
+
+## The Fifth Trial Of Minos
+- Exits: e
+- Last seen here: General Woundwort, the dark demon of Minos, awaits to maul you to shreds.
+
+## Inside The West Gate Of Midgaard (2)
+- Exits: e s w
+- east → Main Street
+- Last seen here: A cityguard stands here. | A cityguard is here, guarding the gate. | A cityguard is here, guarding the gate. | A cityguard is here, guarding the gate. | A cityguard is here, guarding the gate. | A cityguard is here, guarding the gate.
+
+## The Magic Shop
+- Exits: s
+- south → Main Street
+- Shop stock (from `list`): ##   Available   Item                                               Cost | ---------------------------------------------------------------------------- | 1)  Unlimited   A gnarled staff                                     874 | 2)  Unlimited   A gray wand of invisibility                         499 | 3)  Unlimited   A scroll of recall                                  249 | 4)  Unlimited   A yellow potion of see invisible                    499 | 5)  Unlimited   A scroll of identify                               6242
+- Last seen here: A wizard walks around behind the counter, talking to himself.
+
+## The Eastern End Of The Alley
+- Exits: s w
+- west → The Dark Alley At The Levee
+- south → The Deserted Warehouse
+- Sign — breast plate: You see nothing special..
+
+## Outside The East Gate Of Midgaard
+- Exits: e w
+
+## The Entrance To The Mages' Guild
+- Exits: n s
+- north → Main Street
+- Last seen here: An automatic teller machine has been installed in the wall here. | A sorcerer is guarding the entrance.
+
+## The Post Office
+- Exits: s
+- south → The Entrance Hall Of The Grunting Boar Inn
+- Sign — sign: ********************************************************** *                                                        * *    Mail Instructions:                                  * *                                                        * *      To send a note to someone:                        * *    
+- Last seen here: The head postmaster is standing here, waiting to help you with your mail.
+
+## The Reception
+- Exits: n d
+- down → The Entrance Hall Of The Grunting Boar Inn
+- Sign — sign: Rooms are expensive but good!  You may: Offer - get an offer on a room - Time is in real life days. Rent  - Rent a room (saves your stuff, and quits the game), minimum charge is one day. MY WAY OR THE HIGHWAY PAY YOUR RENT! WE WON'T THINK TWICE BEFORE KICKING YOU OUT.
+- Last seen here: An automatic teller machine has been installed in the wall here. | A receptionist is standing behind the counter here, smiling at you.
+
+## The Deserted Warehouse
+- Exits: n
+- north → The Eastern End Of The Alley
+- Last seen here: An oozing green gelatinous blob is here, sucking in bits of debris. | A sailor stands here, waiting to help you.
+
+## Inside The East Gate Of Midgaard (2)
+- Exits: (e) s w
+- south → Ye Olde Water Shoppe
+- west → Main Street
+- Last seen here: A cityguard is here, guarding the gate. | A cityguard is here, guarding the gate. | A cityguard is here, guarding the gate. | A cityguard is here, guarding the gate. | A cityguard is here, guarding the gate.
+
+## The Pet Shop
+- Exits: n
+- north → Main Street
+- Last seen here: There is a Pet Shop Boy standing here cuddling something furry in his hands.
+
+## A Black Square (2)
+- Exits: e s w
+- west → A White Square
+- east → A White Square (2)
+- ⚠ a death occurred here
+- Last seen here: A long sword has been left here. | ( 2) A small sword lies here.
+
+## A White Square (2)
+- Exits: e s
+- east → A Black Square (3)
+- west → A Black Square (3)
+- south → A Black Square
+- Sign — bishop staff: You see nothing special.. ..It has a soft glowing aura!
+
+## A Black Square (3)
+- Exits: e s w
+- east → A White Square (2)
+- west → A White Square (2)
+- Last seen here: A long sword has been left here. | ( 2) A small sword lies here.
+
+## Temple Hannah Market Place
+- Exits: n e s
+- Last seen here: A big temple guard is here.
+
+## A White Square (3)
+- Exits: n e s w
+- west → A Black Square
+- east → A Black Square (4)
+- south → A Black Square (5)
+- Sign — lance: You see nothing special.. ..It emits a faint humming sound!
+
+## A White Square (4)
+- Exits: n e s
+- south → A Black Square
+- east → A White Square (6)
+
+## A Black Square (4)
+- Exits: n e s w
+- east → A White Square (3)
+
+## A Black Square (5)
+- Exits: n s w
+- south → A White Square (5)
+
+## A White Square (5)
+- Exits: n e s w
+- east → The Great Chessboard Of Midgaard
+
+## Ye Olde Water Shoppe
+- Exits: n
+- north → Inside The East Gate Of Midgaard (2)
+- Last seen here: A janitor is walking around, cleaning up. | Wally the Watermaster is standing behind the counter.
+
+## A White Square (6)
+- Exits: n e w
+- east → A Black Square (6)
+- Last seen here: A finely crafted newbie mace is waiting for a worthy owner. ..It has a soft glowing aura! | A long sword has been left here. | Here stands a magnificent knight of the light realm.
+
+## A Black Square (6)
+- Exits: n e w
+- east → A White Square (7)
+- Sign — key: You see nothing special.. (invisible)
+- Last seen here: The White King stands here.
+
+## A White Square (7)
+- Exits: n e w (d)
+- east → A Black Square (6)
+- Last seen here: The White Queen stands here.
+
+## [ 3661] A Black Square[ NOBITS ][ City ]
+- Exits: n e w
+- west → [ 3660] A White Square[ NOBITS ][ City ]
+- Last seen here: [65535] The corpse of the White King is lying here. | [3040] A breast plate is lying on the ground. | [3076] A leather cap is lying on the ground. | [3087] A brown leather cape was abandoned on the floor | [3042] A small wooden shield is lying on the ground. | [3086] A pair of leather sleeves is lying on the ground.
+
+## [ 3660] A White Square[ NOBITS ][ City ]
+- Exits: n e w (d)
+- down → [ 3666] The White Treasury[ DARK INDOORS PRIVATE ][ Inside ]
+
+## [ 3666] The White Treasury[ DARK INDOORS PRIVATE ][ Inside ]
+- Exits: u
+- up → [ 3660] A White Square[ NOBITS ][ City ] (2)
+
+## [ 3660] A White Square[ NOBITS ][ City ] (2)
+- Exits: n e w d
+- north → [ 3652] A Black Square[ NOBITS ][ City ]
+
+## [ 3652] A Black Square[ NOBITS ][ City ]
+- Exits: n e s w
+- north → [ 3644] A White Square[ NOBITS ][ City ]
+- Last seen here: [3601] You see a pawn standing here waiting for orders.
+
+## [ 3644] A White Square[ NOBITS ][ City ]
+- Exits: n e s w
+- north → [ 3636] A Black Square[ NOBITS ][ City ]
+
+## [ 3636] A Black Square[ NOBITS ][ City ]
+- Exits: n e s w
+- north → [ 3628] A White Square[ NOBITS ][ City ]
+
+## [ 3628] A White Square[ NOBITS ][ City ]
+- Exits: n e s w
+- north → [ 3620] A Black Square[ NOBITS ][ City ]
+
+## [ 3620] A Black Square[ NOBITS ][ City ]
+- Exits: n e s w
+- north → [ 3612] A White Square[ NOBITS ][ City ]
+
+## [ 3612] A White Square[ NOBITS ][ City ]
+- Exits: n e s w
+- north → [ 3604] A Black Square[ NOBITS ][ City ]
+- Last seen here: [3600] You see a pawn standing here waiting for orders.
+
+## [ 3604] A Black Square[ NOBITS ][ City ]
+- Exits: e s w (d)
+- down → [ 3665] The Black Treasury[ DARK INDOORS PRIVATE ][ Inside ]
+- Last seen here: [18606] A shiny newbie dagger is lying here looking for a back to stab. ..It has a soft glowing aura! | [18603] A bright newbie helm is hoping a loose head will wander by. ..It has a soft glowing aura! | [18602] A bright green newbie vest is lying here looking for a body to hug.
+
+## [ 3665] The Black Treasury[ DARK INDOORS PRIVATE ][ Inside ]
+- Exits: u
+- up → [ 3604] A Black Square[ NOBITS ][ City ] (2)
+- Last seen here: [3616] There are a LOT of coins here.
+
+## [ 3604] A Black Square[ NOBITS ][ City ] (2)
+- Exits: e s w d
+- east → [ 3605] A White Square[ NOBITS ][ City ]
+- Last seen here: [18606] A shiny newbie dagger is lying here looking for a back to stab. ..It has a soft glowing aura! | [18603] A bright newbie helm is hoping a loose head will wander by. ..It has a soft glowing aura! | [18602] A bright green newbie vest is lying here looking for a body to hug.
+
+## [ 3605] A White Square[ NOBITS ][ City ]
+- Exits: e s w
+- east → [ 3606] A Black Square[ NOBITS ][ City ]
+- Last seen here: [3612] The Sceptre of the Black King lies here, collecting dust. (invisible) ..It emits a faint humming sound! | [3614] There is a sinister black key lying here. (invisible)
+
+## [ 3606] A Black Square[ NOBITS ][ City ]
+- Exits: e s w
+- east → [ 3607] A White Square[ NOBITS ][ City ]
+- west → [ 3605] A White Square[ NOBITS ][ City ]
+- Last seen here: [3606] A dark priest stands here.
+
+## [ 3607] A White Square[ NOBITS ][ City ]
+- Exits: e s w
+- east → [ 3608] A Black Square[ NOBITS ][ City ]
+- west → [ 3606] A Black Square[ NOBITS ][ City ]
+- Last seen here: [3604] Here stands a magnificent knight of the dark realm.
+
+## [ 3608] A Black Square[ NOBITS ][ City ]
+- Exits: s w
+- west → [ 3607] A White Square[ NOBITS ][ City ]
+- south → [ 3616] A White Square[ NOBITS ][ City ]
+- Last seen here: [65535] The corpse of the Black Rook is lying here.
+
+## [ 3616] A White Square[ NOBITS ][ City ]
+- Exits: n s w
+- south → [ 3624] A Black Square[ NOBITS ][ City ]
+- north → [ 3608] A Black Square[ NOBITS ][ City ]
+- Last seen here: [3600] You see a pawn standing here waiting for orders.
+
+## [ 3624] A Black Square[ NOBITS ][ City ]
+- Exits: n s w
+- south → [ 3632] A White Square[ NOBITS ][ City ]
+- north → [ 3616] A White Square[ NOBITS ][ City ]
+
+## [ 3632] A White Square[ NOBITS ][ City ]
+- Exits: n e s w
+- north → [ 3624] A Black Square[ NOBITS ][ City ]
+- south → [ 3640] A Black Square[ NOBITS ][ City ]
+
+## [ 3640] A Black Square[ NOBITS ][ City ]
+- Exits: n s w
+- south → [ 3648] A White Square[ NOBITS ][ City ]
+
+## [ 3648] A White Square[ NOBITS ][ City ]
+- Exits: n s w
+- south → [ 3656] A Black Square[ NOBITS ][ City ]
+
+## [ 3656] A Black Square[ NOBITS ][ City ]
+- Exits: n s w
+- south → [ 3664] A White Square[ NOBITS ][ City ]
+- Last seen here: [3601] You see a pawn standing here waiting for orders.
+
+## [ 3664] A White Square[ NOBITS ][ City ]
+- Exits: n w
+- north → [ 3656] A Black Square[ NOBITS ][ City ]
+- west → [ 3663] A Black Square[ NOBITS ][ City ]
+- Last seen here: [65535] The corpse of the White Rook is lying here.
+
+## [ 3663] A Black Square[ NOBITS ][ City ]
+- Exits: n e w
+- west → [ 3662] A White Square[ NOBITS ][ City ]
+- Last seen here: [3605] Here stands a magnificent knight of the light realm.
+
+## [ 3662] A White Square[ NOBITS ][ City ]
+- Exits: n e w
+- Last seen here: [3607] A light priest stands here.
+
+## [28468] A north-south street in Ghenna.[ DARK ][ City ]
+- Exits: n s w
+- south → [ 3005] The Temple Square[ * ][ City ]
+- Last seen here: [28409] *A Death Knight stands here, lowering at you.
+
+## [ 3005] The Temple Square[ * ][ City ]
+- Exits: n e s w
+- south → [ 3014] Market Square[ * ][ City ]
+- north ⇢ [ 3003] The Bar Of Divination (seen via `exits`, not visited)
+- east ⇢ [ 3005] The Temple Square (seen via `exits`, not visited)
+- Last seen here: [3035] A large fountain carved from blue-streaked marble is here, bubbling merrily. | [3059] [T3009] A Peacekeeper is standing here, ready to jump in at the first sign of trouble.
+
+## [ 3014] Market Square[ * ][ City ]
+- Exits: n e s w
+- east → [ 3015] Main Street[ * ][ City ]
+- north → [ 3005] The Temple Square[ * ][ City ]
+- south → [ 3025] The Common Square[ * ][ City ]
+- west → [ 3013] Main Street[ * ][ City ]
+
+## [ 3015] Main Street[ * ][ City ]
+- Exits: n e s w
+- east → [ 3016] Main Street[ * ][ City ]
+- north → [ 3010] The General Store[ INDOORS NO_MAGIC * ][ Inside ]
+- west → [ 3014] Market Square[ * ][ City ]
+- Last seen here: [3061] [T3011] A janitor is walking around, cleaning up.
+
+## [ 3016] Main Street[ * ][ City ]
+- Exits: n e s w
+- north → [ 3011] The Weapon Shop[ INDOORS NO_MAGIC * ][ Inside ]
+- west → [ 3015] Main Street[ * ][ City ]
+
+## [ 3011] The Weapon Shop[ INDOORS NO_MAGIC * ][ Inside ]
+- Exits: s
+- south → [ 3016] Main Street[ * ][ City ]
+- Last seen here: [18606] A shiny newbie dagger is lying here looking for a back to stab. ..It has a soft glowing aura! | [3066] [T3010] An odif yltsaeb is here, walking backwards. | [3003] A weaponsmith is standing here.
+
+## [ 3010] The General Store[ INDOORS NO_MAGIC * ][ Inside ]
+- Exits: s
+- south → [ 3015] Main Street[ * ][ City ]
+- Last seen here: [3002] A grocer stands at the counter, with a slightly impatient look on his face.
+
+## [ 3025] The Common Square[ * ][ City ]
+- Exits: n e s w
+- north → [ 3014] Market Square[ * ][ City ]
+- east ⇢ [ 3026] The Dark Alley (seen via `exits`, not visited)
+- south ⇢ [ 3030] The Dump (seen via `exits`, not visited)
+- west ⇢ [ 3024] The Eastern End Of Poor Alley (seen via `exits`, not visited)
+- Last seen here: [3015] A rather dubious looking piece of meat is on the ground here. | [3059] [T3009] A Peacekeeper is standing here, ready to jump in at the first sign of trouble.
+
+## [ 3013] Main Street[ * ][ City ]
+- Exits: n e s w
+- west → [ 3012] Main Street[ * ][ City ]
+- east → [ 3014] Market Square[ * ][ City ]
+- north → [ 3009] The Bakery[ INDOORS NO_MAGIC * ][ Inside ]
+- south → [ 3020] The Armory[ INDOORS NO_MAGIC * ][ Inside ]
+- Last seen here: [3061] [T3011] A janitor is walking around, cleaning up.
+
+## [ 3012] Main Street[ * ][ City ]
+- Exits: n e s w
+- east → [ 3013] Main Street[ * ][ City ]
+- west → [ 3040] Inside The West Gate Of Midgaard[ * ][ City ]
+- north → [ 3033] The Magic Shop[ INDOORS NO_MAGIC * ][ Inside ]
+- south ⇢ [ 3017] The Entrance To The Mages' Guild (seen via `exits`, not visited)
+- Last seen here: [3062] [T3010] A beastly fido is mucking through the garbage looking for food here. | [3062] [T3010] A beastly fido is mucking through the garbage looking for food here.
+
+## [ 3009] The Bakery[ INDOORS NO_MAGIC * ][ Inside ]
+- Exits: s
+- south → [ 3013] Main Street[ * ][ City ]
+- Last seen here: ( 3) [3021] A small sword lies here. | [3001] The baker looks at you calmly, wiping flour from his face with one hand.
+
+## [ 3020] The Armory[ INDOORS NO_MAGIC * ][ Inside ]
+- Exits: n
+- north → [ 3013] Main Street[ * ][ City ]
+- Last seen here: [3021] A small sword lies here. | [3022] A long sword has been left here. | [18606] A shiny newbie dagger is lying here looking for a back to stab. ..It has a soft glowing aura! | [3071] A pair of leather gloves is lying on the ground. | [3086] A pair of leather sleeves is lying on the ground. | [3004] An armorer stands here displaying his new (and previously owned) armors.
+
+## [ 3040] Inside The West Gate Of Midgaard[ * ][ City ]
+- Exits: e s w
+- east → [ 3012] Main Street[ * ][ City ]
+- Last seen here: [3067] [T3009] A cityguard is here, guarding the gate. | [3067] [T3009] A cityguard is here, guarding the gate. | [3067] [T3009] A cityguard is here, guarding the gate. | [3067] [T3009] A cityguard is here, guarding the gate. | [3067] [T3009] A cityguard is here, guarding the gate.
+
+## [ 3033] The Magic Shop[ INDOORS NO_MAGIC * ][ Inside ]
+- Exits: s
+- Last seen here: [3000] A wizard walks around behind the counter, talking to himself.
+
 ## Frontier — untried exits (explore these)
-- The Dark Alley At The Levee: east
-- The Levee: south ⇢ On The River
 - On The Bridge: south
-- The Entrance Hall Of The Grunting Boar Inn: north, up
 - The Quadruple Junction Under The Dump: west, up ⇢ The Dump
 - The Triple Junction: south, west
 - The Sewer Pipe Bend: west
@@ -910,14 +1466,9 @@ Current room: **A T-Intersection In The Passage**
 - A Quiet Pipe Junction: east, west
 - The Muddy Sewer Pipe: east, south, west
 - The Entrance Hall To The Guild Of Thieves: east
-- Inside The West Gate Of Midgaard: south, west
-- Behind The Temple Altar: south
-- The Great Field Of Midgaard: south
-- The Great Field Of Midgaard (2): south
+- Inside The West Gate Of Midgaard: west
 - The Dirt Path: east
 - The Great Chessboard Of Midgaard: east
-- A White Square: east, south
-- A Black Square: east, south
 - The Beginning Of The Passage: south
 - The Dirty Hallway: west
 - A Nexus: east ⇢ The door is closed.
@@ -944,20 +1495,98 @@ Current room: **A T-Intersection In The Passage**
 - A Narrow Passage (2): south
 - The Balcony (2): down
 - A Corner Room: west
+- On The River: east
+- Inside The East Gate Of Midgaard: east, south
+- Under The Bridge: east
+- On The Swift Flowing River: east
+- The Riverbank: east
+- On The River Bank In The Deep, Dark Forest: south, west
+- A Small Path In The Deep, Dark Forest: south
+- A Small Path In The Deep, Dark Forest (2): south
+- A Junction In The Deep, Dark Forest: north, east
+- A Small Path In The Deep, Dark Forest (3): east
+- A Small Path In The Deep, Dark Forest (4): north
+- A Junction On The River Bank In The Deep, Dark Forest: north, east
+- A Small Path On The River Bank In The Deep, Dark Forest: east
+- A Narrow Trail Through The Deep, Dark Forest: north, south
+- A Narrow Trail Through The Deep, Dark Forest (2): east
+- A Dusty Trail In The Deep, Dark Forest: east
+- A Dusty Trail In The Deep, Dark Forest (2): south
+- At The End Of The Trail Through The Deep, Dark Forest: east
+- On The Narrow Trail: south
+- In The Forest: south, west
+- In The Forest (2): east, west
+- The Twisty Part Of The River: east
+- The Scenic Route: east
+- The Swift River Delta: east, south
+- Near The Rocks: east
+- The South River Delta: north, west
+- Mired In Seaweed: north
+- The North Channel: south, west
+- The North Channel (2): east, south
+- Near The Isle: east
+- The Lane Of The Lying: north
+- The Fifth Trial Of Minos: east
+- Inside The West Gate Of Midgaard (2): south, west
+- Outside The East Gate Of Midgaard: east, west
+- The Entrance To The Mages' Guild: south
+- The Reception: north
+- Inside The East Gate Of Midgaard (2): east
+- A Black Square (2): south
+- A Black Square (3): south
+- Temple Hannah Market Place: north, east, south
+- A White Square (3): north
+- A White Square (4): north
+- A Black Square (4): north, south, west
+- A Black Square (5): north, west
+- A White Square (5): north, south, west
+- A White Square (6): north, west
+- A Black Square (6): north, west
+- A White Square (7): north, west, down
+- [ 3661] A Black Square[ NOBITS ][ City ]: north, east
+- [ 3660] A White Square[ NOBITS ][ City ]: north, east, west
+- [ 3660] A White Square[ NOBITS ][ City ] (2): east, west, down
+- [ 3652] A Black Square[ NOBITS ][ City ]: east, south, west
+- [ 3644] A White Square[ NOBITS ][ City ]: east, south, west
+- [ 3636] A Black Square[ NOBITS ][ City ]: east, south, west
+- [ 3628] A White Square[ NOBITS ][ City ]: east, south, west
+- [ 3620] A Black Square[ NOBITS ][ City ]: east, south, west
+- [ 3612] A White Square[ NOBITS ][ City ]: east, south, west
+- [ 3604] A Black Square[ NOBITS ][ City ]: east, south, west
+- [ 3604] A Black Square[ NOBITS ][ City ] (2): south, west, down
+- [ 3605] A White Square[ NOBITS ][ City ]: south, west
+- [ 3606] A Black Square[ NOBITS ][ City ]: south
+- [ 3607] A White Square[ NOBITS ][ City ]: south
+- [ 3616] A White Square[ NOBITS ][ City ]: west
+- [ 3624] A Black Square[ NOBITS ][ City ]: west
+- [ 3632] A White Square[ NOBITS ][ City ]: east, west
+- [ 3640] A Black Square[ NOBITS ][ City ]: north, west
+- [ 3648] A White Square[ NOBITS ][ City ]: north, west
+- [ 3656] A Black Square[ NOBITS ][ City ]: north, west
+- [ 3663] A Black Square[ NOBITS ][ City ]: north, east
+- [ 3662] A White Square[ NOBITS ][ City ]: north, east, west
+- [28468] A north-south street in Ghenna.[ DARK ][ City ]: north, west
+- [ 3005] The Temple Square[ * ][ City ]: north ⇢ [ 3003] The Bar Of Divination, east ⇢ [ 3005] The Temple Square, west
+- [ 3015] Main Street[ * ][ City ]: south
+- [ 3016] Main Street[ * ][ City ]: east, south
+- [ 3025] The Common Square[ * ][ City ]: east ⇢ [ 3026] The Dark Alley, south ⇢ [ 3030] The Dump, west ⇢ [ 3024] The Eastern End Of Poor Alley
+- [ 3012] Main Street[ * ][ City ]: south ⇢ [ 3017] The Entrance To The Mages' Guild
+- [ 3040] Inside The West Gate Of Midgaard[ * ][ City ]: south, west
+- [ 3033] The Magic Shop[ INDOORS NO_MAGIC * ][ Inside ]: south
 
 ## Trail — recent moves (oldest first)
-- north: The Alchemist's Room (2) → A Narrow Passage (2)
-- north: A Narrow Passage (2) → The South Stairs
-- up: The South Stairs → The Balcony
-- north: The Balcony → The Balcony (2)
-- south: The Balcony (2) → The Balcony
-- down: The Balcony → The South Stairs
-- west: The South Stairs → A Bright Hallway (2)
-- east: A Bright Hallway (2) → The South Stairs
-- south: The South Stairs → A Narrow Passage
-- south: A Narrow Passage → The Alchemist's Room
-- down: The Alchemist's Room → The Entrance
-- north: The Entrance → A Crossing Of Corridors
-- east: A Crossing Of Corridors → A Corner Room
-- north: A Corner Room → Another Corner (2)
-- west: Another Corner (2) → A T-Intersection In The Passage
+- east: [ 3014] Market Square[ * ][ City ] → [ 3015] Main Street[ * ][ City ]
+- east: [ 3015] Main Street[ * ][ City ] → [ 3016] Main Street[ * ][ City ]
+- north: [ 3016] Main Street[ * ][ City ] → [ 3011] The Weapon Shop[ INDOORS NO_MAGIC * ][ Inside ]
+- south: [ 3011] The Weapon Shop[ INDOORS NO_MAGIC * ][ Inside ] → [ 3016] Main Street[ * ][ City ]
+- west: [ 3016] Main Street[ * ][ City ] → [ 3015] Main Street[ * ][ City ]
+- west: [ 3015] Main Street[ * ][ City ] → [ 3014] Market Square[ * ][ City ]
+- west: [ 3014] Market Square[ * ][ City ] → [ 3013] Main Street[ * ][ City ]
+- north: [ 3013] Main Street[ * ][ City ] → [ 3009] The Bakery[ INDOORS NO_MAGIC * ][ Inside ]
+- south: [ 3009] The Bakery[ INDOORS NO_MAGIC * ][ Inside ] → [ 3013] Main Street[ * ][ City ]
+- south: [ 3013] Main Street[ * ][ City ] → [ 3020] The Armory[ INDOORS NO_MAGIC * ][ Inside ]
+- north: [ 3020] The Armory[ INDOORS NO_MAGIC * ][ Inside ] → [ 3013] Main Street[ * ][ City ]
+- west: [ 3013] Main Street[ * ][ City ] → [ 3012] Main Street[ * ][ City ]
+- west: [ 3012] Main Street[ * ][ City ] → [ 3040] Inside The West Gate Of Midgaard[ * ][ City ]
+- east: [ 3040] Inside The West Gate Of Midgaard[ * ][ City ] → [ 3012] Main Street[ * ][ City ]
+- north: [ 3012] Main Street[ * ][ City ] → [ 3033] The Magic Shop[ INDOORS NO_MAGIC * ][ Inside ]

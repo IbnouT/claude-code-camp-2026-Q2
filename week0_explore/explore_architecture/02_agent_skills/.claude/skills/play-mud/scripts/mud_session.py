@@ -215,6 +215,7 @@ class MemoryTracker:
         self.current_room = None
         self.vitals = None        # (hp, mana, moves) from the latest prompt
         self.carrying = None      # list, as of the last `inventory`
+        self.conditions = []      # hungry/thirsty/drunk, as of the last `score`
         self.thought = ""         # the agent's voiced one-line intent
         self.thought_at = None    # when it was voiced (epoch)
         self.trail = []           # recent moves: "south: A -> B"
@@ -258,6 +259,8 @@ class MemoryTracker:
             # some responses are worth capturing verbatim into memory
             if word in INV_WORDS:
                 self._capture = {"kind": "inventory", "arg": "", "lines": []}
+            elif word in ("score", "sc"):
+                self._capture = {"kind": "score", "arg": "", "lines": []}
             elif word == "exits":
                 self._capture = {"kind": "exits", "arg": "", "lines": []}
             elif word == "list":
@@ -389,7 +392,16 @@ class MemoryTracker:
         cap, self._capture = self._capture, None
         if not cap or not cap["lines"]:
             return
-        if cap["kind"] == "exits" and self.current_room in self.rooms:
+        if cap["kind"] == "score":
+            # conditions are only reliably visible in score output; a score
+            # both sets and clears them, so they stay current
+            text = " ".join(cap["lines"])
+            self.conditions = [c for c, marker in
+                               (("hungry", "You are hungry"),
+                                ("thirsty", "You are thirsty"),
+                                ("drunk", "You are intoxicated"))
+                               if marker in text]
+        elif cap["kind"] == "exits" and self.current_room in self.rooms:
             # destinations named without walking there -> "peeks" enrich the map
             room = self.rooms[self.current_room]
             seen = {}
@@ -513,6 +525,7 @@ class MemoryTracker:
                        "carrying": self.carrying, "trail": self.trail,
                        "kills_xp": self.kills_xp, "deaths": self.deaths,
                        "gold_hist": self.gold_hist,
+                       "conditions": self.conditions,
                        "thought": self.thought,
                        "thought_at": self.thought_at}, f, indent=1)
         os.replace(tmp, MEM_STATE)
@@ -559,6 +572,9 @@ class MemoryTracker:
                if self.vitals else "(unknown — no prompt seen yet)")
         if c.get("max_hp"):
             vit += "  (max %s/%s/%s)" % (c["max_hp"], c["max_mana"], c["max_moves"])
+        if self.conditions:
+            vit += "\n⚠ " + " · ".join(self.conditions) + \
+                   " (hunger/thirst stall regeneration — eat/drink)"
         bits = []
         if c.get("rank"):
             bits.append("%s — level %s" % (c["rank"], c["level"]))
@@ -815,14 +831,17 @@ class Mud:
                 "(it offered to create it; refused)." % USER)
         self.send_line(PASSWORD)
         m = self.expect(
-            r"\*\*\* PRESS RETURN:|Make your choice:|Wrong password",
+            r"\*\*\* PRESS RETURN:|Make your choice:|Wrong password|Reconnecting\.",
             label="the post-password screen")
         if "Wrong password" in m.group(0):
             raise SessionError("Wrong password for %r." % USER)
-        if "PRESS RETURN" in m.group(0):
-            self.send_line("")
-            self.expect(r"Make your choice:", label="the main menu")
-        self.send_line("1")       # menu option 1: enter the game
+        if "Reconnecting" in m.group(0):
+            pass                  # link-dead reconnect: straight into the game
+        else:
+            if "PRESS RETURN" in m.group(0):
+                self.send_line("")
+                self.expect(r"Make your choice:", label="the main menu")
+            self.send_line("1")   # menu option 1: enter the game
         if not self.wait_prompt(15):
             raise SessionError(
                 "Logged in but never saw the game prompt.\nLast output:\n%s"

@@ -1,35 +1,25 @@
 {
- "goal": "Defeat the Massive Minotaur",
- "persona": "Efficient grinder: fight anything near my level, avoid trivial kills that waste time, avoid fights I'd likely lose, retreat below 30% HP, always carry a light before going underground.",
+ "goal": "Explore unexplored areas and keep leveling up",
+ "persona": "Aggressive XP grinder: prioritize high-value targets (Peacekeepers ~20k XP) over trivial mobs \u2014 speed of leveling matters more than caution. Flee threshold 15-20% HP EXCEPT when the enemy is also nearly dead ('looks pretty hurt' or worse, i.e. under ~29% HP) - in that case push through down to ~5% HP since the kill is likely 1-2 hits away and finishing it is worth the risk. Only flee earlier than that if bleeding is stacking fast or a second guard/Peacekeeper joins. If a pursuer chases after a flee, teleport recall immediately rather than running on foot.",
  "subtasks": [
   {
-   "text": "Scout the city, eat/drink, learn shops and sewers entrance",
-   "check": "item:lamp",
+   "text": "Sweep remaining unexplored frontier rooms across sewers/caves/countryside, fighting level-appropriate mobs",
+   "check": "level>=8",
    "done": true
   },
   {
-   "text": "Level up to 4-5 hunting the sewers (vermin swarms good XP) with a light source",
-   "check": "level>=4",
+   "text": "Hunt solo Peacekeepers exclusively for XP (avoid East Gate area, avoid cityguards/mercenaries, avoid double-guard rooms)",
+   "check": "level>=10",
    "done": true
   },
   {
-   "text": "Consider the Massive Minotaur, gear up if needed, then engage",
-   "check": "level>=4",
+   "text": "Keep grinding solo Peacekeepers toward level 11 (~230,919 XP needed)",
+   "check": "level>=11",
    "done": true
   },
   {
-   "text": "Push further to level 7 for a safer margin before engaging the Massive Minotaur",
-   "check": "level>=7",
-   "done": true
-  },
-  {
-   "text": "Search for and locate the Massive Minotaur",
-   "check": "room:Minotaur",
-   "done": true
-  },
-  {
-   "text": "Engage and defeat the Massive Minotaur",
-   "check": "room:Minotaur",
+   "text": "Practice new skills at the guild and continue leveling toward 16+",
+   "check": "level>=16",
    "done": false
   }
  ]

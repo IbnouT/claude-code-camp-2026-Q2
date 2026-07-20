@@ -12,81 +12,104 @@
 - Mercenaries in The Dark Alley (east of Common Square) are 'Fairly easy' at level 6 and give ~830-840 XP each (5 of them spawn there) plus gold/weapon drops — great in-town XP source. BUT a cityguard can wander in and 'jump to the aid' of the mercenary being attacked, forcing you into an accidental guard fight (guards are dangerous, above-level). Fled successfully at full HP with . Watch for guard arrival and flee immediately if one joins.
 - DANGER: The Great Chessboard of Midgaard (reached via countryside north of the Temple's back exit → Great Field → west split path → rusty gate archway) has aggressive chess-piece bosses. The Black King (found deep in the board, several squares in) is 'Are you mad!?' tier and hit me for 21-23 damage per hit, dropping me from 97 to 15 HP in just 3 rounds — nearly died. It attacked immediately without me issuing 'kill', so entering its square is enough to trigger combat. AVOID the Chessboard's King/Queen squares entirely until much higher level. No Minotaur found there so far.
 - DEFEATED the Massive Minotaur! Found it in 'A T-Intersection In The Passage' inside the Newbie Zone's hidden lower dungeon (accessed via: countryside north of Temple's back exit -> Great Field -> east split -> Entrance to Newbie Zone -> north into the zone -> through the hallways to the Alchemist's Room -> down the stairs past the 'level 7 minimum' warning sign -> into the maze -> east from Crossing of Corridors -> north -> west -> T-Intersection). It was aggressive (attacked alongside a zombie), 'The perfect match!' tier at level 7/97 max HP, gave 1668 XP. Fight lasted ~15 rounds, ended at 81/97 HP (83%) — no real danger once actually engaged. The earlier 'sewers Massive Minotaur' assumption was wrong; the real one is in the Newbie Zone's secret dungeon, consistent with the level 4-7 sign requirement.
+- Peacekeepers are noticeably tougher than cityguards — one dropped me from 67% to 22% HP in about 10 rounds and caused ongoing bleeding damage even after landing a hit. Fled successfully at 22% HP. Don't deliberately fight Peacekeepers that join mercenary fights; cityguards are manageable (gave 5092 XP once) but Peacekeepers are riskier — flee early if one joins instead of trading blows.
+- CRITICAL DANGER: Peacekeepers can chain-pursue you between rooms after you flee ("Hey! You're the fiend that attacked me!!!") and their thrash attack causes ongoing BLEEDING damage that persists even while fleeing/resting, on top of direct hits. Third Peacekeeper fight nearly killed me — went from 32% HP to 4% HP across two failed/successful flees while it followed me two rooms and kept hitting. NEW RULE: flee Peacekeeper fights at 50%+ HP, not 30%, and if it follows after fleeing, immediately teleport recall rather than trying to out-run it on foot. First two Peacekeeper kills were clean (20k XP each) because I fought them alone without them chasing after a flee; this one chased me down.
+- 'sleep' command heals HP much faster than 'rest' (roughly 2-3x the rate observed) but raises AC to ~33 (far more vulnerable to being hit) and can be interrupted by wandering aggressive mobs — only sleep in safe/quiet rooms (shops work), and 'wake'+'stand' before continuing. Also confirmed hunger significantly slows/stalls HP regen even while resting/sleeping — keep danish pastries stocked.
+- Found 'The Cave Of The Green Dragon' in Haon-Dor forest (west of Midgaard via the river — exit the city west through the river/bridge, then north into the forest, several junctions west/north to 'Outside A Cave', then north into the cave). Bones littered the floor and heavy stench — a dragon's lair, clearly high-level content (Green Dragon likely far above level 8). No dragon present when I visited; grabbed a large round shield loot and retreated immediately without engaging. Avoid until much higher level.
+- Found 'River Island of Minos' (zone list entry #9, levels 4-25) — accessed via the river delta west of Haon-Dor forest: from Midgaard's Levee, go west on river through bridge, south at 'The Twisty Part Of The River' junction, west to 'Swift River Delta', north through 'North Channel' x2, west to 'Near The Isle', south to 'The Lane Of The Lying' (an eerie no-recall zone — 'the Gods will not hear you call here'), then south into a cave with sign warning 'only fools and dead people pass this way — the tests of Minos await'. Wide level range (4-25) so could scale dangerously — proceeding cautiously with consider before every fight.
+- River Island of Minos trials (accessed via cave south of 'The Lane Of The Lying'): a ONE-WAY forced gauntlet, each trial room has only a forward exit (no retreat by walking back). Trial 1: empty intro. Trial 2: TWO 'greatest swordsman' — 'Fairly easy' each, gave 1638+1673 XP, no real danger. Trial 3: 'The Mummy of Rabscuttle' — considered 'lot of luck and great equipment' but was actually manageable, gave 5593 XP, ended at 91% HP. Trial 4: a 'giant lizard' — 'Are you mad!?' tier, did NOT engage. Trial 5 (reached by trying to retreat from trial 4, since 'south' there is actually forward not back): 'General Woundwort, the dark demon of Minos' — considered 'You ARE mad!' (the most extreme tier seen), clearly a serious boss. Escaped via teleport recall (which DOES work despite the zone's 'Gods will not hear you' flavor text). DO NOT enter this dungeon again below a much higher level, and if returning, know that 'south'/'back' inside individual trial rooms is NOT a safe retreat — it advances to the next trial, not backward. Teleport recall is the only safe way out mid-dungeon.
+- EXTREME DANGER: TWO Peacekeepers fighting together (one 'jumps to the aid of' the other when you engage one, near the Mages' Guild) nearly killed me — went from full HP to 5% in about 12 rounds with bleeding stacking. Fled at 5% HP and randomly landed INSIDE THE WEST GATE with 5 cityguards (flee is a random exit, can drop you somewhere worse) — had to teleport recall immediately from 12% HP. NEVER fight two Peacekeepers/guards simultaneously — one alone (~20k XP) is manageable at level 8/112HP, but two together is a near-death trip. Also reconfirmed: guild entrance guardians (knight templar at Clerics, sorcerer at Mages, knight at Swordsmen) are ALL 'You ARE mad!' tier — unbeatable gatekeepers, never engage.
+- Health-condition strings via 'look <enemy>' mid-combat: 'is in excellent condition'=100%, 'has a few scratches'=90-99%, 'has some small wounds and bruises'=75-89%, 'has quite a few wounds'=50-74%, 'has some big nasty wounds and scratches'=30-49%, 'looks pretty hurt'=15-29%, 'is in awful condition'/'bleeding awfully'=0-14%. Use this to track a tough enemy's progress toward death instead of guessing — much safer than blind engagement. ALWAYS check the room for a second Peacekeeper/guard before engaging one; only fight them solo.
+- REFINED RULE: A solo Peacekeeper fight is safe and clean (~20k XP, ends 50-90% HP). But if a SECOND attacker joins (another guard/Peacekeeper) mid-fight, flee IMMEDIATELY rather than pushing through — the 2-attacker near-deaths (5% and 3% HP) both happened because I kept fighting after the second joined, hoping to finish off the first target. Bleeding stacks fast with 2 attackers and can outpace regen even at 120+ max HP. From now on: if a second guard/Peacekeeper joins, flee/teleport right away regardless of how close the original target is to death — they regenerate anyway so there's no lasting advantage to finishing them off under those odds.
+- Tested the knight templar (Clerics' Guild guard, 'You ARE mad!' tier) in actual combat at level 9/124HP as an experiment: it landed 'slashes you hard' repeatedly (~9-10 dmg/hit) while I missed almost every attack — dropped from 100% to 67% HP in about 7 rounds with only 1 landed hit on my side. Fled at 67% HP, well before real danger. CONFIRMED: guild guardians are genuinely too strong right now, not just an overcautious consider rating — avoid until significantly higher level/better gear.
+- DANGER: a cityguard near East Gate/Water Shop now recognizes me from a prior kill and screamed on sight, causing all 5 East Gate cityguards to chain-join via jumps to the aid of. Fled successfully at 106/124 HP before real damage. Avoid the East Gate area entirely going forward - route around it. Per user instruction, only hunt solo Peacekeepers now, skip cityguards/mercenaries entirely.
+- Confirmed: when 2 Peacekeepers are up at The Dark Alley At The Levee, just wait/check back shortly - one leaves on its own, leaving a solo target. No need to abandon the spot entirely.
+- A specific Peacekeeper now recognizes me on sight near the Levee/Dark Alley At The Levee and attacks immediately without warning (even mid-flee-attempt), unlike the passive ones that wait to be attacked. Sleep heals much faster than rest when safe (Temple Square worked well, no interruptions) - went from 43 to 97 HP. Drink fountain at Temple Square clears thirst instantly.
+- A specific recognizing Peacekeeper at the Levee/Dark Alley At The Levee area is now a persistent hazard - it ambushes on sight even when I'm just passing through or trying to retreat, not just when attacking. It caused two forced flees in a row today at low HP with bleeding. Since it's tied to this exact spawn area, treat any Peacekeeper encounter there with extra caution now - check HP/consider before approaching, and if greeted with the recognition line be ready to flee/teleport instantly since it attacks mid-movement.
+- Bought a scale mail jacket (1302g) at the Armory thinking it was an upgrade to my bronze breast plate, but AC comparison showed bronze breast plate (AC 9) is actually BETTER than scale mail jacket (AC 15) - lower AC is better in this MUD (descending AC system). Sold the jacket back for 457g (partial loss). Lesson: always compare AC via score before/after wearing a new item, don't assume higher price = better stat. Current full bronze gear set (breastplate/helmet/leggings/gauntlets/sleeves) plus shield is already solid and shouldn't be replaced without confirming AC improvement first.
+- Verified via shop-identify (identify <item> at a shop) that both scale mail jacket and bronze breast plate have Affections: None / Extra Flags: NOBITS - no hidden hit/dam/hp bonuses, just AC-apply values (bronze breastplate AC-apply 6 beats scale mail's 4). Found a genuine upgrade though: my starting 'a shield' had AC-apply 2, while 'a large round shield' (390g at Armory) has AC-apply 5 - bought and equipped it, AC improved 9->6. Current body/head/legs/hands/arms armor (all bronze tier) already at the best available in this shop. shop-identify only works on items the shop currently stocks, not arbitrary inventory items - useful for pre-purchase comparison shopping.
+- Reached level 10 (Dummy the Combatant), max HP jumped 124->134, next level needs 230,919 XP (~12 more Peacekeepers at ~20k each - a much bigger grind than levels 8-9-10). Practiced 'kick' skill (1 session earned from leveling, used it there - now 0 sessions left) since it's direct combat damage and I already knew it at 'good' tier. IMPORTANT: kick locks out ALL commands including flee for 3 rounds after use - only ever use it early in a fight while HP is high/safe, never when near the flee threshold or bleeding, since being unable to flee for 3 rounds could be fatal in a close fight.
+- Re-tested the Great Chessboard of Midgaard at level 10/134HP with the upgraded shield (AC 6). CONFIRMED with real combat data (not just consider text) that non-pawn pieces are genuinely lethal, not just an overcautious consider rating: pawns are 'Easy' (trivial, fine to farm), but Rook/Bishop are 'You ARE mad!' and Knight/Queen/King are 'Are you mad!?' - and unlike Peacekeepers at the same consider tier, these hit MUCH harder (Knight ~14-20 dmg/hit 'crushes', Queen ~15-17 dmg/hit 'extremely hard', King has an OBLITERATE crit that combined with follow-up hits took me from 34 HP to -9 HP in under 2 rounds). All these pieces (Rook, Knight, Bishop, Queen, King at minimum) attack automatically the moment you enter or try to leave their square, just like the King did before - you cannot just look/consider and walk away safely, leaving is what triggers the attack. NEAR-DEATH: fled Queen fight, random flee landed me in the King's square, got hit before teleport could complete, ended at -9 HP mortally wounded and fully incapacitated (no self-heal/bandage/flee possible). Rescued only by admin intervention (full heal) - would have died otherwise, tbaMUD mortally-wounded state does not self-recover without external aid. LESSON: the Chessboard's non-pawn pieces are still far too strong at level 10 with good gear - avoid entirely until much higher level. Also: flee's random-exit mechanic is extremely dangerous in a small connected area like the chessboard where every adjacent square has another lethal piece.
+- CRITICAL: after the lizard fight at Trial 4 of Minos, do NOT go east/forward - that leads directly to Trial 5 and General Woundwort ('You ARE mad!', extreme boss) with no way back (only exit is further east, forward into his room). A session disconnect/reconnect during the lizard fight left me standing right in front of Woundwort at full HP with no safe path except teleport recall. After testing/farming Trial 2 (swordsmen), Trial 3 (mummy), and Trial 4 (giant lizard) as safe filler XP, must teleport recall out rather than continuing further into the dungeon - Trial 5 is a one-way death trap.
+- MAJOR DISCOVERY: The Chessboard pieces are extremely lucrative XP with admin healing backup - killed the Black Knight (90,452 XP!) and White Knight (23,580 XP) in one session. Board layout: from the entrance archway, west x8 to reach the west edge, then north x2 lands on the Black Queen's Rook (dead-end corner, e/s exits only), east from there is the Black Queen's Knight, further east is Bishop then Queen then King (all in a row). Symmetric on the other side: continue south from the Black Queen's Pawn row to find White Queen's Pawns, then further south to White Queen's Rook (dead-end corner, n/e exits), east from there is the White Queen's Knight. Both Knights have huge HP pools (didn't die until 90%+ HP consumed via 'quite a few wounds' through 'awful condition' stages) but are killable with admin healing keeping HP topped off - without a healer backup, a solo knight fight would likely be fatal given the sustained heavy damage (14-23 dmg/hit) over 20-30+ rounds. The Black Rook has an extremely high AC/dodge (missed nearly everything for the first ~15 rounds) - even less approachable without a healer. White Knight dropped 'the Lance of the White Knight' - a knight-exclusive weapon that ZAPS and force-drops if a non-qualifying character tries to wield it (anti-theft mechanic), sellable but not usable by this character. Also found 'a dark minotaur shield' (looted from Minos Trial 2 swordsman fight) is a genuine upgrade over the large round shield - AC-apply improved my total AC from 6 to 1. IMPORTANT SAFETY NOTE: this entire strategy is ONLY viable because of admin/god healing backup - without it, died once already from the Black Knight fight (lost 318,992 XP and all gear, had to do a dangerous unarmed corpse-retrieval run). Do not attempt full Chessboard non-pawn fights solo without a healer safety net.
+- Admin gifted 5 levels (level 10 -> 15, 'Dummy the Swordmaster'), XP jumped 443,509 -> 1,850,000, max HP 134->194, max moves 106->114. Next level (16) needs 350,000 XP. This is well beyond the original Peacekeeper-grinding pace - should have several new practice sessions available at the guild now.
+- Used 5 practice sessions from the level-15 admin gift: bash x2 (poor), bandage x2 (average, up from poor), track x1 (learned). CONFIRMED kick was already maxed for my level - 'practice kick' returned 'You are already learned in that area' instead of the success message, resolving the earlier uncertainty about whether that session was wasted. 'track <mob>' is a huge quality-of-life skill - it directly tells you which direction to walk to find the nearest instance of a mob type ('You sense a trail north from here!'), eliminating the blind room-cycling I was doing to find Peacekeeper spawns. Use 'track peacekeeper' from now on instead of manually checking rooms.
+- MAJOR ADMIN-ASSISTED SESSION: went from level 10 to the absolute level/XP cap (level 34, 'Dummy the Implementor', 10,000,000 exp exactly, no further levels possible) via a series of admin level-up gifts while clearing the ENTIRE Great Chessboard of Midgaard - both Black and White sides fully cleared (Knight, Rook, Bishop, Queen, King each, killed multiple times as they respawned). Total XP earned from chess pieces alone: hundreds of thousands. KEY DISCOVERY: the White King drops 'the Key to the White Treasury' as a rare loot item - only visible/lootable once you have a level-gated 'peek at inventory' ability that reveals a mob's held items before they die (this ability appeared automatically partway through the session after enough level-ups, shown as 'You attempt to peek at its inventory' under the look/consider output). This single key unlocks BOTH treasury vaults: the White Queen's square has a locked 'marble' door (the (d) exit) leading down to 'The White Treasury' (vnum 3666), and the Black Queen's square has an identical locked 'marble' door leading down to 'The Black Treasury' (vnum 3665) - each contains 'a LOT of coins' (1000 gold each, named 'the White/Black Royal Treasure'). Commands: at the Queen's square, 'unlock marble' then 'open marble' then 'down'. The Black King likely also carries a similar key/treasure but this wasn't confirmed since he was killed before the peek-inventory ability was active - if replaying, check his inventory via 'look king' after that ability unlocks. Bosses picked up unusable-by-me loot too: Lances (knight-only, zap on wield), Crowns/Staffs/Rook Armor (all confirmed WORSE than my existing bronze gear + minotaur shield via direct AC comparison) - kept only for resale value.
+- HUGE: at level 34 'Implementor' rank (the game's admin/god tier), I have access to admin commands myself, including 'restore <name>' which fully heals HP/mana/moves instantly - tested 'restore dummy' successfully. No longer need external admin healing backup for these boss fights; can self-sustain indefinitely. Also confirmed XP is hard-capped at exactly 10,000,000 - further kills give 0 net XP gain (the 'You receive N experience points' messages still show but score never increases past 10M), so remaining chess piece fights are purely for gold/exploration/completionism at this point, not character progression.
+- Cleared Guild of Swordsmen knight guardian (room 3021, entrance hall) - Fairly easy consider, killed in ~14 rounds, 37082 XP, 330 gold, dropped a long sword (unremarkable, not identified - shop wouldn't ID it there). Dummy took only ~72 HP damage total (438->366), trivial fight at level 34. Heading to Clerics' Guild (west of Temple Square 3005) for the knight templar next.
+- COMPLETED: 'go clear all, fight the guild guardians' instruction fully done. Killed all three Midgaard guild guardian mobs (previously rated 'You ARE mad!'/unbeatable at low level, now 'Fairly easy' at level 34/438HP): knight at Guild of Swordsmen entrance (room 3021, 37082 XP), knight templar at Clerics' Guild entrance (room 3004, 37057 XP), sorcerer at Guild of Magic Users entrance (room 3017, 37252 XP). Route to Mages Guild: from Market Square (3014) go west twice along Main Street (3013, 3012) then south into 'The Entrance To The Mages Guild' (3017). Each guardian dropped an unremarkable long sword (sold for ~288g each) and 330 gold. Total combined XP was 0 net gain since already at the 10M hard cap, but ~950g gold profit. Ended fight at 265/438 HP - no danger at any point, all three fights were essentially identical (guardian never landed more than 'slashes you very hard' tier hits). This completes the full 'clear all Chessboard + guild guardians' directive - both halves done.
 
 <!-- AUTO — everything below is rewritten in real time by mud_session.py; edits below this line are lost -->
 
 ## Persona (apply this style to every decision)
-Efficient grinder: fight anything near my level, avoid trivial kills that waste time, avoid fights I'd likely lose, retreat below 30% HP, always carry a light before going underground.
+Aggressive XP grinder: prioritize high-value targets (Peacekeepers ~20k XP) over trivial mobs — speed of leveling matters more than caution. Flee threshold 15-20% HP EXCEPT when the enemy is also nearly dead ('looks pretty hurt' or worse, i.e. under ~29% HP) - in that case push through down to ~5% HP since the kill is likely 1-2 hits away and finishing it is worth the risk. Only flee earlier than that if bleeding is stacking fast or a second guard/Peacekeeper joins. If a pursuer chases after a flee, teleport recall immediately rather than running on foot.
 
 ## Plan (managed via `plan` subcommands)
-Goal: Defeat the Massive Minotaur
-1. [x] Scout the city, eat/drink, learn shops and sewers entrance  (check: item:lamp)
-2. [x] Level up to 4-5 hunting the sewers (vermin swarms good XP) with a light source  (check: level>=4)
-3. [x] Consider the Massive Minotaur, gear up if needed, then engage  (check: level>=4)
-4. [x] Push further to level 7 for a safer margin before engaging the Massive Minotaur  (check: level>=7)
-5. [x] Search for and locate the Massive Minotaur  (check: room:Minotaur)
-6. [ ] Engage and defeat the Massive Minotaur   ← CURRENT
-   check [room:Minotaur]: UNMET — current room is A T-Intersection In The Passage
+Goal: Explore unexplored areas and keep leveling up
+1. [x] Sweep remaining unexplored frontier rooms across sewers/caves/countryside, fighting level-appropriate mobs  (check: level>=8)
+2. [x] Hunt solo Peacekeepers exclusively for XP (avoid East Gate area, avoid cityguards/mercenaries, avoid double-guard rooms)  (check: level>=10)
+3. [x] Keep grinding solo Peacekeepers toward level 11 (~230,919 XP needed)  (check: level>=11)
+4. [ ] Practice new skills at the guild and continue leveling toward 16+   ← CURRENT
+   check [level>=16]: MET — level is 34, need >=16
 
 ## Vitals (live, from the game prompt)
-HP 97 · Mana 100 · Moves 98  (max 97/100/98)
+HP 438 · Mana 100 · Moves 153  (max 438/100/153)
 
 ## Character (from the last `score`)
-Dummy the Veteran — level 7
-XP 81287 (43713 to next level) · 768 gold
+Dummy the Implementor — level 34
+XP 10000000 (565849 to next level) · 9599 gold
 
 ## Signals (computed — watch these, adapt strategy)
-- Avg XP/kill (last 5): 683
-- XP to next level: 43713 → ~65 more kills at this rate
-- Moves: 98 now, +0 over the last 30 prompts
-- Gold: 768 (+758 this session)
-- Deaths recorded: 0
-- Frontier: 133 untried exits across 163 mapped rooms
+- Avg XP/kill (last 5): 28344
+- XP to next level: 565849 → ~20 more kills at this rate
+- Moves: 153 now, +0 over the last 30 prompts
+- Gold: 9599 (+8946 this session)
+- Deaths recorded: 1
+- Frontier: 259 untried exits across 272 mapped rooms
 
 ## Carrying (as of the last `inventory`)
-- a dagger
-- a bright green newbie vest
-- a shiny newbie dagger ..It has a soft glowing aura!
-- some cool newbie leggings
-- some cool newbie sleeves
-- a glowing newbie mace ..It has a soft glowing aura!
-- a wee little key
-- a small sword
-- the teleporter
-- a warhammer
-- a bright newbie helm ..It has a soft glowing aura!
+- [3612] the Black King's Sceptre (invisible) ..It emits a faint humming sound!
+- [3614] the Key to the Black Treasury (invisible)
+- [3615] the Key to the White Treasury (invisible)
+- [3083] a leather ring
+- [3037] a candle
+- [3613] the White King's Sceptre (invisible) ..It emits a faint humming sound!
+- [3061] a canoe
+- [3006] [TRIGS] the teleporter
+- [909] a pair of boots
+- [3011] a danish pastry
 
 ## Current location
-A T-Intersection In The Passage — map, frontier and hazards in world.md
+[ 3033] The Magic Shop[ INDOORS NO_MAGIC * ][ Inside ] — map, frontier and hazards in world.md
 
 ## Recent events (oldest first)
-- Killed The small bat (+33 xp)
-- Killed The small bat (+33 xp)
-- Killed The mercenary (+833 xp)
-- Killed The mercenary (+843 xp)
-- Killed The mercenary (+833 xp)
-- Killed The cityguard (+5092 xp)
-- LEVEL UP! Now level 7
-- Killed The mercenary (+835 xp)
-- Killed The mercenary (+833 xp)
-- Killed The zombiefied newbie (+533 xp)
-- Killed The zombiefied newbie (+538 xp)
-- Killed The smart newbie (+833 xp)
-- Killed The zombiefied newbie (+533 xp)
-- Killed The zombiefied newbie (+538 xp)
-- Killed The zombiefied newbie (+533 xp)
-- Killed The zombiefied newbie (+533 xp)
-- Killed The quasit (+300 xp)
-- Killed The newbie monster (+138 xp)
-- Killed The newbie monster (+235 xp)
-- Killed The annoying newbie (+133 xp)
-- Killed The newbie monster (+133 xp)
-- Killed The pit beast (+833 xp)
-- Killed The zombiefied newbie (+533 xp)
-- Killed The smart newbie (+849 xp)
-- Killed The talkative newbie (+300 xp)
-- Killed The annoying newbie (+133 xp)
-- Killed The zombiefied newbie (+540 xp)
-- Killed The massive Minotaur (+1668 xp)
-- Killed The zombiefied newbie (+533 xp)
-- Killed The zombiefied newbie (+540 xp)
+- Killed The swordsman (+1643 xp)
+- Killed The swordsman (+1650 xp)
+- Killed The Mummy of Rabscuttle (+4567 xp)
+- Killed The Peacekeeper (+18286 xp)
+- Killed The Peacekeeper (+18661 xp)
+- Killed The Peacekeeper (+19213 xp)
+- DIED near A Black Square (2) — respawned at the temple; corpse (with gear) left behind
+- Killed The Black Knight (+90452 xp)
+- Killed The White Knight (+23580 xp)
+- Killed The Peacekeeper (+12385 xp)
+- Killed The Black Knight (+15310 xp)
+- Killed The Black Rook (+61936 xp)
+- Killed The Black Bishop (+39834 xp)
+- LEVEL UP! Now level 18
+- Killed The Black Queen (+64570 xp)
+- Killed The Black King (+71432 xp)
+- Killed The White Rook (+26918 xp)
+- Killed The White Knight (+11192 xp)
+- Killed The White Bishop (+21300 xp)
+- Killed The White Queen (+33194 xp)
+- Killed The White King (+37430 xp)
+- Killed The Black Bishop (+20084 xp)
+- Killed The Black Knight (+11423 xp)
+- Killed The Black Rook (+27439 xp)
+- Killed The White Rook
+- Killed The White Knight (+10800 xp)
+- Killed The White Bishop (+19528 xp)
+- Killed The knight (+37082 xp)
+- Killed The knight templar (+37057 xp)
+- Killed The sorcerer (+37252 xp)
