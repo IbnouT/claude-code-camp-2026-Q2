@@ -159,6 +159,7 @@ export function demoFrame(tick: number): StateC {
     events,
     plan: { goal: "Defeat the minotaur in the deep passage", steps },
     thought,
+    conditions: tick > 20 ? ["hungry"] : [],
     activity,
     combat,
     feed: feed.slice(-40),

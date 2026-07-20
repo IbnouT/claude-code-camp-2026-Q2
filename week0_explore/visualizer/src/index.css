@@ -78,3 +78,63 @@ body,
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-thumb { background: var(--grid); border-radius: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
+
+/* ================= Ink & Parchment theme (?theme=ink) =================
+   The map as a dungeon cartographer's chart: aged paper, hand-drawn ink
+   strokes, a red route line for the trail, wax-red hazards. */
+html.theme-ink { background: #e7dbc0; }
+.theme-ink {
+  color-scheme: light;
+  --plane: #e7dbc0;
+  --surface: #eee3c8;
+  --surface-2: #e3d5b4;
+  --ink: #2b2115;
+  --ink-2: #4a3b28;
+  --ink-3: #8a7a5f;
+  --grid: #d8c9a6;
+  --hairline: rgba(43, 33, 21, 0.5);
+  --accent: #9c2b1a;      /* heraldic red: route, agent, current step */
+  --aqua: #5c6e34;        /* moss — moves */
+  --gold: #8a6d1f;
+  --good: #4d6b2d;
+  --warning: #a5651c;
+  --serious: #8f4a14;
+  --critical: #8c1f14;
+  --link-stroke: #5a4a33;
+  --mana: #3d5a7a;        /* indigo ink, not danger-red */
+  --xp-fill: #8a6d1f;     /* gold ink for progress */
+  --room-fill: #f2e8cf;
+  --room-cur-fill: #f7edd2;
+  --trail-dash: 7 6;      /* the expedition route, dashed in red */
+  font-family: "Iowan Old Style", Palatino, Georgia, serif;
+}
+.theme-ink body,
+.theme-ink #root { background: #e7dbc0; color: var(--ink); }
+
+/* the chart itself: paper grain, vignette, old stains */
+.theme-ink .map-plane {
+  background-color: #e7dbc0;
+  background-image:
+    radial-gradient(ellipse 120% 100% at 50% 45%, rgba(0, 0, 0, 0) 55%, rgba(87, 62, 35, 0.28) 100%),
+    radial-gradient(circle 260px at 18% 78%, rgba(122, 90, 44, 0.10), transparent 70%),
+    radial-gradient(circle 200px at 84% 16%, rgba(122, 90, 44, 0.08), transparent 70%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.42 0 0 0 0 0.33 0 0 0 0 0.20 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23p)'/%3E%3C/svg%3E");
+}
+
+/* hand-drawn strokes: wobble every room outline and link */
+.theme-ink .ink-stroke { filter: url(#ink-rough); }
+
+/* cartographer's lettering */
+.theme-ink .map-plane svg text {
+  font-family: inherit;
+  font-style: italic;
+  letter-spacing: 0.01em;
+}
+
+/* panels read as journal cards, not glass */
+.theme-ink aside,
+.theme-ink .backdrop-blur { backdrop-filter: none; }
+.theme-ink ::-webkit-scrollbar-thumb { background: #c9b988; }
+
+/* the agent marker + heartbeat keep their pulse, now in red via --accent */
+.theme-ink .heartbeat-live { animation: none; box-shadow: none; }

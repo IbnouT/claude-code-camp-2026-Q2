@@ -253,6 +253,7 @@ def read_state(data_dir):
              "vitals": vitals, "deaths": int(store.get("deaths") or 0),
              "events": store.get("events") or [],
              "plan": plan, "thought": store.get("thought") or "",
+             "conditions": store.get("conditions") or [],
              "thought_age_s": _thought_age(store)}
     # prefer the agent's live narration when it's fresher than a voiced thought
     n_text, n_age = latest_narration(Handler.cc_dir)

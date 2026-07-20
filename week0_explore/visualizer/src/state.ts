@@ -53,6 +53,7 @@ export interface StateC {
   events: string[];
   plan: { goal: string; steps: PlanStep[] } | null;
   thought: string;
+  conditions: string[]; // hungry/thirsty/drunk, from the last `score`
   thought_age_s?: number | null;
   activity: Activity | null;
   combat: { foe: string; lines: string[] } | null;
@@ -72,6 +73,7 @@ export const EMPTY_STATE: StateC = {
   events: [],
   plan: null,
   thought: "",
+  conditions: [],
   activity: null,
   combat: null,
   feed: [],

@@ -82,6 +82,12 @@ export default function MapView({ state }: { state: StateC }) {
   return (
     <div className="relative h-full w-full map-plane">
       <svg ref={svgRef} className="h-full w-full cursor-grab active:cursor-grabbing">
+        <defs>
+          <filter id="ink-rough" filterUnits="userSpaceOnUse" x={-30000} y={-30000} width={60000} height={60000}>
+            <feTurbulence type="fractalNoise" baseFrequency="0.032" numOctaves="2" seed="7" result="n" />
+            <feDisplacementMap in="SourceGraphic" in2="n" scale="2.6" />
+          </filter>
+        </defs>
         <g ref={camRef}>
           {/* links under everything */}
           {state.links.map((l, i) => {
@@ -99,11 +105,11 @@ export default function MapView({ state }: { state: StateC }) {
                 key={`${l.from}|${l.dir}|${l.to}`}
                 d={d}
                 fill="none"
-                stroke="#383835"
+                stroke="var(--link-stroke, #383835)"
                 strokeWidth={2}
                 strokeDasharray={l.ghost ? "4 5" : undefined}
                 opacity={l.ghost ? 0.65 : 1}
-                className={l.ghost ? undefined : "link-draw"}
+                className={(l.ghost ? "" : "link-draw") + " ink-stroke"}
                 style={{ "--len": len } as React.CSSProperties}
               />
             );
@@ -121,6 +127,7 @@ export default function MapView({ state }: { state: StateC }) {
                 stroke="var(--accent)"
                 strokeWidth={4}
                 strokeLinecap="round"
+                style={{ strokeDasharray: "var(--trail-dash, 0)" } as React.CSSProperties}
                 opacity={0.06 + 0.4 * ((i + 1) / state.trail.length)}
                 pointerEvents="none"
               />
@@ -172,9 +179,10 @@ export default function MapView({ state }: { state: StateC }) {
                 onMouseLeave={() => setTip(null)}
               >
                 <rect
+                  className="ink-stroke"
                   x={-BOX_W / 2} y={-BOX_H / 2} width={BOX_W} height={BOX_H}
                   rx={8}
-                  fill={isCur ? "#20304a" : ghost ? "transparent" : "var(--surface)"}
+                  fill={isCur ? "var(--room-cur-fill, #20304a)" : ghost ? "transparent" : "var(--room-fill, var(--surface))"}
                   stroke={isCur ? "var(--accent)" : death ? "var(--critical)" : hazard ? "var(--warning)" : ghost ? "var(--ink-3)" : "var(--hairline)"}
                   strokeWidth={isCur ? 2 : 1}
                   strokeDasharray={ghost ? "5 4" : undefined}

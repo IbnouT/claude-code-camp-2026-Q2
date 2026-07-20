@@ -7,12 +7,16 @@ export default function Cockpit({
   lastChange,
   voiceOn,
   onToggleVoice,
+  inkTheme,
+  onToggleTheme,
 }: {
   state: StateC;
   mode: Mode;
   lastChange: number;
   voiceOn: boolean;
   onToggleVoice: () => void;
+  inkTheme: boolean;
+  onToggleTheme: () => void;
 }) {
   const v = state.vitals;
   const stale = Date.now() - lastChange > 5000;
@@ -31,6 +35,13 @@ export default function Cockpit({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={onToggleTheme}
+            title={inkTheme ? "switch to dark theme" : "switch to ink & parchment"}
+            className="rounded border border-[var(--hairline)] px-1.5 py-0.5 text-[11px] text-[var(--ink-3)] hover:text-[var(--ink-2)]"
+          >
+            {inkTheme ? "🌑" : "🗺️"}
+          </button>
           <button
             onClick={onToggleVoice}
             title={voiceOn ? "voice narration on" : "voice narration off"}
@@ -87,8 +98,21 @@ export default function Cockpit({
       {/* vitals */}
       <section className="flex flex-col gap-2.5">
         <Bar label="♥ HP" val={v.hp} max={v.max_hp} color={hpColor(v.hp, v.max_hp)} />
-        <Bar label="✦ Mana" val={v.mana} max={v.max_mana} color="var(--accent)" />
+        <Bar label="✦ Mana" val={v.mana} max={v.max_mana} color="var(--mana, var(--accent))" />
         <Bar label="➤ Moves" val={v.moves} max={v.max_moves} color="var(--aqua)" />
+        {state.conditions.length > 0 && (
+          <div className="flex gap-1.5">
+            {state.conditions.map((c) => (
+              <span
+                key={c}
+                title="conditions stall regeneration (from the last `score`)"
+                className="rounded border border-[var(--warning)]/50 bg-[var(--warning)]/10 px-1.5 py-0.5 text-[11px] text-[var(--warning)]"
+              >
+                {c === "hungry" ? "🍗" : c === "thirsty" ? "💧" : "🍺"} {c}
+              </span>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* stat tiles */}
@@ -112,7 +136,7 @@ export default function Cockpit({
               className="bar-fill h-full rounded-full"
               style={{
                 width: `${Math.min(100, (100 * v.xp) / (v.xp + v.xp_to_next))}%`,
-                backgroundColor: "var(--accent)",
+                backgroundColor: "var(--xp-fill, var(--accent))",
               }}
             />
           </div>

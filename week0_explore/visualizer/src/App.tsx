@@ -1,11 +1,25 @@
+import { useEffect, useState } from "react";
 import MapView from "./map/MapView";
 import Cockpit from "./cockpit/Cockpit";
 import { useGameState } from "./state";
 import { CombatPanel, TerminalDrawer, Toasts, useVoice } from "./overlays";
 
+function useTheme(): { ink: boolean; toggle: () => void } {
+  const [ink, setInk] = useState(() =>
+    new URLSearchParams(window.location.search).get("theme") === "ink" ||
+    localStorage.getItem("observatory-theme") === "ink",
+  );
+  useEffect(() => {
+    document.documentElement.classList.toggle("theme-ink", ink);
+    localStorage.setItem("observatory-theme", ink ? "ink" : "dark");
+  }, [ink]);
+  return { ink, toggle: () => setInk((v) => !v) };
+}
+
 export default function App() {
   const { state, mode, lastChange, ready } = useGameState();
   const { voiceOn, toggle } = useVoice(state, ready);
+  const theme = useTheme();
   const empty = Object.keys(state.rooms).length === 0;
 
   return (
@@ -34,6 +48,8 @@ export default function App() {
         lastChange={lastChange}
         voiceOn={voiceOn}
         onToggleVoice={toggle}
+        inkTheme={theme.ink}
+        onToggleTheme={theme.toggle}
       />
     </div>
   );

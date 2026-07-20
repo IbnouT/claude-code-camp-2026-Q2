@@ -4,6 +4,14 @@ A live web dashboard for **watching an agent play the MUD**: the map grows
 room by room as the agent explores, with its position, vitals, plan, combat,
 events, and running commentary — optionally spoken aloud.
 
+| Dark (default) | Ink & parchment (🗺️ toggle) |
+|---|---|
+| ![dark theme](docs/screenshot-dark.png) | ![ink theme](docs/screenshot-ink.png) |
+
+*Live sessions: the agent grinding through Midgaard and its sewers — exact
+room identity from the server's world files, red route line for its recent
+moves, hazard marks where it died.*
+
 It is a pure **observer**: it only reads files the play session already
 produces. It never talks to the game server, never writes to the agent's
 memory, and the playing agent doesn't know it exists.
