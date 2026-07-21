@@ -36,6 +36,11 @@ bin/00_config
 
 Each step's README documents what its example does and the underlying command.
 
+Each step is a self-contained [`uv`](https://docs.astral.sh/uv/) project with
+its own environment: the steps are versions of the same package, which cannot
+share one env, and uv's lazy creation and cache hardlinks keep the cost near
+zero.
+
 ## Organization
 
 ```
