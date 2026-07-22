@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Run the tool-registry step's example.
+set -euo pipefail
+
+cd "$(dirname "$0")/../agent/02_the_registry"
+exec uv run examples/example.py "$@"
