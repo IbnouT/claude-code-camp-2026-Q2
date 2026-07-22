@@ -39,6 +39,15 @@ Detailed architecture: [architecture.md](../plans/week1_baseline/architecture.md
 - Config discovery now walks up from the current directory to the nearest `.boukensha`, like git finds its repo, so a project-local config needs no environment setup; the trade is that the found tree's `.env` gets loaded, so you trust where you run.
 - Full detail in the step's [README](../../week1_baseline/agent/00_config/README.md).
 
+**Step 01 · Struct skeleton**
+
+- Built and verified: the example's nine assertions pass, covering normalization, every invariant rejection, immutability, and history order.
+- Message content is one provider-neutral shape, a tuple of typed blocks (text, tool-use, tool-result), so downstream reads one dialect, each backend translates only at its own edge, and stored history stays portable across providers.
+- Four invariants are enforced when a message is built, not at request time: a tool result must carry its `tool_use_id`, only a tool-result message may hold that content, a tool call may come only from the assistant, and content holds only typed blocks. Invalid conversation data cannot reach a provider as a 400.
+- The call-to-result link lives only on the tool-result block, exposed as `tool_use_ids` (plural, for parallel calls), so there is no second copy to drift.
+- Context stays conversation-only: the tool table, token counts, and turn counters each live with the component that owns them, so nothing is stored in two places.
+- Full detail in the step's [README](../../week1_baseline/agent/01_struct_skeleton/README.md).
+
 ## Technical Conclusions
 
 [todo]

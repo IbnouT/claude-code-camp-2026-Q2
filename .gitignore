@@ -25,3 +25,6 @@ settings.local.json
 
 # Claude Code browser tool artifacts
 .playwright-mcp/
+
+# Internal working instructions, not repo content
+CLAUDE.md
