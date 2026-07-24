@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Run the prompt-builder step's example.
+set -euo pipefail
+
+cd "$(dirname "$0")/../agent/03_prompt_builder"
+exec uv run examples/example.py "$@"
