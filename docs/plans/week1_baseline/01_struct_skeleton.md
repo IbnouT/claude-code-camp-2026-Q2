@@ -1,4 +1,4 @@
-# Step 01 · Struct skeleton — plan
+# Step 01 · Struct skeleton plan
 
 ## Goal
 
@@ -34,7 +34,7 @@ week1_baseline/bin/01_struct_skeleton
 
 ## Design
 
-### `Role` — the allowed conversation roles
+### `Role`: the allowed conversation roles
 
 An enum, so the closed set is explicit and validated at construction rather
 than an informal string convention.
@@ -45,7 +45,7 @@ than an informal string convention.
 | `assistant` | a model response |
 | `tool_result` | the output of a tool call, fed back to the model |
 
-### Content blocks — one provider-neutral shape
+### Content blocks: one provider-neutral shape
 
 Position: message content is always a sequence of our own typed blocks, and
 plain text is normalized to a one-element sequence at construction. There is
@@ -78,7 +78,7 @@ itself: the `tool_result` role already exists in this step, and defining half
 the content model would reintroduce dual typing the moment tool traffic
 appears.
 
-### `Message` — one conversation entry
+### `Message`: one conversation entry
 
 Frozen dataclass: `role: Role`, `content: tuple[Block, ...]`.
 
@@ -101,7 +101,7 @@ the model issued parallel tool calls. Constructor helpers:
 `Message.user(text)`, `Message.assistant(blocks_or_text)`,
 `Message.tool_result(tool_use_id, content)`.
 
-### `Tool` — a callable capability
+### `Tool`: a callable capability
 
 Frozen dataclass, a value object only: registration and dispatch are the next
 component's job.
@@ -113,9 +113,9 @@ component's job.
 | `parameters` | mapping | parameter name → its schema |
 | `handler` | callable | the function that executes the tool |
 
-### `Context` — the live conversation state
+### `Context`: the live conversation state
 
-The one mutable holder; all mutation goes through its methods.
+The one mutable holder, and all mutation goes through its methods.
 
 | Holds | Method surface |
 |---|---|

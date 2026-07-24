@@ -1,7 +1,8 @@
-"""Smoke test for the data structures.
+"""Demonstration of the core data structures.
 
-Builds messages, a tool, and a context, prints the state, and asserts the
-construction invariants that keep invalid conversation data out of a request.
+Runs entirely offline. It builds a small conversation, prints it, then shows
+each construction invariant rejecting bad data with the error it raises. The
+compact assertion pass at the end pins the same behavior.
 """
 
 from dataclasses import FrozenInstanceError
@@ -18,16 +19,12 @@ from boukensha import (
     ToolUseBlock,
 )
 
+# -- build a conversation --------------------------------------------------
+
 config = Config()
 system_prompt = Player.system_prompt(
     config.tasks("player"), config.user_prompt_path(Player.task_name)
 )
-
-ctx = Context(system=system_prompt)
-ctx.add(Message.user("Explore north and tell me what you find."))
-ctx.add(Message.assistant("Heading north to look around."))
-ctx.add(Message.assistant(ToolUseBlock("call_1", "move", {"direction": "north"})))
-ctx.add(Message.tool_result("call_1", "You move north into a torch-lit corridor."))
 
 move = Tool(
     "move",
@@ -36,23 +33,60 @@ move = Tool(
     lambda direction: f"You move {direction}.",
 )
 
+ctx = Context(system=system_prompt)
+ctx.add(Message.user("Explore north and tell me what you find."))
+ctx.add(Message.assistant("Heading north to look around."))
+ctx.add(Message.assistant(ToolUseBlock("call_1", "move", {"direction": "north"})))
+ctx.add(Message.tool_result("call_1", "You move north into a torch-lit corridor."))
+
 print("=== boukensha · step 01: struct skeleton ===")
 print()
 print(f"Config:   {config}")
+print()
+print("-- conversation --")
 print(f"Context:  {ctx}")
 print(f"Tool:     {move}")
 print("Messages:")
 for m in ctx.messages:
     print(f"  {m}  tool_use_ids={m.tool_use_ids}")
 
+# -- invariants: bad data must fail at construction, not at request time ---
 
-def rejected(build) -> bool:
-    """True if construction raised, i.e. the invariant held."""
+INVALID = [
+    ("invalid role",
+        lambda: Message("user", "hi")),
+    ("tool_result without linkage",
+        lambda: Message(Role.TOOL_RESULT, ToolResultBlock("", "out"))),
+    ("tool result on another role",
+        lambda: Message(Role.USER, ToolResultBlock("call_1", "out"))),
+    ("tool call outside assistant",
+        lambda: Message(Role.USER, ToolUseBlock("id", "move", {}))),
+    ("untyped content element",
+        lambda: Message(Role.USER, ["not a block"])),
+    ("Context.add non-Message",
+        lambda: Context().add("not a message")),
+]
+
+
+def rejection(build) -> str | None:
+    """Return the error a failing construction raises, or None if it wrongly succeeded."""
     try:
         build()
-        return False
-    except (ValueError, TypeError):
-        return True
+        return None
+    except (ValueError, TypeError) as exc:
+        return str(exc)
+
+
+rejections = {label: rejection(build) for label, build in INVALID}
+
+print()
+print("-- invariants (bad data rejected at construction) --")
+for label, msg in rejections.items():
+    mark = "✓" if msg else "✗"
+    shown = f"rejected: {msg}" if msg else "NOT REJECTED"
+    print(f"  {mark} {label:<29} {shown}")
+
+# -- assertions ------------------------------------------------------------
 
 
 def is_frozen(message) -> bool:
@@ -68,29 +102,15 @@ order_ctx.add(Message.user("a"))
 order_ctx.add(Message.user("b"))
 
 checks = {
-    "1 invalid role rejected":
-        rejected(lambda: Message("user", "hi")),
-    "2 text normalizes to one TextBlock":
+    "text normalizes to one TextBlock":
         Message.user("look").content == (TextBlock("look"),),
-    "3 tool_result without linkage rejected":
-        rejected(lambda: Message(Role.TOOL_RESULT, ToolResultBlock("", "out"))),
-    "4 tool-result content on other role rejected":
-        rejected(lambda: Message(Role.USER, ToolResultBlock("call_1", "out"))),
-    "5 message is immutable":
+    "message is immutable":
         is_frozen(Message.user("look")),
-    "6 add preserves order and count":
+    "add preserves order and count":
         [b.text for msg in order_ctx.messages for b in msg.content] == ["a", "b"],
-    "7 tool_use outside assistant rejected":
-        rejected(lambda: Message(Role.USER, ToolUseBlock("id", "move", {}))),
-    "8 untyped content element rejected":
-        rejected(lambda: Message(Role.USER, ["not a block"])),
-    "9 Context.add rejects a non-Message":
-        rejected(lambda: Context().add("not a message")),
+    **{label: msg is not None for label, msg in rejections.items()},
 }
 
+assert all(checks.values()), f"failed: {[k for k, v in checks.items() if not v]}"
 print()
-for label, passed in checks.items():
-    print(f"  {'✓' if passed else '✗'} {label}")
-assert all(checks.values()), "one or more invariants failed"
-print()
-print("assertions passed (9) ✓")
+print(f"assertions passed ({len(checks)}) ✓")
