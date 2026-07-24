@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Run the run-DSL step's example.
+set -euo pipefail
+
+cd "$(dirname "$0")/../agent/07_the_run_dsl"
+exec uv run examples/example.py "$@"
