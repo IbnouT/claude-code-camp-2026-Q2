@@ -1,7 +1,8 @@
-"""Smoke test for the tool registry.
+"""Demonstration of the tool registry.
 
-Registers tools two ways, dispatches them, and asserts the ownership and
-dispatch-boundary guarantees.
+Runs entirely offline. It registers tools two ways, dispatches them, then walks
+the dispatch boundary so each failure the model can cause prints as a named
+error. The compact assertion pass at the end pins the same behavior.
 """
 
 from boukensha import (
@@ -12,6 +13,8 @@ from boukensha import (
     ToolArgumentError,
     UnknownToolError,
 )
+
+# -- register tools --------------------------------------------------------
 
 config = Config()
 registry = Registry()
@@ -35,17 +38,50 @@ registry.register(
     )
 )
 
+print("=== boukensha · step 02: the registry ===")
+print()
+print(f"Config:   {config}")
+print()
+print("-- registered tools --")
+print(f"Registry: {registry}")
+for tool in registry.tools.values():
+    print(f"  {tool}")
+
+# -- dispatch (the model emits a name and args, the registry runs it) -------
+
+print()
+print("-- dispatch --")
+print(f"move   direction='north'         -> {registry.dispatch('move', {'direction': 'north'})}")
+print(f"shout  message='dragon spotted'  -> {registry.dispatch('shout', {'message': 'dragon spotted'})}")
+
+
+# -- dispatch boundary (every failure the model can cause is named) ---------
+
 
 @registry.tool("boom", "A tool whose handler has an internal bug.", {})
 def boom():
     return 1 + "not a number"  # raises TypeError inside the body
 
-print("=== boukensha · step 02: the registry ===")
+
+def show(label, call):
+    """Run a call expected to fail and print the error it raised."""
+    try:
+        call()
+    except Exception as exc:
+        print(f"  {label:<20} -> {type(exc).__name__}: {exc}")
+
+
 print()
-print(f"Config:   {config}")
-print(f"Registry: {registry}")
-print(f"move -> {registry.dispatch('move', {'direction': 'north'})}")
-print(f"shout -> {registry.dispatch('shout', {'message': 'dragon spotted'})}")
+print("-- dispatch boundary (each failure named) --")
+show("unknown tool", lambda: registry.dispatch("flee"))
+show("undeclared arg", lambda: registry.dispatch("move", {"heading": "north"}))
+show("missing arg", lambda: registry.dispatch("move", {}))
+show("handler bug", lambda: registry.dispatch("boom"))
+show("incoherent tool", lambda: Tool("t", "d", {}, lambda message: message))
+print("  (a handler bug surfaces as its own error, never relabeled as an argument fault)")
+
+
+# -- assertions ------------------------------------------------------------
 
 
 def rejected(call, error):
@@ -92,6 +128,7 @@ checks = {
 }
 
 print()
+print("-- assertions --")
 for label, passed in checks.items():
     print(f"  {'✓' if passed else '✗'} {label}")
 assert all(checks.values()), "one or more registry guarantees failed"

@@ -1,4 +1,4 @@
-# Step 02 · The registry — plan
+# Step 02 · The registry plan
 
 ## Goal
 
@@ -64,7 +64,7 @@ Two ways in, both landing in the same table:
 - `register(tool)`: add an already-built `Tool`.
 - `@registry.tool(name, description, parameters)`: a decorator that builds the
   `Tool` from the decorated function and registers it, returning the function
-  unchanged. This is the ergonomic the standard tool library will lean on.
+  unchanged. This is the ergonomic form for defining a tool inline.
 
 A duplicate name is rejected at registration, naming the tool. Two tools under
 one name is never-valid data: dispatch could not choose between them.
