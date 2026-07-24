@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Run the agent-loop step's example.
+set -euo pipefail
+
+cd "$(dirname "$0")/../agent/05_agent_loop"
+exec uv run examples/example.py "$@"
