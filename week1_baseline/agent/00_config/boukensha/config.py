@@ -1,6 +1,6 @@
 """Configuration: the single source of truth for settings and secrets.
 
-Config reads a ``.boukensha/`` directory — ``.env`` for secrets (loaded into
+Config reads a ``.boukensha/`` directory: ``.env`` for secrets (loaded into
 the environment) and ``settings.yaml`` for everything else. The directory is
 resolved from ``BOUKENSHA_DIR`` if set, else the nearest ``.boukensha/`` found
 walking up from the current directory (like git repo discovery), else
@@ -86,7 +86,7 @@ class Config:
 
     @property
     def mud_password(self) -> str | None:
-        """The MUD password — a secret, read from the environment (.env)."""
+        """The MUD password, a secret read from the environment (.env)."""
         return os.environ.get("MUD_PASSWORD")
 
     # -- representation ----------------------------------------------------

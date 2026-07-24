@@ -1,6 +1,6 @@
 """Tasks: a role in the agent bound to its own model.
 
-A task's behaviour is expressed as class methods over its settings dict — no
+A task's behaviour is expressed as class methods over its settings dict, no
 instances. Concrete tasks set :attr:`task_name`.
 """
 
@@ -61,7 +61,7 @@ class Task:
                       override_path: Path | None = None) -> str | None:
         """The task's system prompt: user override first, else the default.
 
-        1. ``override_path`` (from ``Config.user_prompt_path``) — when the
+        1. ``override_path`` (from ``Config.user_prompt_path``), when the
            task's ``prompt_override.system`` is true and the file exists.
         2. ``prompts/system.md`` shipped inside this package.
         """
