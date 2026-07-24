@@ -28,3 +28,7 @@ settings.local.json
 
 # Internal working instructions, not repo content
 CLAUDE.md
+
+# Per-step reference comparison notes, internal working docs
+**/COMPARISON.md
+

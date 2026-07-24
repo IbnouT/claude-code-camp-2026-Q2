@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Run the logger step's example.
+set -euo pipefail
+
+cd "$(dirname "$0")/../agent/06_the_logger"
+exec uv run examples/example.py "$@"
