@@ -1,0 +1,397 @@
+"""Logger: a structured recorder for one session's turns.
+
+One :class:`Logger` writes one JSON Lines file, one complete JSON object per
+line, each tagged with ``session_id``, ``at``, and ``phase``. This is a file
+logger for machine reading and ``tail``/``grep``, not user-facing display. The
+agent's loop drives it: a line per iteration, prompt, model response, tool call,
+tool result, and the turn's terminal event.
+
+The response event carries execution metadata (task, provider, model, normalized
+token counts, and an estimated USD cost when the model has per-token pricing), so
+a session log states exactly which model answered and what it cost.
+"""
+
+from __future__ import annotations
+
+import json
+import secrets
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+from .config import Config
+from .message import Message, TextBlock, ToolResultBlock, ToolUseBlock
+
+if TYPE_CHECKING:
+    from .backends.base import Backend
+    from .tasks.base import Task  # pragma: no cover
+
+
+class Logger:
+    """Records one session's turns as JSON Lines under ``sessions/``."""
+
+    #: Directory name under the config directory where session files live.
+    DEFAULT_SESSION_DIR = "sessions"
+
+    #: Log schema version, written into session_start so a later consumer (a log
+    #: viewer, the Visualizer) can detect the vocabulary it is reading and adapt
+    #: or refuse rather than guess.
+    SCHEMA_VERSION = 1
+
+    #: Every phase name this logger can emit. A consumer (the log viewer) reads
+    #: this to validate or route events without hard-coding the vocabulary, and
+    #: bumping it alongside SCHEMA_VERSION keeps the two in step.
+    PHASES = (
+        "session_start", "turn", "iteration", "limit_reached", "prompt",
+        "response", "tool_call", "tool_result", "reasoning", "plan",
+        "compaction", "retry", "turn_end", "raw", "log_error",
+    )
+
+    def __init__(self, session_id: str | None = None, dir: str | Path | None = None,
+                 log: str | Path | None = None,
+                 snapshot: dict[str, Any] | None = None,
+                 debug: bool = False) -> None:
+        self._session_id = session_id or self._generate_session_id()
+        if log is not None:
+            self._path = Path(log)
+        else:
+            base = Path(dir) if dir is not None else self._default_dir()
+            self._path = base / f"{self._session_id}.jsonl"
+        self._debug = debug
+        #: Count of events dropped because even the log_error fallback failed.
+        self._dropped = 0
+        #: Callbacks that receive every event, in addition to the JSONL file.
+        #: Fan-out only, the file record is unaffected. First consumed by the
+        #: TUI (step 11) to drive its progress line without polling.
+        self._subscribers: list[Any] = []
+
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        self._log_io = open(self._path, "a", encoding="utf-8")
+
+        start: dict[str, Any] = {"phase": "session_start", "schema": self.SCHEMA_VERSION}
+        if snapshot:
+            start.update(snapshot)
+        self._write_log(start)
+
+    # -- read-only identity -----------------------------------------------
+
+    @property
+    def session_id(self) -> str:
+        return self._session_id
+
+    @property
+    def path(self) -> Path:
+        return self._path
+
+    # -- phase events ------------------------------------------------------
+
+    def iteration(self, n: int, max: int | None) -> None:
+        self._write_log({"phase": "iteration", "n": n, "max": max})
+
+    def limit_reached(self, kind: str, n: int, max: int | None) -> None:
+        self._write_log({"phase": "limit_reached", "kind": kind, "n": n, "max": max})
+
+    def turn_end(self, reason: str, iterations: int,
+                 tokens: int | None = None, *,
+                 input_tokens: int | None = None,
+                 output_tokens: int | None = None,
+                 cost_usd: float | None = None,
+                 duration_ms: float | None = None) -> None:
+        """Close one turn, with its totals so a viewer needs no re-summing.
+
+        ``input_tokens``/``output_tokens``/``cost_usd`` are the turn's summed
+        usage across every model round trip, ``duration_ms`` its wall-clock in
+        the model calls. Each is omitted when the agent could not compute it.
+        """
+        event: dict[str, Any] = {
+            "phase": "turn_end",
+            "reason": reason,
+            "iterations": iterations,
+            "tokens": tokens,
+        }
+        if input_tokens is not None:
+            event["input_tokens"] = input_tokens
+        if output_tokens is not None:
+            event["output_tokens"] = output_tokens
+        if cost_usd is not None:
+            event["cost_usd"] = cost_usd
+        if duration_ms is not None:
+            event["duration_ms"] = round(duration_ms)
+        self._write_log(event)
+
+    def retry(self, attempt: int, wait: float, status: int | None = None,
+              error: str | None = None) -> None:
+        """Record one transient-failure retry before the client sleeps.
+
+        ``attempt`` is the attempt that just failed, ``wait`` the delay before
+        the next one, and one of ``status`` (a retryable HTTP status) or
+        ``error`` (a transport exception) names the trigger. Gives a viewer the
+        provider flakiness a bare response never shows.
+        """
+        self._write_log({
+            "phase": "retry", "attempt": attempt, "wait": wait,
+            "status": status, "error": error,
+        })
+
+    def turn(self, n: int) -> None:
+        """Mark the start of an interactive turn, one per user input in a REPL
+        session. First consumed by the REPL (step 08)."""
+        self._write_log({"phase": "turn", "n": n})
+
+    def prompt(self, messages: list[Message], tools: Any,
+               context_window: int | None = None) -> None:
+        names = list(tools.keys()) if isinstance(tools, dict) else list(tools)
+        event: dict[str, Any] = {
+            "phase": "prompt",
+            "message_count": len(messages),
+            "messages": [self._serialize_message(m) for m in messages],
+            "tool_count": len(names),
+            "tools": names,
+        }
+        if context_window is not None:
+            event["context_window"] = context_window
+        self._write_log(event)
+
+    def compaction(self, before: int, dropped: int, context_window: int) -> None:
+        """Record one context compaction: the pre-compaction window pressure,
+        how many messages were dropped, and the model's window. Consumed by
+        context management (step 12)."""
+        self._write_log({
+            "phase": "compaction",
+            "before": before,
+            "dropped": dropped,
+            "context_window": context_window,
+        })
+
+    def reasoning(self, text: str, redacted: bool = False) -> None:
+        """Record one model thinking block, first-class for a log viewer.
+        Consumed by context management (step 12)."""
+        self._write_log({"phase": "reasoning", "text": str(text), "redacted": redacted})
+
+    def plan(self, text: str) -> None:
+        """Record the text preamble the model wrote alongside its tool calls.
+        Consumed by context management (step 12)."""
+        self._write_log({"phase": "plan", "text": str(text).strip()})
+
+    def tool_call(self, name: str, args: dict[str, Any] | None,
+                  id: str | None = None) -> None:
+        event: dict[str, Any] = {"phase": "tool_call", "name": name, "args": args}
+        if id is not None:
+            event["id"] = id
+        self._write_log(event)
+
+    def tool_result(self, name: str, result: Any, ok: bool = True,
+                    error: str | None = None, tool_use_id: str | None = None) -> None:
+        event: dict[str, Any] = {
+            "phase": "tool_result",
+            "name": name,
+            "result": str(result),
+            "ok": ok,
+            "error": error,
+        }
+        if tool_use_id is not None:
+            event["tool_use_id"] = tool_use_id
+        self._write_log(event)
+
+    def response(self, text: str, usage: dict[str, Any] | None = None,
+                 stop_reason: str | None = None,
+                 task: type[Task] | None = None,
+                 backend: Backend | None = None,
+                 duration_ms: float | None = None) -> None:
+        event: dict[str, Any] = {
+            "phase": "response",
+            "text": str(text).strip(),
+            "usage": usage,
+            "stop_reason": stop_reason,
+        }
+        if duration_ms is not None:
+            event["duration_ms"] = round(duration_ms)
+        event.update(self._execution_metadata(task=task, backend=backend, usage=usage))
+        self._write_log(event)
+
+    def raw(self, data: Any) -> None:
+        """Record the full provider response, only when debug is on."""
+        if not self._debug:
+            return
+        self._write_log({"phase": "raw", "data": data})
+
+    def subscribe(self, callback: Any) -> None:
+        """Register a callback that receives every event this logger writes.
+
+        Called after each JSONL line is written and flushed, with the same event
+        dict. Fan-out only: the file record is unchanged. First used by the TUI
+        (step 11) to update its progress line from log events.
+        """
+        self._subscribers.append(callback)
+
+    def close(self) -> None:
+        if self._log_io is not None and not self._log_io.closed:
+            self._log_io.close()
+
+    def __enter__(self) -> "Logger":
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self.close()
+
+    # -- line assembly -----------------------------------------------------
+
+    def _default_dir(self) -> Path:
+        return Config.resolve_dir() / self.DEFAULT_SESSION_DIR
+
+    def _write_log(self, event: dict[str, Any]) -> None:
+        # Logging must never crash the agent turn. A serialization or write
+        # failure is recorded as a log_error line instead of raising; if even
+        # that fallback fails, the event is counted and dropped.
+        try:
+            line = dict(event)
+            line["session_id"] = self._session_id
+            line["at"] = datetime.now().astimezone().isoformat()
+            self._log_io.write(
+                json.dumps(line, separators=(",", ":"), default=str) + "\n")
+            self._log_io.flush()
+        except Exception as exc:
+            self._write_error(event.get("phase"), exc)
+        # Fan the original event out to subscribers after the file write, so a
+        # subscriber failure never costs the file record and never crashes the
+        # turn. Subscribers see the event without the file-only fields.
+        for callback in self._subscribers:
+            try:
+                callback(event)
+            except Exception:
+                self._dropped += 1
+
+    def _write_error(self, original_phase: Any, exc: Exception) -> None:
+        try:
+            line = {
+                "phase": "log_error",
+                "session_id": self._session_id,
+                "at": datetime.now().astimezone().isoformat(),
+                "original_phase": original_phase,
+                "error": f"{type(exc).__name__}: {exc}",
+            }
+            self._log_io.write(json.dumps(line, default=str) + "\n")
+            self._log_io.flush()
+        except Exception:
+            self._dropped += 1
+
+    @staticmethod
+    def _generate_session_id() -> str:
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        return f"{stamp}-{secrets.token_hex(4)}"
+
+    @staticmethod
+    def _serialize_message(msg: Message) -> dict[str, Any]:
+        return {
+            "role": msg.role.value,
+            "content": [Logger._serialize_block(b) for b in msg.content],
+        }
+
+    @staticmethod
+    def _serialize_block(block: Any) -> dict[str, Any]:
+        if isinstance(block, TextBlock):
+            return {"type": "text", "text": block.text}
+        if isinstance(block, ToolUseBlock):
+            return {
+                "type": "tool_use",
+                "id": block.id,
+                "name": block.name,
+                "input": block.input,
+            }
+        if isinstance(block, ToolResultBlock):
+            return {
+                "type": "tool_result",
+                "tool_use_id": block.tool_use_id,
+                "tool_name": block.tool_name,
+                "content": block.content,
+            }
+        # A block type the logger does not know is recorded, not raised: a
+        # logging gap must never crash the agent turn.
+        return {"type": "unknown", "repr": str(block)}
+
+    # -- execution metadata ------------------------------------------------
+
+    def _execution_metadata(self, task: type[Task] | None,
+                            backend: Backend | None,
+                            usage: dict[str, Any] | None) -> dict[str, Any]:
+        if not (task or backend or usage):
+            return {}
+        tokens = self._usage_tokens(usage)
+        metadata: dict[str, Any] = {
+            "task": self._task_name(task),
+            "provider": self._provider_name(backend),
+            "model": backend.model if backend else None,
+            "usage_unit": backend.usage_unit if backend else None,
+            "usage_level": backend.usage_level if backend else None,
+            "context_window": backend.context_window if backend else None,
+            "input_tokens": tokens["input"],
+            "output_tokens": tokens["output"],
+            "cost_usd": self._estimate_cost(backend, tokens),
+        }
+        return {k: v for k, v in metadata.items() if v is not None}
+
+    @staticmethod
+    def _task_name(task: type[Task] | None) -> str | None:
+        if task is None:
+            return None
+        name = getattr(task, "task_name", None)
+        return name if name else str(task)
+
+    @staticmethod
+    def _provider_name(backend: Backend | None) -> str | None:
+        return backend.provider_name if backend else None
+
+    def _usage_tokens(self, usage: dict[str, Any] | None) -> dict[str, int | None]:
+        return self.token_counts(usage)
+
+    @staticmethod
+    def token_counts(usage: dict[str, Any] | None) -> dict[str, int | None]:
+        """Normalized ``{"input", "output"}`` token counts from any provider's
+        usage shape, each ``None`` when absent. Public so the agent can sum turn
+        totals with the exact extraction the response metadata uses, no second
+        guess at the key names."""
+        usage = usage or {}
+        return {
+            "input": Logger._first_integer(
+                usage, "input_tokens", "prompt_tokens",
+                "promptTokenCount", "prompt_eval_count",
+            ),
+            "output": Logger._first_integer(
+                usage, "output_tokens", "completion_tokens",
+                "candidatesTokenCount", "eval_count",
+            ),
+        }
+
+    @staticmethod
+    def _first_integer(usage: dict[str, Any], *keys: str) -> int | None:
+        """The first present key coerced to int, or None on missing/non-integer.
+
+        The first key with a non-null value decides the result: a bad value
+        there yields None rather than falling through to a later key, matching
+        the reference so one metadata shape covers every provider without a
+        surprising second guess.
+        """
+        for key in keys:
+            value = usage.get(key)
+            if value is not None:
+                if isinstance(value, bool):
+                    return None
+                try:
+                    return int(value)
+                except (TypeError, ValueError, OverflowError):
+                    return None
+        return None
+
+    @staticmethod
+    def _estimate_cost(backend: Backend | None,
+                       tokens: dict[str, int | None]) -> float | None:
+        if backend is None:
+            return None
+        if tokens["input"] is None or tokens["output"] is None:
+            return None
+        return backend.estimate_cost(tokens["input"], tokens["output"])
+
+    def __str__(self) -> str:
+        return f"<Logger session_id={self._session_id} path={self._path}>"
+
+    __repr__ = __str__
