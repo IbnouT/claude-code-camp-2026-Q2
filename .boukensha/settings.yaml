@@ -2,9 +2,28 @@ tasks:
   player:
     provider: anthropic
     model: claude-haiku-4-5
+    #provider: gemini 
+    #model: gemini-3.5-flash
+    #provider: openai
+    #model: gpt-5.4-mini
+    #provider: ollama_cloud 
+    #model: gemma4:31b-cloud
+    #provider: ollama
+    #model: gemma4
     prompt_override:
       system: true
-mud:
-  host: localhost
-  port: 4000
-  username: dummy
+# boukensha is an MCP host: every tool arrives from an mcp_servers entry. The
+# mud-manager gem (week0_explore/mud_manager: gem build + gem install) provides
+# the command on PATH. required: true makes a missing or broken mud-manager
+# fail loudly at boot instead of producing a mystery tool-less agent.
+mcp_servers:
+  mud:
+    command: mud-manager
+    args: ["--mcp"]
+    prefix: tbamud
+    required: true
+    env:
+      MUD_HOST: localhost
+      MUD_PORT: 4000
+      MUD_NAME: poucet
+      MUD_PASSWORD: poucette

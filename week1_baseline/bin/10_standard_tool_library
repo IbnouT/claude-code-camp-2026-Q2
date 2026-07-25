@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Run the standard-tool-library (MCP host) step: the example, then the tests.
+set -euo pipefail
+
+cd "$(dirname "$0")/../agent/10_standard_tool_library"
+uv run examples/example.py "$@"
+echo
+exec uv run python -m unittest discover -s tests -t .
