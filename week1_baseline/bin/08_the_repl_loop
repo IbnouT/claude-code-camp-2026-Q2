@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Run the REPL-loop step's example.
+set -euo pipefail
+
+cd "$(dirname "$0")/../agent/08_the_repl_loop"
+exec uv run examples/example.py "$@"

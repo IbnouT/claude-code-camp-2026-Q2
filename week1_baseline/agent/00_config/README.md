@@ -84,10 +84,12 @@ installed as well as from source).
 
 ## Secrets
 
-Secrets live only in `.env` and load into the environment, `settings.yaml` holds
-none. `ANTHROPIC_API_KEY` and the MUD password (`MUD_PASSWORD`) come from `.env`.
-Copy `.env.example` to `.env` and fill in the values. The real `.env` is
-gitignored, so nothing in the assertion path requires a key to be present.
+Secrets live only in `.env` and load into the environment at startup.
+`settings.yaml` holds none.
+
+- Read from `.env`: `ANTHROPIC_API_KEY` and `MUD_PASSWORD`.
+- To set them: copy `.env.example` to `.env` and fill in the values.
+- The real `.env` is gitignored, so the assertion path needs no key present.
 
 ## Tasks
 

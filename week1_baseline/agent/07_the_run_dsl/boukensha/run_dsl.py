@@ -121,6 +121,7 @@ def run(task: str, *,
         client = Client(builder, transport=transport, sleep=sleep)
         logger = Logger(log=log, snapshot={
             "task": Player.task_name,
+            "system": system,
             "max_iterations": effective_max_iterations,
             "max_output_tokens": effective_max_output_tokens,
             "model": model,
