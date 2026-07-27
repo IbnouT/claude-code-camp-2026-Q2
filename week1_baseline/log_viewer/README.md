@@ -73,7 +73,7 @@ data, each addressable by URL:
 |---|---|
 | narrative | What happened, turn by turn. |
 | map | The route walked, with rooms identified by their exits. |
-| player | Confused, bored, overpowered, and drained, each with the threshold that decided it. |
+| player | Confused, blocked, bored, stuck, overpowered, and drained, each with the threshold that decided it. |
 | pressure | Prompt size per call against the window, with compactions marked. |
 | timeline | Wall-clock time per call, against this session's median. |
 | context | What each prompt added over the previous one. |
@@ -95,10 +95,11 @@ still flags its worst.
   data, not imported, and where they are absent the map says so rather than drawing
   a false path.
 - Player: the findings are computed, not left to the reader. Confused is a room
-  entered three or more times, bored is four identical actions in a row, overpowered
-  is the world naming a zone above the agent's level, and drained is the game
-  reporting exhaustion. Each threshold is printed beside its finding, and the
-  criteria show even when nothing is found.
+  entered three or more times, blocked is the same action refused twice or more, bored
+  is four identical actions in a row, stuck is a turn spending eight or more actions to
+  reach at most one new room, overpowered is the world naming a zone above the agent's
+  level, and drained is the game reporting exhaustion. Each threshold is printed beside
+  its finding, and the criteria show even when nothing is found.
 
 ## Deliberately not here
 

@@ -32,3 +32,14 @@ CLAUDE.md
 # Per-step reference comparison notes, internal working docs
 **/COMPARISON.md
 
+
+# Built Ruby gems (regenerate with gem build)
+*.gem
+
+# Internal working files (rework report + monitor feedback), not deliverables
+reworks_report.md
+feedback_rework.md
+
+# The demo video lives on YouTube. GitHub does not render a committed mp4
+# inline, only the gif, so the bytes would buy a link and nothing else.
+week1_baseline/log_viewer/docs/demo.mp4
