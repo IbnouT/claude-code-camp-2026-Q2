@@ -5,7 +5,7 @@
 Put a readable, live view of the player journey in front of the REPL. boukensha
 plays the MUD, and the TUI shows the journey a human wants to watch: the current
 room, humanized actions, the agent's thinking, and vitals. It is not the system
-of record. The full technical trace lives in the JSONL log and the step-13 log
+of record. The full technical trace lives in the JSONL log and the log
 viewer. The plain REPL stays reachable with `tui=False` and `--no-tui`.
 
 ```

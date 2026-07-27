@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Run the log viewer. It reads a session log and serves it, and it is not the
+# agent: it is unnumbered and it sits outside the agent tree.
+set -euo pipefail
+
+cd "$(dirname "$0")/../log_viewer"
+exec uv run examples/example.py "$@"
