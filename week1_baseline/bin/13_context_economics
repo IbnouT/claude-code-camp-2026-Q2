@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Run the economics step's launcher: caching, cost, and honest token metrics.
+set -euo pipefail
+
+cd "$(dirname "$0")/../agent/13_context_economics"
+exec uv run examples/example.py "$@"

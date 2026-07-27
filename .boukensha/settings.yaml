@@ -1,29 +1,77 @@
+# boukensha configuration. Every option is shown here: active values are set,
+# optional ones are commented with their default. Secrets (provider API keys,
+# the MUD password) belong in .boukensha/.env, never in this file.
+
+# === tasks: one entry per task. The agent plays the `player` task. ==========
 tasks:
   player:
+    # Provider, one of: anthropic, gemini, openai, ollama, ollama_cloud.
+    # Model must exist in the catalog (boukensha/models.yaml or a .boukensha
+    # override).
     provider: anthropic
     model: claude-haiku-4-5
-    #provider: gemini 
+    #provider: gemini
     #model: gemini-3.5-flash
     #provider: openai
     #model: gpt-5.4-mini
-    #provider: ollama_cloud 
+    #provider: ollama_cloud
     #model: gemma4:31b-cloud
     #provider: ollama
     #model: gemma4
+
+    # Use the prompt override at .boukensha/prompts/player/system.md when present.
     prompt_override:
       system: true
-# boukensha is an MCP host: every tool arrives from an mcp_servers entry. The
-# mud-manager gem (week0_explore/mud_manager: gem build + gem install) provides
-# the command on PATH. required: true makes a missing or broken mud-manager
-# fail loudly at boot instead of producing a mystery tool-less agent.
+
+    # Reasoning effort, clamped to what the model supports. One of: none,
+    # minimal, low, medium, high, xhigh, max. Unset takes the model's default.
+    #thinking: medium
+
+    # Per-task limit overrides. Resolution is: this value, else the agent:
+    # block below, else the code default shown here.
+    max_iterations: 125          # tool-call rounds per turn (0 disables)
+    max_output_tokens: 1024      # per-call output-token cap
+    max_turn_tokens: 0           # was 60000. 0 disables: volume is a metric, not a budget
+    max_turn_cost: 0.50          # per-turn spend ceiling in USD
+    compaction_threshold: 0.85   # window fraction that triggers auto-compaction
+
+# === agent: agent-wide defaults for the four limits above. ==================
+# A per-task value overrides these; these override the code defaults.
+#agent:
+#  max_iterations: 25
+#  max_output_tokens: 1024
+#  max_turn_tokens: 60000
+#  compaction_threshold: 0.85
+
+# === mcp_servers: every tool the agent has comes from an entry here. ========
+# boukensha ships no built-in tools. The mud-manager gem
+# (week0_explore/mud_manager: gem build + gem install) provides `mud-manager`
+# on PATH.
 mcp_servers:
   mud:
-    command: mud-manager
-    args: ["--mcp"]
-    prefix: tbamud
-    required: true
-    env:
+    command: mud-manager         # an executable on PATH
+    args: ["--mcp"]             # arguments passed to it
+    prefix: tbamud               # agent-side tool-name prefix (tbamud__look)
+    required: true               # true: a failed spawn stops boot. false: warn and continue tool-less
+    #timeout: 30                 # per-call ceiling in seconds (default 30)
+    #allow: [look, move, attack] # if set, only these tool names register
+    #deny: [shutdown]            # tool names to drop
+    env:                          # environment for the spawned server
       MUD_HOST: localhost
       MUD_PORT: 4000
       MUD_NAME: poucet
-      MUD_PASSWORD: poucette
+      MUD_PASSWORD: poucette      # a secret. Prefer MUD_PASSWORD in .boukensha/.env
+
+# === mud: optional, feeds only the /mud info command's readout. =============
+# The real connection is mcp_servers.mud.env above. Omit this unless you want
+# the /mud command to report a target.
+#mud:
+#  host: localhost
+#  port: 4000
+#  username: poucet
+
+# === Secrets live in .boukensha/.env (not here) =============================
+# One per provider you use, plus the MUD password:
+#   ANTHROPIC_API_KEY=...   GEMINI_API_KEY=...   OPENAI_API_KEY=...
+#   OLLAMA_API_KEY=...      (ollama local needs no key)
+#   MUD_PASSWORD=...
