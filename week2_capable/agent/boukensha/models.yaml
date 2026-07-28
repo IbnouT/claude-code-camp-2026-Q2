@@ -1,0 +1,257 @@
+# Model catalog: context windows and USD costs per million tokens, per token class.
+# Classes: input (fresh), output, cache_read (a cache hit), cache_write_5m and
+# cache_write_1h (storing into a 5-minute or 1-hour cache). A class absent from a
+# model means that provider does not bill it separately.
+# Cache classes verified 2026-07-26. Anthropic bills two cache lifetimes (5m write
+# 1.25x input, 1h write 2x, read 0.1x). OpenAI bills cached input at 0.1x and is
+# encoded with cache_read only. Gemini's explicit cache also bills storage per token
+# per hour, which is a time dimension this schema does not model: we rely on its
+# implicit caching, which has no storage charge. A model with no cache class has no
+# verified rate, and cost for it reports unavailable rather than zero.
+# Every value is taken from that model's own provider page, verified 2026-07:
+#   Anthropic  platform.claude.com/docs/en/about-claude/pricing,
+#              /build-with-claude/effort, /build-with-claude/thinking-troubleshooting
+#   OpenAI     developers.openai.com/api/docs/models/<model>
+#   Gemini     ai.google.dev/gemini-api/docs/pricing, /docs/models
+#   Ollama     ollama.com/library/<model>, docs.ollama.com/cloud
+# thinking_default is the model's documented default thinking state
+# (off | on | always_on) and governs what `none` does.
+# Override or extend any entry with models.yaml in your .boukensha directory.
+
+anthropic:
+  claude-fable-5:
+    cache_min_tokens: 512
+    context_window: 1_000_000
+    cost_per_million: {input: 10.00, output: 50.00, cache_read: 1.00, cache_write_5m: 12.50, cache_write_1h: 20.00}
+    usage_unit: tokens
+    thinking: adaptive
+    thinking_default: always_on
+    thinking_levels: [low, medium, high, xhigh, max]
+  claude-opus-4-8:
+    cache_min_tokens: 1024
+    context_window: 1_000_000
+    cost_per_million: {input: 5.00, output: 25.00, cache_read: 0.50, cache_write_5m: 6.25, cache_write_1h: 10.00}
+    usage_unit: tokens
+    thinking: adaptive
+    thinking_default: off
+    thinking_levels: [low, medium, high, xhigh, max]
+  claude-opus-4-7:
+    cache_min_tokens: 2048
+    context_window: 1_000_000
+    cost_per_million: {input: 5.00, output: 25.00, cache_read: 0.50, cache_write_5m: 6.25, cache_write_1h: 10.00}
+    usage_unit: tokens
+    thinking: adaptive
+    thinking_default: off
+    thinking_levels: [low, medium, high, xhigh, max]
+  claude-sonnet-5:
+    cache_min_tokens: 1024
+    context_window: 1_000_000
+    # Introductory pricing through 2026-08-31; standard is 3.00/15.00 after.
+    cost_per_million: {input: 2.00, output: 10.00, cache_read: 0.20, cache_write_5m: 2.50, cache_write_1h: 4.00}
+    usage_unit: tokens
+    thinking: adaptive
+    thinking_default: on
+    thinking_levels: [low, medium, high, xhigh, max]
+  claude-sonnet-4-6:
+    cache_min_tokens: 1024
+    context_window: 1_000_000
+    cost_per_million: {input: 3.00, output: 15.00, cache_read: 0.30, cache_write_5m: 3.75, cache_write_1h: 6.00}
+    usage_unit: tokens
+    thinking: adaptive
+    thinking_default: off
+    thinking_levels: [low, medium, high, max]
+  claude-haiku-4-5:
+    cache_min_tokens: 4096
+    context_window: 200_000
+    cost_per_million: {input: 1.00, output: 5.00, cache_read: 0.10, cache_write_5m: 1.25, cache_write_1h: 2.00}
+    usage_unit: tokens
+    thinking: budget
+    thinking_default: off
+    thinking_levels: [low, medium, high]
+  claude-haiku-4-5-20251001:
+    cache_min_tokens: 4096
+    context_window: 200_000
+    cost_per_million: {input: 1.00, output: 5.00, cache_read: 0.10, cache_write_5m: 1.25, cache_write_1h: 2.00}
+    usage_unit: tokens
+    thinking: budget
+    thinking_default: off
+    thinking_levels: [low, medium, high]
+  claude-opus-4-5:
+    cache_min_tokens: 4096
+    context_window: 200_000
+    cost_per_million: {input: 5.00, output: 25.00, cache_read: 0.50, cache_write_5m: 6.25, cache_write_1h: 10.00}
+    usage_unit: tokens
+    thinking: budget
+    thinking_default: off
+    thinking_levels: [low, medium, high]
+
+openai:
+  gpt-5.6-sol:
+    context_window: 1_050_000
+    cost_per_million: {input: 5.00, output: 30.00, cache_read: 0.500}
+    usage_unit: tokens
+    thinking: effort
+    thinking_levels: [none, low, medium, high, xhigh, max]
+  gpt-5.6-terra:
+    context_window: 1_050_000
+    cost_per_million: {input: 2.50, output: 15.00, cache_read: 0.250}
+    usage_unit: tokens
+    thinking: effort
+    thinking_levels: [none, low, medium, high, xhigh, max]
+  gpt-5.6-luna:
+    context_window: 1_050_000
+    cost_per_million: {input: 1.00, output: 6.00, cache_read: 0.100}
+    usage_unit: tokens
+    thinking: effort
+    thinking_levels: [none, low, medium, high, xhigh, max]
+  gpt-5.5:
+    context_window: 1_000_000
+    cost_per_million: {input: 5.00, output: 30.00, cache_read: 0.500}
+    usage_unit: tokens
+    thinking: effort
+    thinking_levels: [none, low, medium, high, xhigh]
+  gpt-5.5-pro:
+    context_window: 1_050_000
+    cost_per_million: {input: 30.00, output: 180.00, cache_read: 3.000}
+    usage_unit: tokens
+    thinking: effort
+    thinking_levels: [medium, high, xhigh]
+  gpt-5.4:
+    context_window: 1_050_000
+    cost_per_million: {input: 2.50, output: 15.00, cache_read: 0.250}
+    usage_unit: tokens
+    thinking: effort
+    thinking_levels: [none, low, medium, high, xhigh]
+  gpt-5.4-mini:
+    context_window: 400_000
+    cost_per_million: {input: 0.75, output: 4.50, cache_read: 0.075}
+    usage_unit: tokens
+    thinking: effort
+    thinking_levels: [none, low, medium, high, xhigh]
+
+gemini:
+  gemini-3.1-pro-preview:
+    context_window: 1_000_000
+    cost_per_million: {input: 2.00, output: 12.00}
+    usage_unit: tokens
+    thinking: level
+    thinking_levels: [low, medium, high]
+  gemini-3.6-flash:
+    context_window: 1_048_576
+    cost_per_million: {input: 1.50, output: 7.50}
+    usage_unit: tokens
+    thinking: level
+    thinking_levels: [minimal, low, medium, high]
+  gemini-3.5-flash:
+    context_window: 1_048_576
+    cost_per_million: {input: 1.50, output: 9.00}
+    usage_unit: tokens
+    thinking: level
+    thinking_levels: [minimal, low, medium, high]
+  gemini-3.5-flash-lite:
+    context_window: 1_048_576
+    cost_per_million: {input: 0.30, output: 2.50}
+    usage_unit: tokens
+    thinking: level
+    thinking_levels: [minimal, low, medium, high]
+  gemini-2.5-pro:
+    context_window: 1_048_576
+    cost_per_million: {input: 1.25, output: 10.00, cache_read: 0.125}
+    usage_unit: tokens
+    thinking: level
+    thinking_levels: [low, medium, high]
+  gemini-2.5-flash:
+    context_window: 1_048_576
+    cost_per_million: {input: 0.30, output: 2.50, cache_read: 0.03}
+    usage_unit: tokens
+    thinking: level
+    thinking_levels: [low, medium, high]
+  gemini-2.5-flash-lite:
+    context_window: 1_048_576
+    cost_per_million: {input: 0.10, output: 0.40, cache_read: 0.01}
+    usage_unit: tokens
+    thinking: level
+
+# Local inference is free; the context window is the model's own.
+ollama:
+  "gpt-oss:20b":
+    context_window: 128_000
+    cost_per_million: {input: 0.00, output: 0.00, cache_read: 0.00, cache_write_5m: 0.00, cache_write_1h: 0.00}
+    usage_unit: local_compute
+    thinking: level_string
+    thinking_levels: [low, medium, high]
+  "gpt-oss:120b":
+    context_window: 128_000
+    cost_per_million: {input: 0.00, output: 0.00, cache_read: 0.00, cache_write_5m: 0.00, cache_write_1h: 0.00}
+    usage_unit: local_compute
+    thinking: level_string
+    thinking_levels: [low, medium, high]
+  gemma4:
+    context_window: 128_000
+    cost_per_million: {input: 0.00, output: 0.00, cache_read: 0.00, cache_write_5m: 0.00, cache_write_1h: 0.00}
+    usage_unit: local_compute
+  "gemma4:e2b":
+    context_window: 128_000
+    cost_per_million: {input: 0.00, output: 0.00, cache_read: 0.00, cache_write_5m: 0.00, cache_write_1h: 0.00}
+    usage_unit: local_compute
+  "gemma4:e4b":
+    context_window: 128_000
+    cost_per_million: {input: 0.00, output: 0.00, cache_read: 0.00, cache_write_5m: 0.00, cache_write_1h: 0.00}
+    usage_unit: local_compute
+  "gemma4:12b":
+    context_window: 256_000
+    cost_per_million: {input: 0.00, output: 0.00, cache_read: 0.00, cache_write_5m: 0.00, cache_write_1h: 0.00}
+    usage_unit: local_compute
+  "gemma4:26b":
+    context_window: 256_000
+    cost_per_million: {input: 0.00, output: 0.00, cache_read: 0.00, cache_write_5m: 0.00, cache_write_1h: 0.00}
+    usage_unit: local_compute
+  "gemma4:31b":
+    context_window: 256_000
+    cost_per_million: {input: 0.00, output: 0.00, cache_read: 0.00, cache_write_5m: 0.00, cache_write_1h: 0.00}
+    usage_unit: local_compute
+  "qwen3:8b":
+    context_window: 40_000
+    cost_per_million: {input: 0.00, output: 0.00, cache_read: 0.00, cache_write_5m: 0.00, cache_write_1h: 0.00}
+    usage_unit: local_compute
+    thinking: flag
+  "qwen3:30b":
+    context_window: 256_000
+    cost_per_million: {input: 0.00, output: 0.00, cache_read: 0.00, cache_write_5m: 0.00, cache_write_1h: 0.00}
+    usage_unit: local_compute
+    thinking: flag
+  "deepseek-r1:8b":
+    context_window: 128_000
+    cost_per_million: {input: 0.00, output: 0.00, cache_read: 0.00, cache_write_5m: 0.00, cache_write_1h: 0.00}
+    usage_unit: local_compute
+    thinking: flag
+
+# Ollama Cloud bills by subscription, with no published per-token price.
+ollama_cloud:
+  "gpt-oss:120b":
+    context_window: 128_000
+    cost_per_million: {input: null, output: null}
+    usage_unit: subscription
+    thinking: level_string
+    thinking_levels: [low, medium, high]
+  "gpt-oss:20b":
+    context_window: 128_000
+    cost_per_million: {input: null, output: null}
+    usage_unit: subscription
+    thinking: level_string
+    thinking_levels: [low, medium, high]
+  "gemma4:31b":
+    context_window: 256_000
+    cost_per_million: {input: null, output: null}
+    usage_unit: subscription
+    usage_level: medium
+  minimax-m3:
+    context_window: 512_000
+    cost_per_million: {input: null, output: null}
+    usage_unit: subscription
+    usage_level: high
+  kimi-k2.5:
+    context_window: 256_000
+    cost_per_million: {input: null, output: null}
+    usage_unit: subscription
+    usage_level: high
