@@ -26,6 +26,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from .tool_result import view_tool_result
+
 # The MUD wraps every line in terminal color escapes; they carry no meaning for
 # a text card and render as garbage, so they are stripped before display.
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]|\x1b[()][0-9A-B]|\x1b[=>]")
@@ -312,13 +314,19 @@ class Presenter:
         call = self._pending.pop(
             str(event.get("tool_use_id") or event.get("name")), None) or {}
         name = bare_tool_name(call.get("name") or event.get("name"))
-        text = strip_ansi(event.get("result"))
+        view = view_tool_result(event.get("result"))
+        text = strip_ansi(view.text)
+        if view.is_error:
+            self.latest_message = self._clean(view.text)[:600]
+            card = Card(kind="error", body=self.latest_message)
+            self.cards.append(card)
+            return [card]
         combat_card = self._absorb_combat(text)
         # A result that carried combat (mid-fight or just-ended) belongs to the
         # fight box, not the transient message line.
         is_combat_result = self.combat_active or combat_card is not None
 
-        room = self._room_card(event.get("result")) if name in ROOM_TOOLS else None
+        room = self._room_card(view.text) if name in ROOM_TOOLS else None
         emitted: list[Card] = []
         if room is not None:
             # A room display is the new current output; it supersedes any
@@ -334,7 +342,7 @@ class Presenter:
             # A non-room, non-combat reply (examine, track, a shop list) is a
             # transient MUD message, shown live on the dashboard but not kept as
             # a Feed card. Line structure is preserved so a list stays a list.
-            self.latest_message = self._clean(event.get("result"))[:600]
+            self.latest_message = self._clean(view.text)[:600]
         if combat_card is not None:
             emitted.append(combat_card)
         return emitted

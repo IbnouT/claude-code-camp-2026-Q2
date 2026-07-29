@@ -33,6 +33,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from .tool_result import view_tool_result
+
 # Line rules, verbatim from week0's mud_session.py (verified against real
 # tbaMUD transcripts there).
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]|\x1b[()][0-9A-B]|\x1b[=>]")
@@ -172,9 +174,17 @@ class JourneyParser:
         call = self._pending.pop(str(call_id or name), None) or {
             "name": str(name or "").split("__")[-1], "args": {},
         }
-        text = ANSI_RE.sub("", str(result or ""))
+        view = view_tool_result(result)
+        text = ANSI_RE.sub("", view.text)
         hp_before = self.state.vitals["hp"]
         position_before = self.state.position
+        if view.is_error:
+            self._recent_calls.append({
+                "name": call["name"],
+                "new_info": False,
+            })
+            del self._recent_calls[:-CONFUSION_WINDOW]
+            return
         self._scan_lines(text)
         if call["name"] in ROOM_TOOLS:
             self._parse_room(text, call)

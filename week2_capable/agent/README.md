@@ -67,6 +67,9 @@ First run, in order:
 The REPL and TUI use the same assembly path and therefore the same gateway
 profile and tool set.
 
+The gateway's typed result envelopes stay intact in model context and session
+logs. The TUI unwraps their human text into rooms, messages and readable errors.
+
 The full `tasks.<name>` reference (the agent plays the `player` task):
 
 | Key | Default | Meaning |
@@ -102,8 +105,11 @@ The context window is not a setting: it is a model fact read from the catalog.
 ## Tests
 
 ```bash
-uv run python -m unittest discover -s tests -t .
+uv run pytest -q
 ```
+
+pytest is a development-only dependency for Week 2 tests and collects the
+carried unittest suite as well.
 
 ## Organization
 
