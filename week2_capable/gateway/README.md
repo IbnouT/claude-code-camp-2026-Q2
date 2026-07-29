@@ -153,3 +153,9 @@ Verify a retained journal replays deterministically:
 uv run python scripts/stream_smoke.py \
   --journal ../../.boukensha/gateway/live-smoke.db
 ```
+
+Report capability and argument-shape coverage:
+
+```bash
+uv run python scripts/capability_report.py
+```

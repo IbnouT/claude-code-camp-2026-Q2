@@ -534,6 +534,22 @@
     "name": "save_character"
   },
   {
+    "description": "Send an arbitrary command string to the MUD and return the response. Escape hatch for when no structured tool fits.",
+    "inputSchema": {
+      "properties": {
+        "command": {
+          "description": "The raw command to send (e.g. 'who', 'help backstab')",
+          "type": "string"
+        }
+      },
+      "required": [
+        "command"
+      ],
+      "type": "object"
+    },
+    "name": "send_raw"
+  },
+  {
     "description": "Return any unprompted output that has arrived since the last command (combat ticks, other players, room events) without sending anything. Use this to notice things that happen while idle.",
     "inputSchema": {
       "properties": {},
