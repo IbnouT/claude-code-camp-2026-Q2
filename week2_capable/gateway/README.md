@@ -13,6 +13,7 @@ flowchart LR
     O --> T["conservative position tracker"]
     O --> J
     T --> J
+    J --> V["ASGI live SSE + replay"]
     J --> X["JSONL projection"]
     A["Boukensha"] -- MCP stdio --> P["session profile"]
     P --> M["generated command surface"]
@@ -40,6 +41,8 @@ gateway/
 │   ├── observe.py
 │   ├── observation_pipeline.py
 │   ├── position.py
+│   ├── stream.py
+│   ├── api.py
 │   ├── profiles.py
 │   ├── raw.py
 │   ├── results.py
@@ -77,6 +80,11 @@ application project.
 - Reset restores the benchmark character, then verifies through mortal
   `score` and `look` output.
 - Two identical resets must produce identical fully read mortal state.
+- Live SSE and historical replay use one deterministic event serializer.
+- `Last-Event-ID` resumes from the durable journal sequence.
+- Slow subscribers are dropped and recorded rather than blocking the game.
+- Canonical wire replay reconstructs exact captured bytes, including
+  length-preserving zeroes for credentials redacted before persistence.
 - ANSI colour and line shape produce typed room, exit, vital, and state
   observations.
 - Every observation records confidence, method, parser version, and its source
@@ -130,4 +138,18 @@ Run the repeatable live reset gate:
 ```bash
 MUD_ADMIN_PASSWORD='...' uv run python scripts/reset_smoke.py \
   --db /tmp/gateway-reset-smoke.db
+```
+
+Serve live and replay views locally:
+
+```bash
+uv run python -m mud_gateway.api \
+  --journal ../../.boukensha/gateway/gateway.db
+```
+
+Verify a retained journal replays deterministically:
+
+```bash
+uv run python scripts/stream_smoke.py \
+  --journal ../../.boukensha/gateway/live-smoke.db
 ```
