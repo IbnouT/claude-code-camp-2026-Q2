@@ -20,6 +20,9 @@
 
 - Replaced the mud_manager with our own gateway so we own the wire a run is
   observed and replayed from.
+- Separating capabilities from advertised profiles made comparison cheap. The
+  first fully validated grouped surface was larger than direct, 7,494 versus
+  6,290 schema bytes, so tool count alone is not a cost result.
 
 ## Technical Conclusions
 

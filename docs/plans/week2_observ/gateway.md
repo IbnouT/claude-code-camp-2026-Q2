@@ -135,36 +135,85 @@ are cut first if time runs short, and never at the observability core's expense.
 The core gateway never chooses a destination and never acts on its own. Anything
 opportunistic above is additive and does not gate the core.
 
-## Parity
+## Capability coverage and surface selection
 
-Parity is the bar the core must clear: the agent performs every game operation
-it performed through the mud_manager, through the gateway, with matching
-behaviour. It is a functional bar, proven by contract tests over recorded
-traffic plus one live journey, not by a paid benchmark.
+The gateway does not mirror the mud_manager's tool surface. The manager is
+evidence for what capabilities exist and a benchmark reference, not the target
+architecture. Week 1 usage is highly concentrated (448 recorded calls: move
+314, then poll 26, look 20, check 18, attack 16, and a long tail, most
+advertised tools never used), so a blind mirror optimises a surface the agent
+barely uses. The target is correct, efficient play at lower total model cost.
 
-The mortal command families the gateway must cover, each a generated MCP tool
-whose result is a typed observation and whose failure is a typed error, not a
-raw string:
+### One capability registry, many advertised profiles
 
-| Family | Commands | Result shape |
-|---|---|---|
-| movement | move (n/s/e/w/u/d), exits | new room observation, or a refusal with reason |
-| perception | look, examine, consider | room or target observation |
-| self | score, inventory, equipment, time | typed self state |
-| items | get, drop, wear, wield, remove | inventory or equipment delta |
-| commerce | list, buy, sell | shop listing or a transaction result |
-| bank | balance, deposit, withdraw | typed balance |
-| position | stand, sit, rest, sleep, wake | posture observation |
-| combat | kill, flee, wimpy | combat or posture observation |
-| social and boards | say, tell, look board, write | acknowledgement or board content |
+Every supported game capability is defined once in an internal typed registry.
+The advertised MCP surface is GENERATED from an explicit allowlisted profile,
+so completeness of capability is separate from what the agent is exposed to.
 
-Parity gate, two parts. Contract tests assert EVERY family's tool name,
-arguments, result shape and error behaviour against recorded traffic, so
-banking, combat, item mutation, posture, social and boards are all proven even
-though no single journey visits them. The live bakery journey (find the bakery,
-read the menu) then proves representative end-to-end integration across login,
-movement, perception and commerce. Only after both pass does the benchmark
-measure E1 through the unoptimised gateway.
+- The registry covers every currently supported mortal capability, coverage
+  measured against capability evidence, so a profile never lacks a capability
+  that exists. It does not promise the game can never reveal a new capability
+  gap: any such gap is logged and becomes a candidate typed definition.
+- A profile is a deny-by-default allowlist selecting which capabilities the
+  agent sees. Trimming to a high-frequency surface is a config choice, and
+  re-enabling a capability is a config change, not a rebuild.
+- Candidate profiles: full direct surface, minimal high-frequency surface,
+  grouped hybrid surface, and hybrid plus guarded navigate once observation
+  exists. Any profile may explicitly add the audited raw fallback.
+
+Rules, which are also what makes this observable and reproducible:
+
+- The profile is fixed for a whole run, so the advertised tool schema stays
+  byte-stable and remains a cache read rather than fresh input each turn. A
+  profile change takes effect on a new session, never mid-turn.
+- Authorization is enforced server-side, not merely hidden from the schema. A
+  call to a capability the profile disables returns a typed permission error.
+- A generic single-line `send_raw` tool is in the mortal registry like any
+  other capability, deny-by-default and not in the agent's default profile. It
+  sends a MORTAL game line only, which the game bounds to the character's own
+  privileges, so allowlisting it is about controlling the agent's surface, not
+  security. When enabled its use emits a capability-gap metric.
+- Immortal/admin commands (goto, trans, restore and the rest) are a different
+  boundary and stay structurally unreachable from the mortal server: they live
+  in the separate admin process, mortal never imports them (the two-process
+  split and AST no-import proof). Profiles do not govern that boundary.
+- The profile id and a capability-set digest are journaled at session start,
+  and every candidate profile reports its schema bytes and capability
+  coverage, so any run states exactly which surface produced its numbers.
+
+### Direct and hybrid surfaces, both generated, both measured
+
+Two shapes are generated from the same registry:
+
+- Direct: one tool per primitive capability.
+- Hybrid: a small stable set (observe, move, guarded navigate, and grouped
+  act / interact enums) that collapses the move-heavy tail and attaches a
+  fresh observation to every mutating result so the model spends no follow-up
+  call on poll, look or check.
+
+Neither is assumed to win. Which surface an agent should use is a measured
+decision: the benchmark and cost simulator replay the same journeys through
+each profile and report journey success, final game state, model calls, total
+tokens, schema tokens, INVALID and CORRECTIVE calls, and latency. A grouped
+enum that raises corrective calls can erase its own token saving, so
+corrective and invalid calls are first-class metrics, not an afterthought.
+
+### Capability gate
+
+Contract tests assert the registry covers every capability the mud_manager
+evidences (magic, training, tracking, containers, status, commerce, social,
+combat, movement, perception, self, lifecycle), each with a typed observation
+result and a typed error, proven against recorded traffic. The default
+bring-up profile is the simple direct projection, chosen for a clean baseline,
+not declared the winner. observe and guarded navigate are defined here but not
+exposed at runtime until group 3 provides trustworthy observation and position
+(observe carries observation age, confidence, parser version and source wire
+sequence, and never presents stale state as current. Navigate does not expose
+until blocked-exit, combat, vitals, unexpected-room and interrupt stops are
+each testable from journal evidence). The live bakery journey proves
+representative end-to-end integration. Only after the capability gate and the
+journey pass does the benchmark measure E1, against the week 1 baseline (the
+448-call distribution), through the chosen bring-up profile.
 
 ## Build order
 

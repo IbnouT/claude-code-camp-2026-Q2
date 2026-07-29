@@ -153,6 +153,27 @@ class Session:
             return Reply(command=line, raw=raw, unsolicited=pending,
                          complete=bool(PROMPT.search(raw)), seq=event.seq)
 
+    async def poll(self, *, trace_id: str | None = None) -> Reply:
+        """Return unsolicited output without sending a game command."""
+        async with self._command_lock:
+            pending = await self.transport.drain_pending()
+            event = self.journal.append(
+                self.id,
+                "poll",
+                {
+                    "bytes": len(pending),
+                    "text": strip_ansi(pending).decode("latin-1"),
+                },
+                trace_id=trace_id,
+            )
+            return Reply(
+                command="poll",
+                raw=pending,
+                unsolicited=b"",
+                complete=True,
+                seq=event.seq,
+            )
+
     # -- internals ----------------------------------------------------------
 
     def _journal_wire(self, event: WireEvent) -> None:
