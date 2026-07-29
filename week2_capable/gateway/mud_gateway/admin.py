@@ -95,10 +95,14 @@ class AdminSession:
         form = "set file" if offline else "set"
         return await self._run(f"{form} {player} {field} {value}", f"set:{field}")
 
-    async def locate(self, player: str) -> tuple[int, str] | None:
+    async def locate_all(self, player: str) -> tuple[tuple[int, str], ...]:
         text = await self._run("where", "locate")
-        for match in WHERE_LINE.finditer(text):
-            if match.group(1).casefold() == player.casefold():
-                return int(match.group(2)), match.group(3).strip()
-        return None
+        return tuple(
+            (int(match.group(2)), match.group(3).strip())
+            for match in WHERE_LINE.finditer(text)
+            if match.group(1).casefold() == player.casefold()
+        )
 
+    async def locate(self, player: str) -> tuple[int, str] | None:
+        matches = await self.locate_all(player)
+        return matches[0] if matches else None

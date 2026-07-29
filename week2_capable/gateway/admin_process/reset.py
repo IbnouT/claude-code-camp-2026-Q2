@@ -77,6 +77,10 @@ class ResetOutcome:
         return not self.drift and not self.state.unread
 
 
+class ResetConflict(RuntimeError):
+    """The benchmark character is not exclusively owned by the reset process."""
+
+
 def parse_score(text: str) -> dict[str, object]:
     found: dict[str, object] = {}
     for name, pattern in SCORE_PATTERNS.items():
@@ -126,19 +130,42 @@ class ResetPlan:
             "reset_started",
             {"reset_id": reset_id, "player": player_name, "room": self.room},
         )
+        active = await admin.locate_all(player_name)
+        if len(active) != 1:
+            journal.append(
+                admin.session.id,
+                "reset_rejected",
+                {
+                    "reset_id": reset_id,
+                    "player": player_name,
+                    "reason": "concurrent_session",
+                    "active_sessions": len(active),
+                },
+            )
+            raise ResetConflict(
+                f"reset requires one active {player_name!r} session, found {len(active)}"
+            )
         applied: list[str] = []
-        await admin.goto(self.room)
-        applied.append("goto")
-        await admin.transfer(player_name)
-        applied.append("transfer")
         await admin.restore(player_name)
         applied.append("restore")
         for name, value in self.fields.items():
             await admin.set_field(player_name, name, value)
             applied.append(name)
+        # Location is applied last. Some character mutations can reload the
+        # target, so transferring earlier does not establish the final state.
+        await admin.goto(self.room)
+        applied.append("goto")
+        await admin.transfer(player_name)
+        applied.append("transfer")
 
+        await player.command("save")
+        applied.append("save")
+        await player.close()
+        await player.open()
+        applied.append("reconnect")
         state = await observe_mortal(player)
-        drift = self.verify(state)
+        located = await admin.locate(player_name)
+        drift = self.verify(state, located=located)
         journal.append(
             admin.session.id,
             "reset_verified",
@@ -153,7 +180,12 @@ class ResetPlan:
         )
         return ResetOutcome(reset_id, player_name, state, drift, tuple(applied))
 
-    def verify(self, state: ObservedState) -> dict[str, tuple[object, object]]:
+    def verify(
+        self,
+        state: ObservedState,
+        *,
+        located: tuple[int, str] | None = None,
+    ) -> dict[str, tuple[object, object]]:
         expected: dict[str, object] = {
             "level": self.fields.get("level"),
             "gold": self.fields.get("gold"),
@@ -171,4 +203,15 @@ class ResetPlan:
             pair = getattr(state, name)
             if pair is not None and pair[0] != pair[1]:
                 drift[name] = ("full", pair)
+        if located is not None:
+            room, title = located
+            if room != self.room:
+                drift["room"] = (self.room, room)
+            if (
+                state.room_title is not None
+                and state.room_title.casefold() != title.casefold()
+            ):
+                drift["room_title"] = (title, state.room_title)
+        else:
+            drift["room"] = (self.room, None)
         return drift

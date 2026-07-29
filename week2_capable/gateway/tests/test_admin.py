@@ -81,3 +81,12 @@ async def test_locate_reads_immortal_room_ground_truth(admin):
     admin.session.replies = [WHERE]
     assert await admin.locate("poucet") == (3054, "Main Street")
 
+
+async def test_locate_all_exposes_duplicate_player_sessions(admin):
+    admin.session.replies = [
+        WHERE + "Poucet   [ 3001] The Temple Of Midgaard\n"
+    ]
+    assert await admin.locate_all("poucet") == (
+        (3054, "Main Street"),
+        (3001, "The Temple Of Midgaard"),
+    )
