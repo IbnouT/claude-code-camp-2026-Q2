@@ -24,6 +24,9 @@ import uuid
 from dataclasses import dataclass
 
 from .journal import Journal
+from .observe import Observation, WireReference
+from .observation_pipeline import ObservationPipeline
+from .position import PositionObservation
 from .wire import PROMPT, Direction, Transport, WireEvent, strip_ansi
 
 #: Login prompts, matched loosely because the banner wording changes between builds.
@@ -53,6 +56,9 @@ class Reply:
     unsolicited: bytes
     complete: bool
     seq: int
+    wire_ref: WireReference | None = None
+    observations: tuple[Observation, ...] = ()
+    position: PositionObservation | None = None
 
     @property
     def text(self) -> str:
@@ -85,6 +91,7 @@ class Session:
         self._logged_in = False
         self._command_lock = asyncio.Lock()
         self.trace_id: str | None = None
+        self.observations = ObservationPipeline(journal, self.id)
 
     # -- lifecycle ----------------------------------------------------------
 
@@ -136,6 +143,7 @@ class Session:
         """Send one line and collect its reply, with the window aligned first."""
         async with self._command_lock:
             trace = trace_id or self.trace_id
+            source_after = self.journal.last_seq(self.id)
             pending = await self.transport.drain_pending()
             if pending:
                 self.journal.append(self.id, "unsolicited",
@@ -150,12 +158,26 @@ class Session:
                  "complete": bool(PROMPT.search(raw)),
                  "unsolicited_bytes": len(pending)},
                 trace_id=trace)
+            wire_ref = self._wire_reference(source_after, event.seq, raw)
+            attempted_move = line.casefold() if line.casefold() in {
+                "north", "south", "east", "west", "up", "down",
+                "n", "s", "e", "w", "u", "d",
+            } else None
+            observations, position = self.observations.ingest(
+                raw,
+                wire_ref,
+                attempted_move=attempted_move,
+                trace_id=trace,
+            )
             return Reply(command=line, raw=raw, unsolicited=pending,
-                         complete=bool(PROMPT.search(raw)), seq=event.seq)
+                         complete=bool(PROMPT.search(raw)), seq=event.seq,
+                         wire_ref=wire_ref, observations=observations,
+                         position=position)
 
     async def poll(self, *, trace_id: str | None = None) -> Reply:
         """Return unsolicited output without sending a game command."""
         async with self._command_lock:
+            source_after = self.journal.last_seq(self.id)
             pending = await self.transport.drain_pending()
             event = self.journal.append(
                 self.id,
@@ -166,12 +188,21 @@ class Session:
                 },
                 trace_id=trace_id,
             )
+            wire_ref = self._wire_reference(source_after, event.seq, pending)
+            observations, position = self.observations.ingest(
+                pending,
+                wire_ref,
+                trace_id=trace_id,
+            )
             return Reply(
                 command="poll",
                 raw=pending,
                 unsolicited=b"",
                 complete=True,
                 seq=event.seq,
+                wire_ref=wire_ref,
+                observations=observations,
+                position=position,
             )
 
     # -- internals ----------------------------------------------------------
@@ -186,6 +217,17 @@ class Session:
              "digest": None if event.redacted
                        else self.journal.put_blob(event.payload)},
             trace_id=self.trace_id, at=event.at, monotonic=event.monotonic)
+
+    def _wire_reference(
+        self, after: int, fallback_seq: int, raw: bytes
+    ) -> WireReference:
+        inbound = [
+            event for event in self.journal.since(self.id, after)
+            if event.kind == "wire" and event.payload.get("direction") == "in"
+        ]
+        first = inbound[0].seq if inbound else fallback_seq
+        last = inbound[-1].seq if inbound else fallback_seq
+        return WireReference.from_bytes(self.id, first, last, raw)
 
     def __str__(self) -> str:
         state = "logged in" if self._logged_in else "not logged in"

@@ -145,6 +145,9 @@ class TestCommands:
         assert "The Temple Of Midgaard" in reply.text
         assert reply.complete
         assert reply.seq > 0
+        assert reply.wire_ref is not None
+        assert reply.observations
+        assert reply.position is not None
 
     async def test_a_reply_with_no_prompt_is_marked_incomplete_rather_than_trusted(self,
                                                                                    journal):
@@ -183,6 +186,28 @@ class TestCommands:
         await session.command("north")
         commands = journal.since(session.id, kind="command")
         assert commands[-1].trace_id == "route-7"
+
+    async def test_parsed_facts_and_metrics_are_committed(self, journal):
+        session = make(journal, [GREETING, PASSWORD, PROMPT_BYTES])
+        await session.open()
+        session.transport.script = [
+            b"\x1b[0;33mThe Temple\x1b[0m\r\n"
+            b"\x1b[0;36m[ Exits: n ]\x1b[0m\r\n" + PROMPT_BYTES
+        ]
+        await session.command("look")
+        kinds = [event.kind for event in journal.since(session.id)]
+        assert "observation" in kinds
+        assert "position" in kinds
+        assert "parse_metric" in kinds
+
+    async def test_unknown_output_is_an_event_not_silent_loss(self, journal):
+        session = make(journal, [GREETING, PASSWORD, PROMPT_BYTES])
+        await session.open()
+        session.transport.script = [b"Something entirely novel.\r\n" + PROMPT_BYTES]
+        await session.command("look")
+        unknown = journal.since(session.id, kind="unparsed")
+        assert unknown
+        assert unknown[0].payload["text"] == "Something entirely novel."
 
     async def test_concurrent_callers_are_serialized(self, journal):
         session = make(journal, [GREETING, PASSWORD, PROMPT_BYTES])

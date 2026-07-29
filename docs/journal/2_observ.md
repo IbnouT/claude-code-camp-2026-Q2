@@ -23,6 +23,9 @@
 - Separating capabilities from advertised profiles made comparison cheap. The
   first fully validated grouped surface was larger than direct, 7,494 versus
   6,290 schema bytes, so tool count alone is not a cost result.
+- Colour-aware rules typed 2,644 of 3,067 recorded lines without a model. The
+  423 misses remain linked events, turning the 13.8% residual into a measured
+  target instead of silent loss.
 
 ## Technical Conclusions
 

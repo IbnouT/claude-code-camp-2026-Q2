@@ -1,13 +1,18 @@
 # MUD gateway
 
 The gateway is the instrumented Python interface between Boukensha and the
-game. It provides transport, login, wire capture, and a durable event journal.
+game. It provides transport, login, wire capture, structured observations, and
+a durable event journal.
 
 ```mermaid
 flowchart LR
     G["tbaMUD"] <-- telnet --> W["wire transport"]
     W --> S["logged-in session"]
     W --> J[("SQLite event journal")]
+    S --> O["rules-first parser"]
+    O --> T["conservative position tracker"]
+    O --> J
+    T --> J
     J --> X["JSONL projection"]
     A["Boukensha"] -- MCP stdio --> P["session profile"]
     P --> M["generated command surface"]
@@ -26,6 +31,9 @@ gateway/
 │   ├── session.py
 │   ├── journal.py
 │   ├── commands.py
+│   ├── observe.py
+│   ├── observation_pipeline.py
+│   ├── position.py
 │   ├── profiles.py
 │   ├── raw.py
 │   ├── results.py
@@ -59,6 +67,14 @@ application project.
 - Named profiles deny `send_raw`. An explicit allowlist can enable it, and
   every use records a capability-gap event with its reason.
 - Immortal credentials and typed admin operations stay outside this process.
+- ANSI colour and line shape produce typed room, exit, vital, and state
+  observations.
+- Every observation records confidence, method, parser version, and its source
+  wire range.
+- Unknown lines remain `unparsed` events and contribute to the parse-miss rate.
+- Position uses arrival paths, exits, and neighbourhoods. A duplicate title is
+  never sufficient evidence to merge two places.
+- The agent-facing `observe` and `navigate` capabilities remain disabled.
 
 ## Verification
 
@@ -83,6 +99,12 @@ Measure the named candidate profiles:
 
 ```bash
 uv run python -m mud_gateway.mcp_server --measure
+```
+
+Replay every retained session and report parser coverage:
+
+```bash
+uv run python scripts/replay_observations.py
 ```
 
 Prove one configured surface:
