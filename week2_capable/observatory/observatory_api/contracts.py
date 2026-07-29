@@ -175,6 +175,138 @@ class Investigation(BaseModel):
     world: WorldProjection
 
 
+class KnowledgeMetric(BaseModel):
+    """One evidence-backed measure in the current knowledge view."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    label: str
+    value: int | float | str
+    detail: str
+
+
+class FrontierItem(BaseModel):
+    """One unresolved or unexplored edge backed by recorded evidence."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    title: str
+    kind: Literal["unresolved_position", "untraversed_exit", "missing_source"]
+    detail: str
+    citations: tuple[str, ...] = ()
+
+
+class KnowledgeOverview(BaseModel):
+    """Honest knowledge coverage without filling absent layers."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    state: Literal["ready", "partial", "unavailable"]
+    source: str
+    metrics: tuple[KnowledgeMetric, ...]
+    frontier: tuple[FrontierItem, ...]
+    entities: tuple[str, ...]
+    player: dict[str, str | int | float]
+    progression: tuple[str, ...]
+    missing_layers: tuple[str, ...]
+
+
+class DiagnosticHistoryItem(BaseModel):
+    """Cross-session prevalence for one deterministic diagnostic."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    kind: str
+    runs: int
+    critical: int
+    warning: int
+    notice: int
+    latest_run: str
+
+
+class DiagnosticHistory(BaseModel):
+    """Diagnostic prevalence across every readable benchmark run."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    total_runs: int
+    successful_runs: int
+    failed_runs: int
+    items: tuple[DiagnosticHistoryItem, ...]
+
+
+class InvestigatorAnnotation(BaseModel):
+    """Investigator-authored context that never mutates source evidence."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str = Field(min_length=1, max_length=120)
+    at: int = Field(ge=0)
+    text: str = Field(min_length=1, max_length=2_000)
+    created_at: str
+
+
+class IncidentExportRequest(BaseModel):
+    """Selection and local annotations included in a portable capsule."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    run_id: str = Field(min_length=1, max_length=160)
+    selected_sequence: int = Field(ge=0)
+    diagnostic_id: str | None = Field(default=None, max_length=160)
+    annotations: tuple[InvestigatorAnnotation, ...] = ()
+
+
+class IncidentSelection(BaseModel):
+    """The exact investigation focus restored when a capsule opens."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    selected_sequence: int
+    diagnostic_id: str | None
+
+
+class RedactionReport(BaseModel):
+    """Visible proof of the export boundary applied to a capsule."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    policy: str
+    replacements: int
+    local_paths_included: bool = False
+    credentials_included: bool = False
+
+
+class IncidentPayload(BaseModel):
+    """Portable evidence and derived views needed for offline investigation."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    generated_at: str
+    title: str
+    source_versions: dict[str, str]
+    investigation: Investigation
+    knowledge: KnowledgeOverview
+    history: DiagnosticHistory
+    selection: IncidentSelection
+    annotations: tuple[InvestigatorAnnotation, ...]
+    redaction: RedactionReport
+
+
+class IncidentCapsule(BaseModel):
+    """Versioned incident envelope with deterministic integrity digest."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    kind: Literal["boukensha.observatory.incident"] = (
+        "boukensha.observatory.incident"
+    )
+    version: int = 1
+    digest: str
+    payload: IncidentPayload
+
+
 class AttentionEconomics(BaseModel):
     """Mean attention and payload cost for one comparable cohort."""
 

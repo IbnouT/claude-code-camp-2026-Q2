@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  Archive,
   ChevronDown,
   Command,
   GitBranch,
@@ -30,6 +31,8 @@ import { LivingWorld } from "../components/LivingWorld";
 import { CompareWorkspace } from "../components/CompareWorkspace";
 import { ComparisonInsights } from "../components/ComparisonInsights";
 import { ComparisonTimeline } from "../components/ComparisonTimeline";
+import { IncidentWorkflow } from "../components/IncidentWorkflow";
+import type { IncidentCapsule } from "../data/incidents";
 
 export function App() {
   const [mode, setMode] = useState<Mode>(() => {
@@ -41,11 +44,16 @@ export function App() {
   const [demoSelected, setDemoSelected] = useState(82);
   const [demoPaused, setDemoPaused] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [incidentOpen, setIncidentOpen] = useState(false);
+  const [offlineCapsule, setOfflineCapsule] = useState<IncidentCapsule | null>(
+    null,
+  );
   const sources = useCapabilities();
   const evidence = useSessionStream();
   const recorded = useInvestigation();
   const compared = useComparison();
-  const investigation = recorded.investigation;
+  const investigation = offlineCapsule?.payload.investigation
+    ?? recorded.investigation;
   const comparison = compared.comparison;
   const [investigationSelected, setInvestigationSelected] = useState(0);
   const [selectedDiagnostic, setSelectedDiagnostic] = useState<string | null>(null);
@@ -145,13 +153,17 @@ export function App() {
       return;
     }
     const parameters = new URL(window.location.href).searchParams;
-    const requestedDiagnostic = parameters.get("diagnostic");
+    const requestedDiagnostic = offlineCapsule?.payload.selection.diagnostic_id
+      ?? parameters.get("diagnostic");
     const diagnostic = investigation.diagnostics.find(
       (item) => item.id === requestedDiagnostic,
     ) ?? investigation.diagnostics.find(
       (item) => item.kind === "false_completion",
     ) ?? investigation.diagnostics[0];
-    const requestedSequence = Number(parameters.get("iSeq"));
+    const requestedSequence = Number(
+      offlineCapsule?.payload.selection.selected_sequence
+      ?? parameters.get("iSeq"),
+    );
     setInvestigationSelected(
       Number.isInteger(requestedSequence) && requestedSequence > 0
         ? requestedSequence
@@ -159,7 +171,7 @@ export function App() {
     );
     setSelectedDiagnostic(diagnostic?.id ?? null);
     setActiveEvidence(diagnostic?.evidence ?? []);
-  }, [investigation]);
+  }, [investigation, offlineCapsule]);
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -249,6 +261,14 @@ export function App() {
             Ask or search
             <kbd><Command size={11} aria-hidden="true" />K</kbd>
           </button>
+          <button
+            className="capsule-trigger"
+            type="button"
+            onClick={() => setIncidentOpen(true)}
+          >
+            <Archive size={14} aria-hidden="true" />
+            Capsules
+          </button>
           <SourceHealth sources={sources} />
         </div>
       </header>
@@ -261,7 +281,11 @@ export function App() {
                 <Radio size={12} aria-hidden="true" />
                 {comparing
                   ? "Reset-verified cohorts"
-                  : investigating ? "Verified benchmark evidence" : runState}
+                  : investigating
+                  ? offlineCapsule === null
+                    ? "Verified benchmark evidence"
+                    : "Portable offline evidence"
+                  : runState}
               </span>
               <strong>
                 {comparing
@@ -413,6 +437,23 @@ export function App() {
             setMode("investigate");
             setPaletteOpen(false);
           }
+        }}
+      />
+      <IncidentWorkflow
+        open={incidentOpen}
+        investigation={investigation}
+        runId={offlineCapsule?.payload.investigation.run.id ?? recorded.selectedRun}
+        selected={investigationSelected}
+        diagnosticId={selectedDiagnostic}
+        capsule={offlineCapsule}
+        onClose={() => setIncidentOpen(false)}
+        onOpenCapsule={(nextCapsule) => {
+          setOfflineCapsule(nextCapsule);
+          setInvestigationSelected(nextCapsule.payload.selection.selected_sequence);
+          setSelectedDiagnostic(nextCapsule.payload.selection.diagnostic_id);
+          setActiveEvidence([]);
+          setMode("investigate");
+          setIncidentOpen(false);
         }}
       />
     </div>

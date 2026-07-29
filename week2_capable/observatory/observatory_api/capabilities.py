@@ -21,6 +21,11 @@ FEATURES = (
     "counterfactual",
     "query",
     "copilot-local",
+    "knowledge-overview",
+    "incident-capsules",
+    "offline-reopen",
+    "annotations",
+    "diagnostic-history",
 )
 
 
@@ -83,11 +88,11 @@ def _path_source(
             id=source_id,
             label=label,
             state="unavailable",
-            detail=f"Configured path does not exist: {path}",
+            detail="Configured source is unavailable",
         )
     return SourceStatus(
         id=source_id,
         label=label,
         state="ready",
-        detail=str(path),
+        detail="Configured source is readable",
     )

@@ -18,7 +18,10 @@ from starlette.responses import (
 from starlette.routing import Route
 
 from .capabilities import discover
-from .contracts import AskRequest
+from .contracts import AskRequest, IncidentExportRequest
+from .incidents import build_capsule
+from .projections.history import diagnostic_history
+from .projections.knowledge import project_knowledge
 from .queries import answer, answer_operation
 from .queries.model import ModelTranslator
 from .settings import Settings
@@ -136,6 +139,75 @@ def create_app(
             return JSONResponse({"error": "not_found"}, status_code=404)
         return JSONResponse(result.model_dump(mode="json"))
 
+    async def knowledge(request: Request) -> JSONResponse:
+        if benchmark is None:
+            return JSONResponse(
+                {
+                    "error": "source_disabled",
+                    "detail": "OBSERVATORY_BENCHMARK_ROOT is not configured",
+                },
+                status_code=503,
+            )
+        result = benchmark.investigation(request.path_params["run_id"])
+        if result is None:
+            return JSONResponse({"error": "not_found"}, status_code=404)
+        projection = project_knowledge(result)
+        return JSONResponse(projection.model_dump(mode="json"))
+
+    async def history(_request: Request) -> JSONResponse:
+        if benchmark is None:
+            return JSONResponse(
+                {
+                    "error": "source_disabled",
+                    "detail": "OBSERVATORY_BENCHMARK_ROOT is not configured",
+                },
+                status_code=503,
+            )
+        result = diagnostic_history(benchmark)
+        return JSONResponse(result.model_dump(mode="json"))
+
+    async def export_incident(request: Request) -> Response:
+        if benchmark is None:
+            return JSONResponse(
+                {
+                    "error": "source_disabled",
+                    "detail": "OBSERVATORY_BENCHMARK_ROOT is not configured",
+                },
+                status_code=503,
+            )
+        try:
+            payload = IncidentExportRequest.model_validate(await request.json())
+        except (ValidationError, ValueError) as error:
+            return JSONResponse(
+                {"error": "invalid_incident", "detail": str(error)},
+                status_code=422,
+            )
+        result = benchmark.investigation(payload.run_id)
+        if result is None:
+            return JSONResponse({"error": "not_found"}, status_code=404)
+        capsule = build_capsule(
+            payload,
+            result,
+            project_knowledge(result),
+            diagnostic_history(benchmark),
+            active.revision,
+        )
+        safe_name = "".join(
+            character
+            for character in result.run.journey.casefold()
+            if character.isalnum() or character in {"-", "_"}
+        )
+        return Response(
+            capsule.model_dump_json(),
+            media_type="application/vnd.boukensha.incident+json",
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="boukensha-{safe_name}-incident.json"'
+                ),
+                "Cache-Control": "no-store",
+            },
+        )
+
     async def comparisons(_request: Request) -> JSONResponse:
         result = (
             None
@@ -248,6 +320,9 @@ def create_app(
             ),
             Route("/api/runs", runs),
             Route("/api/runs/{run_id:str}/investigation", investigation),
+            Route("/api/runs/{run_id:str}/knowledge", knowledge),
+            Route("/api/diagnostic-history", history),
+            Route("/api/incidents/export", export_incident, methods=["POST"]),
             Route("/api/comparisons", comparisons),
             Route(
                 "/api/comparisons/{comparison_id:str}",

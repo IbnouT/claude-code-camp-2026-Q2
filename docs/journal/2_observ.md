@@ -40,6 +40,9 @@
   payload size predicted the bill.
 - Common questions mapped to typed local queries without a model. An optional
   translator reached 6/6 for $0.001375 while seeing no run evidence.
+- A useful incident handoff was not a log bundle. It needed a sealed evidence
+  prefix, explicit missing knowledge, and investigator notes kept outside the
+  facts they explain.
 
 ## Technical Conclusions
 

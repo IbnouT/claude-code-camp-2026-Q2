@@ -55,6 +55,17 @@ flowchart LR
   of synthesizing it.
 - An isolated 12,288-room capacity probe measures the canvas renderer without
   presenting synthetic positions as game knowledge.
+- Knowledge coverage separates observed places and frontier from unavailable
+  entity, player, progression, and durable-store layers.
+- Diagnostic history shows finding prevalence across every readable run.
+- Investigator annotations remain a separate local layer and never alter
+  evidence or diagnostics.
+- Incident capsules package one selected investigation, its derived views,
+  notes, versions, and redaction report.
+- Capsule export removes credentials and local paths, then seals the payload
+  with a SHA-256 integrity digest.
+- An intact capsule reopens without gateway, benchmark, knowledge, or model
+  access.
 - Belief and observed state remain visually separate.
 - Diagnostics link failures to evidence moments.
 - The Chronicle aligns causal events with model cost.
@@ -77,6 +88,7 @@ observatory/
 │   ├── app.py
 │   ├── capabilities.py
 │   ├── contracts.py
+│   ├── incidents.py
 │   ├── settings.py
 │   ├── projections/
 │   └── sources/
@@ -142,6 +154,7 @@ The API uses explicit environment variables:
 | `OBSERVATORY_COPILOT_SPEND_CAP` | `0` | Process-local translator cost ceiling |
 | `OBSERVATORY_COPILOT_INPUT_RATE` | `0` | Input dollars per million tokens |
 | `OBSERVATORY_COPILOT_OUTPUT_RATE` | `0` | Output dollars per million tokens |
+| `OBSERVATORY_REVISION` | launcher revision | Repository revision recorded in capsules |
 
 Unavailable or disabled sources remain visible with an explanation. The
 observatory never invents data to fill an absent source.
@@ -166,6 +179,18 @@ Investigations also encode the mode, run, causal sequence, diagnostic, and
 structured query in the URL. Reloading returns to the same evidence-backed
 view.
 
+The Capsules action opens the handoff workspace:
+
+- Add sequence-linked investigator notes.
+- Review knowledge coverage and open frontier.
+- See diagnostic patterns across recorded runs.
+- Export a sanitized local capsule.
+- Open a capsule from any Observatory installation, with no evidence source
+  configured.
+
+Capsules do not contain credentials or absolute source paths. A changed file
+fails its integrity check before any investigation state is rendered.
+
 ## Verify
 
 ```bash
@@ -179,4 +204,5 @@ npm run build
 UI changes require rendered checks at desktop and narrow widths. The shell has
 been verified against a real gateway journal and at narrow width, including
 historical selection, keyboard focus, capability fallback, and reduced-motion
-behavior.
+behavior. Capsule verification covers sanitization, tamper rejection, offline
+reopen, annotations, source-missing states, and the rendered handoff workspace.

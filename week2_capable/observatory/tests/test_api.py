@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import sqlite3
 from pathlib import Path
 
 import httpx
 
 from observatory_api.app import create_app
+from observatory_api.incidents import canonical_payload
+from observatory_api.contracts import IncidentCapsule
 from observatory_api.projections.parser_replay import replay_parser
 from observatory_api.projections.world import project_world
 from observatory_api.queries import plan_operation
@@ -270,6 +273,85 @@ async def test_j2_false_completion_links_claim_to_verified_outcome(tmp_path):
     assert model_answer["tier"] == "model_translated"
     assert model_answer["plan"][0]["operation"] == "diagnose_stop"
     assert model_answer["model_cost_usd"] > 0
+
+
+async def test_incident_capsule_is_sanitized_integrity_sealed_and_portable(
+    tmp_path,
+):
+    benchmark_root = tmp_path / "benchmarks"
+    ledger = benchmark_root / "j2-portable"
+    attempt = ledger / "attempts" / "a1"
+    attempt.mkdir(parents=True)
+    (ledger / "attempts.jsonl").write_text(
+        '{"attempt_id":"a1","journey_id":"J2","status":"complete",'
+        '"success":false,"stop_reason":"completed","iterations":2,'
+        '"cost_usd":0.02,"result_mode":"full","parse_misses":1,'
+        '"final_state":{"position":{"title":"Crossroads",'
+        '"confidence":"ambiguous","method":"duplicate-title"}}}\n'
+    )
+    (attempt / "agent.jsonl").write_text(
+        '{"phase":"response","at":"now","text":"I am done.",'
+        '"cost_usd":0.01}\n'
+        '{"phase":"turn_end","at":"now","cost_usd":0.02}\n'
+    )
+    app = create_app(
+        Settings(
+            benchmark_root=benchmark_root,
+            web_dist=tmp_path,
+            revision="abc123",
+        )
+    )
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        runs = (await client.get("/api/runs")).json()["runs"]
+        run_id = runs[0]["id"]
+        knowledge = await client.get(f"/api/runs/{run_id}/knowledge")
+        history = await client.get("/api/diagnostic-history")
+        exported = await client.post(
+            "/api/incidents/export",
+            json={
+                "run_id": run_id,
+                "selected_sequence": 2,
+                "diagnostic_id": "false-completion",
+                "annotations": [{
+                    "id": "note-1",
+                    "at": 2,
+                    "text": (
+                        "Check /Users/reviewer/private/run.json "
+                        "token=private-value"
+                    ),
+                    "created_at": "2026-07-29T00:00:00Z",
+                }],
+            },
+        )
+
+    assert knowledge.status_code == 200
+    assert knowledge.json()["missing_layers"] == [
+        "entities",
+        "player",
+        "progression",
+        "durable knowledge store",
+    ]
+    assert history.json()["total_runs"] == 1
+    assert history.json()["failed_runs"] == 1
+    assert exported.headers["content-type"].startswith(
+        "application/vnd.boukensha.incident+json"
+    )
+    assert "/Users/" not in exported.text
+    assert "private-value" not in exported.text
+    capsule = IncidentCapsule.model_validate_json(exported.text)
+    assert capsule.payload.investigation.run.id == run_id
+    assert capsule.payload.selection.selected_sequence == 2
+    assert capsule.payload.annotations[0].text.count("[REDACTED]") == 1
+    assert "[LOCAL_PATH]" in capsule.payload.annotations[0].text
+    assert capsule.payload.source_versions["repository"] == "abc123"
+    assert capsule.payload.redaction.replacements == 1
+    assert capsule.digest == hashlib.sha256(
+        canonical_payload(capsule.payload)
+    ).hexdigest()
 
 
 def test_relative_source_paths_resolve_from_launcher_project_root(

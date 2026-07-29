@@ -19,6 +19,7 @@ class Settings:
     copilot_spend_cap: float = 0
     copilot_input_rate: float = 0
     copilot_output_rate: float = 0
+    revision: str = "unknown"
     web_dist: Path = Path(__file__).parents[1] / "web" / "dist"
 
     @classmethod
@@ -46,6 +47,7 @@ class Settings:
             copilot_output_rate=float(
                 os.environ.get("OBSERVATORY_COPILOT_OUTPUT_RATE", "0")
             ),
+            revision=os.environ.get("OBSERVATORY_REVISION", "unknown"),
             web_dist=Path(
                 os.environ.get(
                     "OBSERVATORY_WEB_DIST",
