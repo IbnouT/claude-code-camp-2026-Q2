@@ -147,6 +147,74 @@ Caveats:
 - Minimal's longer paths are suggestive. They need confirmation on J2 or
   another task before becoming a default-policy claim.
 
+## J2 long navigation probe
+
+Question: what does a long, unsuccessful run reveal that the short J1
+benchmark hides?
+
+Method: J2 asked the agent to travel north from the Temple into the newbie
+zone and find the Massive Minotaur. Only a gateway observation naming the
+Massive Minotaur counted as success. One full-envelope run used the
+`direct-full` surface and a `$2` cap.
+
+| Result | Stop | Iterations | Cost | Tool calls | Invalid | Corrective | Final position |
+|---|---|---:|---:|---:|---:|---:|---|
+| FAIL | completed | 90 | $0.21086010 | 90 | 1 | 1 | The Entrance To The Newbie Zone, ambiguous |
+
+Tool distribution: 80 `move`, six `look`, two `examine`, one `check`, and one
+`track`. The agent visited 17 distinct positions.
+
+Most repeated positions:
+
+| Position | Observations |
+|---|---:|
+| A White Square | 15 |
+| A Black Square | 13 |
+| A Nexus | 8 |
+| The Great Field Of Midgaard | 7 |
+| The Dirty Hallway | 5 |
+| More Of The Hallway | 5 |
+| The End Of The Passage | 5 |
+
+Cumulative cost checkpoints:
+
+| Model call | 9 | 18 | 27 | 36 | 45 | 54 | 63 | 72 | 81 | 90 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Cost | $0.0244 | $0.0369 | $0.0514 | $0.0673 | $0.0851 | $0.1043 | $0.1266 | $0.1510 | $0.1799 | $0.2109 |
+
+Finding: the hard journey used about 6.5 times as many calls and 6.7 times the
+cost of the full-envelope J1 mean, then failed.
+
+The agent did not hit an iteration or cost limit. It self-terminated with
+`completed` while the evidence predicate remained false. Its belief that the
+turn was done diverged from game-grounded success.
+
+The position tracker ended with `ambiguous` confidence and
+`duplicate-title-not-separated` as its method. It preserved uncertainty at the
+duplicate Newbie Zone entrance instead of collapsing two rooms into one.
+
+Repeated junctions suggest missing route state as one explanation, but this
+single run does not establish the cause.
+
+The cost curve steepened as the prompt grew. Calls 1 through 9 cost `$0.0244`
+in total. Calls 82 through 90 added `$0.0310`. Long-run path inefficiency
+therefore increases both the number of calls and the cost of later calls.
+
+Measurement correction: individual response cost fields omitted cache-read
+charges and summed to `$0.0499`, while the authoritative turn total was
+`$0.21086010`. The benchmark now reprices each response from its usage classes
+and the model catalog. The rebuilt curve ends exactly at the turn total.
+
+Caveats:
+
+- This is one deliberately difficult probe, not a success-rate estimate.
+- The model stopped voluntarily after 90 calls. It did not reach the configured
+  iteration or cost ceiling.
+- A replicate batch or feature comparison needs a separate cap. Ten comparable
+  runs would cost about `$2.10`.
+- A route memory or navigator comparison is required to test the loop
+  hypothesis.
+
 ## Spend
 
 | Evidence | Cost |
@@ -155,6 +223,7 @@ Caveats:
 | Invalid pre-fix raw attempt | $0.01608500 |
 | Valid one-sample rendering probes | $0.12501980 |
 | N=10 rendering batches | $1.02211945 |
-| Cumulative measured spend | $1.18910150 |
+| J2 long navigation probe | $0.21086010 |
+| Cumulative measured spend | $1.39996160 |
 
 The cumulative spend remains below the `$5` overnight stop.
