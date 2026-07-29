@@ -57,7 +57,9 @@ async def discover(
     ]
     return ObservatoryCapabilities(
         sources=tuple(sources),
-        features=(
+        features=tuple(
+            feature
+            for feature in (
             FEATURES + ("copilot-model",)
             if (
                 settings.copilot_model
@@ -67,6 +69,8 @@ async def discover(
                 and settings.copilot_output_rate > 0
             )
             else FEATURES
+            )
+            if feature not in settings.disabled_features
         ),
     )
 

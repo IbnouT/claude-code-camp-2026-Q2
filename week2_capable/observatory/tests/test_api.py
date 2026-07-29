@@ -66,6 +66,46 @@ async def test_capabilities_are_honest_when_sources_are_absent(tmp_path):
     assert sources["knowledge"]["state"] == "disabled"
 
 
+async def test_capability_flags_disable_only_named_features(tmp_path):
+    app = create_app(
+        Settings(
+            gateway_url="http://127.0.0.1:1",
+            web_dist=tmp_path,
+            disabled_features=("compare", "copilot-local"),
+        )
+    )
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        features = (await client.get("/api/capabilities")).json()["features"]
+    assert "compare" not in features
+    assert "copilot-local" not in features
+    assert "incident-capsules" in features
+
+
+async def test_corrupt_benchmark_rows_do_not_hide_readable_runs(tmp_path):
+    root = tmp_path / "benchmarks"
+    ledger = root / "mixed"
+    ledger.mkdir(parents=True)
+    (ledger / "attempts.jsonl").write_text(
+        "not json\n"
+        '{"unexpected":"row"}\n'
+        '{"attempt_id":"good","journey_id":"J1","success":true,'
+        '"stop_reason":"complete","iterations":1,"cost_usd":0.01,'
+        '"result_mode":"raw"}\n'
+    )
+    app = create_app(Settings(benchmark_root=root, web_dist=tmp_path))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        runs = (await client.get("/api/runs")).json()["runs"]
+    assert [run["attempt"] for run in runs] == ["good"]
+
+
 async def test_missing_frontend_has_a_setup_action(tmp_path):
     app = create_app(Settings(web_dist=tmp_path))
     transport = httpx.ASGITransport(app=app)

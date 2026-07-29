@@ -112,11 +112,15 @@ From `week2_capable/observatory`:
 uv sync --extra dev
 cd web
 npm install
+npx playwright install chromium
 npm run build
 ```
 
 The Python and JavaScript dependencies are pinned. Frontend build output and
 package directories remain uncommitted.
+
+Playwright provides reproducible browser workflows. Axe runs semantic
+accessibility checks inside the same Chromium matrix.
 
 ## Launch
 
@@ -155,6 +159,7 @@ The API uses explicit environment variables:
 | `OBSERVATORY_COPILOT_INPUT_RATE` | `0` | Input dollars per million tokens |
 | `OBSERVATORY_COPILOT_OUTPUT_RATE` | `0` | Output dollars per million tokens |
 | `OBSERVATORY_REVISION` | launcher revision | Repository revision recorded in capsules |
+| `OBSERVATORY_DISABLED_FEATURES` | empty | Comma-separated features hidden by policy |
 
 Unavailable or disabled sources remain visible with an explanation. The
 observatory never invents data to fill an absent source.
@@ -199,6 +204,8 @@ uv lock --check
 cd web
 npm test
 npm run build
+npm run test:budget
+npm run test:e2e
 ```
 
 UI changes require rendered checks at desktop and narrow widths. The shell has
@@ -206,3 +213,22 @@ been verified against a real gateway journal and at narrow width, including
 historical selection, keyboard focus, capability fallback, and reduced-motion
 behavior. Capsule verification covers sanitization, tamper rejection, offline
 reopen, annotations, source-missing states, and the rendered handoff workspace.
+
+## Product hardening
+
+The production surface keeps these gates executable from a fresh clone:
+
+| Gate | Enforced behavior |
+| --- | --- |
+| Unit | Deterministic reducers, projections, queries, redaction, and imports |
+| End to end | Desktop and 390-pixel flows in Chromium |
+| Accessibility | Automated semantic audit, forced colors, and reduced motion |
+| Failure | Gaps, corrupt rows, modified capsules, and unavailable sources |
+| Policy | Named capabilities disappear from discovery and navigation |
+| Performance | JavaScript under 300 KB raw and 90 KB gzip |
+| Performance | CSS under 60 KB raw and 12 KB gzip |
+
+The reference floor is covered by live activity, run browsing, cost, errors,
+tool use, search, and export. Observatory-native layers add causal diagnostics,
+belief versus reality, evidence time travel, living uncertainty, experiment
+comparison, grounded questions, and portable incident handoff.

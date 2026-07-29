@@ -43,6 +43,9 @@
 - A useful incident handoff was not a log bundle. It needed a sealed evidence
   prefix, explicit missing knowledge, and investigator notes kept outside the
   facts they explain.
+- Browser hardening caught both a dense-frontier overflow and an accessible
+  name collision that unit tests missed. Visual and semantic gates found
+  different failures.
 
 ## Technical Conclusions
 

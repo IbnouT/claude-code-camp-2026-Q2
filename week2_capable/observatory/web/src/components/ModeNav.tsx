@@ -9,13 +9,14 @@ const modes: { id: Mode; label: string; icon: typeof Activity }[] = [
 
 type Props = {
   active: Mode;
+  enabled: Mode[];
   onChange: (mode: Mode) => void;
 };
 
-export function ModeNav({ active, onChange }: Props) {
+export function ModeNav({ active, enabled, onChange }: Props) {
   return (
     <nav className="mode-nav" aria-label="Observatory modes">
-      {modes.map(({ id, label, icon: Icon }) => (
+      {modes.filter(({ id }) => enabled.includes(id)).map(({ id, label, icon: Icon }) => (
         <button
           key={id}
           className={active === id ? "mode-button is-active" : "mode-button"}

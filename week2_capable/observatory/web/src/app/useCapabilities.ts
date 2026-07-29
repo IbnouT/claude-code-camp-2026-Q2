@@ -28,8 +28,18 @@ const fallback: SourceState[] = [
   },
 ];
 
-export function useCapabilities(): SourceState[] {
+export type CapabilityState = {
+  sources: SourceState[];
+  features: string[];
+};
+
+export function useCapabilities(): CapabilityState {
   const [sources, setSources] = useState<SourceState[]>(fallback);
+  const [features, setFeatures] = useState<string[]>([
+    "live",
+    "diagnostics",
+    "compare",
+  ]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -38,9 +48,12 @@ export function useCapabilities(): SourceState[] {
         if (!response.ok) {
           throw new Error("capability discovery failed");
         }
-        return response.json() as Promise<{ sources: SourceState[] }>;
+        return response.json() as Promise<CapabilityState>;
       })
-      .then((payload) => setSources(payload.sources))
+      .then((payload) => {
+        setSources(payload.sources);
+        setFeatures(payload.features);
+      })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") {
           return;
@@ -50,5 +63,5 @@ export function useCapabilities(): SourceState[] {
     return () => controller.abort();
   }, []);
 
-  return sources;
+  return { sources, features };
 }

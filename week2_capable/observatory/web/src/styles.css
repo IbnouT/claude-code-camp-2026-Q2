@@ -3339,3 +3339,30 @@ input:focus-visible {
     animation-iteration-count: 1 !important;
   }
 }
+
+@media (forced-colors: active) {
+  :root {
+    --bg: Canvas;
+    --surface: Canvas;
+    --surface-raised: Canvas;
+    --surface-soft: Canvas;
+    --line: CanvasText;
+    --line-strong: CanvasText;
+    --text: CanvasText;
+    --muted: CanvasText;
+    --quiet: GrayText;
+    --cyan: LinkText;
+    --amber: MarkText;
+    --coral: LinkText;
+    --violet: LinkText;
+    --green: LinkText;
+  }
+
+  button,
+  input,
+  textarea,
+  article,
+  section {
+    forced-color-adjust: auto;
+  }
+}

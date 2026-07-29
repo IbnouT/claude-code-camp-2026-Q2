@@ -20,6 +20,7 @@ class Settings:
     copilot_input_rate: float = 0
     copilot_output_rate: float = 0
     revision: str = "unknown"
+    disabled_features: tuple[str, ...] = ()
     web_dist: Path = Path(__file__).parents[1] / "web" / "dist"
 
     @classmethod
@@ -48,6 +49,14 @@ class Settings:
                 os.environ.get("OBSERVATORY_COPILOT_OUTPUT_RATE", "0")
             ),
             revision=os.environ.get("OBSERVATORY_REVISION", "unknown"),
+            disabled_features=tuple(
+                feature.strip()
+                for feature in os.environ.get(
+                    "OBSERVATORY_DISABLED_FEATURES",
+                    "",
+                ).split(",")
+                if feature.strip()
+            ),
             web_dist=Path(
                 os.environ.get(
                     "OBSERVATORY_WEB_DIST",

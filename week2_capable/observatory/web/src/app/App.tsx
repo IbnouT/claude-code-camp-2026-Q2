@@ -48,7 +48,7 @@ export function App() {
   const [offlineCapsule, setOfflineCapsule] = useState<IncidentCapsule | null>(
     null,
   );
-  const sources = useCapabilities();
+  const capabilities = useCapabilities();
   const evidence = useSessionStream();
   const recorded = useInvestigation();
   const compared = useComparison();
@@ -79,6 +79,19 @@ export function App() {
   const paused = evidence.available
     ? !evidence.state.followingLive
     : demoPaused;
+  const enabledModes: Mode[] = [
+    ...(capabilities.features.includes("live") ? ["live" as const] : []),
+    ...(capabilities.features.includes("diagnostics")
+      ? ["investigate" as const]
+      : []),
+    ...(capabilities.features.includes("compare") ? ["compare" as const] : []),
+  ];
+
+  useEffect(() => {
+    if (!enabledModes.includes(mode)) {
+      setMode(enabledModes[0] ?? "live");
+    }
+  }, [enabledModes, mode]);
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
@@ -215,7 +228,7 @@ export function App() {
             <small>Observatory</small>
           </span>
         </a>
-        <ModeNav active={mode} onChange={setMode} />
+        <ModeNav active={mode} enabled={enabledModes} onChange={setMode} />
         <div className="header-actions">
           {mode === "investigate" && recorded.runs.length > 0 ? (
             <label className="session-picker recorded-picker">
@@ -269,7 +282,7 @@ export function App() {
             <Archive size={14} aria-hidden="true" />
             Capsules
           </button>
-          <SourceHealth sources={sources} />
+          <SourceHealth sources={capabilities.sources} />
         </div>
       </header>
 
