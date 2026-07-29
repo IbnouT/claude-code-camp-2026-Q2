@@ -12,7 +12,7 @@ flowchart LR
     Cfg["Configuration<br/><small>settings · secrets · prompts</small>"] --> Core
     Core --> Model["Model access<br/><small>5 providers, REST</small>"]
     Core --> Tools["Tools<br/><small>MCP host</small>"]
-    Tools --> MM["MCP server"] --> MUD(["MUD server"])
+    Tools --> GW["gateway<br/><small>MCP server</small>"] --> MUD(["MUD server"])
     Core -.session logs.-> Viewer["Log viewer"]
 ```
 
@@ -50,11 +50,22 @@ First run, in order:
    `model`. The alternatives are present as commented lines, switching is
    uncommenting one pair.
 
-3. Have the game side ready: the MUD server running, and the MCP server named
-   by `mcp_servers.mud.command` installed on PATH. Its `env` block carries the
+3. Install the gateway command from the repository root:
+
+   ```bash
+   uv tool install --editable ./week2_capable/gateway
+   ```
+
+   The isolated tool exposes `boukensha-gateway` on `PATH`. The default MCP
+   entry starts it with the `direct-full` profile. Its `env` block carries the
    connection settings (host, port, character name).
 
-4. `bin/agent` from `week2_capable/`, then type a goal at the prompt.
+4. Have the MUD server running.
+
+5. Run `week2_capable/bin/agent`, then type a goal at the prompt.
+
+The REPL and TUI use the same assembly path and therefore the same gateway
+profile and tool set.
 
 The full `tasks.<name>` reference (the agent plays the `player` task):
 

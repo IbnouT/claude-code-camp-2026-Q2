@@ -57,6 +57,25 @@ gateway/
 `mud_gateway` is the import namespace. The outer `gateway` directory is the
 application project.
 
+## Installation
+
+Install the gateway as an isolated user-level command from the repository
+root:
+
+```bash
+uv tool install --editable ./week2_capable/gateway
+```
+
+The editable install follows source changes without reinstalling:
+
+```bash
+boukensha-gateway --profile direct-full --prove
+boukensha-gateway-admin --help
+```
+
+Run the install command again with `--force` after dependency or entry-point
+changes. Do not install into the system Python and do not use `sudo`.
+
 ## Behavior
 
 - The transport preserves arbitrary socket chunk boundaries.

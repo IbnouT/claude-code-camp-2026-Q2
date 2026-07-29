@@ -11,6 +11,10 @@ dependencies = [
   "uvicorn>=0.32,<1",        # runs the local ASGI app
 ]
 
+[project.scripts]
+boukensha-gateway = "mud_gateway.mcp_server:main"
+boukensha-gateway-admin = "admin_process.server:main"
+
 [project.optional-dependencies]
 dev = [
   "httpx>=0.27,<1",          # exercises the ASGI live and replay contract in process

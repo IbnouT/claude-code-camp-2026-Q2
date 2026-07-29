@@ -230,8 +230,9 @@ the core groups and the extended ones: the parity journey and the E1 baseline.
 | 5 | live view and replay | core | the observatory's live and replay feed | SSE live view, journal replay, audited verbosity |
 
 Milestone A, parity: with groups 1 to 5 in, the parity contract tests cover
-every command family and the agent completes the live bakery journey through
-the gateway. Functional bar, no paid measurement.
+every command family, the default agent configuration points both REPL and TUI
+at the gateway, and the agent completes the live bakery journey through it.
+Functional bar, no paid measurement.
 
 Milestone B, E1 baseline: the benchmark measures the baseline through the
 unoptimised gateway. Its own plan owns this. Every later group is judged against
@@ -559,7 +560,7 @@ gain.
 | 3 | observation | replay all recorded sessions, report parse coverage and residual, duplicate titles never collapse |
 | 4 | admin and reset | two consecutive resets produce identical mortal-observable state |
 | 5 | live view and replay | live and replayed sessions render through one serializer, a reconnecting subscriber replays exactly what it missed |
-| A | parity | contract tests cover every command family, and the agent completes the live bakery journey through the gateway |
+| A | parity | contract tests cover every command family, REPL and TUI share the gateway configuration, and the agent completes the live bakery journey through it |
 | B | E1 baseline | the benchmark records E1 through the unoptimised gateway (its own plan) |
 | 6 | rendering and cost | replay the corpus, show characters delivered against E1 and a miss rate per category, exceed the detectability floor |
 | 7 | manufactured fixtures | death, dark room, locked door and reconnect each recorded as a fixture from the live game against a dedicated character, each proving full-state restoration |
