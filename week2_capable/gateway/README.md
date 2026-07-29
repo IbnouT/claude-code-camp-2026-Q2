@@ -17,6 +17,8 @@ flowchart LR
     A["Boukensha"] -- MCP stdio --> P["session profile"]
     P --> M["generated command surface"]
     M --> S
+    B["benchmark harness"] -- local socket --> R["separate admin process"]
+    R --> G
 ```
 
 ## Layout
@@ -26,7 +28,11 @@ clear.
 
 ```text
 gateway/
+├── admin_process/
+│   ├── reset.py
+│   └── server.py
 ├── mud_gateway/
+│   ├── admin.py
 │   ├── wire.py
 │   ├── session.py
 │   ├── journal.py
@@ -67,6 +73,10 @@ application project.
 - Named profiles deny `send_raw`. An explicit allowlist can enable it, and
   every use records a capability-gap event with its reason.
 - Immortal credentials and typed admin operations stay outside this process.
+- A separate local-socket process owns typed immortal operations and reset.
+- Reset restores the benchmark character, then verifies through mortal
+  `score` and `look` output.
+- Two identical resets must produce identical fully read mortal state.
 - ANSI colour and line shape produce typed room, exit, vital, and state
   observations.
 - Every observation records confidence, method, parser version, and its source
@@ -113,4 +123,11 @@ Prove one configured surface:
 uv run python -m mud_gateway.mcp_server --prove
 uv run python -m mud_gateway.mcp_server \
   --profile direct-full --allow look,move,send_raw --prove
+```
+
+Run the repeatable live reset gate:
+
+```bash
+MUD_ADMIN_PASSWORD='...' uv run python scripts/reset_smoke.py \
+  --db /tmp/gateway-reset-smoke.db
 ```
