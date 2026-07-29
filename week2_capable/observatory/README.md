@@ -41,6 +41,11 @@ flowchart LR
   a model call.
 - Recorded wire frames replay through the current canonical gateway parser to
   expose parser drift.
+- Ask maps common natural-language investigations to typed local operations.
+- Every answer exposes its query plan, confidence, missing data, and citations.
+- Optional model translation sees only the question and operation vocabulary.
+  It never receives evidence or database access.
+- Secret-shaped question text is redacted again at the model boundary.
 - The living-world lens projects recorded positions into a distinct-place
   journey graph.
 - Journey and neighbourhood views keep duplicate titles separate by place ID,
@@ -132,9 +137,18 @@ The API uses explicit environment variables:
 | `OBSERVATORY_BENCHMARK_ROOT` | disabled | Benchmark evidence root |
 | `OBSERVATORY_KNOWLEDGE_DB` | disabled | Knowledge-store database |
 | `OBSERVATORY_WEB_DIST` | `web/dist` | Built frontend location |
+| `OBSERVATORY_COPILOT_MODEL` | disabled | Optional Anthropic translator model |
+| `OBSERVATORY_COPILOT_ENDPOINT` | Anthropic messages API | Translator REST endpoint |
+| `OBSERVATORY_COPILOT_SPEND_CAP` | `0` | Process-local translator cost ceiling |
+| `OBSERVATORY_COPILOT_INPUT_RATE` | `0` | Input dollars per million tokens |
+| `OBSERVATORY_COPILOT_OUTPUT_RATE` | `0` | Output dollars per million tokens |
 
 Unavailable or disabled sources remain visible with an explanation. The
 observatory never invents data to fill an absent source.
+
+Model translation also requires `ANTHROPIC_API_KEY`. The key remains
+server-side. A user must enable model translation for the individual question,
+and the deterministic planner always runs first.
 
 Relative source paths are resolved from the repository root by the launcher.
 For the local benchmark evidence:

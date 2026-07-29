@@ -20,6 +20,7 @@ FEATURES = (
     "compare",
     "counterfactual",
     "query",
+    "copilot-local",
 )
 
 
@@ -51,7 +52,17 @@ async def discover(
     ]
     return ObservatoryCapabilities(
         sources=tuple(sources),
-        features=FEATURES,
+        features=(
+            FEATURES + ("copilot-model",)
+            if (
+                settings.copilot_model
+                and settings.copilot_api_key
+                and settings.copilot_spend_cap > 0
+                and settings.copilot_input_rate > 0
+                and settings.copilot_output_rate > 0
+            )
+            else FEATURES
+        ),
     )
 
 

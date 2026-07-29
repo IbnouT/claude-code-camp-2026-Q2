@@ -6,6 +6,7 @@ import argparse
 from pathlib import Path
 
 import httpx
+from pydantic import ValidationError
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import (
@@ -17,6 +18,9 @@ from starlette.responses import (
 from starlette.routing import Route
 
 from .capabilities import discover
+from .contracts import AskRequest
+from .queries import answer, answer_operation
+from .queries.model import ModelTranslator
 from .settings import Settings
 from .sources.benchmark import BenchmarkSource
 from .sources.comparison import rendering_comparison
@@ -27,6 +31,7 @@ def create_app(
     settings: Settings | None = None,
     *,
     gateway_transport: httpx.AsyncBaseTransport | None = None,
+    copilot_transport: httpx.AsyncBaseTransport | None = None,
 ) -> Starlette:
     active = settings or Settings.from_environment()
     gateway = GatewaySource(
@@ -36,6 +41,25 @@ def create_app(
     benchmark = (
         BenchmarkSource(active.benchmark_root)
         if active.benchmark_root is not None
+        else None
+    )
+    model_spend = 0.0
+    translator = (
+        ModelTranslator(
+            endpoint=active.copilot_endpoint,
+            api_key=active.copilot_api_key,
+            model=active.copilot_model,
+            input_rate=active.copilot_input_rate,
+            output_rate=active.copilot_output_rate,
+            transport=copilot_transport,
+        )
+        if (
+            active.copilot_model
+            and active.copilot_api_key
+            and active.copilot_spend_cap > 0
+            and active.copilot_input_rate > 0
+            and active.copilot_output_rate > 0
+        )
         else None
     )
 
@@ -146,6 +170,52 @@ def create_app(
             return JSONResponse({"error": "not_found"}, status_code=404)
         return JSONResponse(result.model_dump(mode="json"))
 
+    async def ask(request: Request) -> JSONResponse:
+        nonlocal model_spend
+        if benchmark is None:
+            return JSONResponse(
+                {
+                    "error": "source_disabled",
+                    "detail": "OBSERVATORY_BENCHMARK_ROOT is not configured",
+                },
+                status_code=503,
+            )
+        try:
+            payload = AskRequest.model_validate(await request.json())
+        except (ValidationError, ValueError) as error:
+            return JSONResponse(
+                {"error": "invalid_query", "detail": str(error)},
+                status_code=422,
+            )
+        result = answer(payload, benchmark)
+        if (
+            result.tier == "model_disabled"
+            and payload.allow_model
+            and translator is not None
+        ):
+            reserve = (
+                1_000 * active.copilot_input_rate
+                + 80 * active.copilot_output_rate
+            ) / 1_000_000
+            if model_spend + reserve <= active.copilot_spend_cap:
+                try:
+                    translation = await translator.translate(payload.question)
+                    translated = answer_operation(
+                        translation.operation,
+                        payload,
+                        benchmark,
+                    )
+                    model_spend += translation.cost_usd
+                    result = translated.model_copy(
+                        update={
+                            "tier": "model_translated",
+                            "model_cost_usd": translation.cost_usd,
+                        }
+                    )
+                except (httpx.HTTPError, ValueError):
+                    pass
+        return JSONResponse(result.model_dump(mode="json"))
+
     async def index(_request: Request) -> Response:
         target = active.web_dist / "index.html"
         if not target.exists():
@@ -183,6 +253,7 @@ def create_app(
                 "/api/comparisons/{comparison_id:str}",
                 comparison,
             ),
+            Route("/api/ask", ask, methods=["POST"]),
             Route("/assets/{path:path}", asset),
             Route("/", index),
             Route("/{path:path}", index),

@@ -38,6 +38,8 @@
 - Full results were 59.8% larger than raw over identical evidence, but their
   10-run journey costs overlapped. Representation changed the path more than
   payload size predicted the bill.
+- Common questions mapped to typed local queries without a model. An optional
+  translator reached 6/6 for $0.001375 while seeing no run evidence.
 
 ## Technical Conclusions
 

@@ -13,6 +13,12 @@ class Settings:
     agent_events: Path | None = None
     benchmark_root: Path | None = None
     knowledge_db: Path | None = None
+    copilot_model: str | None = None
+    copilot_api_key: str | None = None
+    copilot_endpoint: str = "https://api.anthropic.com/v1/messages"
+    copilot_spend_cap: float = 0
+    copilot_input_rate: float = 0
+    copilot_output_rate: float = 0
     web_dist: Path = Path(__file__).parents[1] / "web" / "dist"
 
     @classmethod
@@ -25,6 +31,21 @@ class Settings:
             agent_events=_optional_path("OBSERVATORY_AGENT_EVENTS"),
             benchmark_root=_optional_path("OBSERVATORY_BENCHMARK_ROOT"),
             knowledge_db=_optional_path("OBSERVATORY_KNOWLEDGE_DB"),
+            copilot_model=os.environ.get("OBSERVATORY_COPILOT_MODEL"),
+            copilot_api_key=os.environ.get("ANTHROPIC_API_KEY"),
+            copilot_endpoint=os.environ.get(
+                "OBSERVATORY_COPILOT_ENDPOINT",
+                "https://api.anthropic.com/v1/messages",
+            ),
+            copilot_spend_cap=float(
+                os.environ.get("OBSERVATORY_COPILOT_SPEND_CAP", "0")
+            ),
+            copilot_input_rate=float(
+                os.environ.get("OBSERVATORY_COPILOT_INPUT_RATE", "0")
+            ),
+            copilot_output_rate=float(
+                os.environ.get("OBSERVATORY_COPILOT_OUTPUT_RATE", "0")
+            ),
             web_dist=Path(
                 os.environ.get(
                     "OBSERVATORY_WEB_DIST",

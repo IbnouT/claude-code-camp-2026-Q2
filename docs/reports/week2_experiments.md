@@ -215,6 +215,31 @@ Caveats:
 - A route memory or navigator comparison is required to test the loop
   hypothesis.
 
+## Grounded investigation translation
+
+Question: can open-ended investigation language reach typed read-only
+operations without giving a model evidence or database access?
+
+Method:
+
+- Six questions covered stop diagnosis, position candidates, rendering
+  comparison, and one unsupported request.
+- The deterministic planner handled its supported phrases at zero model cost.
+- The optional translator received only the question and four allowed
+  operation names.
+- Evidence execution and the final answer remained deterministic.
+
+| Result | Questions | Correct | Final corpus cost | Total with preflight |
+|---|---:|---:|---:|---:|
+| PASS | 6 | 6 | $0.001375 | $0.004683 |
+
+Finding: a small model can make the typed query surface more forgiving without
+becoming a second source of truth. The model chose an operation. It did not see
+or summarize the evidence.
+
+Caveat: six questions prove the boundary and integration, not broad language
+coverage. The corpus should grow from real investigator questions.
+
 ## Spend
 
 | Evidence | Cost |
@@ -224,6 +249,7 @@ Caveats:
 | Valid one-sample rendering probes | $0.12501980 |
 | N=10 rendering batches | $1.02211945 |
 | J2 long navigation probe | $0.21086010 |
-| Cumulative measured spend | $1.39996160 |
+| Copilot translation evaluation | $0.00468300 |
+| Cumulative measured spend | $1.40464460 |
 
-The cumulative spend remains below the `$5` overnight stop.
+The cumulative spend remains below the standing `$10` cap.

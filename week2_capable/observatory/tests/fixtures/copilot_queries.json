@@ -1,0 +1,26 @@
+[
+  {
+    "question": "Why did the agent stop?",
+    "operation": "diagnose_stop"
+  },
+  {
+    "question": "Why did it believe the journey was complete?",
+    "operation": "diagnose_stop"
+  },
+  {
+    "question": "Which position candidates remain ambiguous?",
+    "operation": "list_position_candidates"
+  },
+  {
+    "question": "Show the low confidence position.",
+    "operation": "list_position_candidates"
+  },
+  {
+    "question": "Compare raw, minimal, and full rendering.",
+    "operation": "compare_rendering"
+  },
+  {
+    "question": "What color is the dragon?",
+    "operation": null
+  }
+]

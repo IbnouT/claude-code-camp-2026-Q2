@@ -2,14 +2,36 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from pathlib import Path
 
 import httpx
 
 from observatory_api.app import create_app
 from observatory_api.projections.parser_replay import replay_parser
 from observatory_api.projections.world import project_world
+from observatory_api.queries import plan_operation
+from observatory_api.redaction import redact_question
 from observatory_api.settings import Settings
 from observatory_api.sources.comparison import rendering_comparison
+
+
+def test_copilot_query_corpus_routes_only_supported_operations():
+    fixture = (
+        Path(__file__).parent / "fixtures" / "copilot_queries.json"
+    )
+    for row in json.loads(fixture.read_text()):
+        assert plan_operation(row["question"]) == row["operation"]
+
+
+def test_model_boundary_redacts_secret_shaped_question_text():
+    value = redact_question(
+        "Why stopped? password=hunter2 token:abc123 "
+        "0123456789abcdef0123456789abcdef"
+    )
+    assert "hunter2" not in value
+    assert "abc123" not in value
+    assert "0123456789abcdef" not in value
+    assert value.count("[REDACTED]") == 3
 
 
 async def test_health_is_read_only(tmp_path):
@@ -165,12 +187,43 @@ async def test_j2_false_completion_links_claim_to_verified_outcome(tmp_path):
         '"cost_usd":0.01,"stop_reason":"end_turn"}\n'
         '{"phase":"turn_end","at":"now","cost_usd":0.21}\n'
     )
+
+    async def translator(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        assert set(body) == {
+            "model",
+            "max_tokens",
+            "temperature",
+            "system",
+            "messages",
+        }
+        question = body["messages"][0]["content"]
+        assert "I need an autopsy" in question
+        assert "private-value" not in question
+        assert "[REDACTED]" in question
+        return httpx.Response(
+            200,
+            json={
+                "content": [{
+                    "type": "text",
+                    "text": '```json\n{"operation":"diagnose_stop"}\n```',
+                }],
+                "usage": {"input_tokens": 100, "output_tokens": 10},
+            },
+        )
+
     app = create_app(
         Settings(
             gateway_url="http://127.0.0.1:1",
             benchmark_root=benchmark_root,
             web_dist=tmp_path,
-        )
+            copilot_model="test-model",
+            copilot_api_key="test-token",
+            copilot_spend_cap=0.1,
+            copilot_input_rate=1,
+            copilot_output_rate=5,
+        ),
+        copilot_transport=httpx.MockTransport(translator),
     )
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(
@@ -181,6 +234,24 @@ async def test_j2_false_completion_links_claim_to_verified_outcome(tmp_path):
         response = await client.get(
             f"/api/runs/{runs[0]['id']}/investigation"
         )
+        asked = await client.post(
+            "/api/ask",
+            json={
+                "question": "Why did the agent stop?",
+                "run_id": runs[0]["id"],
+            },
+        )
+        translated = await client.post(
+            "/api/ask",
+            json={
+                "question": (
+                    "I need an autopsy of the final decision "
+                    "token=private-value"
+                ),
+                "run_id": runs[0]["id"],
+                "allow_model": True,
+            },
+        )
     payload = response.json()
     findings = {item["kind"]: item for item in payload["diagnostics"]}
     assert findings["false_completion"]["evidence"]
@@ -190,6 +261,15 @@ async def test_j2_false_completion_links_claim_to_verified_outcome(tmp_path):
     assert payload["lens"]["parsed"]["text"].startswith("Position: ambiguous")
     assert "{" not in payload["lens"]["parsed"]["text"]
     assert all("/" not in item["label"] for item in payload["citations"])
+    answer = asked.json()
+    assert answer["tier"] == "deterministic"
+    assert answer["plan"][0]["operation"] == "diagnose_stop"
+    assert answer["claims"]
+    assert answer["citations"]
+    model_answer = translated.json()
+    assert model_answer["tier"] == "model_translated"
+    assert model_answer["plan"][0]["operation"] == "diagnose_stop"
+    assert model_answer["model_cost_usd"] > 0
 
 
 def test_relative_source_paths_resolve_from_launcher_project_root(

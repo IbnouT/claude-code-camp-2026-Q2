@@ -402,7 +402,19 @@ export function App() {
         )}
       </main>
 
-      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        runId={recorded.selectedRun}
+        comparisonId={comparison?.id ?? null}
+        onOpenCitation={(citation) => {
+          if (citation.sequence !== null) {
+            setInvestigationSelected(citation.sequence);
+            setMode("investigate");
+            setPaletteOpen(false);
+          }
+        }}
+      />
     </div>
   );
 }

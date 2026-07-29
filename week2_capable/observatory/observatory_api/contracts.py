@@ -287,3 +287,58 @@ class RunComparison(BaseModel):
     counterfactuals: tuple[CounterfactualProjection, ...]
     parser_counterfactuals: tuple[ParserCounterfactual, ...]
     findings: tuple[str, ...]
+
+
+class AskRequest(BaseModel):
+    """One natural-language investigation constrained to typed operations."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    question: str = Field(min_length=3, max_length=500)
+    run_id: str | None = None
+    comparison_id: str | None = None
+    allow_model: bool = False
+
+
+class QueryStep(BaseModel):
+    """One visible step in a validated investigation plan."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    operation: Literal[
+        "diagnose_stop",
+        "list_position_candidates",
+        "compare_rendering",
+    ]
+    source: Literal["benchmark", "gateway"]
+    detail: str
+
+
+class AnswerClaim(BaseModel):
+    """One answer claim with inspectable support."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    text: str
+    confidence: Literal["high", "medium", "low"]
+    citations: tuple[str, ...]
+
+
+class AskResponse(BaseModel):
+    """A grounded answer whose plan and evidence remain inspectable."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    tier: Literal[
+        "deterministic",
+        "model_translated",
+        "model_disabled",
+        "unsupported",
+    ]
+    question: str
+    plan: tuple[QueryStep, ...]
+    answer: str
+    claims: tuple[AnswerClaim, ...]
+    citations: tuple[EvidenceCitation, ...]
+    missing: tuple[str, ...] = ()
+    model_cost_usd: float = 0
