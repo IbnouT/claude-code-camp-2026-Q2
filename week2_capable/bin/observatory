@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-cd "$(dirname "$0")/../observatory"
+project_root="$(cd "$(dirname "$0")/../.." && pwd)"
+export OBSERVATORY_PROJECT_ROOT="$project_root"
+cd "$project_root/week2_capable/observatory"
 exec uv run boukensha-observatory "$@"

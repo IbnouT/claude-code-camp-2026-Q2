@@ -24,6 +24,12 @@ flowchart LR
 - Pausing selects an immutable prefix while live ingestion continues.
 - Session and sequence live in the URL for a shareable evidence moment.
 - Unknown event kinds remain available instead of being discarded.
+- Investigate joins benchmark outcomes to their agent causal trace.
+- A waterfall separates plans, model responses, tool calls, results, and cost.
+- The evidence lens keeps wire, parsed, rendered, believed, and truth forms
+  distinct.
+- Diagnostics explain their trigger and cite the evidence behind each finding.
+- Structured filters and saved views narrow long traces without a model call.
 - A living-world canvas is the spatial anchor.
 - Belief and observed state remain visually separate.
 - Diagnostics link failures to evidence moments.
@@ -35,6 +41,9 @@ flowchart LR
 When gateway evidence is available, the interface labels and renders it as
 such. The representative J2 state appears only when no gateway session is
 available.
+
+Configured benchmark evidence adds recorded runs to Investigate. Local paths
+and credentials never enter the browser contract.
 
 ## Layout
 
@@ -107,9 +116,21 @@ The API uses explicit environment variables:
 Unavailable or disabled sources remain visible with an explanation. The
 observatory never invents data to fill an absent source.
 
+Relative source paths are resolved from the repository root by the launcher.
+For the local benchmark evidence:
+
+```bash
+OBSERVATORY_BENCHMARK_ROOT=.boukensha/benchmarks \
+  ./week2_capable/bin/observatory
+```
+
 The selected evidence moment is encoded as `?session=<id>&seq=<number>`. Opening
 that URL reconstructs the same prefix, then continues ingesting newer events
 without moving the historical cursor.
+
+Investigations also encode the mode, run, causal sequence, diagnostic, and
+structured query in the URL. Reloading returns to the same evidence-backed
+view.
 
 ## Verify
 

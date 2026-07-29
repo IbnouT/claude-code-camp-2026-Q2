@@ -36,4 +36,10 @@ class Settings:
 
 def _optional_path(name: str) -> Path | None:
     value = os.environ.get(name)
-    return None if value is None else Path(value)
+    if value is None:
+        return None
+    path = Path(value)
+    project_root = os.environ.get("OBSERVATORY_PROJECT_ROOT")
+    if not path.is_absolute() and project_root:
+        return Path(project_root) / path
+    return path

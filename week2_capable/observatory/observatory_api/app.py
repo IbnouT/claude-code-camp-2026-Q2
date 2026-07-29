@@ -18,6 +18,7 @@ from starlette.routing import Route
 
 from .capabilities import discover
 from .settings import Settings
+from .sources.benchmark import BenchmarkSource
 from .sources.gateway import GatewaySource
 
 
@@ -30,6 +31,11 @@ def create_app(
     gateway = GatewaySource(
         active.gateway_url,
         transport=gateway_transport,
+    )
+    benchmark = (
+        BenchmarkSource(active.benchmark_root)
+        if active.benchmark_root is not None
+        else None
     )
 
     async def health(_request: Request) -> JSONResponse:
@@ -85,6 +91,26 @@ def create_app(
             },
         )
 
+    async def runs(_request: Request) -> JSONResponse:
+        available = () if benchmark is None else benchmark.runs()
+        return JSONResponse(
+            {"runs": [run.model_dump(mode="json") for run in available]}
+        )
+
+    async def investigation(request: Request) -> JSONResponse:
+        if benchmark is None:
+            return JSONResponse(
+                {
+                    "error": "source_disabled",
+                    "detail": "OBSERVATORY_BENCHMARK_ROOT is not configured",
+                },
+                status_code=503,
+            )
+        result = benchmark.investigation(request.path_params["run_id"])
+        if result is None:
+            return JSONResponse({"error": "not_found"}, status_code=404)
+        return JSONResponse(result.model_dump(mode="json"))
+
     async def index(_request: Request) -> Response:
         target = active.web_dist / "index.html"
         if not target.exists():
@@ -115,6 +141,8 @@ def create_app(
                 "/api/sessions/{session:str}/{endpoint:str}",
                 gateway_events,
             ),
+            Route("/api/runs", runs),
+            Route("/api/runs/{run_id:str}/investigation", investigation),
             Route("/assets/{path:path}", asset),
             Route("/", index),
             Route("/{path:path}", index),

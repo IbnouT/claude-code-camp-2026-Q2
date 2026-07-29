@@ -1082,6 +1082,306 @@ input:focus-visible {
   cursor: pointer;
 }
 
+.recorded-picker select {
+  width: 165px;
+  border: 0;
+  outline: 0;
+  color: #d6e1e8;
+  background: transparent;
+  font: inherit;
+  appearance: none;
+}
+
+.investigation-workspace {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 58px auto minmax(0, 1fr);
+}
+
+.investigation-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 0 18px 0 22px;
+}
+
+.investigation-toolbar h2 {
+  margin: 2px 0 0;
+  font-size: 13px;
+}
+
+.evidence-search {
+  width: min(310px, 42%);
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--quiet);
+  background: #090e13;
+}
+
+.evidence-search:focus-within {
+  border-color: #477c7a;
+  box-shadow: 0 0 0 2px rgb(104 225 220 / 8%);
+}
+
+.evidence-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  color: var(--text);
+  background: transparent;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+}
+
+.saved-views {
+  min-height: 35px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 22px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.saved-views button {
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  background: #0c1218;
+  cursor: pointer;
+  font-size: 9px;
+}
+
+.saved-views button:hover,
+.saved-views button.is-active {
+  border-color: #356764;
+  color: var(--cyan);
+  background: var(--cyan-soft);
+}
+
+.causal-surface {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(300px, 1.2fr) minmax(220px, 0.8fr);
+  gap: 12px;
+  padding: 12px 16px 16px;
+}
+
+.causal-waterfall,
+.causal-inspector {
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgb(9 14 19 / 92%);
+}
+
+.causal-waterfall {
+  padding: 8px;
+}
+
+.causal-row {
+  position: relative;
+  width: 100%;
+  min-height: 45px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  gap: 9px;
+  align-items: center;
+  padding: 6px 9px 6px 16px;
+  border: 0;
+  border-radius: 7px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.causal-row:hover,
+.causal-row.is-selected {
+  color: var(--text);
+  background: rgb(104 225 220 / 6%);
+}
+
+.causal-row.is-selected {
+  box-shadow: inset 2px 0 var(--cyan);
+}
+
+.causal-spine {
+  position: absolute;
+  top: -7px;
+  bottom: -7px;
+  left: 26px;
+  width: 1px;
+  background: #26333d;
+}
+
+.causal-icon {
+  z-index: 1;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #3a4b57;
+  border-radius: 50%;
+  color: #8db1b0;
+  background: #101820;
+}
+
+.phase-response .causal-icon,
+.phase-plan .causal-icon {
+  color: #c2a4ff;
+  border-color: #594678;
+}
+
+.causal-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.causal-copy strong {
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.causal-copy small,
+.causal-cost {
+  color: var(--quiet);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 8px;
+}
+
+.causal-inspector {
+  padding: 18px;
+}
+
+.causal-inspector h3 {
+  margin: 8px 0 18px;
+  color: #e3edf2;
+  font-size: 16px;
+}
+
+.causal-inspector dl {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 18px;
+}
+
+.causal-inspector dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--line);
+}
+
+.causal-inspector dt {
+  color: var(--quiet);
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.causal-inspector dd {
+  max-width: 70%;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #b7c6ce;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+  text-align: right;
+}
+
+.causal-inspector p:last-child {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.evidence-lens {
+  padding: 17px;
+  border-bottom: 1px solid var(--line);
+}
+
+.lens-stack {
+  display: grid;
+  gap: 7px;
+}
+
+.lens-card {
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #0b1117;
+}
+
+.lens-card.is-active {
+  border-color: #5c4f31;
+  box-shadow: inset 2px 0 var(--amber);
+}
+
+.lens-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.lens-card header span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--cyan);
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.lens-card header small {
+  color: var(--quiet);
+  font-size: 8px;
+}
+
+.lens-card strong {
+  display: block;
+  font-size: 10px;
+}
+
+.lens-card p {
+  max-height: 52px;
+  margin: 5px 0 7px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.lens-card button {
+  padding: 0;
+  border: 0;
+  color: var(--cyan);
+  background: transparent;
+  cursor: pointer;
+  font-size: 8px;
+}
+
+.lens-card button:disabled {
+  color: var(--quiet);
+  cursor: default;
+}
+
+.investigation-diagnostics .diagnostic-card.is-selected {
+  border-color: #594a30;
+  background: rgb(234 192 106 / 5%);
+}
+
 @media (max-width: 1120px) {
   .app-header {
     grid-template-columns: auto auto 1fr;
@@ -1178,6 +1478,41 @@ input:focus-visible {
 
   .world-stage {
     margin: 0 8px 8px;
+  }
+
+  .investigation-workspace {
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+
+  .investigation-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 14px 16px 10px;
+  }
+
+  .evidence-search {
+    width: 100%;
+  }
+
+  .saved-views {
+    overflow-x: auto;
+    padding: 0 16px 10px;
+  }
+
+  .saved-views button {
+    flex: 0 0 auto;
+  }
+
+  .causal-surface {
+    padding: 8px;
+  }
+
+  .causal-surface {
+    grid-template-columns: 1fr;
+  }
+
+  .causal-inspector {
+    display: none;
   }
 
   .world-graph {
