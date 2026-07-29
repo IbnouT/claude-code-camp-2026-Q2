@@ -57,6 +57,8 @@ flowchart TB
 
 - [gateway.md](gateway.md): the instrumented game interface.
 - [benchmark.md](benchmark.md): the E1 journey measurement through the gateway.
+- [observatory.md](observatory.md): the causal flight recorder, debugger, and
+  experiment studio.
 - Further plans land here as each component starts, one plan per component,
   reviewed before its code.
 
