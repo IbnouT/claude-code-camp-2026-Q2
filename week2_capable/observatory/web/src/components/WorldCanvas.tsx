@@ -1,7 +1,21 @@
 import { Crosshair, Layers3, LocateFixed } from "lucide-react";
 import { edges, rooms } from "../app/demo";
 
-export function WorldCanvas() {
+type Props = {
+  evidenceActive?: boolean;
+  roomTitle?: string | null;
+  positionTitle?: string | null;
+  positionConfidence?: string | null;
+  throughSequence?: number;
+};
+
+export function WorldCanvas({
+  evidenceActive = false,
+  roomTitle,
+  positionTitle,
+  positionConfidence,
+  throughSequence,
+}: Props) {
   const byId = new Map(rooms.map((room) => [room.id, room]));
 
   return (
@@ -25,15 +39,50 @@ export function WorldCanvas() {
       <div className="world-stage">
         <div className="map-status">
           <span className="status-orbit" aria-hidden="true" />
-          Position unresolved
-          <strong>2 candidates</strong>
+          {evidenceActive
+            ? positionTitle ?? roomTitle ?? "No spatial observation"
+            : "Position unresolved"}
+          <strong>
+            {evidenceActive
+              ? `${positionConfidence ?? "unknown"} · seq ${throughSequence ?? 0}`
+              : positionConfidence
+              ? `${positionConfidence} · seq ${throughSequence ?? 0}`
+              : "2 candidates"}
+          </strong>
         </div>
-        <svg
-          className="world-graph"
-          viewBox="0 0 980 500"
-          role="img"
-          aria-label="Journey map ending at two ambiguous Newbie Zone entrances"
-        >
+        {evidenceActive ? (
+          <svg
+            className="world-graph"
+            viewBox="0 0 980 500"
+            role="img"
+            aria-label={
+              roomTitle
+                ? `Selected evidence places the session at ${roomTitle}`
+                : "No spatial evidence exists in the selected prefix"
+            }
+          >
+            <g
+              className="room-node room-current"
+              transform="translate(490 250)"
+            >
+              <circle r="46" className="candidate-orbit" />
+              <circle r="17" className="room-disc" />
+              <Crosshair x={-9} y={-9} size={18} aria-hidden="true" />
+              <text y="45" textAnchor="middle">
+                {roomTitle ?? "Awaiting room evidence"}
+              </text>
+              <text y="-55" textAnchor="middle" className="confidence-label">
+                Prefix through sequence {throughSequence ?? 0}
+              </text>
+            </g>
+          </svg>
+        ) : (
+          <svg
+            className="world-graph"
+            viewBox="0 0 980 500"
+            role="img"
+            aria-label="Journey map ending at two ambiguous Newbie Zone entrances"
+          >
           <defs>
             <pattern id="candidate-pattern" width="8" height="8" patternUnits="userSpaceOnUse">
               <path d="M0 8L8 0" stroke="currentColor" strokeOpacity=".18" />
@@ -90,7 +139,8 @@ export function WorldCanvas() {
               </g>
             ))}
           </g>
-        </svg>
+          </svg>
+        )}
         <div className="map-legend" aria-label="Map legend">
           <span><i className="legend-dot visited" />Observed</span>
           <span><i className="legend-dot candidate" />Candidate</span>

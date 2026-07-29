@@ -1,14 +1,16 @@
 # Boukensha observatory
 
 The observatory is a local, read-only flight recorder and experiment studio for
-the agent. Its first shell establishes the product language and source
-capability boundary. Live session projection follows in the next increment.
+the agent. It follows committed gateway evidence live and reconstructs any
+selected historical prefix through the same deterministic reducer.
 
 ```mermaid
 flowchart LR
-    G["Gateway contracts and evidence"] --> A["Read-only Starlette API"]
+    G["Gateway replay and SSE"] --> A["Read-only Starlette proxy"]
     E["Optional agent, benchmark, knowledge sources"] --> A
-    A --> W["Strict TypeScript client"]
+    A --> R["Runtime contract decoder"]
+    R --> D["One deterministic reducer"]
+    D --> W["Selected evidence prefix"]
     W --> L["Live"]
     W --> I["Investigate"]
     W --> C["Compare"]
@@ -17,6 +19,11 @@ flowchart LR
 ## Current interface
 
 - Three modes only: Live, Investigate, and Compare.
+- Live ingestion and replay use the same canonical event envelope.
+- Sequence cursors deduplicate at-least-once delivery and expose gaps.
+- Pausing selects an immutable prefix while live ingestion continues.
+- Session and sequence live in the URL for a shareable evidence moment.
+- Unknown event kinds remain available instead of being discarded.
 - A living-world canvas is the spatial anchor.
 - Belief and observed state remain visually separate.
 - Diagnostics link failures to evidence moments.
@@ -25,8 +32,9 @@ flowchart LR
 - Source health distinguishes ready, disabled, and unavailable.
 - Desktop and narrow layouts use the same information hierarchy.
 
-The representative J2 data currently demonstrates the intended interaction and
-visual states. It is not presented as a live session.
+When gateway evidence is available, the interface labels and renders it as
+such. The representative J2 state appears only when no gateway session is
+available.
 
 ## Layout
 
@@ -42,7 +50,8 @@ observatory/
 ├── web/
 │   ├── src/
 │   │   ├── app/
-│   │   └── components/
+│   │   ├── components/
+│   │   └── data/
 │   ├── package.json
 │   └── vite.config.ts
 ├── pyproject.toml
@@ -98,6 +107,10 @@ The API uses explicit environment variables:
 Unavailable or disabled sources remain visible with an explanation. The
 observatory never invents data to fill an absent source.
 
+The selected evidence moment is encoded as `?session=<id>&seq=<number>`. Opening
+that URL reconstructs the same prefix, then continues ingesting newer events
+without moving the historical cursor.
+
 ## Verify
 
 ```bash
@@ -109,5 +122,6 @@ npm run build
 ```
 
 UI changes require rendered checks at desktop and narrow widths. The shell has
-been verified at both, including keyboard focus, capability fallback, and
-reduced-motion behavior.
+been verified against a real gateway journal and at narrow width, including
+historical selection, keyboard focus, capability fallback, and reduced-motion
+behavior.

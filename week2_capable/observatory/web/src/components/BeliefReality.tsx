@@ -1,6 +1,20 @@
 import { Eye, ScanSearch } from "lucide-react";
 
-export function BeliefReality() {
+type Props = {
+  evidenceActive?: boolean;
+  roomTitle?: string | null;
+  roomConfidence?: string | null;
+  parseMissRate?: number | null;
+  evidenceCount?: number;
+};
+
+export function BeliefReality({
+  evidenceActive = false,
+  roomTitle,
+  roomConfidence,
+  parseMissRate,
+  evidenceCount = 4,
+}: Props) {
   return (
     <section className="belief-panel" aria-labelledby="belief-title">
       <header className="rail-heading compact">
@@ -15,17 +29,45 @@ export function BeliefReality() {
       <div className="belief-comparison">
         <article className="belief-cell agent-belief">
           <span className="cell-label">Agent belief</span>
-          <strong>Journey complete</strong>
-          <p>“I have reached the destination.”</p>
-          <span className="unsupported-tag">Unsupported claim</span>
+          <strong>
+            {evidenceActive
+              ? "No belief event captured"
+              : roomTitle ?? "Journey complete"}
+          </strong>
+          <p>
+            {evidenceActive
+              ? "This prefix contains gateway evidence only."
+              : roomConfidence
+              ? `Parsed room with ${roomConfidence} confidence.`
+              : "“I have reached the destination.”"}
+          </p>
+          <span className="unsupported-tag">
+            {evidenceActive
+              ? "Instrumentation gap"
+              : roomConfidence
+                ? "Parsed inference"
+                : "Unsupported claim"}
+          </span>
         </article>
         <article className="belief-cell observed-state">
           <span className="cell-label">Observed state</span>
-          <strong>Objective unmet</strong>
-          <p>No evidence names the Massive Minotaur.</p>
+          <strong>
+            {evidenceActive
+              ? roomTitle ?? "No parsed room yet"
+              : roomTitle ? "Evidence selected" : "Objective unmet"}
+          </strong>
+          <p>
+            {evidenceActive && (parseMissRate === null || parseMissRate === undefined)
+              ? `${evidenceCount} committed ${
+                evidenceCount === 1 ? "event exists" : "events exist"
+              } in this prefix.`
+              : parseMissRate === null || parseMissRate === undefined
+              ? "No evidence names the Massive Minotaur."
+              : `${Math.round(parseMissRate * 100)}% of source lines remain unparsed.`}
+          </p>
           <button type="button" className="evidence-link">
             <Eye size={13} aria-hidden="true" />
-            4 evidence links
+            {evidenceCount} {evidenceCount === 1 ? "evidence link" : "evidence links"}
           </button>
         </article>
       </div>

@@ -1,7 +1,8 @@
 import { Pause, Play, Radio, SkipBack, SkipForward } from "lucide-react";
-import { chronicle } from "../app/demo";
+import type { ChronicleEvent } from "../app/types";
 
 type Props = {
+  events: ChronicleEvent[];
   selected: number;
   paused: boolean;
   onSelect: (sequence: number) => void;
@@ -9,13 +10,14 @@ type Props = {
 };
 
 export function Chronicle({
+  events,
   selected,
   paused,
   onSelect,
   onTogglePause,
 }: Props) {
-  const totalCost = chronicle.reduce((sum, event) => sum + event.cost, 0);
-  const maxCost = Math.max(...chronicle.map((event) => event.cost));
+  const totalCost = events.reduce((sum, event) => sum + event.cost, 0);
+  const maxCost = Math.max(0, ...events.map((event) => event.cost));
 
   return (
     <section className="chronicle-panel" aria-labelledby="chronicle-title">
@@ -42,7 +44,7 @@ export function Chronicle({
           </button>
         </div>
         <div className="chronicle-metrics">
-          <span><b>11</b> events</span>
+          <span><b>{events.length}</b> events</span>
           <span><b>${totalCost.toFixed(4)}</b> selected range</span>
           <span className={paused ? "clock-state paused" : "clock-state live"}>
             <Radio size={12} aria-hidden="true" />
@@ -52,8 +54,10 @@ export function Chronicle({
       </header>
       <div className="chronicle-track" role="list" aria-label="Causal event timeline">
         <div className="cost-baseline" aria-hidden="true" />
-        {chronicle.map((event) => {
-          const costHeight = event.cost === 0 ? 0 : 8 + (event.cost / maxCost) * 28;
+        {events.map((event) => {
+          const costHeight = event.cost === 0 || maxCost === 0
+            ? 0
+            : 8 + (event.cost / maxCost) * 28;
           return (
             <button
               key={event.seq}

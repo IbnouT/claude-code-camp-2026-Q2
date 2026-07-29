@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import httpx
+
 from .contracts import ObservatoryCapabilities, SourceStatus
 from .settings import Settings
 from .sources.gateway import gateway_status
@@ -21,9 +23,16 @@ FEATURES = (
 )
 
 
-async def discover(settings: Settings) -> ObservatoryCapabilities:
+async def discover(
+    settings: Settings,
+    *,
+    gateway_transport: httpx.AsyncBaseTransport | None = None,
+) -> ObservatoryCapabilities:
     sources = [
-        await gateway_status(settings.gateway_url),
+        await gateway_status(
+            settings.gateway_url,
+            transport=gateway_transport,
+        ),
         _path_source(
             "agent",
             "Agent events",

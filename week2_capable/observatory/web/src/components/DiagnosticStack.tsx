@@ -1,5 +1,6 @@
 import { AlertTriangle, ChevronRight, CircleAlert, Info } from "lucide-react";
 import { diagnostics } from "../app/demo";
+import type { Diagnostic } from "../app/types";
 
 const icons = {
   critical: CircleAlert,
@@ -9,9 +10,10 @@ const icons = {
 
 type Props = {
   onSelect: (sequence: number) => void;
+  items?: Diagnostic[];
 };
 
-export function DiagnosticStack({ onSelect }: Props) {
+export function DiagnosticStack({ onSelect, items = diagnostics }: Props) {
   return (
     <section className="diagnostics-panel" aria-labelledby="diagnostics-title">
       <header className="rail-heading">
@@ -19,10 +21,15 @@ export function DiagnosticStack({ onSelect }: Props) {
           <p className="eyebrow">Needs attention</p>
           <h2 id="diagnostics-title">Diagnostics</h2>
         </div>
-        <span className="count-badge">{diagnostics.length}</span>
+        <span className="count-badge">{items.length}</span>
       </header>
       <div className="diagnostic-list">
-        {diagnostics.map((diagnostic) => {
+        {items.length === 0 && (
+          <p className="source-empty">
+            Deterministic diagnostics begin in the next analysis stage.
+          </p>
+        )}
+        {items.map((diagnostic) => {
           const Icon = icons[diagnostic.severity];
           return (
             <button

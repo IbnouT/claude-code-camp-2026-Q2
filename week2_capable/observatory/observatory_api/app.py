@@ -5,24 +5,85 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import httpx
 from starlette.applications import Starlette
 from starlette.requests import Request
-from starlette.responses import FileResponse, JSONResponse, Response
+from starlette.responses import (
+    FileResponse,
+    JSONResponse,
+    Response,
+    StreamingResponse,
+)
 from starlette.routing import Route
 
 from .capabilities import discover
 from .settings import Settings
+from .sources.gateway import GatewaySource
 
 
-def create_app(settings: Settings | None = None) -> Starlette:
+def create_app(
+    settings: Settings | None = None,
+    *,
+    gateway_transport: httpx.AsyncBaseTransport | None = None,
+) -> Starlette:
     active = settings or Settings.from_environment()
+    gateway = GatewaySource(
+        active.gateway_url,
+        transport=gateway_transport,
+    )
 
     async def health(_request: Request) -> JSONResponse:
         return JSONResponse({"status": "ok", "read_only": True})
 
     async def capabilities(_request: Request) -> JSONResponse:
-        result = await discover(active)
+        result = await discover(
+            active,
+            gateway_transport=gateway_transport,
+        )
         return JSONResponse(result.model_dump(mode="json"))
+
+    async def sessions(_request: Request) -> JSONResponse:
+        try:
+            return JSONResponse(await gateway.sessions())
+        except (httpx.HTTPError, ValueError) as error:
+            return _upstream_error(error)
+
+    async def contracts(_request: Request) -> JSONResponse:
+        try:
+            return JSONResponse(await gateway.json("/contracts"))
+        except (httpx.HTTPError, ValueError) as error:
+            return _upstream_error(error)
+
+    async def gateway_events(request: Request) -> Response:
+        session = request.path_params["session"]
+        endpoint = request.path_params["endpoint"]
+        if endpoint not in {"events", "replay"}:
+            return JSONResponse({"error": "not_found"}, status_code=404)
+        query = list(request.query_params.multi_items())
+        context = gateway.stream(
+            f"/sessions/{session}/{endpoint}",
+            query=query,
+        )
+        try:
+            upstream = await context.__aenter__()
+        except (httpx.HTTPError, ValueError) as error:
+            return _upstream_error(error)
+
+        async def body():
+            try:
+                async for chunk in upstream.aiter_raw():
+                    yield chunk
+            finally:
+                await context.__aexit__(None, None, None)
+
+        return StreamingResponse(
+            body(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+            },
+        )
 
     async def index(_request: Request) -> Response:
         target = active.web_dist / "index.html"
@@ -48,10 +109,26 @@ def create_app(settings: Settings | None = None) -> Starlette:
         routes=[
             Route("/api/health", health),
             Route("/api/capabilities", capabilities),
+            Route("/api/contracts", contracts),
+            Route("/api/sessions", sessions),
+            Route(
+                "/api/sessions/{session:str}/{endpoint:str}",
+                gateway_events,
+            ),
             Route("/assets/{path:path}", asset),
             Route("/", index),
             Route("/{path:path}", index),
         ]
+    )
+
+
+def _upstream_error(error: Exception) -> JSONResponse:
+    return JSONResponse(
+        {
+            "error": "gateway_unavailable",
+            "detail": str(error),
+        },
+        status_code=503,
     )
 
 
