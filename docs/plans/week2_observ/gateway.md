@@ -139,8 +139,8 @@ opportunistic above is additive and does not gate the core.
 
 The gateway does not mirror the mud_manager's tool surface. The manager is
 evidence for what capabilities exist and a benchmark reference, not the target
-architecture. Week 1 usage is highly concentrated (448 recorded calls: move
-314, then poll 26, look 20, check 18, attack 16, and a long tail, most
+architecture. Week 1 usage is highly concentrated (451 executed calls: move
+316, then poll 26, look 19, check 19, attack 16, and a long tail, most
 advertised tools never used), so a blind mirror optimises a surface the agent
 barely uses. The target is correct, efficient play at lower total model cost.
 
@@ -213,7 +213,7 @@ until blocked-exit, combat, vitals, unexpected-room and interrupt stops are
 each testable from journal evidence). The live bakery journey proves
 representative end-to-end integration. Only after the capability gate and the
 journey pass does the benchmark measure E1, against the week 1 baseline (the
-448-call distribution), through the chosen bring-up profile.
+451-call executed distribution), through the chosen bring-up profile.
 
 ## Build order
 

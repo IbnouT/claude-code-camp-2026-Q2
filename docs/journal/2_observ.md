@@ -26,6 +26,9 @@
 - Colour-aware rules typed 2,644 of 3,067 recorded lines without a model. The
   423 misses remain linked events, turning the 13.8% residual into a measured
   target instead of silent loss.
+- Re-deriving the Week 1 baseline exposed 451 executed calls and 447 that
+  reached later prompts, not the working figure of 448. A benchmark number
+  without a traceable counting rule is another unobserved system state.
 
 ## Technical Conclusions
 

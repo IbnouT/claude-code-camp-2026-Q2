@@ -56,5 +56,6 @@ flowchart TB
 ## Plans
 
 - [gateway.md](gateway.md): the instrumented game interface.
+- [benchmark.md](benchmark.md): the E1 journey measurement through the gateway.
 - Further plans land here as each component starts, one plan per component,
   reviewed before its code.
