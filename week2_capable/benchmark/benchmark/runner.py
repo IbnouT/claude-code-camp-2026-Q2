@@ -124,6 +124,7 @@ def run_attempt(
             schema_token_estimate=proof.schema_token_estimate,
             result_mode=config.result_mode,
             error=_redact(f"reset failed: {error}", combined),
+            models_path=repository.agent / "boukensha" / "models.yaml",
         )
 
     launch = launcher or _launch_agent
@@ -146,6 +147,7 @@ def run_attempt(
         result_mode=config.result_mode,
         reset_id=reset_result.reset_id,
         error=error,
+        models_path=repository.agent / "boukensha" / "models.yaml",
     )
 
 

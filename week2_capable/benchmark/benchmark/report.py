@@ -32,6 +32,7 @@ def read_rows(path: Path) -> list[AttemptMetrics]:
         value["tool_arguments"] = tuple(tuple(item) for item in value.get("tool_arguments") or ())
         value.setdefault("result_mode", "full")
         value.setdefault("tool_result_chars", 0)
+        value["cost_curve"] = tuple(value.get("cost_curve") or ())
         rows.append(AttemptMetrics(**value))
     return rows
 
@@ -45,7 +46,7 @@ def write_markdown(
     material = list(rows)
     totals = aggregate(material)
     lines = [
-        "# E1 benchmark report",
+        "# Journey benchmark report",
         "",
         "Only complete, priced attempts enter the aggregate.",
         "",
@@ -122,6 +123,23 @@ def write_markdown(
                 f"| {_escape(row.attempt_id)} | {moves} | {share:.1%} | "
                 f"{share - baseline_moves:+.1%} | `{tools}` |"
             )
+        lines.extend(
+            [
+                "",
+                "## Cumulative cost checkpoints",
+                "",
+                "| Attempt | Model call and cumulative USD |",
+                "|---|---|",
+            ]
+        )
+        for row in material:
+            checkpoints = ", ".join(
+                f"{number}: ${cost:.4f}"
+                for number, cost in _cost_checkpoints(row.cost_curve)
+            )
+            lines.append(
+                f"| {_escape(row.attempt_id)} | {_escape(checkpoints or 'unpriced')} |"
+            )
     lines.extend(
         [
             "",
@@ -172,3 +190,13 @@ def _escape(value: object) -> str:
         .replace("\n", " ")
         .replace("`", "\\`")
     )
+
+
+def _cost_checkpoints(curve: tuple[float, ...]) -> tuple[tuple[int, float], ...]:
+    if not curve:
+        return ()
+    step = max(1, len(curve) // 10)
+    indexes = list(range(step - 1, len(curve), step))
+    if indexes[-1] != len(curve) - 1:
+        indexes.append(len(curve) - 1)
+    return tuple((index + 1, curve[index]) for index in indexes)

@@ -1,4 +1,4 @@
-"""Budgeted E1 command-line entry point."""
+"""Budgeted journey benchmark command-line entry point."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 
 from .config import RESULT_MODES, Repository, create_attempt
-from .journeys import J1
+from .journeys import JOURNEYS
 from .metrics import LEGACY_WEEK1_MOVES, LEGACY_WEEK1_TOTAL, week1_corpus
 from .report import append_jsonl, read_rows, write_markdown
 from .runner import Budget, BudgetError, prove_surface, run_attempt
@@ -38,7 +38,14 @@ def main(argv: list[str] | None = None) -> int:
         default="full",
         help="model-facing gateway result shape",
     )
+    parser.add_argument(
+        "--journey",
+        choices=tuple(JOURNEYS),
+        default="J1",
+        help="evidence-judged game objective",
+    )
     arguments = parser.parse_args(argv)
+    journey = JOURNEYS[arguments.journey]
     repository = Repository.discover()
     proof = prove_surface(profile="direct-full")
     corpus = week1_corpus(repository.week1_sessions)
@@ -107,7 +114,7 @@ def main(argv: list[str] | None = None) -> int:
         row = run_attempt(
             repository=repository,
             config=config,
-            journey=J1,
+            journey=journey,
             attempt_id=attempt_id,
             proof=proof,
             environment=os.environ,

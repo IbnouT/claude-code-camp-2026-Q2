@@ -42,6 +42,7 @@ The first journey is the Week 1 bakery task:
 | Id | Order | Success |
 |---|---|---|
 | J1 | Find the bakery and read the menu. | a bakery menu row and bakery good are observed |
+| J2 | Find the Massive Minotaur in the newbie zone north of the Temple. | an observation names the Massive Minotaur |
 
 The harness records one row per attempt:
 
@@ -52,6 +53,7 @@ The harness records one row per attempt:
 - fresh, cache-read, cache-write, output and occupancy tokens
 - schema input bytes and an explicitly labelled token estimate
 - cost in dollars
+- cumulative cost after each model call
 - gateway profile id and capability digest
 - model-facing result mode and delivered result characters
 - gateway parse misses and wire provenance

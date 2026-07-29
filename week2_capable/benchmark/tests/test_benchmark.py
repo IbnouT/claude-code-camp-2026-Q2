@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from benchmark.config import Repository, _UNIX_SOCKET_PATH_LIMIT, create_attempt
-from benchmark.journeys import J1, judge
+from benchmark.journeys import J1, J2, judge
 from benchmark.metrics import AttemptMetrics, aggregate, week1_corpus
 from benchmark.metrics import measure_attempt
 from benchmark.report import write_markdown
@@ -72,6 +72,7 @@ def test_unpriced_and_incomplete_attempts_do_not_aggregate(tmp_path: Path) -> No
         schema_token_estimate=1, reset_id="reset-1", profile_id="direct-full",
         capability_digest="abc", parse_misses=0,
         result_mode="full", tool_result_chars=1,
+        cost_curve=(0.1,),
         wire_sequences=(), agent_log="agent.jsonl", gateway_journal="gateway.db",
     )
     priced = AttemptMetrics(cost_usd=0.1, **base)
@@ -138,6 +139,7 @@ def test_report_row_links_both_sources_and_escapes_text(tmp_path: Path) -> None:
         cost_usd=0.1, reset_id="reset-1", profile_id="direct-full",
         result_mode="full", capability_digest="abc", parse_misses=0,
         tool_result_chars=1,
+        cost_curve=(0.1,),
         wire_sequences=(1,), agent_log="agent|log.jsonl",
         gateway_journal="gateway.db",
     )
@@ -153,6 +155,7 @@ def test_report_row_links_both_sources_and_escapes_text(tmp_path: Path) -> None:
     assert "no twentieth look" in text
     assert "Attempt measurements" in text
     assert "Tool distribution" in text
+    assert "Cumulative cost checkpoints" in text
     assert "Success rate: 100.0%" in text
     assert "Standard deviation" in text
 
@@ -164,6 +167,20 @@ def test_j1_requires_bakery_and_menu_good() -> None:
         }
     }])
     assert verdict.success
+
+
+def test_j2_requires_minotaur_observation_evidence() -> None:
+    verdict = judge(J2, [
+        {
+            "kind": "observation",
+            "payload": {"kind": "room", "mobs": ["The Massive Minotaur is here."]},
+        }
+    ])
+    assert verdict.success
+    assert "Massive Minotaur" in verdict.evidence[0]
+    assert not judge(J2, [
+        {"kind": "command", "payload": {"line": "find Massive Minotaur"}}
+    ]).success
 
 
 def test_budget_requires_headroom_and_pricing() -> None:
@@ -203,6 +220,81 @@ def test_metrics_preserve_limit_stop_reason_and_iterations(tmp_path: Path) -> No
     )
     assert row.stop_reason == "max_iterations"
     assert row.iterations == 125
+
+
+def test_metrics_record_cumulative_model_cost_curve(tmp_path: Path) -> None:
+    agent_log = tmp_path / "agent.jsonl"
+    agent_log.write_text(
+        "\n".join(
+            json.dumps({"phase": "response", "cost_usd": cost})
+            for cost in (0.01, 0.02, 0.03)
+        )
+        + "\n"
+        + json.dumps({
+            "phase": "turn_end",
+            "reason": "max_iterations",
+            "iterations": 3,
+            "cost_usd": 0.06,
+        })
+        + "\n"
+    )
+    row = measure_attempt(
+        attempt_id="curve",
+        journey=J1,
+        agent_log=agent_log,
+        gateway_journal=tmp_path / "missing.db",
+        wall_ms=1,
+        process_ok=True,
+        schema_bytes=100,
+        schema_token_estimate=25,
+    )
+    assert row.cost_curve == (0.01, 0.03, 0.06)
+
+
+def test_cost_curve_prices_cached_tokens_from_model_catalog(tmp_path: Path) -> None:
+    agent_log = tmp_path / "agent.jsonl"
+    agent_log.write_text(
+        json.dumps({
+            "phase": "response",
+            "provider": "test",
+            "model": "cached",
+            "cost_usd": 0.000005,
+            "usage": {
+                "input_tokens": 5,
+                "cache_read_input_tokens": 10_000,
+                "cache_creation_input_tokens": 100,
+                "cache_creation": {"ephemeral_5m_input_tokens": 100},
+                "output_tokens": 10,
+            },
+        })
+        + "\n"
+        + json.dumps({
+            "phase": "turn_end",
+            "reason": "max_iterations",
+            "iterations": 1,
+            "cost_usd": 0.00118,
+        })
+        + "\n"
+    )
+    models = tmp_path / "models.yaml"
+    models.write_text(
+        "test:\n"
+        "  cached:\n"
+        "    cost_per_million: {input: 1, cache_read: 0.1, "
+        "cache_write_5m: 1.25, cache_write_1h: 2, output: 5}\n"
+    )
+    row = measure_attempt(
+        attempt_id="curve",
+        journey=J1,
+        agent_log=agent_log,
+        gateway_journal=tmp_path / "missing.db",
+        wall_ms=1,
+        process_ok=True,
+        schema_bytes=100,
+        schema_token_estimate=25,
+        models_path=models,
+    )
+    assert row.cost_curve == (0.00118,)
 
 
 def test_overlay_selects_model_result_mode(tmp_path: Path) -> None:

@@ -29,6 +29,9 @@
 - Re-deriving the Week 1 baseline exposed 451 executed calls and 447 that
   reached later prompts, not the working figure of 448. A benchmark number
   without a traceable counting rule is another unobserved system state.
+- The long probe crossed 17 rooms, then self-terminated after 90 calls without
+  reaching its goal. The tracker kept the duplicate entrance ambiguous instead
+  of inventing a location: a completed turn is not a completed journey.
 
 ## Technical Conclusions
 

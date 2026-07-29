@@ -48,6 +48,9 @@ uv run --no-project --env-file .boukensha/.env boukensha-e1 --spend --cap 10
 isolated run. The gateway journal always retains the complete typed envelope.
 Use a fresh `--output-dir` for every measured mode.
 
+`--journey J1|J2` selects the evidence-judged objective. J2 asks the agent to
+find the Massive Minotaur in the newbie zone.
+
 `--runs N` sets the target priced journey sample count for that output ledger.
 A partial ledger can resume toward the same target:
 
@@ -69,3 +72,4 @@ profiles without pretending to be a provider tokenizer bill.
 
 Multi-run reports include success rate and the mean, median and sample standard
 deviation for cost, calls, correction counts and token classes.
+Each attempt also records its cumulative model cost after every model call.

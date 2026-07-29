@@ -10,6 +10,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
+import yaml
+
 from .journeys import Journey, judge
 
 
@@ -60,6 +62,7 @@ class AttemptMetrics:
     capability_digest: str | None
     parse_misses: int
     tool_result_chars: int
+    cost_curve: tuple[float, ...]
     wire_sequences: tuple[int, ...]
     agent_log: str
     gateway_journal: str
@@ -127,6 +130,7 @@ def measure_attempt(
     result_mode: str = "full",
     reset_id: str | None = None,
     error: str | None = None,
+    models_path: Path | None = None,
 ) -> AttemptMetrics:
     agent = read_jsonl(agent_log)
     gateway = read_gateway(gateway_journal)
@@ -173,6 +177,7 @@ def measure_attempt(
         len(str(row.get("result") or ""))
         for row in results
     )
+    cost_curve = _cost_curve(responses, models_path)
 
     return AttemptMetrics(
         attempt_id=attempt_id,
@@ -211,7 +216,69 @@ def measure_attempt(
         error=error,
         tool_arguments=arguments,
         tool_result_chars=result_chars,
+        cost_curve=tuple(cost_curve),
     )
+
+
+def _cost_curve(
+    responses: Iterable[Mapping[str, Any]], models_path: Path | None
+) -> list[float]:
+    catalog: Mapping[str, Any] = {}
+    if models_path is not None and models_path.is_file():
+        loaded = yaml.safe_load(models_path.read_text(encoding="utf-8")) or {}
+        if isinstance(loaded, dict):
+            catalog = loaded
+    running = 0.0
+    curve: list[float] = []
+    for response in responses:
+        cost = _priced_response(response, catalog)
+        if cost is None:
+            value = response.get("cost_usd")
+            if not isinstance(value, (int, float)):
+                continue
+            cost = float(value)
+        running += cost
+        curve.append(round(running, 8))
+    return curve
+
+
+def _priced_response(
+    response: Mapping[str, Any], catalog: Mapping[str, Any]
+) -> float | None:
+    provider = catalog.get(str(response.get("provider") or ""))
+    if not isinstance(provider, dict):
+        return None
+    model = provider.get(str(response.get("model") or ""))
+    if not isinstance(model, dict):
+        return None
+    rates = model.get("cost_per_million")
+    usage = response.get("usage")
+    if not isinstance(rates, dict) or not isinstance(usage, dict):
+        return None
+    parsed = _usage([response])
+    cache_creation = usage.get("cache_creation")
+    five_minute = 0
+    one_hour = 0
+    if isinstance(cache_creation, dict):
+        five_minute = _integer(cache_creation, "ephemeral_5m_input_tokens")
+        one_hour = _integer(cache_creation, "ephemeral_1h_input_tokens")
+    unclassified_write = max(0, parsed["write"] - five_minute - one_hour)
+    classes = {
+        "input": parsed["fresh"],
+        "cache_read": parsed["read"],
+        "cache_write_5m": five_minute + unclassified_write,
+        "cache_write_1h": one_hour,
+        "output": parsed["output"],
+    }
+    total = 0.0
+    for name, tokens in classes.items():
+        if not tokens:
+            continue
+        rate = rates.get(name)
+        if not isinstance(rate, (int, float)):
+            return None
+        total += tokens * float(rate) / 1_000_000
+    return total
 
 
 def week1_corpus(directory: Path) -> CorpusMetrics:
