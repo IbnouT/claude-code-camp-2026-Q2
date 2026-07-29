@@ -1,0 +1,30 @@
+## Technical Goal
+
+- Make the agent observable before making it more capable.
+- Expose the bytes, commands, state, timing and cost of a run so a failure can
+  be explained, not guessed.
+
+## Technical Uncertainty
+
+- Whether local instrumentation clarifies the agent's behaviour or just piles
+  up logs.
+- How much can be resolved without a model call.
+
+## Technical Hypotheses
+
+- A deterministic layer close to the game removes repeated LLM work.
+- The hard part is keeping enough raw evidence to debug without flooding the
+  agent with it.
+
+## Technical Observations
+
+- Replaced the mud_manager with our own gateway so we own the wire a run is
+  observed and replayed from.
+
+## Technical Conclusions
+
+- Filled at week's end.
+
+## Key Takeaway
+
+- Filled at week's end.

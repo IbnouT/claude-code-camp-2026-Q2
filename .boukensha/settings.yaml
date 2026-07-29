@@ -60,7 +60,6 @@ mcp_servers:
       MUD_HOST: localhost
       MUD_PORT: 4000
       MUD_NAME: poucet
-      MUD_PASSWORD: poucette      # a secret. Prefer MUD_PASSWORD in .boukensha/.env
 
 # === mud: optional, feeds only the /mud info command's readout. =============
 # The real connection is mcp_servers.mud.env above. Omit this unless you want
