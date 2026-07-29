@@ -1,0 +1,3 @@
+.pytest_cache/
+web/dist/
+web/coverage/
