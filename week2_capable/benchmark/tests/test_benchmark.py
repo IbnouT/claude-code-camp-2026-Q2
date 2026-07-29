@@ -75,14 +75,50 @@ def test_unpriced_and_incomplete_attempts_do_not_aggregate(tmp_path: Path) -> No
         wire_sequences=(), agent_log="agent.jsonl", gateway_journal="gateway.db",
     )
     priced = AttemptMetrics(cost_usd=0.1, **base)
+    priced_failure = AttemptMetrics(
+        cost_usd=0.3,
+        **{
+            **base,
+            "attempt_id": "failed",
+            "success": False,
+            "stop_reason": "max_iterations",
+            "model_calls": 2,
+            "tool_calls": 3,
+            "invalid_calls": 2,
+            "corrective_calls": 1,
+            "fresh_input_tokens": 3,
+        },
+    )
     unpriced = AttemptMetrics(cost_usd=None, **{**base, "attempt_id": "b"})
     incomplete = AttemptMetrics(
         cost_usd=0.2, **{**base, "attempt_id": "c", "status": "incomplete"}
     )
-    assert aggregate([priced, unpriced, incomplete]) == {
-        "attempts": 1, "successes": 1, "cost_usd": 0.1,
-        "tool_calls": 1, "model_calls": 1,
-    }
+    setup_failure = AttemptMetrics(
+        cost_usd=None,
+        **{
+            **base,
+            "attempt_id": "setup",
+            "status": "incomplete",
+            "model_calls": 0,
+            "tool_calls": 0,
+            "reset_id": None,
+        },
+    )
+    totals = aggregate(
+        [priced, priced_failure, unpriced, incomplete, setup_failure]
+    )
+    assert totals["attempts"] == 2
+    assert totals["setup_failures"] == 1
+    assert totals["successes"] == 1
+    assert totals["success_rate"] == 0.5
+    assert totals["cost_usd"] == 0.4
+    assert totals["tool_calls"] == 4
+    assert totals["model_calls"] == 3
+    assert totals["distributions"]["cost_usd"] == pytest.approx(
+        {"mean": 0.2, "median": 0.2, "stdev": 0.1414213562}
+    )
+    assert totals["distributions"]["invalid_calls"]["mean"] == 1
+    assert totals["distributions"]["corrective_calls"]["mean"] == 0.5
 
 
 def test_tracked_week1_corpus_has_reproducible_boundaries() -> None:
@@ -117,6 +153,8 @@ def test_report_row_links_both_sources_and_escapes_text(tmp_path: Path) -> None:
     assert "no twentieth look" in text
     assert "Attempt measurements" in text
     assert "Tool distribution" in text
+    assert "Success rate: 100.0%" in text
+    assert "Standard deviation" in text
 
 
 def test_j1_requires_bakery_and_menu_good() -> None:

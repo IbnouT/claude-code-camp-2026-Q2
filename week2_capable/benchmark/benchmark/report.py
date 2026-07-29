@@ -128,13 +128,37 @@ def write_markdown(
             "## Aggregate",
             "",
             f"- Eligible attempts: {totals['attempts']}",
-            f"- Successful journeys: {totals['successes']}",
+            f"- Setup failures excluded: {totals['setup_failures']}",
+            f"- Successful journeys: {totals['successes']} / {totals['attempts']}",
+            f"- Success rate: {totals['success_rate']:.1%}",
             f"- Model calls: {totals['model_calls']}",
             f"- Tool calls: {totals['tool_calls']}",
             f"- Cost: ${totals['cost_usd']:.6f}",
             "",
+            "| Metric | Mean | Median | Standard deviation |",
+            "|---|---:|---:|---:|",
         ]
     )
+    labels = {
+        "cost_usd": "Cost, USD",
+        "model_calls": "Model calls",
+        "tool_calls": "Tool calls",
+        "invalid_calls": "Invalid calls",
+        "corrective_calls": "Corrective calls",
+        "fresh_input_tokens": "Fresh input tokens",
+        "cache_read_tokens": "Cache read tokens",
+        "cache_write_tokens": "Cache write tokens",
+        "output_tokens": "Output tokens",
+    }
+    for name, label in labels.items():
+        distribution = totals["distributions"][name]
+        precision = 6 if name == "cost_usd" else 1
+        lines.append(
+            f"| {label} | {distribution['mean']:.{precision}f} | "
+            f"{distribution['median']:.{precision}f} | "
+            f"{distribution['stdev']:.{precision}f} |"
+        )
+    lines.append("")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines), encoding="utf-8")
 

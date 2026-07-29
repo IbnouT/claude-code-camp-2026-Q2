@@ -48,10 +48,24 @@ uv run --no-project --env-file .boukensha/.env boukensha-e1 --spend --cap 10
 isolated run. The gateway journal always retains the complete typed envelope.
 Use a fresh `--output-dir` for every measured mode.
 
+`--runs N` sets the target priced journey sample count for that output ledger.
+A partial ledger can resume toward the same target:
+
+```console
+uv run --no-project --env-file .boukensha/.env boukensha-e1 \
+  --spend --cap 3 --result-mode raw --runs 10 \
+  --output-dir .boukensha/benchmarks/e1-render-raw-n10
+```
+
 Runtime artifacts go under `.boukensha/benchmarks/e1/`. A reset failure blocks
-the agent process. An unpriced attempt is recorded for diagnosis but stops the
-paid sequence and never enters aggregates.
+the agent process, is counted separately from journey outcomes, and stops the
+batch for correction. It does not consume the requested sample count. An
+unpriced model attempt is recorded for diagnosis but stops the paid sequence
+and never enters aggregates.
 
 Schema bytes are measured from the generated MCP JSON. The token field is an
 explicit four-bytes-per-token estimate, so it is useful for comparing stable
 profiles without pretending to be a provider tokenizer bill.
+
+Multi-run reports include success rate and the mean, median and sample standard
+deviation for cost, calls, correction counts and token classes.

@@ -17,8 +17,16 @@ from .runner import Budget, BudgetError, prove_surface, run_attempt
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--spend", action="store_true", help="authorize one paid J1 attempt")
+    parser.add_argument(
+        "--spend", action="store_true", help="authorize paid J1 attempts"
+    )
     parser.add_argument("--cap", type=float, help="cumulative dollar cap")
+    parser.add_argument(
+        "--runs",
+        type=_positive_integer,
+        default=1,
+        help="target number of priced journey samples in this output ledger",
+    )
     parser.add_argument(
         "--output-dir",
         type=Path,
@@ -66,42 +74,73 @@ def main(argv: list[str] | None = None) -> int:
     output = arguments.output_dir or repository.settings_dir / "benchmarks" / "e1"
     ledger = output / "attempts.jsonl"
     prior = read_rows(ledger)
-    if prior:
+    if any(row.result_mode != arguments.result_mode for row in prior):
+        parser.error("an output ledger cannot mix model-facing result modes")
+    if prior and arguments.runs == 1:
         parser.error(
             "the J1 live gate already has an attempt; additional samples need "
-            "a separately authorized output directory and cap"
+            "--runs with an explicit target and cap"
+        )
+    completed_samples = sum(row.aggregate_eligible for row in prior)
+    if completed_samples >= arguments.runs:
+        parser.error(
+            f"the ledger already has {completed_samples} priced samples, target is "
+            f"{arguments.runs}"
         )
     budget = Budget(arguments.cap, sum(row.cost_usd or 0 for row in prior))
-    attempt_id = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
-    attempt_dir = output / "attempts" / attempt_id
-    config = create_attempt(
-        repository,
-        attempt_dir,
-        result_mode=arguments.result_mode,
-    )
-    try:
-        budget.require_headroom(config.max_turn_cost)
-    except BudgetError as error:
-        parser.error(str(error))
+    rows = list(prior)
+    while sum(row.aggregate_eligible for row in rows) < arguments.runs:
+        run_number = len(rows) + 1
+        attempt_id = _attempt_id(run_number, multiple=arguments.runs > 1)
+        attempt_dir = output / "attempts" / attempt_id
+        config = create_attempt(
+            repository,
+            attempt_dir,
+            result_mode=arguments.result_mode,
+        )
+        try:
+            budget.require_headroom(config.max_turn_cost)
+        except BudgetError as error:
+            print(f"STOP: {error}")
+            return 2
 
-    row = run_attempt(
-        repository=repository,
-        config=config,
-        journey=J1,
-        attempt_id=attempt_id,
-        proof=proof,
-        environment=os.environ,
-    )
-    append_jsonl(ledger, row)
-    rows = [*prior, row]
-    write_markdown(output / "report.md", rows, corpus=corpus)
-    try:
-        budget.record(row.cost_usd)
-    except BudgetError as error:
-        print(f"STOP: {error}")
-        return 2
-    print(json.dumps(row.as_dict(), indent=2, sort_keys=True))
-    return 0 if row.success else 1
+        row = run_attempt(
+            repository=repository,
+            config=config,
+            journey=J1,
+            attempt_id=attempt_id,
+            proof=proof,
+            environment=os.environ,
+        )
+        append_jsonl(ledger, row)
+        rows.append(row)
+        write_markdown(output / "report.md", rows, corpus=corpus)
+        print(json.dumps(row.as_dict(), indent=2, sort_keys=True))
+
+        if row.setup_failure:
+            print("STOP: setup failed before a model call; fix it, then resume")
+            return 2
+        try:
+            budget.record(row.cost_usd)
+        except BudgetError as error:
+            print(f"STOP: {error}")
+            return 2
+
+    if arguments.runs > 1:
+        return 0
+    return 0 if rows[-1].success else 1
+
+
+def _positive_integer(value: str) -> int:
+    number = int(value)
+    if number < 1:
+        raise argparse.ArgumentTypeError("--runs must be at least 1")
+    return number
+
+
+def _attempt_id(run_number: int, *, multiple: bool) -> str:
+    timestamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+    return f"{timestamp}-{run_number:02d}" if multiple else timestamp
 
 
 if __name__ == "__main__":

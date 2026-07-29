@@ -62,6 +62,10 @@ model prompt, including 314 moves. The earlier 448-call working figure remains
 labelled as legacy because the corpus does not reproduce it. The comparison
 reports the differences, it does not require E1 to reproduce either ratio.
 
+Approved comparisons use one result mode per ledger and a target sample count.
+The report separates setup failures from priced journey outcomes, then reports
+success rate and cost, call, correction and token distributions.
+
 ## Isolation
 
 Each attempt gets:
@@ -82,11 +86,12 @@ A paid run requires:
 
 - an explicit `--spend` flag
 - a cumulative cap
+- an explicit `--runs` target for multi-sample experiments
 - headroom for the agent's configured per-turn ceiling before each attempt
 - a priced result after each attempt, otherwise the sequence stops
 
-The initial live gate is one J1 attempt. The full E1 sample count is chosen
-after the gate passes and requires explicit approval of its cap.
+The initial live gate is one J1 attempt. Rendering comparisons use ten
+reset-verified J1 attempts per mode under an approved cumulative cap.
 
 ## Files
 
@@ -118,6 +123,8 @@ Offline:
 - dry run proves the gateway command and 25-tool `direct-full` surface
 - reset failure prevents agent launch
 - incomplete or unpriced runs never enter baseline aggregates
+- setup failures are reported outside the journey success denominator
+- multi-run aggregates include success rate and distribution statistics
 - recorded Week 1 calls reproduce 451 executed calls and 447 context-confirmed
   calls, while the legacy 448 figure is flagged rather than manufactured
 - report rows trace back to both source logs

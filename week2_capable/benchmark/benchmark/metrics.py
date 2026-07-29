@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import statistics
 from collections import Counter
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -68,6 +69,10 @@ class AttemptMetrics:
     @property
     def aggregate_eligible(self) -> bool:
         return self.status == "complete" and self.cost_usd is not None
+
+    @property
+    def setup_failure(self) -> bool:
+        return self.status != "complete" and self.model_calls == 0
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -236,13 +241,47 @@ def week1_corpus(directory: Path) -> CorpusMetrics:
 
 
 def aggregate(rows: Iterable[AttemptMetrics]) -> dict[str, Any]:
-    eligible = [row for row in rows if row.aggregate_eligible]
+    material = list(rows)
+    eligible = [row for row in material if row.aggregate_eligible]
+    successes = sum(row.success for row in eligible)
     return {
         "attempts": len(eligible),
-        "successes": sum(row.success for row in eligible),
+        "setup_failures": sum(row.setup_failure for row in material),
+        "successes": successes,
+        "success_rate": successes / len(eligible) if eligible else 0.0,
         "cost_usd": round(sum(row.cost_usd or 0 for row in eligible), 8),
         "tool_calls": sum(row.tool_calls for row in eligible),
         "model_calls": sum(row.model_calls for row in eligible),
+        "distributions": {
+            "cost_usd": _distribution(row.cost_usd or 0.0 for row in eligible),
+            "model_calls": _distribution(row.model_calls for row in eligible),
+            "tool_calls": _distribution(row.tool_calls for row in eligible),
+            "invalid_calls": _distribution(row.invalid_calls for row in eligible),
+            "corrective_calls": _distribution(
+                row.corrective_calls for row in eligible
+            ),
+            "fresh_input_tokens": _distribution(
+                row.fresh_input_tokens for row in eligible
+            ),
+            "cache_read_tokens": _distribution(
+                row.cache_read_tokens for row in eligible
+            ),
+            "cache_write_tokens": _distribution(
+                row.cache_write_tokens for row in eligible
+            ),
+            "output_tokens": _distribution(row.output_tokens for row in eligible),
+        },
+    }
+
+
+def _distribution(values: Iterable[int | float]) -> dict[str, float]:
+    material = [float(value) for value in values]
+    if not material:
+        return {"mean": 0.0, "median": 0.0, "stdev": 0.0}
+    return {
+        "mean": statistics.fmean(material),
+        "median": float(statistics.median(material)),
+        "stdev": statistics.stdev(material) if len(material) > 1 else 0.0,
     }
 
 
