@@ -12,6 +12,8 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response, StreamingResponse
 from starlette.routing import Route
 
+from .contracts import capabilities as gateway_capabilities
+from .contracts import contract_schemas
 from .journal import Journal
 from .stream import EventHub, canonical_wire
 
@@ -21,6 +23,14 @@ def create_app(journal: Journal) -> Starlette:
 
     async def sessions(_request: Request) -> JSONResponse:
         return JSONResponse({"sessions": journal.sessions()})
+
+    async def capabilities(_request: Request) -> JSONResponse:
+        return JSONResponse(
+            gateway_capabilities().model_dump(mode="json")
+        )
+
+    async def contracts(_request: Request) -> JSONResponse:
+        return JSONResponse(contract_schemas())
 
     async def events(request: Request) -> StreamingResponse:
         session = request.path_params["session"]
@@ -49,8 +59,11 @@ def create_app(journal: Journal) -> Starlette:
                         return
                 if not tail:
                     return
-                while not subscriber.dropped:
-                    frames = list(subscriber.drain())
+                while True:
+                    remaining = (
+                        None if limit is None else limit - delivered
+                    )
+                    frames = subscriber.poll(journal, limit=remaining)
                     if not frames:
                         if await request.is_disconnected():
                             return
@@ -97,6 +110,8 @@ def create_app(journal: Journal) -> Starlette:
     app = Starlette(
         routes=[
             Route("/sessions", sessions),
+            Route("/capabilities", capabilities),
+            Route("/contracts", contracts),
             Route("/sessions/{session:str}/events", events),
             Route("/sessions/{session:str}/replay", replay),
             Route("/sessions/{session:str}/wire", wire),

@@ -1,0 +1,38 @@
+[
+  {
+    "seq": 1,
+    "session": "fixture-complete",
+    "at": 1.0,
+    "kind": "wire",
+    "trace_id": "trace-look",
+    "data": {"direction": "in", "bytes": 24, "redacted": false}
+  },
+  {
+    "seq": 2,
+    "session": "fixture-complete",
+    "at": 1.1,
+    "kind": "observation",
+    "trace_id": "trace-look",
+    "data": {
+      "observation": "room",
+      "title": "The Temple of Midgaard",
+      "confidence": 0.99,
+      "method": "ansi-room-title",
+      "parser_version": "fixture-1",
+      "wire_ref": {"first": 1, "last": 1}
+    }
+  },
+  {
+    "seq": 3,
+    "session": "fixture-complete",
+    "at": 1.2,
+    "kind": "position",
+    "trace_id": "trace-look",
+    "data": {
+      "status": "resolved",
+      "title": "The Temple of Midgaard",
+      "candidates": ["3001"],
+      "confidence": 0.98
+    }
+  }
+]

@@ -37,6 +37,7 @@ gateway/
 │   ├── wire.py
 │   ├── session.py
 │   ├── journal.py
+│   ├── contracts.py
 │   ├── commands.py
 │   ├── observe.py
 │   ├── observation_pipeline.py
@@ -71,6 +72,7 @@ The editable install follows source changes without reinstalling:
 ```bash
 boukensha-gateway --profile direct-full --prove
 boukensha-gateway-admin --help
+boukensha-gateway-api --help
 ```
 
 Run the install command again with `--force` after dependency or entry-point
@@ -84,7 +86,7 @@ changes. Do not install into the system Python and do not use `sudo`.
 - The password is replaced with a length-preserving redacted event before
   anything is persisted.
 - SQLite runs in WAL mode with one journal writer.
-- Events commit before subscribers receive them.
+- Live readers see only committed events.
 - Unknown journal schema versions are refused.
 - JSONL export provides a supported projection for file-based consumers.
 - One typed registry generates command validation and every MCP projection.
@@ -100,8 +102,12 @@ changes. Do not install into the system Python and do not use `sudo`.
   `score` and `look` output.
 - Two identical resets must produce identical fully read mortal state.
 - Live SSE and historical replay use one deterministic event serializer.
+- Live readers tail committed sequence cursors across process boundaries.
 - `Last-Event-ID` resumes from the durable journal sequence.
-- Slow subscribers are dropped and recorded rather than blocking the game.
+- Slow readers catch up from SQLite without an in-memory event backlog.
+- `/contracts` publishes canonical event, capability, query, and projection
+  schemas.
+- `/capabilities` identifies the exact contract and delivery guarantees.
 - Canonical wire replay reconstructs exact captured bytes, including
   length-preserving zeroes for credentials redacted before persistence.
 - ANSI colour and line shape produce typed room, exit, vital, and state
@@ -162,7 +168,7 @@ MUD_ADMIN_PASSWORD='...' uv run python scripts/reset_smoke.py \
 Serve live and replay views locally:
 
 ```bash
-uv run python -m mud_gateway.api \
+boukensha-gateway-api \
   --journal ../../.boukensha/gateway/gateway.db
 ```
 

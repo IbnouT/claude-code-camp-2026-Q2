@@ -1,0 +1,22 @@
+[
+  {
+    "seq": 1,
+    "session": "fixture-partial",
+    "at": 2.0,
+    "kind": "wire",
+    "trace_id": null,
+    "data": {"direction": "in", "bytes": 9, "redacted": false}
+  },
+  {
+    "seq": 2,
+    "session": "fixture-partial",
+    "at": 2.1,
+    "kind": "unparsed",
+    "trace_id": null,
+    "data": {
+      "text": "Something shifts.",
+      "parser_version": "fixture-1",
+      "wire_ref": {"first": 1, "last": 1}
+    }
+  }
+]

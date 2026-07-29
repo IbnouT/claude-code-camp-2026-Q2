@@ -32,6 +32,9 @@
 - The long probe crossed 17 rooms, then self-terminated after 90 calls without
   reaching its goal. The tracker kept the duplicate entrance ambiguous instead
   of inventing a location: a completed turn is not a completed journey.
+- A committed journal was replayable across processes but not live because its
+  callbacks stopped at the writer process. Durable sequence cursors made live
+  delivery and replay the same contract instead of two similar paths.
 
 ## Technical Conclusions
 

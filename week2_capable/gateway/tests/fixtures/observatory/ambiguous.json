@@ -1,0 +1,30 @@
+[
+  {
+    "seq": 1,
+    "session": "fixture-ambiguous",
+    "at": 3.0,
+    "kind": "observation",
+    "trace_id": "trace-move",
+    "data": {
+      "observation": "room",
+      "title": "The Entrance To The Newbie Zone",
+      "confidence": 0.78,
+      "method": "ansi-room-title",
+      "parser_version": "fixture-1",
+      "wire_ref": {"first": 1, "last": 1}
+    }
+  },
+  {
+    "seq": 2,
+    "session": "fixture-ambiguous",
+    "at": 3.1,
+    "kind": "position",
+    "trace_id": "trace-move",
+    "data": {
+      "status": "ambiguous",
+      "title": "The Entrance To The Newbie Zone",
+      "candidates": ["18600", "18617"],
+      "confidence": 0.5
+    }
+  }
+]

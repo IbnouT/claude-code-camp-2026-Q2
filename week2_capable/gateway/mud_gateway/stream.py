@@ -3,24 +3,26 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Iterable, Iterator
 
+from .contracts import EventEnvelope
 from .journal import Event, Journal
 
-BACKLOG_LIMIT = 512
+READ_BATCH = 512
 
 
 def serialize_event(event: Event) -> str:
+    envelope = EventEnvelope(
+        seq=event.seq,
+        session=event.session,
+        at=event.at,
+        kind=event.kind,
+        trace_id=event.trace_id,
+        data=event.payload,
+    )
     payload = json.dumps(
-        {
-            "seq": event.seq,
-            "session": event.session,
-            "at": event.at,
-            "kind": event.kind,
-            "trace_id": event.trace_id,
-            "data": event.payload,
-        },
+        envelope.model_dump(mode="json"),
         separators=(",", ":"),
         sort_keys=True,
     )
@@ -31,39 +33,48 @@ def serialize_event(event: Event) -> str:
 class Subscriber:
     name: str
     session: str
+    cursor: int
     kinds: frozenset[str] | None = None
-    backlog: list[Event] = field(default_factory=list)
-    dropped: bool = False
 
     def wants(self, event: Event) -> bool:
         return event.session == self.session and (
             self.kinds is None or event.kind in self.kinds
         )
 
-    def offer(self, event: Event) -> bool:
-        if self.dropped:
-            return False
-        if len(self.backlog) >= BACKLOG_LIMIT:
-            self.dropped = True
-            self.backlog.clear()
-            return False
-        self.backlog.append(event)
-        return True
+    def poll(
+        self,
+        journal: Journal,
+        *,
+        limit: int | None = None,
+    ) -> list[str]:
+        """Read committed events after this subscriber's durable cursor."""
 
-    def drain(self) -> Iterator[str]:
-        pending, self.backlog = self.backlog, []
-        for event in pending:
-            yield serialize_event(event)
+        frames: list[str] = []
+        while limit is None or len(frames) < limit:
+            events = journal.since(
+                self.session,
+                after=self.cursor,
+                limit=READ_BATCH,
+            )
+            if not events:
+                break
+            for event in events:
+                self.cursor = event.seq
+                if self.wants(event):
+                    frames.append(serialize_event(event))
+                    if limit is not None and len(frames) >= limit:
+                        break
+            if len(events) < READ_BATCH:
+                break
+        return frames
 
 
 class EventHub:
-    """Fan committed events out without ever blocking the journal writer."""
+    """Serve committed events through durable, cross-process cursors."""
 
     def __init__(self, journal: Journal) -> None:
         self.journal = journal
         self.subscribers: list[Subscriber] = []
-        self._recording_drop = False
-        self._cancel = journal.subscribe(self._publish)
 
     def subscribe(
         self,
@@ -73,47 +84,28 @@ class EventHub:
         kinds: Iterable[str] | None = None,
         last_event_id: int | None = None,
     ) -> tuple[Subscriber, list[str]]:
+        cursor = (
+            self.journal.last_seq(session)
+            if last_event_id is None
+            else last_event_id
+        )
         subscriber = Subscriber(
             name=name,
             session=session,
+            cursor=cursor,
             kinds=None if kinds is None else frozenset(kinds),
         )
         self.subscribers.append(subscriber)
-        missed = []
-        if last_event_id is not None:
-            missed = [
-                serialize_event(event)
-                for event in self.journal.since(session, after=last_event_id)
-                if subscriber.wants(event)
-            ]
+        missed = (
+            []
+            if last_event_id is None
+            else subscriber.poll(self.journal)
+        )
         return subscriber, missed
 
     def unsubscribe(self, subscriber: Subscriber) -> None:
         if subscriber in self.subscribers:
             self.subscribers.remove(subscriber)
-
-    def _publish(self, event: Event) -> None:
-        dropped: list[Subscriber] = []
-        for subscriber in list(self.subscribers):
-            if subscriber.wants(event) and not subscriber.offer(event):
-                dropped.append(subscriber)
-                self.unsubscribe(subscriber)
-        if not dropped or self._recording_drop:
-            return
-        self._recording_drop = True
-        try:
-            for subscriber in dropped:
-                self.journal.append(
-                    event.session,
-                    "subscriber_dropped",
-                    {
-                        "subscriber": subscriber.name,
-                        "at_seq": event.seq,
-                        "reason": "backlog_limit",
-                    },
-                )
-        finally:
-            self._recording_drop = False
 
     def replay(
         self,
@@ -129,7 +121,6 @@ class EventHub:
                 yield serialize_event(event)
 
     def close(self) -> None:
-        self._cancel()
         self.subscribers.clear()
 
 
@@ -148,4 +139,3 @@ def canonical_wire(journal: Journal, session: str) -> bytes:
             raise ValueError(f"wire event {event.seq} has no byte-exact body")
         rebuilt.extend(body)
     return bytes(rebuilt)
-
