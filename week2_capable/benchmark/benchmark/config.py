@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import copy
+import hashlib
+import os
 import shutil
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -13,6 +16,9 @@ import yaml
 
 class BenchmarkConfigError(RuntimeError):
     """The repository cannot supply a safe benchmark configuration."""
+
+
+_UNIX_SOCKET_PATH_LIMIT = 103
 
 
 @dataclass(frozen=True)
@@ -111,7 +117,7 @@ def create_attempt(
         agent_log=directory / "agent.jsonl",
         gateway_journal=gateway_journal,
         admin_journal=directory / "admin.db",
-        admin_socket=directory / "admin.sock",
+        admin_socket=_short_socket_path(directory),
         profile=profile,
         max_turn_cost=max_turn_cost,
     )
@@ -120,3 +126,13 @@ def create_attempt(
 def _copy_optional(source: Path, target: Path) -> None:
     if source.is_file():
         shutil.copy2(source, target)
+
+
+def _short_socket_path(directory: Path) -> Path:
+    """Return a stable socket path below the portable Unix path limit."""
+    digest = hashlib.sha256(os.fsencode(directory.resolve())).hexdigest()[:16]
+    filename = f"boukensha-{digest}.sock"
+    candidate = Path(tempfile.gettempdir()) / filename
+    if len(os.fsencode(candidate)) <= _UNIX_SOCKET_PATH_LIMIT:
+        return candidate
+    return Path("/tmp") / filename

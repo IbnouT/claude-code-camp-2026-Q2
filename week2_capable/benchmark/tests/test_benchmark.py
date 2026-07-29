@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from benchmark.config import Repository, create_attempt
+from benchmark.config import Repository, _UNIX_SOCKET_PATH_LIMIT, create_attempt
 from benchmark.journeys import J1, judge
 from benchmark.metrics import AttemptMetrics, aggregate, week1_corpus
 from benchmark.metrics import measure_attempt
@@ -23,6 +23,14 @@ def test_overlay_is_secret_free_and_pins_gateway_profile(tmp_path: Path) -> None
     assert "MUD_PASSWORD" not in text
     assert not (tmp_path / ".env").exists()
     assert attempt.max_turn_cost > 0
+
+
+def test_attempt_uses_short_external_admin_socket(tmp_path: Path) -> None:
+    repository = Repository.discover()
+    deep = tmp_path / ("nested-" * 20)
+    attempt = create_attempt(repository, deep)
+    assert attempt.admin_socket.parent != attempt.directory
+    assert len(bytes(attempt.admin_socket)) <= _UNIX_SOCKET_PATH_LIMIT
 
 
 def test_reset_failure_prevents_agent_launch(tmp_path: Path) -> None:
