@@ -20,6 +20,7 @@ def test_overlay_is_secret_free_and_pins_gateway_profile(tmp_path: Path) -> None
     text = (tmp_path / "settings.yaml").read_text()
     assert "boukensha-gateway" in text
     assert "direct-full" in text
+    assert "result_mode: full" in text
     assert "MUD_PASSWORD" not in text
     assert not (tmp_path / ".env").exists()
     assert attempt.max_turn_cost > 0
@@ -70,6 +71,7 @@ def test_unpriced_and_incomplete_attempts_do_not_aggregate(tmp_path: Path) -> No
         output_tokens=1, occupancy_tokens=1, schema_bytes=1,
         schema_token_estimate=1, reset_id="reset-1", profile_id="direct-full",
         capability_digest="abc", parse_misses=0,
+        result_mode="full", tool_result_chars=1,
         wire_sequences=(), agent_log="agent.jsonl", gateway_journal="gateway.db",
     )
     priced = AttemptMetrics(cost_usd=0.1, **base)
@@ -98,7 +100,8 @@ def test_report_row_links_both_sources_and_escapes_text(tmp_path: Path) -> None:
         cache_read_tokens=0, cache_write_tokens=0, output_tokens=1,
         occupancy_tokens=1, schema_bytes=1, schema_token_estimate=1,
         cost_usd=0.1, reset_id="reset-1", profile_id="direct-full",
-        capability_digest="abc", parse_misses=0,
+        result_mode="full", capability_digest="abc", parse_misses=0,
+        tool_result_chars=1,
         wire_sequences=(1,), agent_log="agent|log.jsonl",
         gateway_journal="gateway.db",
     )
@@ -162,3 +165,10 @@ def test_metrics_preserve_limit_stop_reason_and_iterations(tmp_path: Path) -> No
     )
     assert row.stop_reason == "max_iterations"
     assert row.iterations == 125
+
+
+def test_overlay_selects_model_result_mode(tmp_path: Path) -> None:
+    repository = Repository.discover()
+    attempt = create_attempt(repository, tmp_path, result_mode="minimal")
+    assert attempt.result_mode == "minimal"
+    assert "result_mode: minimal" in (tmp_path / "settings.yaml").read_text()

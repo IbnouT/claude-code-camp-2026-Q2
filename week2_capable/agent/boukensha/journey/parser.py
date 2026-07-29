@@ -33,7 +33,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from .tool_result import view_tool_result
+from ..tool_result import view_tool_result
 
 # Line rules, verbatim from week0's mud_session.py (verified against real
 # tbaMUD transcripts there).

@@ -55,8 +55,10 @@ class AttemptMetrics:
     cost_usd: float | None
     reset_id: str | None
     profile_id: str | None
+    result_mode: str
     capability_digest: str | None
     parse_misses: int
+    tool_result_chars: int
     wire_sequences: tuple[int, ...]
     agent_log: str
     gateway_journal: str
@@ -117,6 +119,7 @@ def measure_attempt(
     process_ok: bool,
     schema_bytes: int,
     schema_token_estimate: int,
+    result_mode: str = "full",
     reset_id: str | None = None,
     error: str | None = None,
 ) -> AttemptMetrics:
@@ -161,6 +164,10 @@ def measure_attempt(
         (_bare(str(row.get("name") or "")), json.dumps(row.get("args") or {}, sort_keys=True))
         for row in calls
     )
+    result_chars = sum(
+        len(str(row.get("result") or ""))
+        for row in results
+    )
 
     return AttemptMetrics(
         attempt_id=attempt_id,
@@ -187,6 +194,7 @@ def measure_attempt(
         cost_usd=cost,
         reset_id=reset_id,
         profile_id=str(profile.get("profile_id")) if profile.get("profile_id") else None,
+        result_mode=result_mode,
         capability_digest=(
             str(profile.get("capability_digest"))
             if profile.get("capability_digest") else None
@@ -197,6 +205,7 @@ def measure_attempt(
         gateway_journal=str(gateway_journal),
         error=error,
         tool_arguments=arguments,
+        tool_result_chars=result_chars,
     )
 
 

@@ -23,6 +23,7 @@ from ..mcp import Client
 from ..mcp.transport import DEFAULT_TIMEOUT
 from ..registry import Registry
 from ..tool import Tool
+from ..tool_result import ResultMode, render_tool_result
 
 #: Joins a prefix to a tool name agent-side.
 SEPARATOR = "__"
@@ -34,7 +35,8 @@ def register(registry: Registry, command: str,
              prefix: str | None = None,
              timeout: float = DEFAULT_TIMEOUT,
              allow: list[str] | None = None,
-             deny: tuple[str, ...] | list[str] = ()) -> Client:
+             deny: tuple[str, ...] | list[str] = (),
+             result_mode: ResultMode = "full") -> Client:
     """Spawn a server, register its tools, and return the client.
 
     ``timeout`` is the per-call ceiling handed to the client, so one hung tool
@@ -45,14 +47,22 @@ def register(registry: Registry, command: str,
     """
     client = Client.spawn(command, args=args, env=env, timeout=timeout)
     atexit.register(_safe_close, client)
-    register_client(registry, client, prefix=prefix, allow=allow, deny=deny)
+    register_client(
+        registry,
+        client,
+        prefix=prefix,
+        allow=allow,
+        deny=deny,
+        result_mode=result_mode,
+    )
     return client
 
 
 def register_client(registry: Registry, client: Client,
                     prefix: str | None = None,
                     allow: list[str] | None = None,
-                    deny: tuple[str, ...] | list[str] = ()) -> int:
+                    deny: tuple[str, ...] | list[str] = (),
+                    result_mode: ResultMode = "full") -> int:
     """Register an already-spawned client's tools. Returns the registered count.
 
     Each discovered tool becomes a :class:`Tool` whose handler calls back into
@@ -84,7 +94,9 @@ def register_client(registry: Registry, client: Client,
             )
         taken.add(local)
 
-        registry.register(_build_tool(client, spec, local, remote))
+        registry.register(
+            _build_tool(client, spec, local, remote, result_mode=result_mode)
+        )
         registered += 1
     return registered
 
@@ -133,7 +145,8 @@ MAX_RESULT_CHARS = 8000
 
 
 def _build_tool(client: Client, spec: dict[str, Any],
-                local: str, remote: str) -> Tool:
+                local: str, remote: str, *,
+                result_mode: ResultMode = "full") -> Tool:
     """Build the boukensha Tool for one discovered MCP tool.
 
     The handler is ``**kwargs`` and forwards to the client under the bare
@@ -147,7 +160,7 @@ def _build_tool(client: Client, spec: dict[str, Any],
 
     def handler(**kwargs: Any) -> str:
         result = client.call_tool(remote, {str(k): v for k, v in kwargs.items()})
-        text = result["text"]
+        text = render_tool_result(result["text"], result_mode)
         if len(text) > MAX_RESULT_CHARS:
             dropped = len(text) - MAX_RESULT_CHARS
             text = text[:MAX_RESULT_CHARS] + f"\n...[truncated {dropped} chars]"

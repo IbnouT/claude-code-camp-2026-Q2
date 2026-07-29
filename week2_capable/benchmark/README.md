@@ -44,6 +44,10 @@ A live attempt requires both an explicit spend flag and a cumulative cap:
 uv run --no-project --env-file .boukensha/.env boukensha-e1 --spend --cap 10
 ```
 
+`--result-mode raw|minimal|full` selects the model-facing result shape for an
+isolated run. The gateway journal always retains the complete typed envelope.
+Use a fresh `--output-dir` for every measured mode.
+
 Runtime artifacts go under `.boukensha/benchmarks/e1/`. A reset failure blocks
 the agent process. An unpriced attempt is recorded for diagnosis but stops the
 paid sequence and never enters aggregates.

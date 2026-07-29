@@ -1,13 +1,15 @@
-"""Readable views over typed MCP tool-result envelopes."""
+"""Typed MCP result decoding and model-facing rendering."""
 
 from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Any, Literal, Mapping
+from typing import Any, Literal, Mapping, cast
 
 
 EnvelopeKind = Literal["observation", "error"]
+ResultMode = Literal["raw", "minimal", "full"]
+RESULT_MODES: tuple[ResultMode, ...] = ("raw", "minimal", "full")
 
 
 @dataclass(frozen=True)
@@ -62,3 +64,36 @@ def view_tool_result(result: Any) -> ToolResultView:
             code=code,
         )
     return ToolResultView(original)
+
+
+def render_tool_result(result: Any, mode: ResultMode | str) -> str:
+    """Shape one recognized envelope for the model, leaving evidence untouched."""
+    if mode not in RESULT_MODES:
+        raise ValueError(
+            f"result mode must be one of {', '.join(RESULT_MODES)}, got {mode!r}"
+        )
+    original = str(result or "")
+    if mode == "full":
+        return original
+
+    view = view_tool_result(result)
+    if view.kind is None:
+        return original
+    if mode == "raw":
+        return view.text
+
+    payload: dict[str, Any] = {"text": view.text}
+    if view.kind == "observation" and view.complete is not None:
+        payload["complete"] = view.complete
+    elif view.kind == "error":
+        payload["complete"] = False
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+
+
+def result_mode(value: str) -> ResultMode:
+    """Validate a configuration value and return its narrowed type."""
+    if value not in RESULT_MODES:
+        raise ValueError(
+            f"result mode must be one of {', '.join(RESULT_MODES)}, got {value!r}"
+        )
+    return cast(ResultMode, value)

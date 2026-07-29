@@ -55,6 +55,7 @@ mcp_servers:
     #timeout: 30                 # per-call ceiling in seconds (default 30)
     #allow: [look, move, attack] # if set, only these tool names register
     #deny: [shutdown]            # tool names to drop
+    result_mode: full            # raw, minimal or full model-facing results
     env:                          # environment for the spawned server
       MUD_HOST: localhost
       MUD_PORT: 4000

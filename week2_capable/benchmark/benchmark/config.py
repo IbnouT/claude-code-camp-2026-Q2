@@ -19,6 +19,7 @@ class BenchmarkConfigError(RuntimeError):
 
 
 _UNIX_SOCKET_PATH_LIMIT = 103
+RESULT_MODES = ("raw", "minimal", "full")
 
 
 @dataclass(frozen=True)
@@ -54,6 +55,7 @@ class AttemptConfig:
     admin_journal: Path
     admin_socket: Path
     profile: str
+    result_mode: str
     max_turn_cost: float
 
     def environment(self) -> dict[str, str]:
@@ -69,8 +71,13 @@ def create_attempt(
     directory: Path,
     *,
     profile: str = "direct-full",
+    result_mode: str = "full",
 ) -> AttemptConfig:
     """Create a secret-free settings overlay for one run."""
+    if result_mode not in RESULT_MODES:
+        raise BenchmarkConfigError(
+            f"result mode must be one of {', '.join(RESULT_MODES)}"
+        )
     source = repository.settings_dir / "settings.yaml"
     if not source.is_file():
         raise BenchmarkConfigError(f"missing public settings: {source}")
@@ -88,6 +95,7 @@ def create_attempt(
     gateway_journal = directory / "gateway.db"
     mud["command"] = "boukensha-gateway"
     mud["args"] = ["--profile", profile]
+    mud["result_mode"] = result_mode
     environment = mud.setdefault("env", {})
     if not isinstance(environment, dict):
         raise BenchmarkConfigError("mcp_servers.mud.env must be a mapping")
@@ -119,6 +127,7 @@ def create_attempt(
         admin_journal=directory / "admin.db",
         admin_socket=_short_socket_path(directory),
         profile=profile,
+        result_mode=result_mode,
         max_turn_cost=max_turn_cost,
     )
 

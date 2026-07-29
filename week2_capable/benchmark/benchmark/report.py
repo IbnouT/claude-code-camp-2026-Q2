@@ -30,6 +30,8 @@ def read_rows(path: Path) -> list[AttemptMetrics]:
         value["evidence"] = tuple(value.get("evidence") or ())
         value["wire_sequences"] = tuple(value.get("wire_sequences") or ())
         value["tool_arguments"] = tuple(tuple(item) for item in value.get("tool_arguments") or ())
+        value.setdefault("result_mode", "full")
+        value.setdefault("tool_result_chars", 0)
         rows.append(AttemptMetrics(**value))
     return rows
 
@@ -83,10 +85,10 @@ def write_markdown(
                 "",
                 "## Attempt measurements",
                 "",
-                "| Attempt | Stop | Iterations | Profile | Schema bytes | "
+                "| Attempt | Stop | Iterations | Mode | Profile | Schema bytes | "
                 "Schema token estimate | Fresh | Cache read | Cache write | Output | "
-                "Invalid | Corrective | Parse misses |",
-                "|---|---|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+                "Result chars | Invalid | Corrective | Parse misses |",
+                "|---|---|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
             ]
         )
         for row in material:
@@ -95,10 +97,12 @@ def write_markdown(
             )
             lines.append(
                 f"| {_escape(row.attempt_id)} | {_escape(row.stop_reason)} | "
-                f"{row.iterations} | {profile} | {row.schema_bytes} | "
+                f"{row.iterations} | {_escape(row.result_mode)} | {profile} | "
+                f"{row.schema_bytes} | "
                 f"{row.schema_token_estimate} | {row.fresh_input_tokens} | "
                 f"{row.cache_read_tokens} | {row.cache_write_tokens} | "
-                f"{row.output_tokens} | {row.invalid_calls} | "
+                f"{row.output_tokens} | {row.tool_result_chars} | "
+                f"{row.invalid_calls} | "
                 f"{row.corrective_calls} | {row.parse_misses} |"
             )
         lines.extend(

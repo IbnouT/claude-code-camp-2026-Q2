@@ -99,6 +99,7 @@ entry here, so the game connection is configuration, not code):
 | `required` | `true` | `true` stops boot on a failed spawn, `false` warns and continues |
 | `timeout` | `30` | per-call ceiling in seconds |
 | `allow` / `deny` | none / `[]` | restrict or drop tool names |
+| `result_mode` | `full` | model-facing results: `raw`, `minimal`, or `full` |
 
 The context window is not a setting: it is a model fact read from the catalog.
 

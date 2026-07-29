@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 
 from .errors import ConfigError
 from .mcp.transport import DEFAULT_TIMEOUT
+from .tool_result import RESULT_MODES, result_mode
 
 #: Default config directory for a real install.
 DEFAULT_DIR = Path.home() / ".boukensha"
@@ -110,6 +111,7 @@ class Config:
                 "timeout": DEFAULT_TIMEOUT if timeout is None else float(timeout),
                 "allow": None if allow is None else [str(a) for a in allow],
                 "deny": [str(d) for d in (entry.get("deny") or [])],
+                "result_mode": result_mode(str(entry.get("result_mode") or "full")),
             }
         return out
 
@@ -239,6 +241,12 @@ class Config:
                         f"settings.yaml: 'mcp_servers.{name}.{field}' must be a "
                         f"string, got {type(entry[field]).__name__}"
                     )
+            mode = entry.get("result_mode")
+            if mode is not None and mode not in RESULT_MODES:
+                raise ConfigError(
+                    f"settings.yaml: 'mcp_servers.{name}.result_mode' must be "
+                    f"one of {', '.join(RESULT_MODES)}, got {mode!r}"
+                )
             for field in ("args", "allow", "deny"):
                 if entry.get(field) is not None and not isinstance(entry[field], list):
                     raise ConfigError(

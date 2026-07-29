@@ -8,7 +8,7 @@ import os
 import time
 from pathlib import Path
 
-from .config import Repository, create_attempt
+from .config import RESULT_MODES, Repository, create_attempt
 from .journeys import J1
 from .metrics import LEGACY_WEEK1_MOVES, LEGACY_WEEK1_TOTAL, week1_corpus
 from .report import append_jsonl, read_rows, write_markdown
@@ -23,6 +23,12 @@ def main(argv: list[str] | None = None) -> int:
         "--output-dir",
         type=Path,
         help="runtime result directory, default .boukensha/benchmarks/e1",
+    )
+    parser.add_argument(
+        "--result-mode",
+        choices=RESULT_MODES,
+        default="full",
+        help="model-facing gateway result shape",
     )
     arguments = parser.parse_args(argv)
     repository = Repository.discover()
@@ -68,7 +74,11 @@ def main(argv: list[str] | None = None) -> int:
     budget = Budget(arguments.cap, sum(row.cost_usd or 0 for row in prior))
     attempt_id = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     attempt_dir = output / "attempts" / attempt_id
-    config = create_attempt(repository, attempt_dir)
+    config = create_attempt(
+        repository,
+        attempt_dir,
+        result_mode=arguments.result_mode,
+    )
     try:
         budget.require_headroom(config.max_turn_cost)
     except BudgetError as error:

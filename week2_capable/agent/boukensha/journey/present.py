@@ -26,7 +26,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from .tool_result import view_tool_result
+from ..tool_result import view_tool_result
 
 # The MUD wraps every line in terminal color escapes; they carry no meaning for
 # a text card and render as garbage, so they are stripped before display.

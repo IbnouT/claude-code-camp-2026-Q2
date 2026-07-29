@@ -62,6 +62,7 @@ def _register_mcp_servers(registry: Registry,
                 timeout=entry["timeout"],
                 allow=entry["allow"],
                 deny=entry["deny"],
+                result_mode=entry["result_mode"],
             )
             # Count what this server actually contributed, after any allow/deny
             # filtering, not everything it advertised.

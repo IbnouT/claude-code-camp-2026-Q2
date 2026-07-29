@@ -122,6 +122,7 @@ def run_attempt(
             process_ok=False,
             schema_bytes=proof.schema_bytes,
             schema_token_estimate=proof.schema_token_estimate,
+            result_mode=config.result_mode,
             error=_redact(f"reset failed: {error}", combined),
         )
 
@@ -142,6 +143,7 @@ def run_attempt(
         process_ok=completed.returncode == 0,
         schema_bytes=proof.schema_bytes,
         schema_token_estimate=proof.schema_token_estimate,
+        result_mode=config.result_mode,
         reset_id=reset_result.reset_id,
         error=error,
     )

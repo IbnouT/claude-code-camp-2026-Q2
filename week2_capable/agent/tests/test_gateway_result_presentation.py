@@ -3,8 +3,13 @@ from __future__ import annotations
 import asyncio
 import json
 
+import pytest
+
+from boukensha.config import Config
+from boukensha.errors import ConfigError
 from boukensha.journey import JourneyParser, Presenter
-from boukensha.journey.tool_result import view_tool_result
+from boukensha.tool_result import render_tool_result, view_tool_result
+from boukensha.tools.mcp import _build_tool
 from boukensha.tui import Tui
 
 from .tui_helper import FakeRepl
@@ -62,6 +67,43 @@ def test_typed_error_becomes_a_readable_message() -> None:
     view = view_tool_result(result)
     assert view.is_error
     assert view.text == "permission denied: move is not enabled"
+
+
+def test_model_rendering_modes_preserve_only_the_selected_fields() -> None:
+    result = observation()
+    assert render_tool_result(result, "raw") == ROOM_TEXT
+    assert json.loads(render_tool_result(result, "minimal")) == {
+        "text": ROOM_TEXT,
+        "complete": True,
+    }
+    assert render_tool_result(result, "full") == result
+
+
+def test_mcp_tool_returns_the_selected_model_shape() -> None:
+    class Client:
+        def call_tool(self, name: str, arguments: dict[str, object]) -> dict[str, object]:
+            return {"text": observation(), "error": False}
+
+    tool = _build_tool(
+        Client(),
+        {"description": "look", "inputSchema": {"properties": {}}},
+        "tbamud__look",
+        "look",
+        result_mode="raw",
+    )
+    assert tool.handler() == ROOM_TEXT
+
+
+def test_config_rejects_an_unknown_result_mode(tmp_path, monkeypatch) -> None:
+    (tmp_path / "settings.yaml").write_text(
+        "mcp_servers:\n"
+        "  mud:\n"
+        "    command: gateway\n"
+        "    result_mode: compact\n"
+    )
+    monkeypatch.setenv("BOUKENSHA_DIR", str(tmp_path))
+    with pytest.raises(ConfigError, match="result_mode"):
+        Config()
 
 
 def test_parser_and_presenter_consume_observation_text() -> None:

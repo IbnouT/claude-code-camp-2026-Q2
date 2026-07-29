@@ -53,6 +53,7 @@ The harness records one row per attempt:
 - schema input bytes and an explicitly labelled token estimate
 - cost in dollars
 - gateway profile id and capability digest
+- model-facing result mode and delivered result characters
 - gateway parse misses and wire provenance
 
 The report compares the run with two reproducible Week 1 views. The corpus has
@@ -134,3 +135,7 @@ Live:
 The live gate passes and a reviewed E1 report exists for the unoptimised
 gateway. Later surface and rendering experiments replay the same journey and
 compare total cost, correctness and corrective calls against it.
+
+The first rendering experiment holds the journey and `direct-full` surface
+constant while comparing raw text, text plus completion state, and the full
+typed envelope. The gateway journal keeps the full envelope in every mode.
