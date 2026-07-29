@@ -30,6 +30,17 @@ flowchart LR
   distinct.
 - Diagnostics explain their trigger and cite the evidence behind each finding.
 - Structured filters and saved views narrow long traces without a model call.
+- Compare joins the complete raw, minimal, and full J1 cohorts directly from
+  benchmark ledgers.
+- Representative runs align by semantic action and jump to their first
+  divergence.
+- Synchronized route fingerprints show path shape at the selected action.
+- Attention economics separates fresh, cache-read, cache-write, and output
+  tokens.
+- The same recorded tool results replay through every rendering policy without
+  a model call.
+- Recorded wire frames replay through the current canonical gateway parser to
+  expose parser drift.
 - The living-world lens projects recorded positions into a distinct-place
   journey graph.
 - Journey and neighbourhood views keep duplicate titles separate by place ID,
@@ -62,6 +73,7 @@ observatory/
 │   ├── capabilities.py
 │   ├── contracts.py
 │   ├── settings.py
+│   ├── projections/
 │   └── sources/
 ├── tests/
 ├── web/

@@ -173,3 +173,117 @@ class Investigation(BaseModel):
     citations: tuple[EvidenceCitation, ...]
     lens: EvidenceLens
     world: WorldProjection
+
+
+class AttentionEconomics(BaseModel):
+    """Mean attention and payload cost for one comparable cohort."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    fresh_tokens: float
+    cache_read_tokens: float
+    cache_write_tokens: float
+    output_tokens: float
+    result_chars: float
+    schema_tokens: float
+    movement_share: float
+
+
+class ComparisonCohort(BaseModel):
+    """Aggregate results for one model-facing rendering policy."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    mode: Literal["raw", "minimal", "full"]
+    samples: int
+    successes: int
+    cost_mean: float
+    cost_median: float
+    cost_stdev: float
+    calls_mean: float
+    calls_stdev: float
+    invalid_calls: int
+    corrective_calls: int
+    tools: dict[str, int]
+    attention: AttentionEconomics
+
+
+class ComparisonMilestone(BaseModel):
+    """One semantic action used to align representative runs."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    index: int
+    kind: Literal["observe", "move", "inspect", "outcome", "other"]
+    label: str
+    tool: str | None
+    argument: str | None
+
+
+class ComparisonLane(BaseModel):
+    """One representative run aligned by semantic action ordinal."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    mode: Literal["raw", "minimal", "full"]
+    attempt: str
+    success: bool
+    cost_usd: float
+    calls: int
+    milestones: tuple[ComparisonMilestone, ...]
+
+
+class FirstDivergence(BaseModel):
+    """The earliest semantic action where comparable runs disagree."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    index: int | None
+    summary: str
+    actions: dict[str, str]
+
+
+class CounterfactualProjection(BaseModel):
+    """One rendering of identical recorded results, with no model call."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    mode: Literal["raw", "minimal", "full"]
+    observations: int
+    bytes: int
+    estimated_tokens: int
+    delta_from_raw: float
+
+
+class ParserCounterfactual(BaseModel):
+    """A replay of recorded wire frames through the current canonical parser."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    mode: Literal["raw", "minimal", "full"]
+    frames: int
+    recorded_version: str
+    replayed_version: str
+    recorded_lines: int
+    recorded_typed: int
+    replayed_lines: int
+    replayed_typed: int
+    recorded_miss_rate: float
+    replayed_miss_rate: float
+    typed_delta: int
+
+
+class RunComparison(BaseModel):
+    """A complete J1 cohort, alignment, and deterministic replay comparison."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    title: str
+    journey: str
+    cohorts: tuple[ComparisonCohort, ...]
+    lanes: tuple[ComparisonLane, ...]
+    divergence: FirstDivergence
+    counterfactuals: tuple[CounterfactualProjection, ...]
+    parser_counterfactuals: tuple[ParserCounterfactual, ...]
+    findings: tuple[str, ...]

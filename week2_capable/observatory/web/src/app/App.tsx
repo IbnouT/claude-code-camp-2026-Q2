@@ -14,6 +14,7 @@ import { useCapabilities } from "./useCapabilities";
 import { toChronicle } from "../data/reducer";
 import { useSessionStream } from "../data/useSessionStream";
 import { useInvestigation } from "../data/useInvestigation";
+import { useComparison } from "../data/useComparison";
 import type { ChronicleEvent } from "./types";
 import { BeliefReality } from "../components/BeliefReality";
 import { Chronicle } from "../components/Chronicle";
@@ -26,6 +27,9 @@ import { EvidenceLens } from "../components/EvidenceLens";
 import { InvestigationDiagnostics } from "../components/InvestigationDiagnostics";
 import { InvestigationWorkspace } from "../components/InvestigationWorkspace";
 import { LivingWorld } from "../components/LivingWorld";
+import { CompareWorkspace } from "../components/CompareWorkspace";
+import { ComparisonInsights } from "../components/ComparisonInsights";
+import { ComparisonTimeline } from "../components/ComparisonTimeline";
 
 export function App() {
   const [mode, setMode] = useState<Mode>(() => {
@@ -40,16 +44,25 @@ export function App() {
   const sources = useCapabilities();
   const evidence = useSessionStream();
   const recorded = useInvestigation();
+  const compared = useComparison();
   const investigation = recorded.investigation;
+  const comparison = compared.comparison;
   const [investigationSelected, setInvestigationSelected] = useState(0);
   const [selectedDiagnostic, setSelectedDiagnostic] = useState<string | null>(null);
   const [activeEvidence, setActiveEvidence] = useState<string[]>([]);
+  const [comparisonSelected, setComparisonSelected] = useState(() => {
+    const value = Number(
+      new URL(window.location.href).searchParams.get("compareAction"),
+    );
+    return Number.isInteger(value) && value > 0 ? value : 1;
+  });
   const [investigationView, setInvestigationView] = useState<"causal" | "world">(
     () => new URL(window.location.href).searchParams.get("lens") === "world"
       ? "world"
       : "causal",
   );
   const investigating = mode === "investigate" && investigation !== null;
+  const comparing = mode === "compare" && comparison !== null;
   const liveEvents = toChronicle(evidence.state.events);
   const chronicle = evidence.available ? liveEvents : demoChronicle;
   const selected = evidence.available
@@ -158,8 +171,13 @@ export function App() {
         url.searchParams.set("diagnostic", selectedDiagnostic);
       }
     }
+    if (comparing) {
+      url.searchParams.set("compareAction", String(comparisonSelected));
+    }
     window.history.replaceState(null, "", url);
   }, [
+    comparing,
+    comparisonSelected,
     investigating,
     investigationSelected,
     investigationView,
@@ -204,6 +222,14 @@ export function App() {
               </span>
               <ChevronDown size={15} aria-hidden="true" />
             </label>
+          ) : comparing ? (
+            <div className="session-picker comparison-picker">
+              <span className="mode-dot mode-full" aria-hidden="true" />
+              <span>
+                <small>Comparison set</small>
+                {comparison.title}
+              </span>
+            </div>
           ) : (
             <button className="session-picker" type="button">
               <span className="live-pulse" aria-hidden="true" />
@@ -233,10 +259,14 @@ export function App() {
             <div>
               <span className="run-state">
                 <Radio size={12} aria-hidden="true" />
-                {investigating ? "Verified benchmark evidence" : runState}
+                {comparing
+                  ? "Reset-verified cohorts"
+                  : investigating ? "Verified benchmark evidence" : runState}
               </span>
               <strong>
-                {investigating
+                {comparing
+                  ? "Raw, minimal, and full · 30 successful journeys"
+                  : investigating
                   ? `${investigation.run.journey} · ${investigation.run.success ? "succeeded" : "objective unmet"}`
                   : evidence.available
                   ? evidence.projection.roomTitle ?? "Reconstructing session"
@@ -245,24 +275,38 @@ export function App() {
             </div>
             <dl>
               <div><dt>Sequence</dt><dd>
-                {investigating ? investigationSelected : selected}
+                {comparing
+                  ? `action ${comparisonSelected}`
+                  : investigating ? investigationSelected : selected}
               </dd></div>
               <div><dt>Position</dt><dd>
-                {investigating ? "Evidence linked" : position}
+                {comparing
+                  ? "Semantically aligned"
+                  : investigating ? "Evidence linked" : position}
               </dd></div>
               <div><dt>Cost</dt><dd>
-                {investigating
+                {comparing
+                  ? "30 measured runs"
+                  : investigating
                   ? `$${investigation.run.cost_usd.toFixed(4)}`
                   : evidence.available ? `$${selectedCost.toFixed(4)}` : "$0.2109"}
               </dd></div>
               <div><dt>Outcome</dt><dd>
-                {investigating
+                {comparing
+                  ? "30/30 success"
+                  : investigating
                   ? investigation.run.success ? "success" : "failed"
                   : confidence}
               </dd></div>
             </dl>
           </div>
-          {investigating ? (
+          {comparing ? (
+            <CompareWorkspace
+              comparison={comparison}
+              selected={comparisonSelected}
+              onSelect={setComparisonSelected}
+            />
+          ) : investigating ? (
             <div className="investigation-stage">
               <nav className="investigation-lens-nav" aria-label="Investigation lens">
                 <button
@@ -307,7 +351,9 @@ export function App() {
         </div>
 
         <aside className="insight-rail">
-          {investigating ? (
+          {comparing ? (
+            <ComparisonInsights comparison={comparison} />
+          ) : investigating ? (
             <>
               <EvidenceLens
                 investigation={investigation}
@@ -339,13 +385,21 @@ export function App() {
           )}
         </aside>
 
-        <Chronicle
-          events={investigating ? investigationChronicle : chronicle}
-          selected={investigating ? investigationSelected : selected}
-          paused={investigating || paused}
-          onSelect={investigating ? setInvestigationSelected : selectEvidence}
-          onTogglePause={investigating ? () => setMode("live") : togglePause}
-        />
+        {comparing ? (
+          <ComparisonTimeline
+            comparison={comparison}
+            selected={comparisonSelected}
+            onSelect={setComparisonSelected}
+          />
+        ) : (
+          <Chronicle
+            events={investigating ? investigationChronicle : chronicle}
+            selected={investigating ? investigationSelected : selected}
+            paused={investigating || paused}
+            onSelect={investigating ? setInvestigationSelected : selectEvidence}
+            onTogglePause={investigating ? () => setMode("live") : togglePause}
+          />
+        )}
       </main>
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />

@@ -19,6 +19,7 @@ from starlette.routing import Route
 from .capabilities import discover
 from .settings import Settings
 from .sources.benchmark import BenchmarkSource
+from .sources.comparison import rendering_comparison
 from .sources.gateway import GatewaySource
 
 
@@ -111,6 +112,40 @@ def create_app(
             return JSONResponse({"error": "not_found"}, status_code=404)
         return JSONResponse(result.model_dump(mode="json"))
 
+    async def comparisons(_request: Request) -> JSONResponse:
+        result = (
+            None
+            if active.benchmark_root is None
+            else rendering_comparison(active.benchmark_root)
+        )
+        return JSONResponse(
+            {
+                "comparisons": []
+                if result is None
+                else [
+                    {
+                        "id": result.id,
+                        "title": result.title,
+                        "journey": result.journey,
+                    }
+                ]
+            }
+        )
+
+    async def comparison(request: Request) -> JSONResponse:
+        if active.benchmark_root is None:
+            return JSONResponse(
+                {
+                    "error": "source_disabled",
+                    "detail": "OBSERVATORY_BENCHMARK_ROOT is not configured",
+                },
+                status_code=503,
+            )
+        result = rendering_comparison(active.benchmark_root)
+        if result is None or result.id != request.path_params["comparison_id"]:
+            return JSONResponse({"error": "not_found"}, status_code=404)
+        return JSONResponse(result.model_dump(mode="json"))
+
     async def index(_request: Request) -> Response:
         target = active.web_dist / "index.html"
         if not target.exists():
@@ -143,6 +178,11 @@ def create_app(
             ),
             Route("/api/runs", runs),
             Route("/api/runs/{run_id:str}/investigation", investigation),
+            Route("/api/comparisons", comparisons),
+            Route(
+                "/api/comparisons/{comparison_id:str}",
+                comparison,
+            ),
             Route("/assets/{path:path}", asset),
             Route("/", index),
             Route("/{path:path}", index),

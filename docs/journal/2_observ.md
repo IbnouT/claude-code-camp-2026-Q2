@@ -35,6 +35,9 @@
 - A committed journal was replayable across processes but not live because its
   callbacks stopped at the writer process. Durable sequence cursors made live
   delivery and replay the same contract instead of two similar paths.
+- Full results were 59.8% larger than raw over identical evidence, but their
+  10-run journey costs overlapped. Representation changed the path more than
+  payload size predicted the bill.
 
 ## Technical Conclusions
 

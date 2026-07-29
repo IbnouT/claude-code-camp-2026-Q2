@@ -6,8 +6,10 @@ import sqlite3
 import httpx
 
 from observatory_api.app import create_app
+from observatory_api.projections.parser_replay import replay_parser
 from observatory_api.projections.world import project_world
 from observatory_api.settings import Settings
+from observatory_api.sources.comparison import rendering_comparison
 
 
 async def test_health_is_read_only(tmp_path):
@@ -282,3 +284,128 @@ def test_missing_world_database_is_an_honest_empty_projection(tmp_path):
     assert world.nodes == ()
     assert world.edges == ()
     assert world.current_confidence == "unknown"
+
+
+def test_rendering_comparison_aligns_semantics_and_replays_same_results(
+    tmp_path,
+):
+    benchmark_root = tmp_path / "benchmarks"
+    paths = {
+        "raw": ["look", "move north", "move east", "shop list"],
+        "minimal": ["look", "move north", "move south", "shop list"],
+        "full": ["look", "move north", "move east", "shop list"],
+    }
+    for mode, milestones in paths.items():
+        ledger = benchmark_root / f"e1-{mode}-n10"
+        attempt = ledger / "attempts" / f"{mode}-1"
+        attempt.mkdir(parents=True)
+        record = {
+            "attempt_id": f"{mode}-1",
+            "journey_id": "J1",
+            "result_mode": mode,
+            "success": True,
+            "stop_reason": "journey-complete",
+            "cost_usd": {"raw": 0.03, "minimal": 0.04, "full": 0.031}[mode],
+            "tool_calls": len(milestones),
+            "invalid_calls": 0,
+            "corrective_calls": 0,
+            "tools": {"look": 1, "move": 2, "shop": 1},
+            "fresh_input_tokens": 100,
+            "cache_read_tokens": 200,
+            "cache_write_tokens": 50,
+            "output_tokens": 20,
+            "tool_result_chars": 500,
+            "schema_token_estimate": 1000,
+        }
+        (ledger / "attempts.jsonl").write_text(json.dumps(record) + "\n")
+        events = []
+        for milestone in milestones:
+            tool, _, argument = milestone.partition(" ")
+            key = "direction" if tool == "move" else "action"
+            events.append(
+                {
+                    "phase": "tool_call",
+                    "name": f"tbamud__{tool}",
+                    "args": {} if not argument else {key: argument},
+                }
+            )
+        if mode == "full":
+            events.append(
+                {
+                    "phase": "tool_result",
+                    "result": json.dumps(
+                        {
+                            "type": "observation",
+                            "text": "Bakery menu",
+                            "complete": True,
+                            "trace_id": "private-metadata",
+                        }
+                    ),
+                }
+            )
+        (attempt / "agent.jsonl").write_text(
+            "\n".join(json.dumps(event) for event in events) + "\n"
+        )
+
+    comparison = rendering_comparison(benchmark_root)
+
+    assert comparison is not None
+    assert comparison.divergence.index == 3
+    assert comparison.divergence.actions == {
+        "raw": "move east",
+        "minimal": "move south",
+        "full": "move east",
+    }
+    replay = {item.mode: item for item in comparison.counterfactuals}
+    assert replay["raw"].bytes < replay["minimal"].bytes < replay["full"].bytes
+    assert comparison.cohorts[1].calls_mean == 4
+
+
+def test_parser_counterfactual_replays_the_exact_recorded_frames(tmp_path):
+    from mud_gateway.observe import Coverage, WireReference, parse
+
+    database = tmp_path / "gateway.db"
+    raw = (
+        b"\x1b[0;33mThe Bakery\x1b[0m\r\n"
+        b"\x1b[0;36m[ Exits: west ]\x1b[0m\r\n20H 100M 82V > "
+    )
+    reference = WireReference.from_bytes("fixture", 7, 7, raw)
+    coverage = Coverage()
+    coverage.add(parse(raw, reference))
+    connection = sqlite3.connect(database)
+    connection.execute(
+        "CREATE TABLE events (seq INTEGER PRIMARY KEY, kind TEXT, payload TEXT)"
+    )
+    connection.execute("CREATE TABLE blobs (digest TEXT PRIMARY KEY, body BLOB)")
+    connection.execute(
+        "INSERT INTO blobs VALUES (?, ?)",
+        (reference.digest, raw),
+    )
+    connection.execute(
+        "INSERT INTO events VALUES (?, ?, ?)",
+        (
+            8,
+            "parse_metric",
+            json.dumps(
+                {
+                    "parser_version": "rules-1",
+                    "wire_ref": {
+                        "source": "fixture",
+                        "first_seq": 7,
+                        "last_seq": 7,
+                        "digest": reference.digest,
+                    },
+                    "lines": coverage.lines,
+                    "typed": coverage.typed,
+                }
+            ),
+        ),
+    )
+    connection.commit()
+    connection.close()
+
+    replay = replay_parser(database, "full")
+
+    assert replay.frames == 1
+    assert replay.typed_delta == 0
+    assert replay.recorded_miss_rate == replay.replayed_miss_rate

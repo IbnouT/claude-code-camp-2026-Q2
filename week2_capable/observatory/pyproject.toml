@@ -4,11 +4,15 @@ version = "0.1.0"
 description = "A causal flight recorder and experiment studio for Boukensha."
 requires-python = ">=3.12"
 dependencies = [
+  "boukensha-gateway",  # reuses the canonical parser for offline counterfactual replay
   "httpx==0.28.1",     # async, typed access to gateway evidence sources
   "pydantic==2.13.4",  # validates source capability and API boundaries
   "starlette==0.52.1", # focused local read API and static application host
   "uvicorn==0.51.0",   # serves the installed local observatory
 ]
+
+[tool.uv.sources]
+boukensha-gateway = { path = "../gateway" }
 
 [project.scripts]
 boukensha-observatory = "observatory_api.app:main"
