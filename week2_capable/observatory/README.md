@@ -30,7 +30,15 @@ flowchart LR
   distinct.
 - Diagnostics explain their trigger and cite the evidence behind each finding.
 - Structured filters and saved views narrow long traces without a model call.
-- A living-world canvas is the spatial anchor.
+- The living-world lens projects recorded positions into a distinct-place
+  journey graph.
+- Journey and neighbourhood views keep duplicate titles separate by place ID,
+  exits, and observed transitions.
+- Candidate positions, parse misses, and unknown positions stay visible.
+- Belief, inferred, and observer-truth layers report missing evidence instead
+  of synthesizing it.
+- An isolated 12,288-room capacity probe measures the canvas renderer without
+  presenting synthetic positions as game knowledge.
 - Belief and observed state remain visually separate.
 - Diagnostics link failures to evidence moments.
 - The Chronicle aligns causal events with model cost.

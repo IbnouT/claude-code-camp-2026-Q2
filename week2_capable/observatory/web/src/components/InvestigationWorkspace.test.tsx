@@ -74,6 +74,15 @@ const investigation: Investigation = {
       citations: ["benchmark:outcome"],
     },
   },
+  world: {
+    nodes: [],
+    edges: [],
+    current_title: null,
+    current_confidence: "unknown",
+    candidates: [],
+    parse_miss_rate: 0,
+    unknown_positions: 0,
+  },
 };
 
 describe("investigation workspace", () => {

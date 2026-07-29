@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import json
+import sqlite3
+
 import httpx
 
 from observatory_api.app import create_app
+from observatory_api.projections.world import project_world
 from observatory_api.settings import Settings
 
 
@@ -193,3 +197,88 @@ def test_relative_source_paths_resolve_from_launcher_project_root(
     monkeypatch.setenv("OBSERVATORY_BENCHMARK_ROOT", ".boukensha/benchmarks")
     settings = Settings.from_environment()
     assert settings.benchmark_root == tmp_path / ".boukensha" / "benchmarks"
+
+
+def test_world_projection_keeps_duplicate_titles_as_distinct_candidates(
+    tmp_path,
+):
+    database = tmp_path / "gateway.db"
+    connection = sqlite3.connect(database)
+    connection.execute(
+        "CREATE TABLE events ("
+        "seq INTEGER PRIMARY KEY, kind TEXT, trace_id TEXT, payload TEXT)"
+    )
+    rows = [
+        (1, "command", "t1", {"line": "north"}),
+        (2, "observation", "t1", {
+            "kind": "room",
+            "title": "White Square",
+            "exits": ["south", "east"],
+        }),
+        (3, "position", "t1", {
+            "place": 101,
+            "title": "White Square",
+            "confidence": "tracked",
+            "method": "exits-and-neighbourhood",
+        }),
+        (4, "command", "t2", {"line": "east"}),
+        (5, "observation", "t2", {
+            "kind": "room",
+            "title": "Nexus",
+            "exits": ["west", "north"],
+        }),
+        (6, "position", "t2", {
+            "place": 202,
+            "title": "Nexus",
+            "confidence": "tracked",
+            "method": "exits-and-neighbourhood",
+        }),
+        (7, "command", "t3", {"line": "north"}),
+        (8, "observation", "t3", {
+            "kind": "room",
+            "title": "White Square",
+            "exits": ["south", "west"],
+        }),
+        (9, "position", "t3", {
+            "place": 303,
+            "title": "White Square",
+            "confidence": "tracked",
+            "method": "exits-and-neighbourhood",
+        }),
+        (10, "parse_metric", "t3", {"cumulative_miss_rate": 0.125}),
+        (11, "position", "t4", {
+            "place": None,
+            "title": "White Square",
+            "confidence": "ambiguous",
+            "method": "duplicate-title",
+        }),
+    ]
+    connection.executemany(
+        "INSERT INTO events VALUES (?, ?, ?, ?)",
+        [
+            (seq, kind, trace, json.dumps(payload))
+            for seq, kind, trace, payload in rows
+        ],
+    )
+    connection.commit()
+    connection.close()
+
+    world = project_world(database)
+
+    white_squares = [node for node in world.nodes if node.title == "White Square"]
+    assert {node.place for node in white_squares} == {101, 303}
+    assert {node.state for node in white_squares} == {"candidate"}
+    assert world.candidates == ("place:101", "place:303")
+    assert [(edge.source, edge.target, edge.direction) for edge in world.edges] == [
+        ("place:101", "place:202", "east"),
+        ("place:202", "place:303", "north"),
+    ]
+    assert world.parse_miss_rate == 0.125
+    assert world.unknown_positions == 1
+
+
+def test_missing_world_database_is_an_honest_empty_projection(tmp_path):
+    world = project_world(tmp_path / "missing.db")
+    assert world.nodes == ()
+    assert world.edges == ()
+    assert world.current_confidence == "unknown"

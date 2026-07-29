@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
-import { ChevronDown, Command, Radio, Search, Telescope } from "lucide-react";
+import {
+  ChevronDown,
+  Command,
+  GitBranch,
+  MapPinned,
+  Radio,
+  Search,
+  Telescope,
+} from "lucide-react";
 import type { Mode } from "./types";
 import { chronicle as demoChronicle } from "./demo";
 import { useCapabilities } from "./useCapabilities";
@@ -17,6 +25,7 @@ import { WorldCanvas } from "../components/WorldCanvas";
 import { EvidenceLens } from "../components/EvidenceLens";
 import { InvestigationDiagnostics } from "../components/InvestigationDiagnostics";
 import { InvestigationWorkspace } from "../components/InvestigationWorkspace";
+import { LivingWorld } from "../components/LivingWorld";
 
 export function App() {
   const [mode, setMode] = useState<Mode>(() => {
@@ -35,6 +44,11 @@ export function App() {
   const [investigationSelected, setInvestigationSelected] = useState(0);
   const [selectedDiagnostic, setSelectedDiagnostic] = useState<string | null>(null);
   const [activeEvidence, setActiveEvidence] = useState<string[]>([]);
+  const [investigationView, setInvestigationView] = useState<"causal" | "world">(
+    () => new URL(window.location.href).searchParams.get("lens") === "world"
+      ? "world"
+      : "causal",
+  );
   const investigating = mode === "investigate" && investigation !== null;
   const liveEvents = toChronicle(evidence.state.events);
   const chronicle = evidence.available ? liveEvents : demoChronicle;
@@ -139,12 +153,19 @@ export function App() {
     url.searchParams.set("mode", mode);
     if (investigating) {
       url.searchParams.set("iSeq", String(investigationSelected));
+      url.searchParams.set("lens", investigationView);
       if (selectedDiagnostic) {
         url.searchParams.set("diagnostic", selectedDiagnostic);
       }
     }
     window.history.replaceState(null, "", url);
-  }, [investigating, investigationSelected, mode, selectedDiagnostic]);
+  }, [
+    investigating,
+    investigationSelected,
+    investigationView,
+    mode,
+    selectedDiagnostic,
+  ]);
 
   const selectDiagnostic = (
     diagnostic: NonNullable<typeof investigation>["diagnostics"][number],
@@ -242,14 +263,36 @@ export function App() {
             </dl>
           </div>
           {investigating ? (
-            <InvestigationWorkspace
-              investigation={investigation}
-              selected={investigationSelected}
-              onSelect={(sequence) => {
-                setInvestigationSelected(sequence);
-                setActiveEvidence([]);
-              }}
-            />
+            <div className="investigation-stage">
+              <nav className="investigation-lens-nav" aria-label="Investigation lens">
+                <button
+                  type="button"
+                  className={investigationView === "causal" ? "is-active" : ""}
+                  onClick={() => setInvestigationView("causal")}
+                >
+                  <GitBranch size={13} aria-hidden="true" /> Causal trace
+                </button>
+                <button
+                  type="button"
+                  className={investigationView === "world" ? "is-active" : ""}
+                  onClick={() => setInvestigationView("world")}
+                >
+                  <MapPinned size={13} aria-hidden="true" /> Living world
+                </button>
+              </nav>
+              {investigationView === "world" ? (
+                <LivingWorld world={investigation.world} />
+              ) : (
+                <InvestigationWorkspace
+                  investigation={investigation}
+                  selected={investigationSelected}
+                  onSelect={(sequence) => {
+                    setInvestigationSelected(sequence);
+                    setActiveEvidence([]);
+                  }}
+                />
+              )}
+            </div>
           ) : (
             <WorldCanvas
               evidenceActive={evidence.available}

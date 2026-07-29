@@ -17,6 +17,7 @@ from ..contracts import (
     InvestigationEvent,
     RunSummary,
 )
+from ..projections.world import project_world
 
 
 class BenchmarkSource:
@@ -73,6 +74,12 @@ class BenchmarkSource:
             diagnostics=tuple(diagnostics),
             citations=tuple(citations.values()),
             lens=_lens(summary, record, rows, citations),
+            world=project_world(
+                ledger.parent
+                / "attempts"
+                / summary.attempt
+                / "gateway.db"
+            ),
         )
 
 

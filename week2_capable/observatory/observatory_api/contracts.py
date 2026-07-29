@@ -118,6 +118,50 @@ class EvidenceLens(BaseModel):
     truth: EvidenceForm
 
 
+class WorldNode(BaseModel):
+    """One distinct inferred place, never just a room title."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    place: int
+    title: str
+    exits: tuple[str, ...]
+    visits: int
+    first_seq: int
+    last_seq: int
+    state: Literal["observed", "candidate", "current"]
+    confidence: str
+    method: str
+
+
+class WorldEdge(BaseModel):
+    """One observed transition between distinct inferred places."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    source: str
+    target: str
+    direction: str
+    traversals: int
+    evidence: tuple[int, ...]
+
+
+class WorldProjection(BaseModel):
+    """The evidence-backed journey graph and its unresolved current state."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    nodes: tuple[WorldNode, ...]
+    edges: tuple[WorldEdge, ...]
+    current_title: str | None
+    current_confidence: str
+    candidates: tuple[str, ...]
+    parse_miss_rate: float
+    unknown_positions: int
+
+
 class Investigation(BaseModel):
     """A reproducible diagnosis of one benchmark attempt."""
 
@@ -128,3 +172,4 @@ class Investigation(BaseModel):
     diagnostics: tuple[DiagnosticRecord, ...]
     citations: tuple[EvidenceCitation, ...]
     lens: EvidenceLens
+    world: WorldProjection

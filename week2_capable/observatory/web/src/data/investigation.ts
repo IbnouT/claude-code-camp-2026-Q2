@@ -54,6 +54,38 @@ export type EvidenceForm = {
   citations: string[];
 };
 
+export type WorldNode = {
+  id: string;
+  place: number;
+  title: string;
+  exits: string[];
+  visits: number;
+  first_seq: number;
+  last_seq: number;
+  state: "observed" | "candidate" | "current";
+  confidence: string;
+  method: string;
+};
+
+export type WorldEdge = {
+  id: string;
+  source: string;
+  target: string;
+  direction: string;
+  traversals: number;
+  evidence: number[];
+};
+
+export type WorldProjection = {
+  nodes: WorldNode[];
+  edges: WorldEdge[];
+  current_title: string | null;
+  current_confidence: string;
+  candidates: string[];
+  parse_miss_rate: number;
+  unknown_positions: number;
+};
+
 export type Investigation = {
   run: RunSummary;
   events: InvestigationEvent[];
@@ -66,6 +98,7 @@ export type Investigation = {
     believed: EvidenceForm;
     truth: EvidenceForm;
   };
+  world: WorldProjection;
 };
 
 export function matchesInvestigationQuery(
