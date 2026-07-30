@@ -52,6 +52,28 @@ test("replays by retained moment and never uses future stop evidence", async ({
     .toBeVisible();
 });
 
+test("keeps saved questions and evidence routes reproducible", async ({
+  page,
+}) => {
+  await page.getByRole("button", { name: "Ask why" }).click();
+  await page.getByRole("textbox", { name: "Question or evidence query" })
+    .fill("Why did the agent stop?");
+  await page.getByRole("button", { name: "Ask", exact: true }).click();
+  await expect(page.getByText("Validated query")).toBeVisible();
+  await expect(page).toHaveURL(/q=Why\+did\+the\+agent\+stop/);
+  await page.getByRole("button", { name: "Close search" }).click();
+  await page.reload();
+  await page.getByRole("button", { name: "Ask why" }).click();
+  await expect(
+    page.getByRole("textbox", { name: "Question or evidence query" }),
+  ).toHaveValue("Why did the agent stop?");
+  await page.getByRole("button", { name: "Ask", exact: true }).click();
+  await page.getByRole("dialog")
+    .getByRole("button", { name: "Verified objective outcome" })
+    .click();
+  await expect(page).toHaveURL(/record=benchmark%3Aoutcome/);
+});
+
 test("reconciles cache-aware cost and preserves narrow reachability", async ({
   page,
 }, testInfo) => {

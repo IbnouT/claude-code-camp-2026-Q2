@@ -13,7 +13,9 @@ from observatory_api.incidents import canonical_payload
 from observatory_api.contracts import IncidentCapsule
 from observatory_api.projections.parser_replay import replay_parser
 from observatory_api.projections.world import project_world, project_world_events
-from observatory_api.queries import plan_operation
+from observatory_api.contracts import QueryScope
+from observatory_api.queries import plan_query
+from observatory_api.queries.model import ModelTranslator
 from observatory_api.redaction import redact_question
 from observatory_api.settings import Settings
 from observatory_api.execution import ExperimentExecutor
@@ -27,8 +29,21 @@ def test_copilot_query_corpus_routes_only_supported_operations():
     fixture = (
         Path(__file__).parent / "fixtures" / "copilot_queries.json"
     )
-    for row in json.loads(fixture.read_text()):
-        assert plan_operation(row["question"]) == row["operation"]
+    rows = json.loads(fixture.read_text())
+    correct = 0
+    for row in rows:
+        planned = plan_query(
+            row["question"],
+            QueryScope.model_validate(row["scope"]),
+        )
+        operation = None if planned is None else planned.operation
+        correct += operation == row["operation"]
+
+    report = {
+        "operation_accuracy": correct / len(rows),
+        "cases": len(rows),
+    }
+    assert report == {"operation_accuracy": 1.0, "cases": 15}
 
 
 def test_model_boundary_redacts_secret_shaped_question_text():
@@ -40,6 +55,93 @@ def test_model_boundary_redacts_secret_shaped_question_text():
     assert "abc123" not in value
     assert "0123456789abcdef" not in value
     assert value.count("[REDACTED]") == 3
+
+
+async def test_optional_model_summary_can_only_cite_returned_evidence():
+    async def summarize(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        supplied = json.loads(body["messages"][0]["content"])
+        assert supplied["evidence"] == [
+            {"id": "gateway:4", "excerpt": "Observed Bakery"}
+        ]
+        return httpx.Response(
+            200,
+            json={
+                "content": [
+                    {
+                        "type": "text",
+                        "text": (
+                            '{"summary":"The agent observed the Bakery.",'
+                            '"citations":["gateway:4"]}'
+                        ),
+                    }
+                ],
+                "usage": {"input_tokens": 50, "output_tokens": 12},
+            },
+        )
+
+    translator = ModelTranslator(
+        endpoint="https://example.test/messages",
+        api_key="test-token",
+        model="pinned-model",
+        input_rate=1,
+        output_rate=5,
+        transport=httpx.MockTransport(summarize),
+    )
+
+    result = await translator.summarize(
+        question="Where was it?",
+        answer="The selected record names the Bakery.",
+        claims=(("The room was Bakery.", ("gateway:4",)),),
+        citations=(("gateway:4", "Observed Bakery"),),
+        missing=(),
+    )
+
+    assert result.summary == "The agent observed the Bakery."
+    assert result.citations == ("gateway:4",)
+    assert result.cost_usd == 0.00011
+
+
+def test_copilot_policy_loads_from_yaml_while_secret_stays_in_environment(
+    tmp_path,
+    monkeypatch,
+):
+    config = tmp_path / ".boukensha"
+    config.mkdir()
+    (config / "settings.yaml").write_text(
+        """
+observatory:
+  disabled_features:
+    - benchmark-execution
+  copilot:
+    model: pinned-model
+    endpoint: https://example.test/messages
+    spend_cap_usd: 0.25
+    input_rate_per_million: 1.5
+    output_rate_per_million: 7.5
+""",
+        encoding="utf-8",
+    )
+    (config / ".env").write_text(
+        "ANTHROPIC_API_KEY=environment-only-secret\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("BOUKENSHA_DIR", str(config))
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    settings = Settings.from_environment()
+
+    assert settings.copilot_model == "pinned-model"
+    assert settings.copilot_endpoint == "https://example.test/messages"
+    assert settings.copilot_spend_cap == 0.25
+    assert settings.copilot_input_rate == 1.5
+    assert settings.copilot_output_rate == 7.5
+    assert settings.copilot_api_key == "environment-only-secret"
+    assert settings.disabled_features == ("benchmark-execution",)
+    assert "environment-only-secret" not in (
+        config / "settings.yaml"
+    ).read_text(encoding="utf-8")
+    monkeypatch.delenv("ANTHROPIC_API_KEY")
 
 
 async def test_health_is_read_only(tmp_path):
@@ -414,7 +516,10 @@ async def test_j2_false_completion_links_claim_to_verified_outcome(tmp_path):
             "/api/ask",
             json={
                 "question": "Why did the agent stop?",
-                "run_id": runs[0]["id"],
+                "scope": {
+                    "space": "sessions",
+                    "run_id": runs[0]["id"],
+                },
             },
         )
         translated = await client.post(
@@ -424,7 +529,10 @@ async def test_j2_false_completion_links_claim_to_verified_outcome(tmp_path):
                     "I need an autopsy of the final decision "
                     "token=private-value"
                 ),
-                "run_id": runs[0]["id"],
+                "scope": {
+                    "space": "sessions",
+                    "run_id": runs[0]["id"],
+                },
                 "allow_model": True,
             },
         )

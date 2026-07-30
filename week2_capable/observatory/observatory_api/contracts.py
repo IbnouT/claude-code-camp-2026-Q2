@@ -127,7 +127,14 @@ class EvidenceCitation(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     id: str
-    source: Literal["agent", "gateway", "benchmark"]
+    source: Literal[
+        "agent",
+        "gateway",
+        "benchmark",
+        "runtime",
+        "experiments",
+        "knowledge",
+    ]
     label: str
     sequence: int | None = None
     trace_id: str | None = None
@@ -871,16 +878,72 @@ class RunComparison(BaseModel):
     findings: tuple[str, ...]
 
 
+class QueryScope(BaseModel):
+    """The complete evidence boundary for one investigation query."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    space: Literal["live", "sessions", "experiments", "knowledge"]
+    player_id: str | None = None
+    live_session_id: str | None = None
+    run_id: str | None = None
+    through_sequence: int | None = Field(default=None, ge=0)
+    selected_record_id: str | None = None
+    comparison_id: str | None = None
+    subject_id: str | None = None
+    lens: str | None = None
+
+
+class QueryFilter(BaseModel):
+    """One allowlisted field predicate in a typed Observatory query."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    field: Literal[
+        "source",
+        "kind",
+        "room",
+        "trace_id",
+        "state",
+        "arm_id",
+        "cost_usd",
+        "confidence",
+    ]
+    operator: Literal["eq", "contains", "gte", "lte"]
+    value: str | int | float | bool
+
+
+class ObservatoryQuery(BaseModel):
+    """A versioned, read-only query accepted by the evidence engine."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    version: Literal[1] = 1
+    operation: Literal[
+        "diagnose_stop",
+        "summarize_live",
+        "list_position_candidates",
+        "compare_rendering",
+        "list_experiment_samples",
+        "search_evidence",
+        "search_knowledge",
+    ]
+    scope: QueryScope
+    filters: tuple[QueryFilter, ...] = ()
+    order: Literal["causal", "chronological", "cost_desc"] = "causal"
+    limit: int = Field(default=25, ge=1, le=100)
+
+
 class AskRequest(BaseModel):
-    """One natural-language investigation constrained to typed operations."""
+    """One question or exact query constrained to an explicit evidence scope."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     question: str = Field(min_length=3, max_length=500)
-    run_id: str | None = None
-    selected_record_id: str | None = None
-    comparison_id: str | None = None
+    scope: QueryScope
+    query: ObservatoryQuery | None = None
     allow_model: bool = False
+    allow_summary: bool = False
 
 
 class QueryStep(BaseModel):
@@ -890,12 +953,24 @@ class QueryStep(BaseModel):
 
     operation: Literal[
         "diagnose_stop",
+        "summarize_live",
         "locate_final_claim",
         "verify_objective",
         "list_position_candidates",
         "compare_rendering",
+        "list_experiment_samples",
+        "search_evidence",
+        "search_knowledge",
+        "validate_scope",
     ]
-    source: Literal["agent", "benchmark", "gateway"]
+    source: Literal[
+        "agent",
+        "benchmark",
+        "gateway",
+        "runtime",
+        "experiments",
+        "knowledge",
+    ]
     detail: str
 
 
@@ -917,14 +992,21 @@ class AskResponse(BaseModel):
     tier: Literal[
         "deterministic",
         "model_translated",
+        "model_summarized",
         "model_disabled",
         "unsupported",
     ]
     question: str
+    query: ObservatoryQuery | None = None
     scope_record_id: str | None = None
     plan: tuple[QueryStep, ...]
     answer: str
     claims: tuple[AnswerClaim, ...]
     citations: tuple[EvidenceCitation, ...]
     missing: tuple[str, ...] = ()
+    hypotheses: tuple[str, ...] = ()
     model_cost_usd: float = 0
+    model_input_tokens: int = 0
+    model_output_tokens: int = 0
+    model_summary: str | None = None
+    model_summary_citations: tuple[str, ...] = ()

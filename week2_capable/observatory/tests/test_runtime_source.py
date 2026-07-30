@@ -308,6 +308,289 @@ async def test_historical_snapshot_is_the_exact_selected_prefix(
     assert latest["cost_usd"] == 0.11
 
 
+async def test_live_ask_uses_only_selected_runtime_scope(tmp_path: Path):
+    root = runtime_root(tmp_path)
+    benchmark = tmp_path / "unrelated-benchmark"
+    benchmark.mkdir()
+    app = create_app(
+        Settings(
+            runtime_root=root,
+            benchmark_root=benchmark,
+            web_dist=tmp_path,
+        )
+    )
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        response = await client.post(
+            "/api/ask",
+            json={
+                "question": "Why did the agent stop?",
+                "scope": {
+                    "space": "live",
+                    "player_id": "alpha",
+                    "live_session_id": "session-alpha",
+                    "through_sequence": 1,
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result["tier"] == "deterministic"
+    assert result["query"]["scope"]["space"] == "live"
+    assert [step["source"] for step in result["plan"]] == ["runtime"]
+    assert all(citation["source"] != "benchmark" for citation in result["citations"])
+    assert "has not stopped" in result["answer"]
+
+
+async def test_live_ask_rejects_player_and_session_mismatch(tmp_path: Path):
+    root = runtime_root(tmp_path)
+    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        response = await client.post(
+            "/api/ask",
+            json={
+                "question": "What is happening now?",
+                "scope": {
+                    "space": "live",
+                    "player_id": "beta",
+                    "live_session_id": "session-alpha",
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result["citations"] == []
+    assert result["missing"] == [
+        "runtime session matching the selected player"
+    ]
+
+
+async def test_exact_query_cannot_replace_active_scope(tmp_path: Path):
+    root = runtime_root(tmp_path)
+    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        response = await client.post(
+            "/api/ask",
+            json={
+                "question": "Search the current evidence",
+                "scope": {
+                    "space": "live",
+                    "player_id": "alpha",
+                    "live_session_id": "session-alpha",
+                },
+                "query": {
+                    "version": 1,
+                    "operation": "search_evidence",
+                    "scope": {
+                        "space": "live",
+                        "player_id": "beta",
+                        "live_session_id": "session-beta",
+                    },
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result["tier"] == "unsupported"
+    assert result["plan"][0]["operation"] == "validate_scope"
+    assert result["citations"] == []
+
+
+async def test_operation_cannot_escape_selected_space(tmp_path: Path):
+    root = runtime_root(tmp_path)
+    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        response = await client.post(
+            "/api/ask",
+            json={
+                "question": "Compare this runtime",
+                "scope": {
+                    "space": "live",
+                    "player_id": "alpha",
+                    "live_session_id": "session-alpha",
+                },
+                "query": {
+                    "version": 1,
+                    "operation": "compare_rendering",
+                    "scope": {
+                        "space": "live",
+                        "player_id": "alpha",
+                        "live_session_id": "session-alpha",
+                    },
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result["tier"] == "unsupported"
+    assert result["plan"][0]["operation"] == "validate_scope"
+    assert result["citations"] == []
+
+
+async def test_filter_operator_must_match_the_selected_field(tmp_path: Path):
+    root = runtime_root(tmp_path)
+    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        response = await client.post(
+            "/api/ask",
+            json={
+                "question": "Find a cost containing one",
+                "scope": {
+                    "space": "live",
+                    "player_id": "alpha",
+                    "live_session_id": "session-alpha",
+                },
+                "query": {
+                    "version": 1,
+                    "operation": "search_evidence",
+                    "scope": {
+                        "space": "live",
+                        "player_id": "alpha",
+                        "live_session_id": "session-alpha",
+                    },
+                    "filters": [{
+                        "field": "cost_usd",
+                        "operator": "contains",
+                        "value": "1",
+                    }],
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result["tier"] == "unsupported"
+    assert result["plan"][0]["operation"] == "validate_scope"
+    assert "cost_usd:contains" in result["plan"][0]["detail"]
+    assert result["citations"] == []
+
+
+async def test_model_translation_cannot_escape_selected_live_scope(
+    tmp_path: Path,
+):
+    root = runtime_root(tmp_path)
+
+    async def translator(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "content": [
+                    {
+                        "type": "text",
+                        "text": '{"operation":"compare_rendering"}',
+                    }
+                ],
+                "usage": {"input_tokens": 12, "output_tokens": 4},
+            },
+        )
+
+    app = create_app(
+        Settings(
+            runtime_root=root,
+            web_dist=tmp_path,
+            copilot_model="test-model",
+            copilot_api_key="test-token",
+            copilot_spend_cap=0.1,
+            copilot_input_rate=1,
+            copilot_output_rate=5,
+        ),
+        copilot_transport=httpx.MockTransport(translator),
+    )
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        response = await client.post(
+            "/api/ask",
+            json={
+                "question": "Give me a totally novel autopsy",
+                "scope": {
+                    "space": "live",
+                    "player_id": "alpha",
+                    "live_session_id": "session-alpha",
+                },
+                "allow_model": True,
+            },
+        )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result["tier"] == "unsupported"
+    assert result["query"]["operation"] == "compare_rendering"
+    assert result["plan"][0]["operation"] == "validate_scope"
+    assert result["citations"] == []
+
+
+async def test_supported_local_query_never_calls_the_optional_model(
+    tmp_path: Path,
+):
+    root = runtime_root(tmp_path)
+    calls = 0
+
+    async def translator(_request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return httpx.Response(500)
+
+    app = create_app(
+        Settings(
+            runtime_root=root,
+            web_dist=tmp_path,
+            copilot_model="test-model",
+            copilot_api_key="test-token",
+            copilot_spend_cap=0.1,
+            copilot_input_rate=1,
+            copilot_output_rate=5,
+        ),
+        copilot_transport=httpx.MockTransport(translator),
+    )
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        response = await client.post(
+            "/api/ask",
+            json={
+                "question": "Show the current agent status.",
+                "scope": {
+                    "space": "live",
+                    "player_id": "alpha",
+                    "live_session_id": "session-alpha",
+                },
+                "allow_model": True,
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["tier"] == "deterministic"
+    assert calls == 0
+
+
 async def test_operator_guidance_and_revised_goal_are_visible_evidence(
     tmp_path: Path,
 ):

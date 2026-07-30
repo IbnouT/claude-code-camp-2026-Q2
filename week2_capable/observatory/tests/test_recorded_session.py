@@ -245,18 +245,53 @@ async def test_recorded_session_routes_name_the_experiment_relationship(
         detail = await client.get(f"/api/recorded-sessions/{run_id}")
         paused = await client.post(
             "/api/ask",
-            json={
-                "question": "Why did the agent stop?",
-                "run_id": run_id,
-                "selected_record_id": "agent:1",
-            },
+                json={
+                    "question": "Why did the agent stop?",
+                    "scope": {
+                        "space": "sessions",
+                        "run_id": run_id,
+                        "selected_record_id": "agent:1",
+                    },
+                },
         )
         final = await client.post(
             "/api/ask",
+                json={
+                    "question": "Why did the agent stop?",
+                    "scope": {
+                        "space": "sessions",
+                        "run_id": run_id,
+                        "selected_record_id": "benchmark:outcome",
+                    },
+                },
+        )
+        search = await client.post(
+            "/api/ask",
             json={
-                "question": "Why did the agent stop?",
-                "run_id": run_id,
-                "selected_record_id": "benchmark:outcome",
+                "question": "Find gateway records",
+                "scope": {
+                    "space": "sessions",
+                    "run_id": run_id,
+                    "selected_record_id": "gateway:4",
+                },
+                "query": {
+                    "version": 1,
+                    "operation": "search_evidence",
+                    "scope": {
+                        "space": "sessions",
+                        "run_id": run_id,
+                        "selected_record_id": "gateway:4",
+                    },
+                    "filters": [
+                        {
+                            "field": "source",
+                            "operator": "eq",
+                            "value": "gateway",
+                        }
+                    ],
+                    "order": "causal",
+                    "limit": 25,
+                },
             },
         )
 
@@ -272,3 +307,10 @@ async def test_recorded_session_routes_name_the_experiment_relationship(
     assert final.status_code == 200
     assert final.json()["claims"]
     assert "linked predicate remained false" in final.json()["answer"]
+    assert search.status_code == 200
+    assert [citation["id"] for citation in search.json()["citations"]] == [
+        "gateway:1",
+        "gateway:2",
+        "gateway:3",
+        "gateway:4",
+    ]

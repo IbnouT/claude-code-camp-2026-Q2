@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
+from dotenv import load_dotenv
 
 
 @dataclass(frozen=True)
@@ -32,6 +33,7 @@ class Settings:
 
     @classmethod
     def from_environment(cls) -> "Settings":
+        _load_shared_environment()
         return cls(
             gateway_url=os.environ.get(
                 "OBSERVATORY_GATEWAY_URL",
@@ -45,30 +47,35 @@ class Settings:
             experiment_state_root=_experiment_state_root(),
             knowledge_db=_optional_path("OBSERVATORY_KNOWLEDGE_DB"),
             world_root=_world_root(),
-            copilot_model=os.environ.get("OBSERVATORY_COPILOT_MODEL"),
+            copilot_model=_optional_string(
+                "OBSERVATORY_COPILOT_MODEL",
+                "copilot",
+                "model",
+            ),
             copilot_api_key=os.environ.get("ANTHROPIC_API_KEY"),
-            copilot_endpoint=os.environ.get(
+            copilot_endpoint=_string_value(
                 "OBSERVATORY_COPILOT_ENDPOINT",
-                "https://api.anthropic.com/v1/messages",
+                "copilot",
+                "endpoint",
+                default="https://api.anthropic.com/v1/messages",
             ),
-            copilot_spend_cap=float(
-                os.environ.get("OBSERVATORY_COPILOT_SPEND_CAP", "0")
+            copilot_spend_cap=_float_value(
+                "OBSERVATORY_COPILOT_SPEND_CAP",
+                "copilot",
+                "spend_cap_usd",
             ),
-            copilot_input_rate=float(
-                os.environ.get("OBSERVATORY_COPILOT_INPUT_RATE", "0")
+            copilot_input_rate=_float_value(
+                "OBSERVATORY_COPILOT_INPUT_RATE",
+                "copilot",
+                "input_rate_per_million",
             ),
-            copilot_output_rate=float(
-                os.environ.get("OBSERVATORY_COPILOT_OUTPUT_RATE", "0")
+            copilot_output_rate=_float_value(
+                "OBSERVATORY_COPILOT_OUTPUT_RATE",
+                "copilot",
+                "output_rate_per_million",
             ),
             revision=os.environ.get("OBSERVATORY_REVISION", "unknown"),
-            disabled_features=tuple(
-                feature.strip()
-                for feature in os.environ.get(
-                    "OBSERVATORY_DISABLED_FEATURES",
-                    "",
-                ).split(",")
-                if feature.strip()
-            ),
+            disabled_features=_disabled_features(),
             web_dist=Path(
                 os.environ.get(
                     "OBSERVATORY_WEB_DIST",
@@ -87,6 +94,15 @@ def _optional_path(name: str) -> Path | None:
     if not path.is_absolute() and project_root:
         return Path(project_root) / path
     return path
+
+
+def _load_shared_environment() -> None:
+    config_dir = _config_dir()
+    if config_dir is None:
+        return
+    env_file = config_dir / ".env"
+    if env_file.is_file():
+        load_dotenv(env_file, override=False)
 
 
 def _runtime_root() -> Path | None:
@@ -163,6 +179,54 @@ def _experiment_state_root() -> Path | None:
     return _resolved_path(configured) if isinstance(configured, str) else None
 
 
+def _optional_string(environment: str, section: str, key: str) -> str | None:
+    value = os.environ.get(environment)
+    if value is not None:
+        return value.strip() or None
+    configured = _observatory_value(section, key)
+    return (
+        configured.strip()
+        if isinstance(configured, str) and configured.strip()
+        else None
+    )
+
+
+def _string_value(
+    environment: str,
+    section: str,
+    key: str,
+    *,
+    default: str,
+) -> str:
+    return _optional_string(environment, section, key) or default
+
+
+def _float_value(environment: str, section: str, key: str) -> float:
+    override = os.environ.get(environment)
+    if override is not None:
+        return float(override)
+    configured = _observatory_value(section, key)
+    return float(configured) if isinstance(configured, int | float) else 0
+
+
+def _disabled_features() -> tuple[str, ...]:
+    override = os.environ.get("OBSERVATORY_DISABLED_FEATURES")
+    if override is not None:
+        return tuple(
+            feature.strip()
+            for feature in override.split(",")
+            if feature.strip()
+        )
+    configured = _observatory_value("", "disabled_features")
+    if not isinstance(configured, list):
+        return ()
+    return tuple(
+        feature.strip()
+        for feature in configured
+        if isinstance(feature, str) and feature.strip()
+    )
+
+
 def _observatory_value(section: str, key: str) -> object:
     config_dir = _config_dir()
     if config_dir is None:
@@ -172,11 +236,9 @@ def _observatory_value(section: str, key: str) -> object:
         return None
     loaded = yaml.safe_load(settings_file.read_text(encoding="utf-8")) or {}
     observatory = loaded.get("observatory", {})
-    selected = (
-        observatory.get(section, {})
-        if isinstance(observatory, dict)
-        else {}
-    )
+    if not isinstance(observatory, dict):
+        return None
+    selected = observatory if not section else observatory.get(section, {})
     return selected.get(key) if isinstance(selected, dict) else None
 
 

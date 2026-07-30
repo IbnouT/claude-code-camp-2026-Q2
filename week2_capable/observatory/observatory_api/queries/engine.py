@@ -1,46 +1,98 @@
-"""Deterministic natural-language routing over typed evidence operations."""
+"""Plan and dispatch typed, scope-safe Observatory questions."""
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-
 from ..contracts import (
-    AnswerClaim,
     AskRequest,
     AskResponse,
-    EvidenceCitation,
+    ObservatoryQuery,
+    QueryScope,
     QueryStep,
 )
+from ..execution import ExperimentExecutor
 from ..sources.benchmark import BenchmarkSource
-from ..sources.comparison import rendering_comparison
 from ..sources.recorded_session import RecordedSessionSource
+from ..sources.runtime import RuntimeSource
+from . import experiments as experiment_queries
+from . import live as live_queries
+from . import recorded as recorded_queries
+from .common import missing
 
 
 def answer(
     request: AskRequest,
-    benchmark: BenchmarkSource,
+    benchmark: BenchmarkSource | None,
     recorded: RecordedSessionSource | None = None,
+    runtime: RuntimeSource | None = None,
+    experiments: ExperimentExecutor | None = None,
 ) -> AskResponse:
     """Plan and execute a supported question without arbitrary data access."""
 
-    operation = plan_operation(request.question)
-    if operation is not None:
-        return answer_operation(operation, request, benchmark, recorded)
-    tier = "model_disabled" if request.allow_model else "unsupported"
-    return AskResponse(
-        tier=tier,
-        question=request.question,
-        plan=(),
-        answer=(
-            "No validated local query matches this question. "
-            "Model translation is not configured."
-            if request.allow_model
-            else "No validated local query matches this question."
-        ),
-        claims=(),
-        citations=(),
-        missing=("supported query operation",),
+    if request.query is not None and request.query.scope != request.scope:
+        return _rejected(
+            request,
+            request.query,
+            "The exact query scope does not match the active workspace scope.",
+            "query scope matching the active workspace",
+        )
+    query = request.query or plan_query(request.question, request.scope)
+    if query is None:
+        tier = "model_disabled" if request.allow_model else "unsupported"
+        return AskResponse(
+            tier=tier,
+            question=request.question,
+            scope_record_id=request.scope.selected_record_id,
+            plan=(),
+            answer=(
+                "No validated local query matches this question. "
+                "Model translation is not configured."
+                if request.allow_model
+                else "No validated local query matches this question."
+            ),
+            claims=(),
+            citations=(),
+            missing=("supported query operation",),
+        )
+    return answer_operation(
+        query.operation,
+        request,
+        benchmark,
+        recorded,
+        runtime,
+        experiments,
+        query=query,
     )
+
+
+def plan_query(question: str, scope: QueryScope) -> ObservatoryQuery | None:
+    """Map supported language into a typed, scope-bearing query."""
+
+    operation = plan_operation(question)
+    if operation is None:
+        normalized = question.casefold()
+        if scope.space == "live" and any(
+            term in normalized
+            for term in ("happening", "current", "doing", "status")
+        ):
+            operation = "summarize_live"
+        elif scope.space == "experiments" and any(
+            term in normalized
+            for term in ("sample", "job", "definition", "cohort")
+        ):
+            operation = "list_experiment_samples"
+        elif scope.space == "knowledge" and any(
+            term in normalized
+            for term in ("know", "learn", "fact", "entity", "place")
+        ):
+            operation = "search_knowledge"
+        elif any(
+            term in normalized
+            for term in ("find", "show", "search", "trace", "record", "room")
+        ):
+            operation = "search_evidence"
+    if operation is None:
+        return None
+    return ObservatoryQuery(operation=operation, scope=scope)
 
 
 def plan_operation(question: str) -> str | None:
@@ -66,337 +118,250 @@ def plan_operation(question: str) -> str | None:
 def answer_operation(
     operation: str,
     request: AskRequest,
-    benchmark: BenchmarkSource,
+    benchmark: BenchmarkSource | None,
     recorded: RecordedSessionSource | None = None,
+    runtime: RuntimeSource | None = None,
+    experiments: ExperimentExecutor | None = None,
+    *,
+    query: ObservatoryQuery | None = None,
 ) -> AskResponse:
-    """Execute one already validated operation selected by a translator."""
+    """Validate and dispatch one typed evidence operation."""
 
-    if operation == "diagnose_stop":
-        return _diagnose_stop(request, benchmark, recorded)
-    if operation == "list_position_candidates":
-        return _position_candidates(request, benchmark)
-    if operation == "compare_rendering":
-        return _compare_rendering(request, benchmark)
+    selected = query or ObservatoryQuery(
+        operation=operation,
+        scope=request.scope,
+    )
+    issue = _scope_issue(selected)
+    if issue is not None:
+        return _rejected(
+            request,
+            selected,
+            issue,
+            "permitted operation for selected space",
+        )
+    if request.scope.space == "live":
+        if operation == "summarize_live":
+            result = live_queries.summarize(request, runtime)
+        elif operation == "diagnose_stop":
+            result = live_queries.diagnose_stop(request, runtime)
+        elif operation == "list_position_candidates":
+            result = live_queries.position_candidates(request, runtime)
+        else:
+            result = live_queries.search(request, runtime, selected)
+    elif request.scope.space == "sessions":
+        if operation == "search_evidence":
+            result = recorded_queries.search(request, recorded, selected)
+        elif benchmark is None:
+            result = _source_missing(request, operation, "selected run")
+        elif operation == "diagnose_stop":
+            result = recorded_queries.diagnose_stop(
+                request,
+                benchmark,
+                recorded,
+            )
+        else:
+            result = recorded_queries.position_candidates(request, benchmark)
+    elif request.scope.space == "experiments":
+        if operation == "compare_rendering":
+            if benchmark is None:
+                result = _source_missing(
+                    request,
+                    operation,
+                    "selected experiment evidence",
+                )
+            else:
+                result = experiment_queries.compare(request, benchmark)
+        else:
+            result = experiment_queries.samples(
+                request,
+                benchmark,
+                experiments,
+                selected,
+            )
+    else:
+        result = missing(
+            request,
+            QueryStep(
+                operation="search_knowledge",
+                source="knowledge",
+                detail="Search only the selected player's learned state.",
+            ),
+            "configured per-player knowledge source",
+        )
+    return _grounded(result).model_copy(update={"query": selected})
+
+
+def _scope_issue(query: ObservatoryQuery) -> str | None:
+    allowed = {
+        "live": {
+            "diagnose_stop",
+            "summarize_live",
+            "list_position_candidates",
+            "search_evidence",
+        },
+        "sessions": {
+            "diagnose_stop",
+            "list_position_candidates",
+            "search_evidence",
+        },
+        "experiments": {
+            "compare_rendering",
+            "list_experiment_samples",
+            "search_evidence",
+        },
+        "knowledge": {"search_knowledge", "search_evidence"},
+    }
+    if query.operation not in allowed[query.scope.space]:
+        return (
+            f"Operation {query.operation} is not permitted in "
+            f"{query.scope.space}."
+        )
+    required = {
+        "live": (query.scope.live_session_id, "runtime session"),
+        "sessions": (query.scope.run_id, "recorded run"),
+        "knowledge": (query.scope.player_id, "player"),
+    }
+    if query.scope.space in required:
+        value, label = required[query.scope.space]
+        if not value:
+            return f"{query.scope.space.title()} queries require one selected {label}."
+    filter_fields = {
+        ("live", "search_evidence"): {
+            "source",
+            "kind",
+            "trace_id",
+            "cost_usd",
+        },
+        ("sessions", "search_evidence"): {
+            "source",
+            "kind",
+            "room",
+            "trace_id",
+            "state",
+            "cost_usd",
+        },
+        ("experiments", "search_evidence"): {
+            "arm_id",
+            "state",
+            "cost_usd",
+        },
+        ("experiments", "list_experiment_samples"): {
+            "arm_id",
+            "state",
+            "cost_usd",
+        },
+        ("knowledge", "search_evidence"): {"kind", "confidence"},
+    }
+    permitted = filter_fields.get(
+        (query.scope.space, query.operation),
+        set(),
+    )
+    unsupported = sorted(
+        {
+            selected.field
+            for selected in query.filters
+            if selected.field not in permitted
+        }
+    )
+    if unsupported:
+        return (
+            "Filters are not permitted for this operation: "
+            + ", ".join(unsupported)
+            + "."
+        )
+    invalid_operators = sorted(
+        {
+            f"{selected.field}:{selected.operator}"
+            for selected in query.filters
+            if (
+                selected.field == "cost_usd"
+                and selected.operator not in {"eq", "gte", "lte"}
+            )
+            or (
+                selected.field != "cost_usd"
+                and selected.operator not in {"eq", "contains"}
+            )
+        }
+    )
+    if invalid_operators:
+        return (
+            "Filter operators are not permitted for these fields: "
+            + ", ".join(invalid_operators)
+            + "."
+        )
+    return None
+
+
+def _rejected(
+    request: AskRequest,
+    query: ObservatoryQuery,
+    detail: str,
+    missing_item: str,
+) -> AskResponse:
     return AskResponse(
         tier="unsupported",
         question=request.question,
-        plan=(),
-        answer="The translated operation is not permitted.",
+        query=query,
+        scope_record_id=request.scope.selected_record_id,
+        plan=(
+            QueryStep(
+                operation="validate_scope",
+                source=_scope_source(request.scope.space),
+                detail=detail,
+            ),
+        ),
+        answer="The query was rejected before reading evidence.",
         claims=(),
         citations=(),
-        missing=("permitted operation",),
+        missing=(missing_item,),
     )
 
 
-def _diagnose_stop(
+def _source_missing(
     request: AskRequest,
-    benchmark: BenchmarkSource,
-    recorded: RecordedSessionSource | None,
-) -> AskResponse:
-    investigation = (
-        benchmark.investigation(request.run_id)
-        if request.run_id
-        else None
-    )
-    steps = (
-        QueryStep(
-            operation="locate_final_claim",
-            source="agent",
-            detail=(
-                "Locate the final model claim available at the selected "
-                "replay moment."
-            ),
-        ),
-        QueryStep(
-            operation="verify_objective",
-            source="benchmark",
-            detail=(
-                "Use the outcome only because this run is an explicitly "
-                "linked experiment sample."
-            ),
-        ),
-    )
-    if investigation is None:
-        return _missing(request, steps[0], "selected run")
-    paused = _before_final_response(request, recorded)
-    if paused:
-        return AskResponse(
-            tier="deterministic",
-            question=request.question,
-            scope_record_id=request.selected_record_id,
-            plan=(steps[0],),
-            answer=(
-                "At the selected replay moment, the run had not yet retained "
-                "its final response. A stop diagnosis would use future "
-                "evidence, so no stop reason is asserted here."
-            ),
-            claims=(),
-            citations=(),
-            missing=("final response at selected moment",),
-        )
-    finding = next(
-        (
-            item
-            for item in investigation.diagnostics
-            if item.kind == "false_completion"
-        ),
-        None,
-    )
-    if finding is None:
-        return AskResponse(
-            tier="deterministic",
-            question=request.question,
-            plan=steps,
-            answer="The selected run has no false-completion diagnostic.",
-            claims=(),
-            citations=(),
-        )
-    citations = tuple(
-        item
-        for item in investigation.citations
-        if item.id in finding.evidence
-    )
-    belief = investigation.lens.believed.text
-    truth = investigation.lens.truth.text
-    claims = (
-        AnswerClaim(
-            text=f"The agent's final account was: {belief}",
-            confidence="high",
-            citations=investigation.lens.believed.citations,
-        ),
-        AnswerClaim(
-            text=truth,
-            confidence="high",
-            citations=investigation.lens.truth.citations,
-        ),
-        AnswerClaim(
-            text=finding.mechanism,
-            confidence="high",
-            citations=finding.evidence,
-        ),
-    )
-    return AskResponse(
-        tier="deterministic",
-        question=request.question,
-        scope_record_id=request.selected_record_id,
-        plan=steps,
-        answer=(
-            "This selected record is an experiment sample, so its retained "
-            "outcome includes the objective predicate used for that run. The "
-            "agent ended its turn, but that linked predicate remained false. "
-            "No benchmark result was attached to an unrelated live session."
-        ),
-        claims=claims,
-        citations=citations,
-    )
-
-
-def _before_final_response(
-    request: AskRequest,
-    recorded: RecordedSessionSource | None,
-) -> bool | None:
-    if (
-        recorded is None
-        or request.run_id is None
-        or request.selected_record_id is None
-    ):
-        return None
-    bundle = recorded.load(request.run_id)
-    if bundle is None:
-        return None
-    selected_agent = next(
-        (
-            row
-            for line, row in enumerate(bundle.agent_rows, start=1)
-            if f"agent:{line}" == request.selected_record_id
-        ),
-        None,
-    )
-    selected_gateway = next(
-        (
-            row
-            for row in bundle.gateway_rows
-            if f"gateway:{row.sequence}" == request.selected_record_id
-        ),
-        None,
-    )
-    final = next(
-        (
-            row
-            for row in reversed(bundle.agent_rows)
-            if row.get("phase") == "response"
-        ),
-        None,
-    )
-    if request.selected_record_id == "benchmark:outcome":
-        return False
-    if final is None:
-        return None
-    selected_at = (
-        _timestamp(selected_agent.get("at"))
-        if selected_agent is not None
-        else datetime.fromtimestamp(selected_gateway.at, UTC)
-        if selected_gateway is not None
-        else None
-    )
-    final_at = _timestamp(final.get("at"))
-    if selected_at is None or final_at is None:
-        return None
-    return selected_at < final_at
-
-
-def _timestamp(value: object) -> datetime | None:
-    if not isinstance(value, str) or not value:
-        return None
-    try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-
-
-def _position_candidates(
-    request: AskRequest,
-    benchmark: BenchmarkSource,
-) -> AskResponse:
-    investigation = (
-        benchmark.investigation(request.run_id)
-        if request.run_id
-        else None
-    )
-    step = QueryStep(
-        operation="list_position_candidates",
-        source="gateway",
-        detail="List unresolved place identities with exits and visit evidence.",
-    )
-    if investigation is None:
-        return _missing(request, step, "selected run")
-    nodes = [
-        node
-        for node in investigation.world.nodes
-        if node.id in investigation.world.candidates
-    ]
-    citations = tuple(
-        EvidenceCitation(
-            id=f"gateway:place:{node.place}",
-            source="gateway",
-            label=f"{node.title}, place {node.place}",
-            sequence=node.last_seq,
-            trace_id=None,
-            excerpt=(
-                f"exits={','.join(node.exits) or 'unknown'} "
-                f"visits={node.visits} method={node.method}"
-            ),
-        )
-        for node in nodes
-    )
-    claims = tuple(
-        AnswerClaim(
-            text=(
-                f"{node.title}, place {node.place}, remains possible with "
-                f"exits {', '.join(node.exits) or 'unknown'}."
-            ),
-            confidence="medium",
-            citations=(f"gateway:place:{node.place}",),
-        )
-        for node in nodes
-    )
-    return AskResponse(
-        tier="deterministic",
-        question=request.question,
-        plan=(step,),
-        answer=(
-            f"{len(nodes)} distinct place identities remain possible. "
-            "Their shared title is not used as identity."
-        ),
-        claims=claims,
-        citations=citations,
-    )
-
-
-def _compare_rendering(
-    request: AskRequest,
-    benchmark: BenchmarkSource,
-) -> AskResponse:
-    comparison = rendering_comparison(benchmark.root)
-    step = QueryStep(
-        operation="compare_rendering",
-        source="benchmark",
-        detail="Compare reset-verified cohorts and same-evidence replay.",
-    )
-    if comparison is None:
-        return _missing(request, step, "complete J1 rendering cohorts")
-    raw, minimal, full = comparison.cohorts
-    citations = (
-        EvidenceCitation(
-            id="benchmark:j1:raw",
-            source="benchmark",
-            label="Raw J1 cohort",
-            sequence=None,
-            trace_id=None,
-            excerpt=f"{raw.successes}/{raw.samples}, ${raw.cost_mean:.6f} mean",
-        ),
-        EvidenceCitation(
-            id="benchmark:j1:minimal",
-            source="benchmark",
-            label="Minimal J1 cohort",
-            sequence=None,
-            trace_id=None,
-            excerpt=(
-                f"{minimal.successes}/{minimal.samples}, "
-                f"{minimal.calls_mean:.1f} mean calls"
-            ),
-        ),
-        EvidenceCitation(
-            id="benchmark:j1:full",
-            source="benchmark",
-            label="Full J1 cohort",
-            sequence=None,
-            trace_id=None,
-            excerpt=f"{full.successes}/{full.samples}, ${full.cost_mean:.6f} mean",
-        ),
-    )
-    return AskResponse(
-        tier="deterministic",
-        question=request.question,
-        plan=(step,),
-        answer=(
-            "Raw and full had overlapping mean journey cost. Minimal used "
-            "more calls and cost despite its smaller envelope, so payload "
-            "size alone did not predict total journey cost."
-        ),
-        claims=(
-            AnswerClaim(
-                text="Every rendering policy succeeded in 10 of 10 journeys.",
-                confidence="high",
-                citations=tuple(item.id for item in citations),
-            ),
-            AnswerClaim(
-                text=(
-                    f"Minimal averaged {minimal.calls_mean:.1f} calls versus "
-                    f"{raw.calls_mean:.1f} for raw."
-                ),
-                confidence="high",
-                citations=("benchmark:j1:minimal", "benchmark:j1:raw"),
-            ),
-        ),
-        citations=citations,
-    )
-
-
-def _missing(
-    request: AskRequest,
-    step: QueryStep,
+    operation: str,
     item: str,
 ) -> AskResponse:
-    return AskResponse(
-        tier="deterministic",
-        question=request.question,
-        plan=(step,),
-        answer=f"The query cannot run without {item}.",
-        claims=(),
-        citations=(),
-        missing=(item,),
+    return missing(
+        request,
+        QueryStep(
+            operation=operation,
+            source=_scope_source(request.scope.space),
+            detail="Read only the selected scope.",
+        ),
+        item,
     )
+
+
+def _grounded(response: AskResponse) -> AskResponse:
+    """Keep assertions only when every cited record is returned."""
+
+    available = {citation.id for citation in response.citations}
+    supported = tuple(
+        claim
+        for claim in response.claims
+        if claim.citations and set(claim.citations) <= available
+    )
+    if len(supported) == len(response.claims):
+        return response
+    return response.model_copy(
+        update={
+            "claims": supported,
+            "missing": (
+                *response.missing,
+                "returned citations for omitted claims",
+            ),
+        }
+    )
+
+
+def _scope_source(space: str) -> str:
+    return {
+        "live": "runtime",
+        "sessions": "gateway",
+        "experiments": "experiments",
+        "knowledge": "knowledge",
+    }[space]
 
 
 def _contains(value: str, *terms: str) -> bool:

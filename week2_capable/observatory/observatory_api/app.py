@@ -28,6 +28,7 @@ from .contracts import (
     ExperimentValidateRequest,
     IncidentExportRequest,
     LiveControlRequest,
+    ObservatoryQuery,
 )
 from .incidents import build_capsule
 from .experiments import fork_one_variable, sample_queue, validate_definition
@@ -36,7 +37,7 @@ from .projections.history import diagnostic_history
 from .projections.knowledge import project_knowledge
 from .projections.live import project_live
 from .projections.session import project_recorded_session
-from .queries import answer, answer_operation
+from .queries import answer
 from .queries.model import ModelTranslator
 from .settings import Settings
 from .sources.benchmark import BenchmarkSource
@@ -688,14 +689,6 @@ def create_app(
 
     async def ask(request: Request) -> JSONResponse:
         nonlocal model_spend
-        if benchmark is None:
-            return JSONResponse(
-                {
-                    "error": "source_disabled",
-                    "detail": "OBSERVATORY_BENCHMARK_ROOT is not configured",
-                },
-                status_code=503,
-            )
         try:
             payload = AskRequest.model_validate(await request.json())
         except (ValidationError, ValueError) as error:
@@ -703,7 +696,13 @@ def create_app(
                 {"error": "invalid_query", "detail": str(error)},
                 status_code=422,
             )
-        result = answer(payload, benchmark, recorded_sessions)
+        result = answer(
+            payload,
+            benchmark,
+            recorded_sessions,
+            runtime,
+            experiment_executor,
+        )
         if (
             result.tier == "model_disabled"
             and payload.allow_model
@@ -716,17 +715,79 @@ def create_app(
             if model_spend + reserve <= active.copilot_spend_cap:
                 try:
                     translation = await translator.translate(payload.question)
-                    translated = answer_operation(
-                        translation.operation,
-                        payload,
+                    translated_query = ObservatoryQuery(
+                        operation=translation.operation,
+                        scope=payload.scope,
+                    )
+                    translated = answer(
+                        payload.model_copy(
+                            update={
+                                "query": translated_query,
+                                "allow_model": False,
+                            }
+                        ),
                         benchmark,
                         recorded_sessions,
+                        runtime,
+                        experiment_executor,
                     )
                     model_spend += translation.cost_usd
                     result = translated.model_copy(
                         update={
-                            "tier": "model_translated",
+                            "tier": (
+                                "model_translated"
+                                if translated.tier != "unsupported"
+                                else "unsupported"
+                            ),
                             "model_cost_usd": translation.cost_usd,
+                            "model_input_tokens": translation.input_tokens,
+                            "model_output_tokens": translation.output_tokens,
+                        }
+                    )
+                except (httpx.HTTPError, ValueError):
+                    pass
+        if (
+            payload.allow_summary
+            and translator is not None
+            and result.tier in {"deterministic", "model_translated"}
+            and result.citations
+        ):
+            reserve = (
+                2_000 * active.copilot_input_rate
+                + 160 * active.copilot_output_rate
+            ) / 1_000_000
+            if model_spend + reserve <= active.copilot_spend_cap:
+                try:
+                    summary = await translator.summarize(
+                        question=payload.question,
+                        answer=result.answer,
+                        claims=tuple(
+                            (claim.text, claim.citations)
+                            for claim in result.claims
+                        ),
+                        citations=tuple(
+                            (citation.id, citation.excerpt)
+                            for citation in result.citations
+                        ),
+                        missing=result.missing,
+                    )
+                    model_spend += summary.cost_usd
+                    result = result.model_copy(
+                        update={
+                            "tier": "model_summarized",
+                            "model_cost_usd": (
+                                result.model_cost_usd + summary.cost_usd
+                            ),
+                            "model_input_tokens": (
+                                result.model_input_tokens
+                                + summary.input_tokens
+                            ),
+                            "model_output_tokens": (
+                                result.model_output_tokens
+                                + summary.output_tokens
+                            ),
+                            "model_summary": summary.summary,
+                            "model_summary_citations": summary.citations,
                         }
                     )
                 except (httpx.HTTPError, ValueError):

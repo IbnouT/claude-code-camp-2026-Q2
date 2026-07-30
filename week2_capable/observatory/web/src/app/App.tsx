@@ -312,29 +312,95 @@ export function App() {
       </main>
       <SearchDialog
         open={searchOpen}
+        modelAvailable={capabilities.features.includes("copilot-model")}
+        scope={{
+          space,
+          ...(player ? { player_id: player } : {}),
+          ...(space === "live" && liveSession
+            ? {
+              live_session_id: liveSession,
+              through_sequence: (
+                live.snapshot?.through_sequence
+                ?? live.selectedSequence
+              ),
+            }
+            : {}),
+          ...(space === "sessions" && recordedRun
+            ? {
+              run_id: recordedRun,
+              selected_record_id: (
+                new URL(window.location.href).searchParams.get("record")
+                ?? undefined
+              ),
+            }
+            : {}),
+          ...(space === "experiments"
+            ? {
+              comparison_id: (
+                new URL(window.location.href).searchParams.get("comparison")
+                ?? undefined
+              ),
+              subject_id: (
+                new URL(window.location.href).searchParams.get("subject")
+                ?? undefined
+              ),
+            }
+            : {}),
+          lens: (
+            new URL(window.location.href).searchParams.get("lens")
+            ?? undefined
+          ),
+        }}
         scopeLabel={
           space === "sessions" && recorded.investigation
             ? `${recorded.investigation.run.journey} · ${recorded.investigation.run.attempt}`
-            : `${space} space`
+            : space === "live" && selectedSession
+              ? `${selectedSession.character} · ${selectedSession.id}`
+              : `${space} space`
         }
-        runId={space === "sessions" ? recordedRun : undefined}
         onClose={() => setSearchOpen(false)}
         onOpenCitation={(citationId) => {
           const url = new URL(window.location.href);
-          url.searchParams.set("space", "sessions");
-          if (citationId.startsWith("gateway:place:")) {
+          if (citationId.startsWith("runtime:")) {
+            url.searchParams.set("space", "live");
+            setSpace("live");
+          } else if (citationId.startsWith("experiment:sample:")) {
+            const runId = citationId.replace("experiment:sample:", "");
+            const run = recorded.catalog.find(
+              (candidate) => candidate.id === runId,
+            );
+            url.searchParams.set("space", "sessions");
+            url.searchParams.set("run", runId);
+            if (run) {
+              url.searchParams.set("player", run.player_id);
+              setPlayer(run.player_id);
+            }
+            setRecordedRun(runId);
+            setSpace("sessions");
+          } else if (citationId.startsWith("experiment:")) {
+            url.searchParams.set("space", "experiments");
+            url.searchParams.set("subject", citationId.split(":")[1] ?? "");
+            setSpace("experiments");
+          } else if (citationId.startsWith("knowledge:")) {
+            url.searchParams.set("space", "knowledge");
+            url.searchParams.set("subject", citationId);
+            setSpace("knowledge");
+          } else if (citationId.startsWith("gateway:place:")) {
+            url.searchParams.set("space", "sessions");
             url.searchParams.set(
               "room",
               citationId.replace("gateway:place:", "place:"),
             );
             url.searchParams.set("lens", "story");
+            setSpace("sessions");
           } else {
+            url.searchParams.set("space", "sessions");
             url.searchParams.set("record", citationId);
             url.searchParams.set("lens", "evidence");
+            setSpace("sessions");
           }
           window.history.pushState(null, "", url);
           window.dispatchEvent(new PopStateEvent("popstate"));
-          setSpace("sessions");
           setSearchOpen(false);
         }}
       />

@@ -212,9 +212,31 @@ Enabling policy does not confirm a run. Validation returns the effective
 configuration, reset identity, deterministic queue, and maximum spend. A
 separate request must explicitly confirm that spend before a runner can start.
 
-Model translation also requires `ANTHROPIC_API_KEY`. The key remains
-server-side. A user must enable model translation for the individual question,
-and the deterministic planner always runs first.
+Optional model translation uses durable non-secret policy:
+
+```yaml
+observatory:
+  disabled_features: [
+    # copilot-model,
+    # benchmark-execution
+  ]
+  copilot:
+    model: claude-haiku-4-5
+    endpoint: https://api.anthropic.com/v1/messages
+    spend_cap_usd: 0.25
+    input_rate_per_million: 1.00
+    output_rate_per_million: 5.00
+```
+
+`ANTHROPIC_API_KEY` is the only copilot value in `.boukensha/.env`.
+Translation becomes available only when the key, pinned model, rates, and
+positive spend cap are all present. It receives redacted question text, not
+evidence. It can select only an allowlisted operation, which is then checked
+against the active player, space, session or run, and replay prefix.
+
+The local deterministic planner always runs first. A user must opt into model
+translation for each unmatched question. Model tokens and cost are reported
+separately from agent and experiment spend.
 
 Relative source paths are resolved from the repository root by the launcher.
 For the local benchmark evidence:

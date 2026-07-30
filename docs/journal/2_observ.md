@@ -102,6 +102,11 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
   derived from planned samples, and a runtime ledger that refuses the next
   sample unless its full ceiling still fits. One cumulative cap cannot prove
   both.
+- Natural language is not the security boundary of an evidence copilot. The
+  boundary is the typed query that carries its source and temporal scope
+  through planning, optional translation, execution, and citation navigation.
+  Validating only the first planner leaves a translated query able to cross
+  the very boundary the interface promises.
 
 ## Technical Conclusions
 

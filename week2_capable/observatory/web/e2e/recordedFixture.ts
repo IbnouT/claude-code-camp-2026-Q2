@@ -256,16 +256,28 @@ export async function mockRecorded(page: Page) {
   });
   await page.route("**/api/ask", async (route) => {
     const request = route.request().postDataJSON() as {
-      selected_record_id: string | null;
+      scope: {
+        space: "sessions";
+        run_id: string;
+        selected_record_id?: string;
+      };
     };
-    const early = request.selected_record_id === "agent:1";
+    const early = request.scope.selected_record_id === "agent:1";
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
         tier: "deterministic",
         question: "Why did the agent stop?",
-        scope_record_id: request.selected_record_id,
+        query: {
+          version: 1,
+          operation: "diagnose_stop",
+          scope: request.scope,
+          filters: [],
+          order: "causal",
+          limit: 25,
+        },
+        scope_record_id: request.scope.selected_record_id ?? null,
         plan: [{
           operation: "diagnose_stop",
           source: "benchmark",
@@ -279,9 +291,20 @@ export async function mockRecorded(page: Page) {
           confidence: "high",
           citations: ["benchmark:outcome"],
         }],
-        citations: [],
+        citations: early ? [] : [{
+          id: "benchmark:outcome",
+          source: "benchmark",
+          label: "Verified objective outcome",
+          sequence: null,
+          trace_id: null,
+          excerpt: "success=false, stop_reason=completed",
+        }],
         missing: early ? ["final response at selected moment"] : [],
         model_cost_usd: 0,
+        model_input_tokens: 0,
+        model_output_tokens: 0,
+        model_summary: null,
+        model_summary_citations: [],
       }),
     });
   });

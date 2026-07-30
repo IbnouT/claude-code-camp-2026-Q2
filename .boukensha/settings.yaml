@@ -131,6 +131,13 @@ gateway:
 
 # === observatory: evidence sources and local product policy. ================
 observatory:
+  # Built capabilities can be hidden by local policy. Leave the list empty to
+  # expose every capability whose dependencies are available.
+  disabled_features: [
+    # copilot-model,
+    # benchmark-execution
+  ]
+
   benchmark:
     # Recorded experiment evidence. Relative paths resolve from the repository
     # root. OBSERVATORY_BENCHMARK_ROOT remains a one-run override.
@@ -152,6 +159,20 @@ observatory:
     # Observer-only CircleMUD atlas. Relative paths resolve from the repository
     # root. BOUKENSHA_WORLD remains a one-run override.
     path: week0_explore/circlemud-world-parser/assets/wld
+
+  copilot:
+    # Local deterministic Ask and structured search work without this model.
+    # The model can only translate an unmatched question into the same
+    # allowlisted, scope-checked query language. It cannot read evidence or
+    # answer directly. Each request also requires explicit UI opt-in.
+    model: claude-haiku-4-5
+    endpoint: https://api.anthropic.com/v1/messages
+    # Local lifetime ceiling for optional Observatory model translation.
+    spend_cap_usd: 0.25
+    # USD per million tokens for the pinned model. Update these rates when the
+    # selected model or its provider pricing changes.
+    input_rate_per_million: 1.00
+    output_rate_per_million: 5.00
 
 # === Secrets live in .boukensha/.env (not here) =============================
 # One per provider you use, plus administrator and player-profile passwords:

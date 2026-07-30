@@ -12,7 +12,13 @@ export type RunSummary = {
 
 export type EvidenceCitation = {
   id: string;
-  source: "agent" | "gateway" | "benchmark";
+  source:
+    | "agent"
+    | "gateway"
+    | "benchmark"
+    | "runtime"
+    | "experiments"
+    | "knowledge";
   label: string;
   sequence: number | null;
   trace_id: string | null;

@@ -1,12 +1,22 @@
 import { Search, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import type { AskResponse } from "../../data/ask";
+import type { AskResponse, QueryScope } from "../../data/ask";
+import { SearchAnswer } from "./SearchAnswer";
+import { StructuredQueryEditor } from "./StructuredQueryEditor";
+import {
+  filterFields,
+  filterOperators,
+  scopeDescription,
+  suggestions,
+  type QueryOrder,
+} from "./queryOptions";
 
 type Props = {
   open: boolean;
   scopeLabel?: string;
-  runId?: string;
+  scope: QueryScope;
+  modelAvailable?: boolean;
   onClose: () => void;
   onOpenCitation?: (citationId: string) => void;
 };
@@ -14,7 +24,8 @@ type Props = {
 export function SearchDialog({
   open,
   scopeLabel,
-  runId,
+  scope,
+  modelAvailable = false,
   onClose,
   onOpenCitation,
 }: Props) {
@@ -24,15 +35,72 @@ export function SearchDialog({
   const [answer, setAnswer] = useState<AskResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [allowModel, setAllowModel] = useState(false);
+  const [allowSummary, setAllowSummary] = useState(false);
+  const [structured, setStructured] = useState(false);
+  const [filterField, setFilterField] = useState(
+    () => filterFields(scope.space)[0],
+  );
+  const [filterOperator, setFilterOperator] = useState("eq");
+  const [filterValue, setFilterValue] = useState("");
+  const [order, setOrder] = useState<QueryOrder>("causal");
+  const scopeReady = scope.space === "live"
+    ? Boolean(scope.live_session_id)
+    : scope.space === "sessions"
+      ? Boolean(scope.run_id)
+      : scope.space === "knowledge"
+        ? Boolean(scope.player_id)
+        : true;
+  const filterValid = !(
+    structured
+    && filterField === "cost_usd"
+    && filterValue.trim()
+    && !Number.isFinite(Number(filterValue))
+  );
 
   useEffect(() => {
     if (open) {
       previousFocus.current = document.activeElement as HTMLElement | null;
+      const saved = new URL(window.location.href).searchParams.get("q");
+      if (saved) {
+        setQuestion(saved);
+      }
+      const url = new URL(window.location.href);
+      const savedField = url.searchParams.get("queryField");
+      if (savedField) {
+        setStructured(true);
+        setFilterField(savedField);
+        setFilterOperator(url.searchParams.get("queryOperator") ?? "eq");
+        setFilterValue(url.searchParams.get("queryValue") ?? "");
+        const savedOrder = url.searchParams.get("queryOrder");
+        if (
+          savedOrder === "causal"
+          || savedOrder === "chronological"
+          || savedOrder === "cost_desc"
+        ) {
+          setOrder(savedOrder);
+        }
+      }
       input.current?.focus();
       return;
     }
     previousFocus.current?.focus();
   }, [open]);
+
+  useEffect(() => {
+    if (!filterFields(scope.space).includes(filterField)) {
+      setFilterField(filterFields(scope.space)[0]);
+      setFilterOperator("eq");
+      setFilterValue("");
+    }
+  }, [filterField, scope.space]);
+
+  useEffect(() => {
+    const valid = filterOperators(filterField).map((item) => item.value);
+    if (!valid.includes(filterOperator)) {
+      setFilterOperator("eq");
+    }
+  }, [filterField, filterOperator]);
 
   if (!open) {
     return null;
@@ -40,7 +108,7 @@ export function SearchDialog({
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!question.trim() || !runId) return;
+    if (!question.trim() || !scopeReady || !filterValid) return;
     setLoading(true);
     setError(null);
     try {
@@ -49,11 +117,29 @@ export function SearchDialog({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           question: question.trim(),
-          run_id: runId,
-          selected_record_id: new URL(window.location.href).searchParams.get(
-            "record",
-          ),
-          allow_model: false,
+          scope,
+          ...(structured
+            ? {
+              query: {
+                version: 1,
+                operation: "search_evidence",
+                scope,
+                filters: filterValue.trim()
+                  ? [{
+                    field: filterField,
+                    operator: filterOperator,
+                    value: filterField === "cost_usd"
+                      ? Number(filterValue)
+                      : filterValue.trim(),
+                  }]
+                  : [],
+                order,
+                limit: 25,
+              },
+            }
+            : {}),
+          allow_model: allowModel,
+          allow_summary: allowSummary,
         }),
       });
       const payload = await response.json() as AskResponse & {
@@ -63,6 +149,24 @@ export function SearchDialog({
         throw new Error(payload.detail ?? `Ask returned ${response.status}`);
       }
       setAnswer(payload);
+      const url = new URL(window.location.href);
+      url.searchParams.set("q", question.trim());
+      if (structured) {
+        url.searchParams.set("queryField", filterField);
+        url.searchParams.set("queryOperator", filterOperator);
+        url.searchParams.set("queryValue", filterValue.trim());
+        url.searchParams.set("queryOrder", order);
+      } else {
+        for (const key of [
+          "queryField",
+          "queryOperator",
+          "queryValue",
+          "queryOrder",
+        ]) {
+          url.searchParams.delete(key);
+        }
+      }
+      window.history.replaceState(null, "", url);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Ask failed");
     } finally {
@@ -90,7 +194,7 @@ export function SearchDialog({
           />
           <button
             className="primary-button"
-            disabled={!question.trim() || !runId || loading}
+            disabled={!question.trim() || !scopeReady || !filterValid || loading}
             type="submit"
           >
             {loading ? "Planning…" : "Ask"}
@@ -108,11 +212,47 @@ export function SearchDialog({
           <span>Scope</span>
           <b>{scopeLabel ?? "Current Observatory space"}</b>
           <small>
-            {runId
-              ? "The answer is limited to this recorded run and the selected replay moment."
-              : "Select a recorded session before asking an evidence question."}
+            {scopeDescription(scope, scopeReady)}
           </small>
         </div>
+        <StructuredQueryEditor
+          scope={scope}
+          enabled={structured}
+          field={filterField}
+          operator={filterOperator}
+          value={filterValue}
+          order={order}
+          valid={filterValid}
+          onEnabledChange={setStructured}
+          onFieldChange={setFilterField}
+          onOperatorChange={setFilterOperator}
+          onValueChange={setFilterValue}
+          onOrderChange={setOrder}
+        />
+        {modelAvailable ? (
+          <div className="search-model-options">
+            <label className="search-model-option">
+              <input
+                checked={allowModel}
+                type="checkbox"
+                onChange={(event) => setAllowModel(event.target.checked)}
+              />
+              <span>
+                Translate an unmatched question into a validated local query
+              </span>
+            </label>
+            <label className="search-model-option">
+              <input
+                checked={allowSummary}
+                type="checkbox"
+                onChange={(event) => setAllowSummary(event.target.checked)}
+              />
+              <span>
+                Summarize returned evidence with cited IDs
+              </span>
+            </label>
+          </div>
+        ) : null}
         {answer === null && error === null ? (
           <div className="search-guidance">
             <p className="eyebrow">Deterministic by default</p>
@@ -122,11 +262,7 @@ export function SearchDialog({
               shows the plan, citations, missing data, and translation cost.
             </p>
             <div className="suggestion-grid">
-              {[
-                "Why did the agent stop?",
-                "Which position candidates remain?",
-                "Which evidence disagrees?",
-              ].map((suggestion) => (
+              {suggestions(scope.space).map((suggestion) => (
                 <button
                   key={suggestion}
                   type="button"
@@ -140,47 +276,10 @@ export function SearchDialog({
         ) : null}
         {error ? <p className="search-error" role="alert">{error}</p> : null}
         {answer ? (
-          <div className="search-answer" aria-live="polite">
-            <div className="answer-heading">
-              <span>
-                {answer.tier.replaceAll("_", " ")}
-              </span>
-              <b>${answer.model_cost_usd.toFixed(4)} model spend</b>
-            </div>
-            <h2>{answer.answer}</h2>
-            <section>
-              <p className="eyebrow">Visible query plan</p>
-              {answer.plan.length > 0 ? answer.plan.map((step) => (
-                <article key={`${step.operation}:${step.source}`}>
-                  <b>{step.operation.replaceAll("_", " ")}</b>
-                  <span>{step.detail}</span>
-                  <small>{step.source}</small>
-                </article>
-              )) : <p>No validated local operation matched this question.</p>}
-            </section>
-            {answer.claims.map((claim) => (
-              <article className="answer-claim" key={claim.text}>
-                <span>{claim.confidence}</span>
-                <p>{claim.text}</p>
-                <div>
-                  {claim.citations.map((citation) => (
-                    <button
-                      key={citation}
-                      type="button"
-                      onClick={() => onOpenCitation?.(citation)}
-                    >
-                      {citation}
-                    </button>
-                  ))}
-                </div>
-              </article>
-            ))}
-            {answer.missing.length > 0 ? (
-              <div className="answer-missing">
-                Missing: {answer.missing.join(", ")}
-              </div>
-            ) : null}
-          </div>
+          <SearchAnswer
+            answer={answer}
+            onOpenCitation={onOpenCitation}
+          />
         ) : null}
       </section>
     </div>

@@ -130,6 +130,25 @@ test("captures the B3 Sessions investigation for rendered review", async ({
   });
 });
 
+test("captures the B6 grounded investigation flow", async ({
+  page,
+}, testInfo) => {
+  await renderFixture(page);
+  await mockRuntime(page);
+  await mockRecorded(page);
+  await page.goto("/?space=sessions");
+  await page.getByRole("button", { name: "Ask why" }).click();
+  await page.getByRole("textbox", { name: "Question or evidence query" })
+    .fill("Why did the agent stop?");
+  await page.getByRole("button", { name: "Ask", exact: true }).click();
+  await expect(page.getByText("Validated query")).toBeVisible();
+  await expect(page.getByText("Exact evidence")).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("b6-grounded-query-dark.png"),
+    fullPage: false,
+  });
+});
+
 test("captures the B5 Experiments workbench for rendered review", async ({
   page,
 }, testInfo) => {
