@@ -10,13 +10,14 @@ set the architecture or product ceiling.
 
 ## Product vision
 
-The observatory should make three difficult questions easy to answer:
+The observatory should make four difficult questions easy to answer:
 
 - What is happening now?
 - Why did the agent make this decision?
-- What would have happened with a different parser, rendering, or tool surface?
+- Which system design performs better under a controlled experiment?
+- What has this player learned across sessions?
 
-Three signature capabilities define the product.
+Three cross-cutting capabilities define the product.
 
 ### Belief versus reality
 
@@ -95,6 +96,14 @@ flowchart LR
 ## Design principles
 
 - Evidence before assertion: every conclusion opens to its source.
+- No orphan evidence: every captured record, field, and retained value remains
+  inspectable in a meaningful form and as its exact sanitized source.
+- No dead-end dimension: evidence can move down to source detail, up to its
+  containing turn and run, or sideways through every captured causal,
+  chronological, spatial, model, tool, gateway, cost, quality, and
+  configuration relation.
+- Visible capture gaps: a missing peer or correlation is named as unavailable
+  evidence. It is never hidden behind an empty panel or inferred into existence.
 - Uncertainty stays visible: ambiguity is information, not a rendering defect.
 - One causal model: wire, parser, tool, model, cost, and state are correlated by
   stable identifiers.
@@ -113,18 +122,27 @@ flowchart LR
 
 ## Experience north star
 
-The product should feel like one instrument with three modes, not a collection
-of dashboards. Map, timeline, evidence, cost, and diagnostics are coordinated
-lenses inside the same workspace.
+The product should feel like one instrument with four question-led spaces, not
+a collection of dashboards. Map, sequence, evidence, cost, and diagnostics are
+coordinated lenses inside each relevant workspace.
 
 The hierarchy is:
 
-1. Live: understand the current run in seconds.
-2. Investigate: explain one moment or failure with evidence.
-3. Compare: decide which system variant performs better.
+1. Live: understand and control the current run.
+2. Sessions: replay and explain any recorded moment.
+3. Experiments: define, run, and compare controlled variants.
+4. Knowledge: inspect what one player has learned across sessions.
 
-Ask and search are available everywhere. They do not become separate
-destinations.
+Ask and search are scoped tools available in every space. They do not become
+separate destinations.
+
+The product has two explicit planes:
+
+- The read plane reconstructs and inspects evidence. It never mutates journals,
+  observations, knowledge history, or the game world.
+- The control plane launches or stops mortal agent runs and delivers confirmed
+  goal revisions through the launcher. It never sends immortal commands or
+  converts observer truth into agent input.
 
 The interface succeeds when these workflows feel obvious:
 
@@ -170,10 +188,12 @@ Live answers "what is happening now?"
 The opening state prioritizes the world and current intent. Secondary measures
 stay quiet until they change or cross a meaningful threshold.
 
-### Investigate
+### Sessions
 
-Investigate answers "why did this happen?"
+Sessions answers "why did this happen in this run?"
 
+- player and session discovery without latest-file inference
+- replay, pause, step, scrub, and synchronized spatial and temporal lenses
 - trace waterfall from model turn to tool call, command, wire, parse, and state
 - belief versus reality comparison
 - evidence inspector for raw, parsed, rendered, and believed forms
@@ -181,14 +201,19 @@ Investigate answers "why did this happen?"
 - parser misses, low-confidence facts, and stale evidence
 - loop, stall, retry, and correction analysis
 
-Investigation begins from a selected fact, diagnostic, map location, timeline
-range, or question. The workspace keeps that subject in focus while the user
-moves between causal, spatial, and evidence lenses.
+Investigation begins from a selected session, fact, diagnostic, map location,
+timeline range, or question. The workspace keeps that subject in focus while
+the user moves between causal, spatial, cost, and evidence lenses.
 
-### Compare
+### Experiments
 
-Compare answers "which design performs better?"
+Experiments answers "which design performs better, and why?"
 
+- controlled scenario definitions with objective, baseline, success predicate,
+  model, tools, rendering, parser, limits, repetitions, and spend cap
+- gateway and agent feature controls generated from the runtime registry
+- reset verification before every sample
+- explicit validate, launch, resume, stop, and compare lifecycle
 - two or more runs aligned by semantic milestones
 - rendering, parser, model, and tool-profile differences
 - success and final-state correctness
@@ -198,6 +223,21 @@ Compare answers "which design performs better?"
 
 Alignment uses room transitions, tool calls, objective milestones, and verified
 state changes. Wall-clock alignment is available, but it is not the default.
+Every experiment and sample links to its full Sessions evidence.
+
+### Knowledge
+
+Knowledge answers "what does this player know, and why?"
+
+- learned world with zone, cluster, and room levels of detail
+- frontier, revisits, entities, objects, and mobile sightings
+- player state, progression, inventory, and milestones
+- per-fact provenance, confidence, parser version, and contradictions
+- snapshots, recoverable reset, and restore
+- belief and observer-truth overlays that remain technically separate
+
+Knowledge is cumulative per player. A selected fact opens every supporting
+session and observation without flattening mobile entities or duplicate rooms.
 
 ### Ask and search
 
@@ -501,7 +541,7 @@ the live MUD or model provider.
 
 ## Architecture
 
-The observatory is a read-only product surface over existing evidence sources.
+The observatory separates a read plane from a narrow mortal control plane.
 
 ```mermaid
 flowchart TB
@@ -514,14 +554,22 @@ flowchart TB
     C --> R["Deterministic event reducer"]
     R --> P["Projection worker"]
     P --> W["Live"]
-    P --> E["Investigate"]
-    P --> A["Compare"]
+    P --> S["Sessions"]
+    P --> E["Experiments"]
+    P --> K["Knowledge"]
     P --> X["Map, evidence, cost lenses"]
     P --> Q["Ask and search"]
     Q --> QE["Validated query engine"]
     QE --> P
     QE -. "optional, budgeted" .-> L["Direct model REST"]
+    UI["Confirmed control actions"] --> LC["Launcher control API"]
+    LC --> AG["Mortal agent processes"]
 ```
+
+Read-plane sources are immutable from the Observatory. Control actions use the
+launcher, carry authenticated session identity, and append their own audit
+events. The control plane can launch, stop, or revise a mortal agent goal. It
+cannot issue game commands, use administrator credentials, or mutate evidence.
 
 ### Package shape
 
@@ -776,7 +824,7 @@ reports available capabilities.
 
 Exit gate: every panel reconstructs the same state at every selected sequence.
 
-### Increment 3: Investigate and diagnostics
+### Increment 3: Sessions investigation and diagnostics
 
 - causal waterfall
 - evidence lens
@@ -798,7 +846,7 @@ evidence without reading raw files.
 Exit gate: duplicate room titles remain separate and the selected candidate set
 is explainable from exits and neighbourhood evidence.
 
-### Increment 5: Compare and counterfactual replay
+### Increment 5: Experiments comparison and counterfactual replay
 
 - semantic run alignment
 - first-divergence workflow
@@ -844,17 +892,149 @@ live MUD, credentials, or undocumented local state.
 Exit gate: all required workflows pass end-to-end, rendered, accessibility, and
 performance gates.
 
+### Increment 9: Universal evidence graph
+
+- index every captured record, field, and retained scalar value without
+  dropping unknown data
+- correlate evidence by session, turn, tool ID, trace ID, sequence, time, room,
+  command, model call, benchmark attempt, and configuration version
+- render agent request, context, response, reasoning, tool arguments, tool
+  result, gateway command, wire frames, parser output, and state change
+- preserve the exact sanitized source record beside each meaningful rendering
+- provide session, model, limits, duration, instrumentation, error, and
+  completeness views
+- make every timeline event, room, diagnostic, cost point, comparison sample,
+  message, and source-health signal an entry point into the same graph
+- allow pivots across causal, chronological, spatial, model, tool, gateway,
+  cost, quality, configuration, and raw-source dimensions
+- retain navigation history, breadcrumbs, linked filters, and stable URLs so an
+  investigator can move down, up, or sideways without losing context
+- provide a schema-aware fallback inspector for new event kinds and fields
+  before a specialized renderer exists
+
+```mermaid
+flowchart TB
+    E["Captured evidence graph"] --> T["Time"]
+    E --> C["Causality"]
+    E --> S["Source and process"]
+    E --> W["World and entities"]
+    E --> K["Cost and context"]
+    E --> M["Model and messages"]
+    E --> G["Gateway and wire"]
+    E --> Q["Quality and completeness"]
+    E --> V["Configuration and versions"]
+    T <--> C
+    C <--> M
+    M <--> G
+    G <--> W
+    K <--> C
+    Q <--> S
+```
+
+The same evidence can be viewed at several levels:
+
+1. outcome and session
+2. milestone and turn
+3. causal span
+4. individual message, tool, gateway, parse, or state event
+5. exact sanitized source record and retained fields
+
+Exit gate: automated coverage proves that every captured record, field, and
+retained value has a meaningful renderer or the schema-aware fallback. From any
+dimension, an investigator can reach the exact source, move up or down the
+containment hierarchy, and pivot to every correlated dimension without a dead
+end. Missing correlations are counted and displayed as capture gaps.
+
+### Increment 10: Live journey cockpit
+
+- join live agent events with the active gateway session
+- animate the recorded journey as rooms, exits, actions, and costs arrive
+- show current goal, plan, model state, tool action, result, vitals, and position
+- retain the recent trail, frontier, unresolved candidates, and parse misses
+- distinguish waiting, disconnected, replaying, paused, and genuinely idle
+- let a live diagnostic pause the view and open its triggering evidence
+
+The central canvas must communicate progress without requiring the side rail.
+An empty map is an explicit source or session state, never the normal live view.
+
+Exit gate: one real agent journey visibly builds the map and causal timeline
+from an empty session through several verified state changes.
+
+### Increment 11: Cost and context intelligence
+
+- add cumulative and marginal cost curves
+- split fresh input, cache read, cache write, and output tokens
+- show prompt size, context occupancy, amplification, calls, latency, and retries
+- connect spend to rooms, actions, milestones, loops, corrections, and stalls
+- identify repeated context and cost after the last verified progress
+- explain every cost measure and its completeness
+- support cost-focused saved questions and drill-down
+
+```mermaid
+flowchart LR
+    U["Usage evidence"] --> T["Turn cost"]
+    T --> A["Action"]
+    A --> M["Milestone or no progress"]
+    M --> E["Efficiency measures"]
+    E --> D["Cost diagnostics"]
+    D --> X["Exact prompt and response evidence"]
+```
+
+Exit gate: the J2 run reveals where money was spent, what progress it bought,
+and which turns added cost without adding verified information.
+
+### Increment 12: Benchmark workbench
+
+- describe journeys in plain language before showing internal IDs
+- select objective, start state, model, tool profile, rendering, parser, limits,
+  repetitions, and spend cap
+- preview the exact controlled variables and estimated maximum spend
+- run only validated benchmark definitions through a separate controlled runner
+- stream attempt progress, cost, state, errors, and completion criteria
+- save immutable experiment definitions beside results
+- compare selected cohorts, individual attempts, and first divergences
+- support rerun, fork, and one-variable-at-a-time experiment creation
+
+The observatory remains read-only for gameplay. Benchmark execution is an
+explicit experiment action with a confirmation boundary and a separate process.
+
+Exit gate: a user can define, run, and compare a small budgeted experiment
+without editing files or knowing repository-specific benchmark names.
+
+### Increment 13: Reference-floor workflow audit
+
+The audit verifies questions and workflows, not route names.
+
+| Information need | Required path |
+| --- | --- |
+| Session and run overview | Overview to exact session detail, then any correlated dimension |
+| Live transcript | Live event to sanitized source message, turn, action, and world change |
+| Tokens, context, and cost | Cost curve to one billed response, prompt, cache class, and progress result |
+| Operation spans | Model turn to tool, gateway, wire, parse, state, and back |
+| Test and benchmark results | Experiment definition to cohort, attempt, turn, and evidence |
+| Manager and Telnet logs | Gateway span to redacted wire frames, command, parse, and caller |
+| Errors and health | Failure state to cause, affected evidence, and recovery |
+| Knowledge and world | Place or entity to every supporting observation and visit |
+| Player progression | Change to the exact event, action, and evidence that caused it |
+| Dropped output | Completeness measure to missing sequence, source, and affected conclusions |
+
+Exit gate: every confirmed reference-floor information need is demonstrated by
+an end-to-end test and a rendered workflow. Innovative views add capability
+above this floor, they do not substitute for it.
+
 ## Scope and priority
 
 The recommended Week 2 priority is:
 
 1. Make the evidence path trustworthy and live.
-2. Build Live, time travel, Investigate, and belief-versus-reality.
+2. Build Live, Sessions replay, and belief-versus-reality.
 3. Add the living journey map and automatic diagnostics.
-4. Build Compare because it closes the loop on current experiments.
+4. Build Experiments because it closes the loop on current measurements.
 5. Add the deterministic query engine and a narrow grounded copilot.
 6. Expand knowledge and atlas features as their data source becomes ready.
 7. Harden and polish continuously, with a final focused pass.
+8. Complete evidence drill-down, cost intelligence, and the benchmark workbench
+   before calling the product complete.
 
 The full atlas, generalized cross-session intelligence, and broad copilot are
 larger than the observability core. They should not block the first useful
