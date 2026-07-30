@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Boukensha Observatory: session sequence (mockup)</title>
+<style>
+  :root{--bg:#080b0f;--bg2:#0d1218;--panel:#0d1218;--panel2:#111820;--line:#1d2833;
+    --ink:#edf4f8;--ink2:#8493a1;--ink3:#596775;
+    --teal:#68e1dc;--aqua:#5db4ff;--violet:#b7a7ff;--amber:#eac06a;--rose:#ff8178;--good:#8bdfa9;}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  .mono{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace}
+  .app{display:flex;flex-direction:column;height:100vh}
+  header{display:flex;align-items:center;gap:14px;padding:11px 20px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#0e141e,#0b0f17)}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:600}
+  .brand .mk{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:radial-gradient(circle at 30% 30%,#123,#0b1a24);border:1px solid #1c3a44;color:var(--teal);font-size:15px}
+  nav{display:flex;gap:4px;margin-left:6px}
+  nav a{padding:6px 12px;border-radius:8px;color:var(--ink2);font-size:13px;text-decoration:none}
+  nav a.on{background:#163738;color:var(--teal);box-shadow:inset 0 0 0 1px #2b3947}
+  .spacer{flex:1}
+  .pick{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:9px;background:var(--panel);border:1px solid var(--line);font-size:12.5px}
+  .pick small{color:var(--ink3);font-size:10px;letter-spacing:.1em;text-transform:uppercase;display:block}
+  .load{font-size:12px;color:var(--aqua);background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:8px 12px}
+  .body{flex:1;overflow:auto;padding:18px 0}
+  .wrap{max-width:920px;margin:0 auto;padding:0 20px}
+  /* session summary bar */
+  .sbar{display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:13px 16px;margin-bottom:8px}
+  .sbar h2{margin:0;font-size:16px} .sbar .tag{font-size:10px;padding:2px 8px;border-radius:6px;background:#2a1218;color:var(--rose)}
+  .sbar .m{margin-left:auto;display:flex;gap:16px;font-size:12px;color:var(--ink2)}
+  .sbar .m b{color:var(--ink)}
+  .ctrls{display:flex;align-items:center;gap:8px;margin:10px 2px 14px;font-size:12px;color:var(--ink3)}
+  .rb{width:30px;height:30px;border-radius:8px;background:var(--panel);border:1px solid var(--line);display:grid;place-items:center;color:var(--ink2)}
+  .rb.play{background:#163738;color:var(--teal);border-color:#2b3947}
+  .expandall{margin-left:auto;color:var(--aqua)}
+  /* iteration node */
+  .iter{margin-bottom:10px}
+  .ihead{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:11px 14px;cursor:pointer}
+  .ihead .tw{width:16px;color:var(--ink3);font-size:12px}
+  .ihead .ttl{font-size:13px;font-weight:600;letter-spacing:.02em}
+  .ihead .meters{margin-left:auto;display:flex;gap:14px;font-size:11.5px;color:var(--ink3);align-items:center}
+  .ihead .meters b{color:var(--ink2)}
+  .cost{color:var(--amber)!important;font-weight:600}
+  .kids{border-left:2px solid #17222f;margin:6px 0 0 20px;padding-left:16px;display:flex;flex-direction:column;gap:8px}
+  /* step nodes */
+  .step{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .shead{display:flex;align-items:center;gap:9px;padding:9px 13px;font-size:12.5px;cursor:pointer}
+  .shead .tw{width:14px;color:var(--ink3);font-size:11px}
+  .shead .lbl{font-weight:600}
+  .shead .side{margin-left:auto;font-size:11px;color:var(--ink3)}
+  .tagp{font-size:9.5px;padding:1px 7px;border-radius:5px;background:#0c1f16;color:#79d6a6;border:1px solid #1d4432}
+  .kind-plan .lbl{color:var(--aqua)} .kind-tool .lbl{color:var(--teal)} .kind-ctx .lbl{color:var(--ink3)} .kind-hook .lbl{color:var(--violet)} .kind-model .lbl{color:var(--ink)}
+  .sbody{padding:0 13px 12px 13px}
+  .plan{font-size:13px;color:var(--ink);line-height:1.5;background:#111820;border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+  .meterline{display:flex;align-items:center;gap:12px;font-size:11px;color:var(--ink3);padding:8px 2px 2px}
+  .bar{height:6px;border-radius:5px;background:#0a0f18;width:120px;overflow:hidden;display:inline-block;vertical-align:middle}
+  .bar i{display:block;height:100%}
+  .term{background:#05070a;border:1px solid #1d2833;border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.6;color:#cbd8e8;white-space:pre-wrap;margin-top:8px}
+  .term .exits{color:#8fb4e0}.term .mob{color:#ff9aa6}.term .cmd{color:#7fd4c8}
+  .argline{font-size:12.5px;color:var(--ink)}
+  .deep{display:flex;gap:8px;margin-top:9px}
+  .deep a{font-size:11px;color:var(--aqua);background:#111820;border:1px solid var(--line);border-radius:7px;padding:5px 9px;text-decoration:none}
+  .foot{font-size:11px;color:var(--ink3);padding:6px 2px 0}
+  .hint{text-align:center;color:var(--ink3);font-size:12px;margin:6px 0 16px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand"><span class="mk">◎</span><span>Boukensha</span></div>
+    <nav><a href="#">Live</a><a class="on" href="#">Sessions</a><a href="#">Experiments</a><a href="#">Knowledge</a></nav>
+    <div class="spacer"></div>
+    <div class="pick"><small>Player</small>poucet ▾</div>
+    <div class="pick"><small>Session</small>J1 · bakery · 19:02 ▾</div>
+    <button class="load">⤓ Load from folder…</button>
+  </header>
+  <div class="body">
+    <div class="wrap">
+      <div class="sbar">
+        <h2>J1 · bakery</h2><span class="tag" style="background:#12241b;color:var(--good)">success</span>
+        <div class="m"><span><b>6</b> iterations</span><span><b>34</b> turns</span><span>ctx peak <b>4.9k</b></span><span>total <b class="cost">$0.031</b></span><span><b>18s</b></span></div>
+      </div>
+      <div class="ctrls">
+        <span class="rb">⏮</span><span class="rb">◀|</span><span class="rb play">▶</span><span class="rb">|▶</span>
+        &nbsp;replay the sequence, or scroll it
+        <span class="expandall">⤢ expand all</span>
+      </div>
+      <div class="hint">Click any node to unfold its steps: keep unfolding down to the raw wire.</div>
+
+      <!-- Iteration 1 (collapsed) -->
+      <div class="iter">
+        <div class="ihead"><span class="tw">▸</span><span class="ttl">ITERATION 1</span>
+          <span class="meters"><span>1.9s</span><span><b>2</b> MUD calls</span><span class="cost">$0.0029</span></span></div>
+      </div>
+
+      <!-- Iteration 2 (expanded) -->
+      <div class="iter">
+        <div class="ihead"><span class="tw">▾</span><span class="ttl">ITERATION 2</span>
+          <span class="meters"><span>1.9s</span><span><b>2</b> MUD calls</span><span>haiku-4-5</span><span class="cost">$0.0029</span></span></div>
+        <div class="kids">
+          <!-- context injected -->
+          <div class="step kind-ctx"><div class="shead"><span class="tw">▸</span><span class="lbl">Context injected</span><span class="side">memory unchanged · [here] The Temple Of Midgaard (visit 18)</span></div></div>
+          <!-- plan -->
+          <div class="step kind-plan"><div class="shead"><span class="tw">▾</span><span class="lbl">Plan</span><span class="side">before tool call</span></div>
+            <div class="sbody"><div class="plan">Good morning! I'll help you find the bakery and list the menu. Let me start by planning a route to the bakery.</div></div></div>
+          <!-- model call (meters) -->
+          <div class="step kind-model"><div class="shead"><span class="tw">▸</span><span class="lbl">Model call</span><span class="side mono">turn 2.4k/60k · +84 out · $0.0027 · 1.3s</span></div>
+            <div class="sbody"><div class="meterline">
+              <span>turn <span class="bar"><i style="width:4%;background:#5db4ff"></i></span> 2.4k/60k</span>
+              <span>ctx <span class="bar"><i style="width:12%;background:#b7a7ff"></i></span> 2.3k</span>
+              <span>+84 out</span><span class="cost">$0.0027</span><span>anthropic / claude-haiku-4-5</span>
+            </div><div class="deep"><a href="#">view request · 4 msgs →</a><a href="#">response →</a></div></div></div>
+          <!-- tool call (expanded → raw output) -->
+          <div class="step kind-tool"><div class="shead"><span class="tw">▾</span><span class="lbl mono">plan_route(destination: "bakery")</span><span class="side">26 ms · read 11</span></div>
+            <div class="sbody">
+              <div class="term mono"><span class="cmd">[route] bakery: known</span>
+to: The Bakery (#12)
+path: south → south → west → north
+4 moves: The Temple Of Midgaard → The Temple Square → Market Square → Main Street → The Bakery</div>
+              <div class="deep"><a href="#">parsed observation →</a><a href="#">telnet / raw wire →</a><a href="#">gateway log →</a></div>
+              <div class="foot">1 MUD call · 26 ms · wrote 0 · read 11</div>
+            </div></div>
+          <!-- automatic context work (hook) -->
+          <div class="step kind-hook"><div class="shead"><span class="tw">▸</span><span class="lbl">Automatic context work</span><span class="side">1 operation · establish position</span></div></div>
+        </div>
+      </div>
+
+      <!-- Iteration 4 (expanded, with examine tool showing raw output) -->
+      <div class="iter">
+        <div class="ihead"><span class="tw">▾</span><span class="ttl">ITERATION 4</span>
+          <span class="meters"><span>1.5s</span><span><b>3</b> MUD calls</span><span>haiku-4-5</span><span class="cost">$0.0034</span></span></div>
+        <div class="kids">
+          <div class="step kind-ctx"><div class="shead"><span class="tw">▸</span><span class="lbl">Context injected</span><span class="side">memory unchanged · [here] The Bakery (visit 5)</span></div></div>
+          <div class="step kind-plan"><div class="shead"><span class="tw">▾</span><span class="lbl">Plan</span><span class="side">before tool call</span></div>
+            <div class="sbody"><div class="plan">Let me examine the baker and check what they have to offer:</div></div></div>
+          <div class="step kind-tool"><div class="shead"><span class="tw">▾</span><span class="lbl mono">tbamud__examine(target: "baker")</span><span class="side">21 ms · read 0</span></div>
+            <div class="sbody">
+              <div class="term mono">   A fat, nice looking baker.  But you can see that he has many scars on his body.
+The baker is in excellent condition.
+
+The baker is using:
+&lt;wielded&gt;   a wooden rolling pin</div>
+              <div class="deep"><a href="#">parsed observation →</a><a href="#">telnet / raw wire →</a></div>
+              <div class="foot">1 MUD call · 21 ms · wrote 0 · read 0</div>
+            </div></div>
+          <div class="step kind-tool"><div class="shead"><span class="tw">▾</span><span class="lbl mono">tbamud__shop(action: "list")</span><span class="side">100 ms · read 3</span></div>
+            <div class="sbody">
+              <div class="term mono">##  Available   Item                         Cost
+------------------------------------------------
+ 1) Unlimited   A danish pastry                  7
+ 2) Unlimited   A bread                         14
+ 3) Unlimited   A waybread                      71</div>
+              <div class="deep"><a href="#">parsed observation →</a><a href="#">buy → objective step</a></div>
+            </div></div>
+        </div>
+      </div>
+
+      <!-- Iteration 5 (collapsed) -->
+      <div class="iter">
+        <div class="ihead"><span class="tw">▸</span><span class="ttl">ITERATION 5</span>
+          <span class="meters"><span>0.9s</span><span><b>1</b> MUD call</span><span class="cost">$0.0021</span><span class="tagp">objective met: danish bought</span></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

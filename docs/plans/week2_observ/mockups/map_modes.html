@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Map focus modes: comparison</title>
+<style>
+  :root{--bg:#080b0f;--panel:#0d1218;--line:#1d2833;--ink:#edf4f8;--ink2:#8493a1;--ink3:#596775;
+    --teal:#68e1dc;--aqua:#5db4ff;--amber:#eac06a;--rose:#ff8178;--good:#8bdfa9;--violet:#b7a7ff;}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{padding:22px 24px}
+  h1{font-size:18px;margin:0 0 2px}
+  .sub{color:var(--ink3);font-size:13px;margin-bottom:18px}
+  .row{display:flex;gap:18px}
+  .card{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;
+    display:flex;flex-direction:column}
+  .ch{padding:12px 15px;border-bottom:1px solid var(--line)}
+  .ch .mode{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600}
+  .ch .mode .k{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);font-weight:600}
+  .ch .d{color:var(--ink2);font-size:12px;margin-top:4px;line-height:1.45}
+  .ch.pick .mode .tag{margin-left:auto;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);
+    background:#163738;border:1px solid #2b3947;border-radius:6px;padding:2px 7px}
+  .plane{position:relative;height:420px;background:radial-gradient(600px 380px at 50% 45%,#0d1622,#080b0f)}
+  svg{display:block;width:100%;height:100%}
+  .rl{font-size:9px;fill:var(--ink2)} .rl.cur{fill:var(--ink);font-weight:600}
+  .foot{padding:10px 15px;border-top:1px solid var(--line);font-size:11.5px;color:var(--ink3)}
+  .toolbar{display:inline-flex;gap:2px;background:#111820;border:1px solid var(--line);border-radius:9px;padding:3px;margin-left:8px}
+  .toolbar span{font-size:11px;padding:4px 9px;border-radius:6px;color:var(--ink3)}
+  .toolbar span.on{background:#163738;color:var(--teal)}
+  .note{margin-top:16px;color:var(--ink3);font-size:12.5px}
+  .expand{fill:#111820;stroke:#2f5680;stroke-dasharray:3 3}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Map focus modes: same journey, three treatments</h1>
+  <div class="sub">The learned map grows messy over a long run. Pick the default. All stay toggleable in the map toolbar
+    <span class="toolbar"><span>Grow</span><span class="on">Focus</span><span>Lantern</span></span></div>
+  <div class="row">
+    <div class="card">
+      <div class="ch"><div class="mode"><span class="k">Mode A</span> Grow</div>
+        <div class="d">Everything the agent has learned. Complete, but crowds fast: 40+ rooms overlap and labels collide.</div></div>
+      <div class="plane"><svg id="svgFull" viewBox="0 0 480 420"></svg></div>
+      <div class="foot">Best for: a final overview / export. Worst for: watching a live run.</div>
+    </div>
+    <div class="card">
+      <div class="ch pick"><div class="mode"><span class="k">Mode B</span> Focus radius <span class="tag">candidate default</span></div>
+        <div class="d">Only ~2 hops around the agent. Distant branches collapse into an expandable “+N” you click to reveal or retract.</div></div>
+      <div class="plane"><svg id="svgFocus" viewBox="0 0 480 420"></svg></div>
+      <div class="foot">Best for: staying oriented on a live run without clutter.</div>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="mode"><span class="k">Mode C</span> Lantern</div>
+        <div class="d">Only the agent and its immediate surroundings are lit: a light held in the dark. Everything beyond the pool stays dark, so focus stays exactly where the action is.</div></div>
+      <div class="plane"><svg id="svgLantern" viewBox="0 0 480 420"></svg></div>
+      <div class="foot">Best for: a live run: zero clutter, all attention on the player. Pan/follow moves the light.</div>
+    </div>
+  </div>
+  <div class="note">Recommendation: <b>Focus radius</b> as default (cleanest on long runs), <b>Lantern</b> as the “cinematic” toggle for demos and following the agent, <b>Grow</b> for overview/export. Final default decided after we test all three on a real long journey.</div>
+</div>
+
+<script>
+// ---- shared graph (a denser Midgaard-ish cluster) ----
+const SECT = {temple:'#183a2e|#2b5c48', city:'#1c3350|#2f5680', shop:'#3a2f18|#5c4a2b', dark:'#241a2e|#463357'};
+function mk(id,x,y,label,sect){const [f,s]=SECT[sect].split('|');return {id,x,y,label,f,s};}
+// grid-ish layout, agent near center-right
+const N = [
+  mk('temple',70,230,'Temple','temple'),
+  mk('tsq',140,230,'Temple Sq','city'),
+  mk('msq',140,150,'Market Sq','city'),
+  mk('msq2',140,80,'N Market','city'),
+  mk('csq',215,230,'Common Sq','city'),
+  mk('groc',215,300,'Grocer','shop'),
+  mk('bak',215,360,'Bakery','shop'),
+  mk('alley',290,190,'A Nexus','city'),
+  mk('white',360,190,'White Sq','city'),   // agent
+  mk('back',430,150,'Back St','city'),
+  mk('back2',430,90,'N Back St','city'),
+  mk('dark',430,240,'Dark Alley','dark'),
+  mk('dark2',430,300,'Deep Alley','dark'),
+  mk('gate',300,120,'City Gate','city'),
+  mk('gate2',300,60,'Gatehouse','city'),
+  mk('shop2',215,150,'Armorer','shop'),
+  mk('shop3',70,300,'Baker Rd','shop'),
+  mk('w2',360,260,'S White','city'),
+  mk('w3',290,260,'SW Path','city'),
+  mk('e2',360,110,'NE Path','city'),
+  mk('far1',500,150,'E Road','city'),
+  mk('far2',500,90,'NE Road','city'),
+];
+const idx = Object.fromEntries(N.map(n=>[n.id,n]));
+const E = [
+  ['temple','tsq'],['tsq','msq'],['msq','msq2'],['tsq','csq'],['csq','groc'],['groc','bak'],
+  ['csq','alley'],['alley','white'],['white','back'],['back','back2'],['white','dark'],['dark','dark2'],
+  ['alley','gate'],['gate','gate2'],['msq','shop2'],['temple','shop3'],['groc','shop3'],
+  ['white','w2'],['w2','w3'],['w3','alley'],['white','e2'],['e2','gate'],['back','far1'],['far1','far2'],['far2','back2'],
+];
+const AGENT='white';
+// frontier (dashed) endpoints
+const FRONTIER=['msq2','gate2','dark2','far2','bak'];
+
+// BFS distance from agent
+function dist(){const d={};N.forEach(n=>d[n.id]=99);d[AGENT]=0;const q=[AGENT];
+  const adj={};N.forEach(n=>adj[n.id]=[]);E.forEach(([a,b])=>{adj[a].push(b);adj[b].push(a);});
+  while(q.length){const c=q.shift();adj[c].forEach(nb=>{if(d[nb]>d[c]+1){d[nb]=d[c]+1;q.push(nb);}});}
+  return d;}
+const D=dist();
+
+function edgePath(a,b){const A=idx[a],B=idx[b];return `M${A.x},${A.y} L${B.x},${B.y}`;}
+function node(n,{op=1,r=12,label=true,cur=false,frontier=false,glow=true}={}){
+  const g=[];
+  if(cur&&glow){g.push(`<circle cx="${n.x}" cy="${n.y}" r="26" fill="url(#glow)"/>`);}
+  if(frontier){
+    g.push(`<rect x="${n.x-9}" y="${n.y-9}" width="18" height="18" rx="5" fill="none" stroke="#26374b" stroke-dasharray="3 3" opacity="${op}"/>`);
+  }else{
+    g.push(`<rect x="${n.x-r}" y="${n.y-r}" width="${r*2}" height="${r*2}" rx="6" fill="${n.f}" stroke="${cur?'#eac06a':n.s}" stroke-width="${cur?2:1}" opacity="${op}"/>`);
+  }
+  if(label&&op>0.28){g.push(`<text class="rl ${cur?'cur':''}" x="${n.x}" y="${n.y+r+11}" text-anchor="middle" opacity="${Math.min(1,op+0.15)}">${n.label}</text>`);}
+  return g.join('');
+}
+const defs=`<defs>
+  <radialGradient id="glow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#68e1dc" stop-opacity=".55"/><stop offset="100%" stop-color="#68e1dc" stop-opacity="0"/></radialGradient>
+  <radialGradient id="lamp" cx="50%" cy="50%" r="60%"><stop offset="0%" stop-color="#000" stop-opacity="0"/><stop offset="55%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#05070b" stop-opacity=".92"/></radialGradient>
+</defs>`;
+
+// ---- Mode A: Grow (everything, full opacity) ----
+function renderFull(){
+  let s=defs+'<g stroke="#2b3947" stroke-width="1.5" fill="none">';
+  E.forEach(([a,b])=>s+=`<path d="${edgePath(a,b)}"/>`);
+  s+='</g><g>';
+  N.forEach(n=>s+=node(n,{op:1,cur:n.id===AGENT}));
+  FRONTIER.forEach(f=>{});
+  s+='</g>';
+  document.getElementById('svgFull').innerHTML=s;
+}
+// ---- Mode B: Focus radius (<=2 hops; collapse far into +N) ----
+function renderFocus(){
+  let s=defs;
+  // edges among visible
+  s+='<g stroke="#2b3947" stroke-width="1.6" fill="none">';
+  E.forEach(([a,b])=>{if(D[a]<=2&&D[b]<=2)s+=`<path d="${edgePath(a,b)}"/>`;});
+  s+='</g><g>';
+  N.forEach(n=>{if(D[n.id]<=2)s+=node(n,{op:1,cur:n.id===AGENT});});
+  // boundary expanders: nodes at dist==2 that have neighbors at dist>=3 -> draw a +N chip
+  const clusters={};
+  E.forEach(([a,b])=>{
+    const near=D[a]===2?a:(D[b]===2?b:null); const far=D[a]>=3?a:(D[b]>=3?b:null);
+    if(near&&far){clusters[near]=(clusters[near]||0)+1;}
+  });
+  Object.entries(clusters).forEach(([nid,cnt])=>{
+    const n=idx[nid]; const ang=Math.atan2(n.y-idx[AGENT].y,n.x-idx[AGENT].x);
+    const cx=n.x+Math.cos(ang)*34, cy=n.y+Math.sin(ang)*34;
+    s+=`<path d="M${n.x},${n.y} L${cx},${cy}" stroke="#2f5680" stroke-dasharray="2 4" stroke-width="1.5" fill="none"/>`;
+    s+=`<circle class="expand" cx="${cx}" cy="${cy}" r="13"/>`;
+    s+=`<text x="${cx}" y="${cy+3.5}" text-anchor="middle" font-size="10" fill="#8fb4e0">+${cnt+2}</text>`;
+  });
+  s+='</g>';
+  document.getElementById('svgFocus').innerHTML=s;
+}
+// ---- Mode C: Lantern (background lighter at the player, degrading to darker; same hue, no color tint) ----
+function renderLantern(){
+  const A=idx[AGENT];
+  const R=250;           // visible radius ≈ 2 nodes out in each direction; beyond → dark
+  function op(n){const dx=n.x-A.x,dy=n.y-A.y;const px=Math.sqrt(dx*dx+dy*dy);
+    return Math.max(0, 1-px/R);}
+  const lampDefs=`<defs>
+    <radialGradient id="lampBg" gradientUnits="userSpaceOnUse" cx="${A.x}" cy="${A.y}" r="${R}">
+      <stop offset="0%" stop-color="#212d40"/>
+      <stop offset="45%" stop-color="#131b27"/>
+      <stop offset="80%" stop-color="#080b11"/>
+      <stop offset="100%" stop-color="#05070a"/>
+    </radialGradient>
+  </defs>`;
+  // limited light pool, zoomed into the agent's neighbourhood so rooms are a
+  // comfortable size: only the agent + immediate surroundings are revealed; the
+  // rest of the map falls into darkness so focus stays where the action is.
+  const Z=1.3;           // modest zoom so ~2 hops fit at a comfortable size
+  let s=lampDefs+`<rect x="0" y="0" width="480" height="420" fill="#05070a"/>`;
+  s+=`<g transform="translate(${A.x},${A.y}) scale(${Z}) translate(${-A.x},${-A.y})">`;
+  s+=`<circle cx="${A.x}" cy="${A.y}" r="${R}" fill="url(#lampBg)"/>`;
+  s+='<g fill="none">';
+  E.forEach(([a,b])=>{const o=Math.min(op(idx[a]),op(idx[b]));
+    if(o>0.06) s+=`<path d="${edgePath(a,b)}" stroke="#48627e" stroke-width="1.4" opacity="${o*0.9}"/>`;});
+  s+='</g><g>';
+  N.forEach(n=>{const o=op(n); if(o>0.06) s+=node(n,{op:o,r:13,cur:n.id===AGENT,glow:false,label:o>0.45});});
+  s+='</g></g>';
+  document.getElementById('svgLantern').innerHTML=s;
+}
+renderFull();renderFocus();renderLantern();
+</script>
+</body>
+</html>

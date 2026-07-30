@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Map detail, glyphs & objective: mockup</title>
+<style>
+  :root{--bg:#080b0f;--panel:#0d1218;--panel2:#0d1218;--line:#1d2833;--ink:#edf4f8;--ink2:#8493a1;--ink3:#596775;
+    --teal:#68e1dc;--aqua:#5db4ff;--amber:#eac06a;--rose:#ff8178;--good:#8bdfa9;--violet:#b7a7ff;}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  .mono{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace}
+  .wrap{height:100vh;display:flex;flex-direction:column}
+  .top{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--line)}
+  .ttl{font-size:14px;font-weight:600}
+  .ttl small{color:var(--ink3);font-weight:500}
+  .spacer{flex:1}
+  .seg{display:inline-flex;gap:2px;background:#111820;border:1px solid var(--line);border-radius:9px;padding:3px}
+  .seg span{font-size:11.5px;padding:5px 10px;border-radius:6px;color:var(--ink3);display:flex;align-items:center;gap:6px}
+  .seg span.on{background:#163738;color:var(--teal)}
+  .seg small{color:var(--ink3);font-size:10px;letter-spacing:.1em;text-transform:uppercase;margin-right:2px}
+  .stage{position:relative;flex:1;background:radial-gradient(800px 480px at 45% 45%,#0d1622,#080b0f)}
+  svg{display:block;width:100%;height:100%}
+  .rl{font-size:11px;fill:var(--ink2)} .rl.cur{fill:var(--ink);font-weight:600}
+  .legend{position:absolute;left:16px;bottom:16px;background:#0d1218cc;border:1px solid var(--line);border-radius:12px;
+    padding:11px 13px;font-size:11.5px;color:var(--ink2);backdrop-filter:blur(6px)}
+  .legend h5{margin:0 0 8px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+  .legend .row{display:flex;align-items:center;gap:9px;margin:5px 0}
+  .gi{width:18px;display:flex;justify-content:center}
+  /* popover */
+  .pop{position:absolute;width:300px;background:linear-gradient(180deg,#131c2a,#0f1621);border:1px solid #26374b;
+    border-radius:14px;box-shadow:0 24px 60px -22px #000;overflow:hidden}
+  .pop .ph{padding:12px 14px;border-bottom:1px solid var(--line)}
+  .pop .ph .nm{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .pop .ph .mt{margin-top:3px;font-size:11.5px;color:var(--ink3);display:flex;gap:10px}
+  .tagv{font-size:10px;padding:1px 7px;border-radius:6px;background:#163738;color:var(--teal);border:1px solid #2b3947}
+  .pop .pb{padding:12px 14px}
+  .pop .desc{font-size:12px;color:var(--ink2);line-height:1.5;margin-bottom:11px}
+  .pop h6{margin:0 0 6px;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)}
+  .exits{display:flex;gap:6px;margin-bottom:11px}
+  .exits a{font-size:11px;color:var(--aqua);background:#111820;border:1px solid var(--line);border-radius:7px;padding:4px 9px;text-decoration:none}
+  .exits a.dead{color:var(--ink3)}
+  .list{display:flex;flex-direction:column;gap:5px;margin-bottom:11px}
+  .li{display:flex;align-items:center;gap:8px;font-size:12px}
+  .li .ic{width:16px;text-align:center}
+  .li .ct{margin-left:auto;color:var(--ink3);font-size:11px}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+  .st{background:#111820;border:1px solid var(--line);border-radius:8px;padding:7px 9px}
+  .st .k{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+  .st .v{font-size:14px;font-weight:600;margin-top:2px}
+  .pop .more{display:block;text-align:center;font-size:11.5px;color:var(--aqua);background:#111820;border:1px solid var(--line);
+    border-radius:8px;padding:7px;text-decoration:none}
+  .pop:after{content:"";position:absolute;width:14px;height:14px;background:#131c2a;border-left:1px solid #26374b;border-bottom:1px solid #26374b}
+  .obeacon{position:absolute;font-size:11px;color:var(--aqua);background:#0c1b26cc;border:1px solid #2b3947;border-radius:8px;padding:5px 9px;backdrop-filter:blur(6px)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="ttl">Live · <b>poucet</b> <small>· map interaction</small></div>
+    <div class="spacer"></div>
+    <div class="seg"><small>Camera</small><span class="on">⌖ Follow agent</span><span>✛ Click-to-center</span></div>
+    <div class="seg"><small>Map</small><span>Grow</span><span class="on">Focus</span><span>Lantern</span></div>
+  </div>
+  <div class="stage">
+    <svg viewBox="0 0 1000 620" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <radialGradient id="glow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#68e1dc" stop-opacity=".5"/><stop offset="100%" stop-color="#68e1dc" stop-opacity="0"/></radialGradient>
+        <radialGradient id="obj" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#5db4ff" stop-opacity=".55"/><stop offset="100%" stop-color="#5db4ff" stop-opacity="0"/></radialGradient>
+      </defs>
+      <!-- edges -->
+      <g stroke="#2b3947" stroke-width="2" fill="none">
+        <path d="M150,330 L280,330"/><path d="M280,330 L280,220"/><path d="M280,330 L420,330"/>
+        <path d="M420,330 L420,450"/><path d="M420,330 L560,290"/><path d="M560,290 L690,250"/>
+        <path d="M690,250 L820,250"/><path d="M560,290 L560,410"/>
+      </g>
+      <!-- selected room highlight ring (A Nexus) -->
+      <circle cx="437" cy="347" r="30" fill="none" stroke="#5db4ff" stroke-width="1.5" stroke-dasharray="3 3" opacity=".8"/>
+
+      <!-- rooms -->
+      <g>
+        <rect x="132" y="312" width="34" height="34" rx="7" fill="#183a2e" stroke="#2b5c48"/>
+        <text class="rl" x="149" y="366" text-anchor="middle">Temple</text>
+
+        <rect x="263" y="312" width="34" height="34" rx="7" fill="#1c3350" stroke="#2f5680"/>
+        <text class="rl" x="280" y="366" text-anchor="middle">Temple Sq</text>
+
+        <rect x="263" y="202" width="34" height="34" rx="7" fill="#1c3350" stroke="#2f5680"/>
+        <text class="rl" x="280" y="194" text-anchor="middle">Market Sq</text>
+
+        <!-- A Nexus (selected) with visit badge + object glyph -->
+        <rect x="420" y="330" width="34" height="34" rx="7" fill="#1c3350" stroke="#5db4ff" stroke-width="2"/>
+        <text class="rl" x="437" y="322" text-anchor="middle">A Nexus</text>
+        <!-- visit-count badge -->
+        <g><circle cx="456" cy="330" r="10" fill="#151d26" stroke="#2f5680"/><text x="456" y="333.5" text-anchor="middle" font-size="9" fill="#8493a1">×5</text></g>
+        <!-- object glyph (key) -->
+        <g transform="translate(414,362)"><circle r="8" fill="#2a2412" stroke="#5c4a2b"/><text x="0" y="3" text-anchor="middle" font-size="10" fill="#eac06a">⚷</text></g>
+
+        <!-- Grocer with object -->
+        <rect x="402" y="432" width="34" height="34" rx="7" fill="#3a2f18" stroke="#5c4a2b"/>
+        <text class="rl" x="419" y="486" text-anchor="middle">Grocer</text>
+
+        <!-- current room (White Sq analog = A Dark Alley), combat glyph -->
+        <circle cx="577" cy="307" r="30" fill="url(#glow)"/>
+        <rect x="559" y="289" width="34" height="34" rx="7" fill="#3a1620" stroke="#eac06a" stroke-width="2"/>
+        <text class="rl cur" x="577" y="281" text-anchor="middle">A Dark Alley</text>
+        <!-- mob glyph on current -->
+        <g transform="translate(596,289)"><circle r="8" fill="#3a1620" stroke="#ff5d6c"/><text x="0" y="3" text-anchor="middle" font-size="9" fill="#ff8178">☠</text></g>
+
+        <!-- Back Street with mob sighting -->
+        <rect x="673" y="233" width="34" height="34" rx="7" fill="#1c3350" stroke="#2f5680"/>
+        <text class="rl" x="690" y="225" text-anchor="middle">Back Street</text>
+        <g transform="translate(709,233)"><circle r="7" fill="#3a1620" stroke="#ff5d6c"/><text x="0" y="3" text-anchor="middle" font-size="8" fill="#ff8178">☠</text></g>
+
+        <!-- Sewer branch -->
+        <rect x="543" y="393" width="34" height="34" rx="7" fill="#241a2e" stroke="#463357"/>
+        <text class="rl" x="560" y="447" text-anchor="middle">Sewer Mouth</text>
+
+        <!-- OBJECTIVE known location: Minotaur Lair (beacon) -->
+        <circle cx="837" cy="267" r="34" fill="url(#obj)"/>
+        <rect x="820" y="250" width="34" height="34" rx="7" fill="#10243a" stroke="#5db4ff" stroke-width="2.5"/>
+        <text x="837" y="271" text-anchor="middle" font-size="14" fill="#5db4ff">◎</text>
+      </g>
+    </svg>
+
+    <!-- objective beacon label -->
+    <div class="obeacon" style="right:150px;top:150px">◎ Minotaur Lair: <b style="color:#cfe6ff">known location</b> · agent under-leveled (lvl 4, needs ~7)</div>
+
+    <!-- room detail popover anchored to A Nexus -->
+    <div class="pop" style="left:470px;top:300px">
+      <div class="ph">
+        <div class="nm">A Nexus <span class="tagv">City</span></div>
+        <div class="mt"><span>passed ×5</span><span>first t8 · last t44</span></div>
+      </div>
+      <div class="pb">
+        <div class="desc">A wide crossing where several roads meet. Cobblestones worn smooth. Ways lead off in all directions.</div>
+        <h6>Exits</h6>
+        <div class="exits"><a href="#">north</a><a href="#">east</a><a href="#">west</a><a class="dead" href="#">south ?</a></div>
+        <h6>Seen here</h6>
+        <div class="list">
+          <div class="li"><span class="ic" style="color:#ff8178">☠</span> a large kobold <span class="ct">×2</span></div>
+          <div class="li"><span class="ic" style="color:#ff8178">☠</span> a sewer rat <span class="ct">×1</span></div>
+        </div>
+        <h6>Objects known here</h6>
+        <div class="list">
+          <div class="li"><span class="ic" style="color:#eac06a">⚷</span> a brass key <span class="ct">picked up t23</span></div>
+        </div>
+        <div class="stats">
+          <div class="st"><div class="k">Passed</div><div class="v">5×</div></div>
+          <div class="st"><div class="k">Spent here</div><div class="v">$0.014</div></div>
+        </div>
+        <a class="more" href="#">Open full evidence →</a>
+      </div>
+    </div>
+
+    <div class="legend">
+      <h5>Map markers</h5>
+      <div class="row"><span class="gi" style="color:#eac06a">⚷</span> known object (key/item)</div>
+      <div class="row"><span class="gi" style="color:#ff8178">☠</span> mob sighting</div>
+      <div class="row"><span class="gi mono" style="color:#8493a1">×N</span> times passed through</div>
+      <div class="row"><span class="gi" style="color:#5db4ff">◎</span> objective: known location</div>
+      <div class="row"><span class="gi"><span style="width:12px;height:12px;border:2px solid #eac06a;border-radius:3px;display:inline-block"></span></span> current room</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

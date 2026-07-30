@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Boukensha Observatory: Sessions replay (mockup)</title>
+<style>
+  :root{
+    --bg:#080b0f;--bg2:#0d1218;--panel:#0d1218;--panel2:#111820;--line:#1d2833;
+    --ink:#edf4f8;--ink2:#8493a1;--ink3:#596775;
+    --teal:#68e1dc;--aqua:#5db4ff;--violet:#b7a7ff;--amber:#eac06a;--rose:#ff8178;--good:#8bdfa9;--danger:#ff5d6c;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  .mono{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace}
+  .app{display:flex;flex-direction:column;height:100vh}
+  header{display:flex;align-items:center;gap:16px;padding:12px 20px;border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#0e141e,#0b0f17)}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:600}
+  .brand .mk{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;
+    background:radial-gradient(circle at 30% 30%,#123,#0b1a24);border:1px solid #1c3a44;color:var(--teal);font-size:16px}
+  .brand small{display:block;color:var(--ink3);font-weight:500;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+  nav{display:flex;gap:4px;margin-left:8px}
+  nav a{padding:7px 14px;border-radius:9px;color:var(--ink2);font-size:13.5px;text-decoration:none;font-weight:500}
+  nav a.on{background:#163738;color:var(--teal);box-shadow:inset 0 0 0 1px #2b3947}
+  .spacer{flex:1}
+  .sel{display:flex;align-items:center;gap:9px;padding:7px 13px;border-radius:10px;background:var(--panel);
+    border:1px solid var(--line);font-size:13px}
+  .sel small{color:var(--ink3);font-size:10px;letter-spacing:.1em;text-transform:uppercase;display:block}
+  .av{width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#2a4a6a,#1a2c40);display:grid;place-items:center;font-size:11px;color:var(--aqua)}
+  .body{flex:1;display:flex;min-height:0}
+  /* --- session list --- */
+  .slist{width:236px;flex:none;border-right:1px solid var(--line);background:var(--bg2);overflow:auto;padding:10px}
+  .slist h5{margin:6px 8px 8px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+  .scard{padding:10px 11px;border-radius:11px;border:1px solid transparent;margin-bottom:6px;cursor:pointer}
+  .scard:hover{background:#101a26}
+  .scard.on{background:#163738;border-color:#2b3947}
+  .scard .t{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600}
+  .scard .m{display:flex;gap:8px;margin-top:5px;font-size:11px;color:var(--ink3)}
+  .badge{font-size:10px;padding:1px 6px;border-radius:5px}
+  .b-fail{background:#2a1218;color:var(--rose)} .b-ok{background:#12241b;color:var(--good)} .b-live{background:#10202b;color:var(--teal)}
+  .livedot{width:7px;height:7px;border-radius:50%;background:var(--good);animation:pulse 1.8s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(95,221,157,.5)}70%{box-shadow:0 0 0 6px rgba(95,221,157,0)}100%{box-shadow:0 0 0 0 rgba(95,221,157,0)}}
+  /* --- center replay --- */
+  .center{flex:1;min-width:0;display:flex;flex-direction:column}
+  .crumb{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line);font-size:12.5px;color:var(--ink2)}
+  .crumb b{color:var(--ink)} .crumb .sepc{color:var(--ink3)}
+  .stage{position:relative;flex:1;background:radial-gradient(900px 500px at 55% 35%,#0d1622,transparent),var(--bg)}
+  svg{display:block;width:100%;height:100%}
+  .rlabel{font-size:10px;fill:var(--ink2)} .rlabel.cur{fill:var(--ink);font-weight:600}
+  .stagehead{position:absolute;top:12px;left:16px;display:flex;gap:8px}
+  .chip{padding:4px 10px;border-radius:999px;font-size:11.5px;background:#111820cc;border:1px solid var(--line);color:var(--ink2);backdrop-filter:blur(6px)}
+  .chip b{color:var(--ink)}
+  .whyflag{position:absolute;z-index:4;background:#1a140a;border:1px solid #4a3a16;color:var(--amber);font-size:11.5px;
+    padding:6px 10px;border-radius:9px;max-width:210px;line-height:1.4}
+  .whyflag:after{content:"";position:absolute;left:20px;bottom:-7px;width:12px;height:12px;background:#1a140a;border-right:1px solid #4a3a16;border-bottom:1px solid #4a3a16;transform:rotate(45deg)}
+  /* replay controls */
+  .rctl{display:flex;align-items:center;gap:14px;padding:11px 16px;border-top:1px solid var(--line);background:var(--bg2)}
+  .btns{display:flex;gap:6px}
+  .rb{width:34px;height:34px;border-radius:9px;background:var(--panel);border:1px solid var(--line);display:grid;place-items:center;color:var(--ink2);font-size:13px;cursor:pointer}
+  .rb.play{background:#163738;color:var(--teal);border-color:#2b3947;width:40px}
+  .scrub{flex:1;height:6px;border-radius:6px;background:#151d26;position:relative}
+  .scrub i{position:absolute;left:0;top:0;bottom:0;width:69%;border-radius:6px;background:linear-gradient(90deg,var(--teal),var(--aqua))}
+  .scrub .kn{position:absolute;left:69%;top:50%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:#eafcff;box-shadow:0 0 0 3px #0b0f17}
+  .scrub .mk{position:absolute;top:-3px;width:2px;height:12px;background:#33465e}
+  .rmeta{font-size:12px;color:var(--ink2);white-space:nowrap} .rmeta b{color:var(--ink)}
+  .speed{font-size:11.5px;color:var(--ink2);border:1px solid var(--line);border-radius:8px;padding:5px 9px;background:var(--panel)}
+  /* --- drawer --- */
+  aside{width:396px;flex:none;border-left:1px solid var(--line);background:var(--bg2);display:flex;flex-direction:column;overflow:hidden}
+  .dh{padding:12px 15px;border-bottom:1px solid var(--line)}
+  .dh .path{font-size:11px;color:var(--ink3)} .dh .path b{color:var(--aqua)}
+  .dh h3{margin:5px 0 0;font-size:15px}
+  .layers{display:flex;gap:3px;padding:8px 12px;border-bottom:1px solid var(--line);overflow-x:auto}
+  .layer{font-size:11.5px;padding:5px 9px;border-radius:8px;color:var(--ink3);white-space:nowrap;cursor:pointer}
+  .layer.on{background:#163738;color:var(--teal);box-shadow:inset 0 0 0 1px #2b3947}
+  .layer.deep{color:var(--ink3)}
+  .dbody{flex:1;overflow:auto;padding:14px 15px}
+  .sec{margin-bottom:16px}
+  .sec h6{margin:0 0 7px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)}
+  .kv{display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px solid #1d2833}
+  .kv .k{color:var(--ink2)} .kv .v{color:var(--ink);font-weight:600}
+  .kv .v small{color:var(--ink3);font-weight:500}
+  .up{color:var(--rose)} .dn{color:var(--good)}
+  .msg{background:#111820;border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:12px;line-height:1.55;margin-bottom:8px}
+  .msg .role{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin-bottom:4px}
+  .msg.sys .role{color:var(--violet)} .msg.usr .role{color:var(--aqua)} .msg.asst .role{color:var(--teal)}
+  .tokbars{display:flex;flex-direction:column;gap:7px;margin-top:4px}
+  .tb{display:flex;align-items:center;gap:9px;font-size:11.5px}
+  .tb .lab{width:70px;color:var(--ink2)} .tb .bar{flex:1;height:7px;border-radius:5px;background:#151d26;overflow:hidden}
+  .tb .bar i{display:block;height:100%} .tb .n{width:96px;text-align:right;color:var(--ink2)}
+  .godeep{display:flex;gap:8px;margin-top:8px}
+  .godeep a{flex:1;text-align:center;font-size:11.5px;color:var(--aqua);background:#111820;border:1px solid var(--line);border-radius:8px;padding:7px;text-decoration:none}
+  /* ask why */
+  .ask{border-top:1px solid var(--line);background:#0c1119;padding:12px 15px}
+  .ask h6{margin:0 0 8px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)}
+  .askin{display:flex;gap:8px;align-items:center;background:#111820;border:1px solid #2b3947;border-radius:10px;padding:8px 11px;font-size:12.5px;color:var(--ink)}
+  .askin .q{flex:1}
+  .askin .go{color:var(--teal)}
+  .answer{margin-top:10px;font-size:12.5px;line-height:1.6;color:var(--ink)}
+  .answer .tier{display:inline-flex;gap:6px;align-items:center;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--good);margin-bottom:6px}
+  .cites{display:flex;flex-direction:column;gap:6px;margin-top:9px}
+  .cite{display:flex;gap:8px;align-items:center;background:#111820;border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:11px}
+  .cite .src{color:var(--aqua);font-weight:600;white-space:nowrap} .cite .ex{color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand"><span class="mk">◎</span><span>Boukensha<small>Observatory</small></span></div>
+    <nav><a href="#">Live</a><a class="on" href="#">Sessions</a><a href="#">Experiments</a><a href="#">Knowledge</a></nav>
+    <div class="spacer"></div>
+    <div class="sel"><span class="av">P</span><span><small>Player</small>poucet ▾</span></div>
+    <div class="sel"><small>Replaying</small>&nbsp;J2 · minotaur ▾</div>
+  </header>
+
+  <div class="body">
+    <!-- session list, scoped to player -->
+    <div class="slist">
+      <h5>poucet · sessions</h5>
+      <div class="scard on">
+        <div class="t"><span class="badge b-fail">failed</span> J2 · minotaur</div>
+        <div class="m"><span>90 turns</span><span>$0.211</span><span>07-28</span></div>
+      </div>
+      <div class="scard">
+        <div class="t"><span class="badge b-ok">ok</span> J1 · bakery</div>
+        <div class="m"><span>34 turns</span><span>$0.031</span><span>07-28</span></div>
+      </div>
+      <div class="scard">
+        <div class="t"><span class="livedot"></span> live · c27b19ab</div>
+        <div class="m"><span>turn 47</span><span>$0.118</span><span>now</span></div>
+      </div>
+      <div class="scard">
+        <div class="t"><span class="badge b-ok">ok</span> J1 · bakery</div>
+        <div class="m"><span>29 turns</span><span>$0.028</span><span>07-27</span></div>
+      </div>
+      <h5 style="margin-top:14px">other players</h5>
+      <div class="scard"><div class="t"><span class="av" style="width:18px;height:18px;font-size:9px">A</span> aria · 6 sessions</div></div>
+      <div class="scard"><div class="t"><span class="av" style="width:18px;height:18px;font-size:9px">T</span> tim · 3 sessions</div></div>
+    </div>
+
+    <!-- center: replay -->
+    <div class="center">
+      <div class="crumb">
+        <b>J2 · minotaur</b><span class="sepc">›</span>Turn <b>62</b><span class="sepc">›</span>
+        <span style="color:var(--amber)">paused: inspecting “turn-around” moment</span>
+      </div>
+      <div class="stage">
+        <div class="stagehead">
+          <span class="chip">Turn <b>62</b> / 90</span>
+          <span class="chip">A White Square</span>
+          <span class="chip">learned <b>41 rooms</b></span>
+        </div>
+        <div class="whyflag" style="right:150px;top:96px">Loop detected: revisited A White Square ×4 without a new exit</div>
+        <svg viewBox="0 0 760 520" preserveAspectRatio="xMidYMid meet">
+          <g stroke-width="2" fill="none">
+            <path d="M120,260 L250,260" style="stroke:#2b3947"/>
+            <path d="M250,260 L250,150" style="stroke:#2b3947"/>
+            <path d="M250,260 L390,260" style="stroke:#2b3947"/>
+            <path d="M390,260 L520,210" style="stroke:#2b3947"/>
+            <path d="M390,260 L520,320" style="stroke:#2b3947"/>
+            <!-- loop path highlight (turning around) -->
+            <path d="M390,260 L520,210 L520,320 L390,260" style="stroke:#6a4a16;stroke-dasharray:3 5" stroke-width="2.5"/>
+          </g>
+          <g>
+            <rect x="102" y="242" width="34" height="34" rx="7" fill="#183a2e" stroke="#2b5c48"/>
+            <text class="rlabel" x="119" y="294" text-anchor="middle">Temple</text>
+            <rect x="233" y="242" width="34" height="34" rx="7" fill="#1c3350" stroke="#2f5680"/>
+            <text class="rlabel" x="250" y="294" text-anchor="middle">Temple Sq</text>
+            <rect x="233" y="132" width="34" height="34" rx="7" fill="#1c3350" stroke="#2f5680"/>
+            <text class="rlabel" x="250" y="124" text-anchor="middle">Market Sq</text>
+            <!-- current: white square (loop) -->
+            <rect x="373" y="243" width="34" height="34" rx="7" fill="#2a2412" stroke="#eac06a" stroke-width="2"/>
+            <text class="rlabel cur" x="390" y="235" text-anchor="middle">A White Square ×4</text>
+            <rect x="503" y="193" width="34" height="34" rx="7" fill="#1c3350" stroke="#2f5680"/>
+            <text class="rlabel" x="520" y="185" text-anchor="middle">Nexus</text>
+            <!-- ambiguous duplicate -->
+            <rect x="503" y="303" width="34" height="34" rx="7" fill="none" stroke="#6a5a2a" stroke-dasharray="4 3"/>
+            <text class="rlabel" x="520" y="357" text-anchor="middle" style="fill:#b79a4a">A White Square? ×2</text>
+            <!-- frontier -->
+            <rect x="233" y="52" width="34" height="34" rx="7" fill="none" stroke="#26374b" stroke-dasharray="3 4"/>
+            <text class="rlabel" x="250" y="46" text-anchor="middle" style="fill:#4a5c74">? north</text>
+          </g>
+        </svg>
+      </div>
+      <!-- replay control bar -->
+      <div class="rctl">
+        <div class="btns">
+          <span class="rb" title="First">⏮</span>
+          <span class="rb" title="Step back">◀|</span>
+          <span class="rb play" title="Play">▶</span>
+          <span class="rb" title="Step forward">|▶</span>
+          <span class="rb" title="Last">⏭</span>
+        </div>
+        <div class="scrub">
+          <i></i>
+          <span class="mk" style="left:24%"></span><span class="mk" style="left:46%"></span>
+          <span class="mk" style="left:69%;background:#eac06a"></span><span class="mk" style="left:86%;background:#ff5d6c"></span>
+          <span class="kn"></span>
+        </div>
+        <div class="rmeta">step <b>62</b> / 90</div>
+        <div class="speed">1× ▾</div>
+      </div>
+    </div>
+
+    <!-- drawer: progressive drill-down -->
+    <aside>
+      <div class="dh">
+        <div class="path">J2 › Turn 62 › <b>Model call</b></div>
+        <h3>Request inspector</h3>
+      </div>
+      <div class="layers">
+        <span class="layer">Summary</span>
+        <span class="layer">Agent</span>
+        <span class="layer on">Model</span>
+        <span class="layer">Tool</span>
+        <span class="layer">Gateway</span>
+        <span class="layer deep">Telnet</span>
+        <span class="layer deep">Parsed</span>
+      </div>
+      <div class="dbody">
+        <div class="sec">
+          <h6>Tokens &amp; cost: with delta vs turn 61</h6>
+          <div class="tokbars">
+            <div class="tb"><span class="lab">Prompt</span><span class="bar"><i style="width:88%;background:linear-gradient(90deg,#5db4ff,#b7a7ff)"></i></span><span class="n mono">11,240 <span class="up">▲420</span></span></div>
+            <div class="tb"><span class="lab">Cached</span><span class="bar"><i style="width:64%;background:#2f6b6f"></i></span><span class="n mono">8,190 <span class="dn">73%</span></span></div>
+            <div class="tb"><span class="lab">Output</span><span class="bar"><i style="width:12%;background:#8bdfa9"></i></span><span class="n mono">380 <span class="dn">▼40</span></span></div>
+          </div>
+          <div class="kv" style="margin-top:10px"><span class="k">Response cost</span><span class="v">$0.00612 <small class="up">▲12% vs prev</small></span></div>
+          <div class="kv"><span class="k">Context size</span><span class="v">12.9k / 200k <small>(+0.4k)</small></span></div>
+          <div class="kv"><span class="k">Stop reason</span><span class="v">end_turn</span></div>
+        </div>
+        <div class="sec">
+          <h6>Request (system + messages)</h6>
+          <div class="msg sys"><div class="role">system</div>You are exploring a MUD to find the Massive Minotaur. Use the available movement and inspection tools…</div>
+          <div class="msg usr"><div class="role">user · observation</div>A White Square. Exits: north, east, west. You have been here before.</div>
+          <div class="msg asst"><div class="role">assistant</div>I'll head east again to look for the lair: I think I missed a passage. <span class="mono" style="color:var(--ink3)">→ move east</span></div>
+        </div>
+        <div class="sec">
+          <h6>Go deeper</h6>
+          <div class="godeep">
+            <a href="#">Tool call & result →</a>
+            <a href="#">mud_manager log →</a>
+          </div>
+          <div class="godeep">
+            <a href="#">Telnet / raw wire →</a>
+            <a href="#">Parsed observation →</a>
+          </div>
+        </div>
+      </div>
+      <!-- ask why -->
+      <div class="ask">
+        <h6>Ask why: at this moment (turn 62)</h6>
+        <div class="askin"><span class="q">Why is the agent turning around instead of exploring north?</span><span class="go">→</span></div>
+        <div class="answer">
+          <span class="tier">✓ grounded · $0.0000</span><br>
+          The agent never recorded the <b>north</b> exit of A White Square as a frontier: its three prior visits each parsed only <b>east/west</b>, so its learned map has no unexplored north edge to pursue. It re-tries east because that is the only exit it believes leads onward.
+          <div class="cites">
+            <div class="cite"><span class="src">parsed:t58</span><span class="ex">exits captured: east, west (north missed)</span></div>
+            <div class="cite"><span class="src">telnet:t62</span><span class="ex">“Exits: north east west” present in raw frame</span></div>
+            <div class="cite"><span class="src">knowledge:frontier</span><span class="ex">no north edge from A White Square</span></div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Boukensha Observatory: turn drill-down (mockup)</title>
+<style>
+  :root{--bg:#080b0f;--bg2:#0d1218;--panel:#0d1218;--panel2:#111820;--line:#1d2833;
+    --ink:#edf4f8;--ink2:#8493a1;--ink3:#596775;
+    --teal:#68e1dc;--aqua:#5db4ff;--violet:#b7a7ff;--amber:#eac06a;--rose:#ff8178;--good:#8bdfa9;}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  .mono{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace}
+  .app{display:flex;flex-direction:column;height:100vh}
+  header{display:flex;align-items:center;gap:14px;padding:11px 20px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#0e141e,#0b0f17)}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:600}
+  .brand .mk{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:radial-gradient(circle at 30% 30%,#123,#0b1a24);border:1px solid #1c3a44;color:var(--teal);font-size:15px}
+  nav{display:flex;gap:4px;margin-left:6px}
+  nav a{padding:6px 12px;border-radius:8px;color:var(--ink2);font-size:13px;text-decoration:none}
+  nav a.on{background:#163738;color:var(--teal);box-shadow:inset 0 0 0 1px #2b3947}
+  .spacer{flex:1}
+  .back{font-size:12.5px;color:var(--aqua);text-decoration:none;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 12px}
+  .crumb{padding:9px 20px;border-bottom:1px solid var(--line);font-size:12.5px;color:var(--ink2);display:flex;gap:8px;align-items:center}
+  .crumb b{color:var(--ink)} .crumb .s{color:var(--ink3)}
+  .crumb .exp{margin-left:auto;font-size:11.5px;color:var(--violet);background:#150f24;border:1px solid #33265a;border-radius:7px;padding:4px 9px}
+  .body{flex:1;display:flex;min-height:0}
+  /* left: span tree */
+  .spans{width:360px;flex:none;border-right:1px solid var(--line);background:var(--bg2);overflow:auto;padding:14px}
+  .spans h5{margin:2px 4px 12px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+  .span{display:block;padding:9px 10px;border-radius:9px;margin-bottom:4px;cursor:pointer;border:1px solid transparent}
+  .span:hover{background:#101a26} .span.on{background:#163738;border-color:#2b3947}
+  .span .r1{display:flex;align-items:center;gap:8px;font-size:12.5px}
+  .span .r1 .nm{font-weight:600} .span .r1 .nm.child{font-weight:500;color:var(--ink2)}
+  .span .dur{margin-left:auto;color:var(--ink3);font-size:11px}
+  .span .bar{height:5px;border-radius:4px;background:#0a0f18;margin-top:6px;overflow:hidden}
+  .span .bar i{display:block;height:100%}
+  .span .cost{font-size:10.5px;color:var(--ink3);margin-top:4px}
+  .ind{padding-left:16px;border-left:1px solid #1b2636;margin-left:8px}
+  .glyphk{font-size:11px}
+  /* right: layers */
+  main{flex:1;min-width:0;overflow:auto;padding:16px 20px}
+  .lhead{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+  .lhead h2{margin:0;font-size:17px}
+  .lhead .pill{font-size:10.5px;color:var(--ink3);border:1px solid var(--line);border-radius:6px;padding:2px 8px}
+  .lsub{color:var(--ink3);font-size:12px;margin-bottom:14px}
+  .chips{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap}
+  .chip{font-size:11.5px;padding:6px 11px;border-radius:8px;color:var(--ink3);background:#111820;border:1px solid var(--line);cursor:pointer}
+  .chip.on{background:#163738;color:var(--teal);border-color:#2b3947}
+  .chip .lv{font-size:8.5px;color:var(--ink3);margin-left:5px}
+  .layer{background:var(--panel);border:1px solid var(--line);border-radius:13px;margin-bottom:13px;overflow:hidden}
+  .layer .lh{display:flex;align-items:center;gap:9px;padding:11px 15px;border-bottom:1px solid var(--line)}
+  .layer .lh .ic{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;font-size:12px}
+  .layer .lh b{font-size:13.5px} .layer .lh small{color:var(--ink3);font-size:11px;margin-left:auto}
+  .layer .lb{padding:13px 15px}
+  .ic.tool{background:#163738;color:var(--teal)} .ic.gw{background:#151f2e;color:var(--aqua)} .ic.wire{background:#1a1526;color:var(--violet)} .ic.parse{background:#12241b;color:var(--good)}
+  .code{background:#0a0f18;border:1px solid #1d2833;border-radius:9px;padding:11px 13px;font-size:12px;line-height:1.6;color:var(--ink2);white-space:pre-wrap;overflow-x:auto}
+  .k{color:var(--aqua)} .str{color:var(--good)} .num{color:var(--amber)} .dim{color:var(--ink3)}
+  .ansi{background:#05070a;border:1px solid #1d2833;border-radius:9px;padding:11px 13px;font-size:12px;line-height:1.65}
+  .cwd{color:#7fd4c8}.srv{color:#cbd8e8}.exits{color:#8fb4e0}.mob{color:#ff9aa6}
+  .wtoggle{display:inline-flex;gap:2px;background:#111820;border:1px solid var(--line);border-radius:7px;padding:2px;margin-left:auto}
+  .wtoggle span{font-size:10.5px;padding:3px 8px;border-radius:5px;color:var(--ink3)} .wtoggle span.on{background:#163738;color:var(--teal)}
+  .kv{display:flex;gap:10px;font-size:12px;padding:4px 0;border-bottom:1px solid #1d2833}
+  .kv:last-child{border:none}.kv .kk{width:120px;color:var(--ink3)}.kv .vv{color:var(--ink);font-weight:600}
+  .badge{font-size:10px;padding:1px 7px;border-radius:5px;background:#12241b;color:var(--good)}
+  .hint{color:var(--ink3);font-size:11.5px;margin:2px 0 14px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand"><span class="mk">◎</span><span>Boukensha</span></div>
+    <nav><a href="#">Live</a><a class="on" href="#">Sessions</a><a href="#">Experiments</a><a href="#">Knowledge</a></nav>
+    <div class="spacer"></div>
+    <a class="back" href="#">← Back to replay</a>
+  </header>
+  <div class="crumb">
+    <a href="#" style="color:var(--aqua);text-decoration:none">Sessions</a><span class="s">›</span>
+    <b>poucet</b><span class="s">›</span><b>J2 · minotaur</b><span class="s">›</span>
+    <b>Turn 62</b><span class="s">›</span>full detail
+    <span class="exp">from experiment: Rendering × tool surface · run A-7</span>
+  </div>
+  <div class="body">
+    <!-- span tree -->
+    <div class="spans">
+      <h5>Turn 62 · operation tree (spans)</h5>
+      <div class="span"><div class="r1"><span class="glyphk">◷</span><span class="nm">before_turn hook</span><span class="dur">2 ms</span></div>
+        <div class="bar"><i style="width:3%;background:#33465e"></i></div></div>
+      <div class="span"><div class="r1"><span class="glyphk" style="color:var(--aqua)">✦</span><span class="nm">model.call · Sonnet</span><span class="dur">1.82 s</span></div>
+        <div class="bar"><i style="width:96%;background:#5db4ff"></i></div><div class="cost">$0.0061 · 11,240 → 380 tok · ▲12%</div></div>
+      <div class="span on"><div class="r1"><span class="glyphk" style="color:var(--teal)">⚙</span><span class="nm">tool · move east</span><span class="dur">14 ms</span></div>
+        <div class="bar"><i style="width:8%;background:#68e1dc"></i></div><div class="cost">selected: drilling this operation</div></div>
+      <div class="ind">
+        <div class="span"><div class="r1"><span class="glyphk" style="color:var(--aqua)">⇄</span><span class="nm child">gateway.command</span><span class="dur">11 ms</span></div>
+          <div class="bar"><i style="width:6%;background:#3a6b8f"></i></div></div>
+        <div class="span"><div class="r1"><span class="glyphk" style="color:var(--violet)">≋</span><span class="nm child">telnet exchange</span><span class="dur">9 ms</span></div>
+          <div class="bar"><i style="width:5%;background:#6a5aa0"></i></div></div>
+      </div>
+      <div class="span"><div class="r1"><span class="glyphk" style="color:var(--good)">◍</span><span class="nm">after_move.summarize · local BERT</span><span class="dur">41 ms</span></div>
+        <div class="bar"><i style="width:12%;background:#8bdfa9"></i></div><div class="cost">$0.0000 · offline model</div></div>
+      <div class="span"><div class="r1"><span class="glyphk">◷</span><span class="nm">after_turn hook · journal write</span><span class="dur">3 ms</span></div>
+        <div class="bar"><i style="width:3%;background:#33465e"></i></div></div>
+    </div>
+
+    <!-- layered detail -->
+    <main>
+      <div class="lhead"><h2>tool · move east</h2><span class="pill">span 62.3</span><span class="pill">trace 8f2c…a1</span></div>
+      <div class="lsub">Progressive detail: each layer is one click deeper. Open only what you need. Here all levels are expanded to show the full descent.</div>
+      <div class="chips">
+        <span class="chip">Summary</span><span class="chip">Agent</span><span class="chip">Model</span>
+        <span class="chip on">Tool <span class="lv">L4</span></span><span class="chip on">Gateway <span class="lv">L5</span></span>
+        <span class="chip on">Telnet <span class="lv">L6</span></span><span class="chip on">Parsed <span class="lv">L7</span></span>
+      </div>
+
+      <!-- Tool -->
+      <div class="layer">
+        <div class="lh"><span class="ic tool">⚙</span><b>Tool call & result</b><small>render mode: raw</small></div>
+        <div class="lb">
+          <div class="code"><span class="dim">request</span>  { <span class="k">"name"</span>: <span class="str">"move"</span>, <span class="k">"args"</span>: { <span class="k">"direction"</span>: <span class="str">"east"</span> } }
+<span class="dim">result</span>   { <span class="k">"ok"</span>: <span class="num">true</span>, <span class="k">"text"</span>: <span class="str">"A Dark Alley\nA narrow…"</span>, <span class="k">"envelope"</span>: <span class="str">"raw"</span> }</div>
+        </div>
+      </div>
+
+      <!-- Gateway -->
+      <div class="layer">
+        <div class="lh"><span class="ic gw">⇄</span><b>Gateway · mud_manager log</b><small>command → observation</small></div>
+        <div class="lb">
+          <div class="code"><span class="dim">10:42:07.114</span> → send  <span class="str">"east"</span>
+<span class="dim">10:42:07.123</span> ← recv  room block · 312 bytes · 1 mob sighted
+<span class="dim">10:42:07.125</span> ok    observation emitted <span class="dim">(wire_ref frame#1487)</span></div>
+        </div>
+      </div>
+
+      <!-- Telnet raw wire -->
+      <div class="layer">
+        <div class="lh"><span class="ic wire">≋</span><b>Telnet · raw wire</b>
+          <span class="wtoggle"><span class="on">ANSI</span><span>hex</span><span>rendered</span></span></div>
+        <div class="lb">
+          <div class="ansi mono"><span class="cwd">» east</span>
+<span class="srv">A Dark Alley</span>
+<span class="srv">A narrow passage between two leaning buildings. Refuse lines the</span>
+<span class="srv">cobbles and something scuttles in the shadows.</span>
+<span class="exits">[ Exits: north east west ]</span>
+<span class="mob">A large kobold snarls here, blocking the way east.</span></div>
+          <div class="hint" style="margin:8px 0 0">byte-exact server↔client frames · IAC negotiation passed through untouched</div>
+        </div>
+      </div>
+
+      <!-- Parsed observation -->
+      <div class="layer">
+        <div class="lh"><span class="ic parse">◍</span><b>Parsed observation</b><small>the typed evidence the agent received</small></div>
+        <div class="lb">
+          <div class="kv"><span class="kk">room</span><span class="vv">A Dark Alley</span></div>
+          <div class="kv"><span class="kk">exits</span><span class="vv">north · east · west</span></div>
+          <div class="kv"><span class="kk">mobs</span><span class="vv">a large kobold <span class="dim">(blocks east)</span></span></div>
+          <div class="kv"><span class="kk">confidence</span><span class="vv"><span class="badge">high</span></span></div>
+          <div class="kv"><span class="kk">method</span><span class="vv">title + exits match</span></div>
+          <div class="kv"><span class="kk">parser version</span><span class="vv">3</span></div>
+          <div class="kv"><span class="kk">wire ref</span><span class="vv" style="color:var(--violet)">frame#1487 ↑</span></div>
+          <div class="kv"><span class="kk">parse residual</span><span class="vv" style="color:var(--ink3)">none: 0 unclassified bytes</span></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</body>
+</html>

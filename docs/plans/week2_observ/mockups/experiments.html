@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Boukensha Observatory: Experiments workbench (mockup)</title>
+<style>
+  :root{--bg:#0a0e14;--bg2:#0e131c;--panel:#121926;--panel2:#161f2e;--line:#1e2a3c;
+    --ink:#e6edf6;--ink2:#9fb0c6;--ink3:#5f7590;
+    --teal:#4fd6c9;--aqua:#5db4ff;--violet:#9a8cff;--amber:#f5c463;--rose:#ff7a8a;--good:#5fdd9d;--danger:#ff5d6c;}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  .mono{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace}
+  .app{display:flex;flex-direction:column;height:100vh}
+  header{display:flex;align-items:center;gap:16px;padding:12px 20px;border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#0e141e,#0b0f17)}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:600}
+  .brand .mk{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:radial-gradient(circle at 30% 30%,#123,#0b1a24);border:1px solid #1c3a44;color:var(--teal);font-size:16px}
+  .brand small{display:block;color:var(--ink3);font-weight:500;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+  nav{display:flex;gap:4px;margin-left:8px}
+  nav a{padding:7px 14px;border-radius:9px;color:var(--ink2);font-size:13.5px;text-decoration:none;font-weight:500}
+  nav a.on{background:#12202b;color:var(--teal);box-shadow:inset 0 0 0 1px #1d3a44}
+  .spacer{flex:1}
+  .btn{font-size:12.5px;padding:8px 14px;border-radius:9px;border:1px solid var(--line);background:var(--panel);color:var(--ink2)}
+  .btn.p{background:#12202b;color:var(--teal);border-color:#1d3a44}
+  .body{flex:1;display:flex;min-height:0}
+  /* left rail */
+  .rail{width:230px;flex:none;border-right:1px solid var(--line);background:var(--bg2);overflow:auto;padding:12px}
+  .rail h5{margin:6px 6px 8px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+  .ex{padding:10px 11px;border-radius:10px;margin-bottom:6px;cursor:pointer;border:1px solid transparent}
+  .ex:hover{background:#101a26} .ex.on{background:#12202b;border-color:#1d3a44}
+  .ex .t{font-size:13px;font-weight:600} .ex .m{font-size:11px;color:var(--ink3);margin-top:3px}
+  .ex .st{font-size:9.5px;padding:1px 6px;border-radius:5px;background:#12241b;color:var(--good)}
+  .newbtn{width:100%;margin-top:6px;font-size:12.5px;padding:9px;border-radius:10px;border:1px dashed #2f5680;background:transparent;color:var(--aqua)}
+  /* main */
+  main{flex:1;min-width:0;overflow:auto;padding:18px 22px}
+  .htitle{display:flex;align-items:center;gap:12px}
+  .htitle h2{margin:0;font-size:19px}
+  .htitle .st{font-size:10.5px;padding:3px 9px;border-radius:6px;background:#12241b;color:var(--good);letter-spacing:.08em;text-transform:uppercase}
+  .obj{color:var(--ink2);font-size:13px;margin:6px 0 2px}
+  .meta{color:var(--ink3);font-size:12px;margin-bottom:16px}
+  .sect{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin:6px 0 10px;font-weight:600}
+  .regnote{font-size:11.5px;color:var(--ink3);background:#0c131d;border:1px solid var(--line);border-radius:9px;padding:9px 12px;margin-bottom:14px}
+  .regnote b{color:var(--aqua)}
+  /* arms */
+  .arms{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:22px}
+  .arm{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .arm .ah{display:flex;align-items:center;gap:9px;padding:11px 14px;border-bottom:1px solid var(--line)}
+  .arm .tag{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-weight:700;font-size:13px}
+  .arm.a .tag{background:#12202b;color:var(--teal)} .arm.b .tag{background:#1a1526;color:var(--violet)}
+  .arm .ah b{font-size:14px} .arm .ah small{color:var(--ink3);font-size:11px;margin-left:auto}
+  .knob{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid #131c29;font-size:12.5px}
+  .knob:last-child{border-bottom:none}
+  .knob .kn{width:150px;color:var(--ink2)}
+  .knob .kn .reg{display:block;font-size:9px;color:var(--ink3);letter-spacing:.08em;text-transform:uppercase}
+  .knob .val{flex:1;color:var(--ink);font-weight:600}
+  .diff{color:var(--amber)}
+  .sw{width:34px;height:19px;border-radius:20px;background:#20304a;position:relative;flex:none}
+  .sw i{position:absolute;top:2px;width:15px;height:15px;border-radius:50%;background:#8fb0d0;transition:.2s}
+  .sw.on{background:#134536} .sw.on i{left:17px;background:#5fdd9d} .sw.off i{left:2px}
+  .chip{font-size:11px;padding:2px 8px;border-radius:6px;background:#0c131d;border:1px solid var(--line);color:var(--ink2)}
+  .newflag{font-size:8.5px;background:#1a1526;color:var(--violet);border:1px solid #33265a;border-radius:4px;padding:1px 4px;margin-left:6px;letter-spacing:.06em}
+  /* results */
+  .results{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .rgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:8px}
+  .metric{background:#0c131d;border:1px solid var(--line);border-radius:11px;padding:12px}
+  .metric .k{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+  .cmp{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+  .cbar{display:flex;align-items:center;gap:8px;font-size:12px}
+  .cbar .lab{width:16px;font-weight:700}.cbar .lab.a{color:var(--teal)}.cbar .lab.b{color:var(--violet)}
+  .cbar .track{flex:1;height:9px;border-radius:6px;background:#0a0f18;overflow:hidden}
+  .cbar .track i{display:block;height:100%}
+  .cbar .n{width:70px;text-align:right;color:var(--ink2)}
+  .win{margin-left:6px;font-size:9px;color:var(--good)}
+  .verdict{margin-top:16px;background:#0c1a13;border:1px solid #1d4432;border-radius:11px;padding:13px 15px;font-size:13px;line-height:1.55}
+  .verdict b{color:var(--good)}
+  .footnote{color:var(--ink3);font-size:11.5px;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand"><span class="mk">◎</span><span>Boukensha<small>Observatory</small></span></div>
+    <nav><a href="#">Live</a><a href="#">Sessions</a><a class="on" href="#">Experiments</a><a href="#">Knowledge</a></nav>
+    <div class="spacer"></div>
+    <button class="btn">Validate</button>
+    <button class="btn p">▶ Re-run (10×2)</button>
+  </header>
+  <div class="body">
+    <!-- experiment list -->
+    <div class="rail">
+      <h5>Experiments</h5>
+      <div class="ex on"><div class="t">Rendering × tool surface</div><div class="m"><span class="st">done</span> &nbsp;20 runs · $1.42</div></div>
+      <div class="ex"><div class="t">ML extractor on/off</div><div class="m"><span class="st">done</span> &nbsp;20 runs · $1.10</div></div>
+      <div class="ex"><div class="t">Model: sonnet vs haiku</div><div class="m"><span class="st">done</span> &nbsp;20 runs · $0.74</div></div>
+      <div class="ex"><div class="t">Structured preprocessing</div><div class="m">draft · not run</div></div>
+      <button class="newbtn">+ New experiment</button>
+      <h5 style="margin-top:16px">Templates</h5>
+      <div class="ex"><div class="t">A/B two arms</div></div>
+      <div class="ex"><div class="t">Sweep one feature</div></div>
+    </div>
+
+    <!-- workbench -->
+    <main>
+      <div class="htitle"><h2>Rendering × tool surface</h2><span class="st">completed · 10 reps each</span></div>
+      <div class="obj"><b style="color:var(--ink)">Objective:</b> reach the bakery from the temple and buy a danish.</div>
+      <div class="meta">Success = danish in inventory · start = Temple of Midgaard · model = Sonnet · limits: 60 turns / $0.60 · spend cap $3.00 · total spent $1.42</div>
+
+      <div class="regnote">⚙ Controls are generated from the <b>gateway feature registry</b>: every flag the gateway exposes shows up here automatically. Add a feature to the gateway → a new control appears in this workbench with zero UI changes. <span class="newflag">NEW</span> marks a flag added since last run.</div>
+
+      <div class="sect">Arms: the features under test</div>
+      <div class="arms">
+        <!-- Arm A -->
+        <div class="arm a">
+          <div class="ah"><span class="tag">A</span><b>Rich pipeline</b><small>10 runs</small></div>
+          <div class="knob"><span class="kn">Model<span class="reg">registry · model</span></span><span class="val">Sonnet</span></div>
+          <div class="knob"><span class="kn">Tool surface<span class="reg">registry · tools.profile</span></span><span class="val">full (25 tools)</span></div>
+          <div class="knob"><span class="kn">Structured preprocessing<span class="reg">registry · render.structured</span></span><span class="sw on"><i></i></span></div>
+          <div class="knob"><span class="kn">ML semantic extractor<span class="reg">registry · ml.look_target</span></span><span class="sw on"><i></i></span></div>
+          <div class="knob"><span class="kn">Response envelope<span class="reg">registry · render.mode</span></span><span class="val diff">full</span></div>
+          <div class="knob"><span class="kn">Room fingerprinting <span class="newflag">NEW</span><span class="reg">registry · ml.fingerprint</span></span><span class="sw on"><i></i></span></div>
+        </div>
+        <!-- Arm B -->
+        <div class="arm b">
+          <div class="ah"><span class="tag">B</span><b>Lean pipeline</b><small>10 runs</small></div>
+          <div class="knob"><span class="kn">Model<span class="reg">registry · model</span></span><span class="val">Sonnet</span></div>
+          <div class="knob"><span class="kn">Tool surface<span class="reg">registry · tools.profile</span></span><span class="val diff">minimal (8 tools)</span></div>
+          <div class="knob"><span class="kn">Structured preprocessing<span class="reg">registry · render.structured</span></span><span class="sw on"><i></i></span></div>
+          <div class="knob"><span class="kn">ML semantic extractor<span class="reg">registry · ml.look_target</span></span><span class="sw off"><i></i></span></div>
+          <div class="knob"><span class="kn">Response envelope<span class="reg">registry · render.mode</span></span><span class="val diff">raw</span></div>
+          <div class="knob"><span class="kn">Room fingerprinting <span class="newflag">NEW</span><span class="reg">registry · ml.fingerprint</span></span><span class="sw off"><i></i></span></div>
+        </div>
+      </div>
+
+      <div class="sect">Results: A vs B</div>
+      <div class="results">
+        <div class="rgrid">
+          <div class="metric"><div class="k">Success rate</div>
+            <div class="cmp">
+              <div class="cbar"><span class="lab a">A</span><span class="track"><i style="width:90%;background:var(--teal)"></i></span><span class="n mono">90%</span></div>
+              <div class="cbar"><span class="lab b">B</span><span class="track"><i style="width:100%;background:var(--violet)"></i></span><span class="n mono">100%<span class="win">win</span></span></div>
+            </div>
+          </div>
+          <div class="metric"><div class="k">Mean cost / run</div>
+            <div class="cmp">
+              <div class="cbar"><span class="lab a">A</span><span class="track"><i style="width:100%;background:var(--teal)"></i></span><span class="n mono">$0.089</span></div>
+              <div class="cbar"><span class="lab b">B</span><span class="track"><i style="width:62%;background:var(--violet)"></i></span><span class="n mono">$0.055<span class="win">win</span></span></div>
+            </div>
+          </div>
+          <div class="metric"><div class="k">Cost / progress ($/room)</div>
+            <div class="cmp">
+              <div class="cbar"><span class="lab a">A</span><span class="track"><i style="width:100%;background:var(--teal)"></i></span><span class="n mono">$0.0041</span></div>
+              <div class="cbar"><span class="lab b">B</span><span class="track"><i style="width:66%;background:var(--violet)"></i></span><span class="n mono">$0.0027<span class="win">win</span></span></div>
+            </div>
+          </div>
+          <div class="metric"><div class="k">Avg turns to goal</div>
+            <div class="cmp">
+              <div class="cbar"><span class="lab a">A</span><span class="track"><i style="width:82%;background:var(--teal)"></i></span><span class="n mono">28</span></div>
+              <div class="cbar"><span class="lab b">B</span><span class="track"><i style="width:100%;background:var(--violet)"></i></span><span class="n mono">34</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="rgrid" style="grid-template-columns:repeat(3,1fr);margin-top:14px">
+          <div class="metric"><div class="k">Failures</div><div class="cmp">
+            <div class="cbar"><span class="lab a">A</span><span class="track"><i style="width:30%;background:var(--rose)"></i></span><span class="n mono">1 / 10</span></div>
+            <div class="cbar"><span class="lab b">B</span><span class="track"><i style="width:2%;background:var(--rose)"></i></span><span class="n mono">0 / 10</span></div></div></div>
+          <div class="metric"><div class="k">Result tokens / turn</div><div class="cmp">
+            <div class="cbar"><span class="lab a">A</span><span class="track"><i style="width:100%;background:var(--teal)"></i></span><span class="n mono">1,240</span></div>
+            <div class="cbar"><span class="lab b">B</span><span class="track"><i style="width:40%;background:var(--violet)"></i></span><span class="n mono">500</span></div></div></div>
+          <div class="metric"><div class="k">First divergence</div><div class="cmp" style="font-size:12px;color:var(--ink2);padding-top:4px">Turn 6: A calls <span class="mono">room_inspect</span>. B moves directly, and its leaner surface avoids an exploratory detour.</div></div>
+        </div>
+        <div class="verdict">▲ <b>B (Lean pipeline) wins for this objective.</b> Equal-or-better success (100% vs 90%) at <b>38% lower cost</b>, driven mostly by the raw envelope (−60% result tokens/turn) and the smaller tool surface. The rich pipeline's ML extractor + full tools didn't pay off on a short, well-mapped route: worth re-testing on a long unexplored journey where fingerprinting may matter.</div>
+        <div class="footnote">Every number links to the runs that produced it · export this experiment as a shareable capsule.</div>
+      </div>
+    </main>
+  </div>
+</div>
+</body>
+</html>

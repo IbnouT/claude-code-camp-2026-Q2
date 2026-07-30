@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Boukensha Observatory: dense learned map (mockup)</title>
+<style>
+  :root{color-scheme:dark;
+    --bg:#080b0f;--surface:#0d1218;--raised:#111820;--soft:#151d26;
+    --line:#1d2833;--line2:#2b3947;--text:#edf4f8;--muted:#8493a1;--quiet:#596775;
+    --cyan:#68e1dc;--cyan-soft:#163738;--amber:#eac06a;--amber-soft:#3b301d;
+    --coral:#ff8178;--coral-soft:#3e2425;--violet:#b7a7ff;--violet-soft:#292640;--green:#8bdfa9;
+    --shadow:0 24px 70px rgb(0 0 0 / 32%);}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  svg.i{width:1em;height:1em;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.125em}
+  .app{display:flex;flex-direction:column;height:100vh}
+  header{display:flex;align-items:center;gap:16px;padding:13px 22px;border-bottom:1px solid var(--line);background:var(--surface)}
+  .brand{display:flex;align-items:center;gap:11px;font-weight:600;font-size:15px}
+  .brand .mk{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;color:var(--cyan);background:radial-gradient(120% 120% at 30% 20%,#123639,#0a171c);box-shadow:inset 0 0 0 1px rgb(104 225 220/18%)}
+  .brand small{display:block;color:var(--quiet);font-weight:500;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase}
+  nav{display:flex;gap:3px;margin-left:6px}
+  nav a{padding:8px 14px;border-radius:10px;color:var(--muted);font-size:13.5px;text-decoration:none;font-weight:500;display:flex;gap:7px;align-items:center}
+  nav a.on{background:var(--cyan-soft);color:var(--cyan);box-shadow:inset 0 0 0 1px rgb(104 225 220/18%)}
+  .spacer{flex:1}
+  .pick{font-size:12.5px;color:var(--muted);background:var(--raised);border:1px solid var(--line);border-radius:10px;padding:8px 13px}
+  .subbar{display:flex;align-items:center;gap:12px;padding:10px 22px;border-bottom:1px solid var(--line);background:var(--surface)}
+  .tabs{display:flex;gap:3px}
+  .tabs span{font-size:13px;padding:7px 13px;border-radius:9px;color:var(--muted);display:flex;gap:7px;align-items:center}
+  .tabs span.on{background:var(--soft);color:var(--text);box-shadow:inset 0 0 0 1px var(--line2)}
+  .search{display:flex;align-items:center;gap:8px;background:var(--raised);border:1px solid var(--line);border-radius:9px;padding:7px 12px;color:var(--quiet);font-size:12.5px;width:220px}
+  .chips{display:flex;gap:5px}
+  .chip{font-size:11.5px;padding:6px 10px;border-radius:8px;color:var(--muted);background:var(--raised);border:1px solid var(--line)}
+  .chip.on{background:var(--cyan-soft);color:var(--cyan);border-color:rgb(104 225 220/22%)}
+  .lod{margin-left:auto;display:inline-flex;gap:2px;background:var(--raised);border:1px solid var(--line);border-radius:9px;padding:3px}
+  .lod span{font-size:11.5px;padding:5px 11px;border-radius:6px;color:var(--muted)}
+  .lod span.on{background:var(--soft);color:var(--text);box-shadow:inset 0 0 0 1px var(--line2)}
+  .body{flex:1;display:flex;min-height:0}
+  .canvas{flex:1;min-width:0;position:relative;background:radial-gradient(900px 560px at 45% 45%,var(--soft),var(--bg))}
+  svg.world{display:block;width:100%;height:100%}
+  .zl{fill:var(--text);font-weight:600} .zc{fill:var(--muted)}
+  .stat{position:absolute;left:16px;top:14px;font-size:12px;color:var(--muted);background:var(--raised);border:1px solid var(--line);border-radius:9px;padding:7px 12px}
+  .stat b{color:var(--text)}
+  .legend{position:absolute;left:16px;bottom:16px;background:var(--raised);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:11px;color:var(--muted)}
+  .legend .r{display:flex;align-items:center;gap:8px;margin:4px 0}
+  .minimap{position:absolute;right:16px;bottom:16px;width:150px;height:104px;background:var(--surface);border:1px solid var(--line2);border-radius:9px;overflow:hidden}
+  .minimap .vp{position:absolute;border:1.5px solid var(--cyan);border-radius:3px;background:rgb(104 225 220/8%)}
+  /* zone detail panel */
+  .detail{flex:0 0 340px;border-left:1px solid var(--line);overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:14px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:14px 15px;box-shadow:var(--shadow)}
+  .card h3{margin:0 0 3px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:9px}
+  .card .sctag{font-size:10px;padding:2px 8px;border-radius:6px;background:var(--cyan-soft);color:var(--cyan);margin-left:auto}
+  .sub{color:var(--quiet);font-size:12px;margin-bottom:12px}
+  .prog{height:7px;border-radius:6px;background:var(--soft);overflow:hidden;margin:4px 0 3px}.prog i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--violet))}
+  .kv{display:flex;justify-content:space-between;font-size:12.5px;padding:6px 0;border-bottom:1px solid #131c25}.kv:last-of-type{border:none}.kv .v{font-weight:600}
+  .roomsg{height:150px;background:var(--bg);border:1px solid var(--line);border-radius:10px;margin-top:6px;position:relative;overflow:hidden}
+  .h4{font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--quiet);font-weight:600;margin:0 0 8px}
+  .ent{display:flex;align-items:center;gap:9px;font-size:12.5px;padding:6px 0;border-bottom:1px solid #131c25;color:var(--muted)}.ent:last-child{border:none}.ent .nm{color:var(--text)}
+  .drill{font-size:12px;color:var(--cyan);text-decoration:none;display:inline-flex;gap:6px;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand"><span class="mk">◎</span><span>Boukensha<small>Observatory</small></span></div>
+    <nav>
+      <a href="#"><svg class="i" viewBox="0 0 24 24" style="font-size:15px"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> Live</a>
+      <a href="#"><svg class="i" viewBox="0 0 24 24" style="font-size:15px"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg> Sessions</a>
+      <a href="#"><svg class="i" viewBox="0 0 24 24" style="font-size:15px"><path d="M4 20V4M4 20h16M8 16v-5M13 16V8M18 16v-8"/></svg> Experiments</a>
+      <a class="on" href="#"><svg class="i" viewBox="0 0 24 24" style="font-size:15px"><path d="M4 19V5a2 2 0 012-2h13v18H6a2 2 0 01-2-2z"/></svg> Knowledge</a>
+    </nav>
+    <div class="spacer"></div>
+    <div class="pick">Player: poucet ▾</div>
+  </header>
+
+  <div class="subbar">
+    <div class="tabs"><span class="on"><svg class="i" viewBox="0 0 24 24" style="font-size:14px"><path d="M9 4v16M15 4v16M3 9l6-5 6 5 6-5v11l-6 5-6-5-6 5z"/></svg> Learned map</span></div>
+    <div class="search"><svg class="i" viewBox="0 0 24 24" style="font-size:14px"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg> Jump to room / zone…</div>
+    <div class="chips"><span class="chip on">Visited</span><span class="chip">Frontier</span><span class="chip">Has entity</span><span class="chip">By sector</span><span class="chip">Visit heat</span></div>
+    <div class="lod"><span class="on">Zones</span><span>Rooms</span><span>Auto (zoom)</span></div>
+  </div>
+
+  <div class="body">
+    <div class="canvas">
+      <div class="stat">Learned <b>1,240</b> of ~12,000 rooms · <b>11</b> zones touched · showing zone clusters (zoom in for rooms)</div>
+      <svg class="world" viewBox="0 0 900 620" preserveAspectRatio="xMidYMid meet">
+        <defs><radialGradient id="selz" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#68e1dc" stop-opacity=".28"/><stop offset="1" stop-color="#68e1dc" stop-opacity="0"/></radialGradient>
+          <radialGradient id="objz" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#b7a7ff" stop-opacity=".3"/><stop offset="1" stop-color="#b7a7ff" stop-opacity="0"/></radialGradient></defs>
+        <!-- inter-zone links -->
+        <g stroke="#25333f" stroke-width="2.5" fill="none">
+          <path d="M250,320 L420,300"/><path d="M420,300 L250,180"/><path d="M420,300 L600,220"/>
+          <path d="M420,300 L470,470"/><path d="M600,220 L740,150"/><path d="M600,220 L720,360"/>
+          <path d="M250,320 L160,460"/><path d="M470,470 L650,500"/>
+          <path d="M740,150 L820,90" stroke="#ff8178" stroke-dasharray="5 5"/>
+        </g>
+        <!-- zones: r ~ sqrt(count) -->
+        <!-- Temple District (start) -->
+        <g><circle cx="250" cy="320" r="34" fill="#12271c" stroke="#2b5c48" stroke-width="2"/>
+          <text class="zl" x="250" y="317" text-anchor="middle" font-size="12">Temple District</text>
+          <text class="zc" x="250" y="333" text-anchor="middle" font-size="10">86 rooms · agent here ★</text></g>
+        <!-- Midgaard City (selected, large) -->
+        <circle cx="420" cy="300" r="66" fill="url(#selz)"/>
+        <g><circle cx="420" cy="300" r="52" fill="#14212e" stroke="#68e1dc" stroke-width="2.5"/>
+          <text class="zl" x="420" y="296" text-anchor="middle" font-size="13">Midgaard City</text>
+          <text class="zc" x="420" y="314" text-anchor="middle" font-size="10">312 rooms · 48 visited</text></g>
+        <!-- Market Rows -->
+        <g><circle cx="250" cy="180" r="30" fill="#14212e" stroke="#2b3947" stroke-width="2"/>
+          <text class="zl" x="250" y="178" text-anchor="middle" font-size="11">Market Rows</text>
+          <text class="zc" x="250" y="193" text-anchor="middle" font-size="9.5">64 rooms</text></g>
+        <!-- The Sewers -->
+        <g><circle cx="470" cy="470" r="40" fill="#1c1630" stroke="#463357" stroke-width="2"/>
+          <text class="zl" x="470" y="467" text-anchor="middle" font-size="11.5">The Sewers</text>
+          <text class="zc" x="470" y="483" text-anchor="middle" font-size="9.5">140 rooms · dense</text></g>
+        <!-- Newbie Zone -->
+        <g><circle cx="600" cy="220" r="34" fill="#12271f" stroke="#2b5c53" stroke-width="2"/>
+          <text class="zl" x="600" y="218" text-anchor="middle" font-size="11.5">Newbie Zone</text>
+          <text class="zc" x="600" y="233" text-anchor="middle" font-size="9.5">92 rooms</text></g>
+        <!-- Dark Forest -->
+        <g><circle cx="720" cy="360" r="36" fill="#141f16" stroke="#33502b" stroke-width="2"/>
+          <text class="zl" x="720" y="358" text-anchor="middle" font-size="11.5">Dark Forest</text>
+          <text class="zc" x="720" y="373" text-anchor="middle" font-size="9.5">118 rooms</text></g>
+        <!-- Thieves' Quarter -->
+        <g><circle cx="160" cy="460" r="26" fill="#2a2416" stroke="#5c4a2b" stroke-width="2"/>
+          <text class="zl" x="160" y="458" text-anchor="middle" font-size="11">Thieves' Qtr</text>
+          <text class="zc" x="160" y="472" text-anchor="middle" font-size="9.5">40 rooms</text></g>
+        <!-- Graveyard -->
+        <g><circle cx="650" cy="500" r="28" fill="#161b20" stroke="#33414d" stroke-width="2"/>
+          <text class="zl" x="650" y="498" text-anchor="middle" font-size="11">Graveyard</text>
+          <text class="zc" x="650" y="512" text-anchor="middle" font-size="9.5">54 rooms</text></g>
+        <!-- Wilderness gate (partly explored) -->
+        <g><circle cx="740" cy="150" r="28" fill="#14212e" stroke="#2b3947" stroke-width="2"/>
+          <text class="zl" x="740" y="148" text-anchor="middle" font-size="11">North Gate</text>
+          <text class="zc" x="740" y="162" text-anchor="middle" font-size="9.5">36 rooms</text></g>
+        <!-- Minotaur Lair (objective, frontier/unverified) -->
+        <circle cx="820" cy="90" r="34" fill="url(#objz)"/>
+        <g><circle cx="820" cy="90" r="24" fill="none" stroke="#b7a7ff" stroke-width="2.5" stroke-dasharray="5 4"/>
+          <text class="zl" x="820" y="88" text-anchor="middle" font-size="10.5" style="fill:#cabfff">Minotaur Lair</text>
+          <text class="zc" x="820" y="102" text-anchor="middle" font-size="9" style="fill:#8a7fc4">objective · unentered</text></g>
+      </svg>
+      <div class="legend">
+        <div class="r"><span style="width:14px;height:14px;border-radius:50%;background:#14212e;border:2px solid #2b3947;display:inline-block"></span>zone (size = rooms)</div>
+        <div class="r"><span style="width:14px;height:14px;border-radius:50%;border:2px solid #68e1dc;display:inline-block"></span>selected zone</div>
+        <div class="r"><span style="width:14px;height:14px;border-radius:50%;border:2px dashed #b7a7ff;display:inline-block"></span>objective / unentered</div>
+        <div class="r"><span style="width:14px;height:2px;background:#ff8178;display:inline-block"></span>unverified link</div>
+      </div>
+      <div class="minimap"><div class="vp" style="left:28%;top:30%;width:44%;height:46%"></div>
+        <svg viewBox="0 0 150 104" style="width:100%;height:100%;opacity:.5"><g fill="#2b3947"><circle cx="42" cy="54" r="6"/><circle cx="70" cy="50" r="9"/><circle cx="42" cy="30" r="5"/><circle cx="78" cy="78" r="6"/><circle cx="100" cy="37" r="6"/><circle cx="120" cy="60" r="6"/><circle cx="27" cy="77" r="4"/><circle cx="108" cy="83" r="5"/><circle cx="123" cy="25" r="5"/><circle cx="137" cy="15" r="4"/></g></svg>
+      </div>
+    </div>
+
+    <!-- zone detail (cluster → expand) -->
+    <div class="detail">
+      <div class="card">
+        <h3>Midgaard City <span class="sctag">Inside · City</span></h3>
+        <div class="sub">312 rooms learned · 48 visited (15%) · 9 frontier exits</div>
+        <div class="prog"><i style="width:15%"></i></div>
+        <div class="kv"><span>Visited</span><span class="v">48 / 312</span></div>
+        <div class="kv"><span>Revisits (loops)</span><span class="v">21</span></div>
+        <div class="kv"><span>Entities in zone</span><span class="v">7</span></div>
+        <p class="h4" style="margin-top:14px">Visited rooms in this zone</p>
+        <div class="roomsg">
+          <svg viewBox="0 0 300 150" style="width:100%;height:100%">
+            <g stroke="#25333f" stroke-width="1.5" fill="none"><path d="M60,80 L110,80 L110,50 L160,50 L160,90 L210,90 L210,55"/><path d="M110,80 L110,115 L160,115"/><path d="M160,50 L200,40"/></g>
+            <g fill="#14212e" stroke="#2f5680"><rect x="52" y="72" width="16" height="16" rx="4"/><rect x="102" y="72" width="16" height="16" rx="4"/><rect x="102" y="42" width="16" height="16" rx="4"/><rect x="152" y="42" width="16" height="16" rx="4"/><rect x="152" y="82" width="16" height="16" rx="4"/><rect x="202" y="82" width="16" height="16" rx="4"/><rect x="102" y="107" width="16" height="16" rx="4"/><rect x="152" y="107" width="16" height="16" rx="4"/></g>
+            <rect x="202" y="47" width="16" height="16" rx="4" fill="none" stroke="#26374b" stroke-dasharray="2 3"/>
+            <rect x="192" y="32" width="16" height="16" rx="4" fill="#2c2416" stroke="#eac06a"/>
+          </svg>
+        </div>
+        <a class="drill" href="#">Zoom into this zone (room level) →</a>
+      </div>
+      <div class="card">
+        <p class="h4">Entities in Midgaard City</p>
+        <div class="ent"><span style="color:var(--coral)">☠</span><span class="nm">a large kobold</span><span style="margin-left:auto;color:var(--quiet)">×3 · Dark Alley</span></div>
+        <div class="ent"><span style="color:var(--green)">🧑</span><span class="nm">the baker</span><span style="margin-left:auto;color:var(--quiet)">Bakery</span></div>
+        <div class="ent"><span style="color:var(--amber)">⚷</span><span class="nm">a brass key</span><span style="margin-left:auto;color:var(--quiet)">A Nexus</span></div>
+        <a class="drill" href="#">All entities in zone →</a>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

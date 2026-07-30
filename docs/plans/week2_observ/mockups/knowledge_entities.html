@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Boukensha Observatory: Knowledge / Entities (mockup)</title>
+<style>
+  :root{color-scheme:dark;
+    --bg:#080b0f;--surface:#0d1218;--raised:#111820;--soft:#151d26;
+    --line:#1d2833;--line2:#2b3947;--text:#edf4f8;--muted:#8493a1;--quiet:#596775;
+    --cyan:#68e1dc;--cyan-soft:#163738;--amber:#eac06a;--amber-soft:#3b301d;
+    --coral:#ff8178;--coral-soft:#3e2425;--violet:#b7a7ff;--violet-soft:#292640;--green:#8bdfa9;
+    --shadow:0 24px 70px rgb(0 0 0 / 32%);}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  svg.i{width:1em;height:1em;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.125em}
+  .app{display:flex;flex-direction:column;height:100vh}
+  header{display:flex;align-items:center;gap:16px;padding:13px 22px;border-bottom:1px solid var(--line);background:var(--surface)}
+  .brand{display:flex;align-items:center;gap:11px;font-weight:600;font-size:15px}
+  .brand .mk{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;color:var(--cyan);background:radial-gradient(120% 120% at 30% 20%,#123639,#0a171c);box-shadow:inset 0 0 0 1px rgb(104 225 220/18%)}
+  .brand small{display:block;color:var(--quiet);font-weight:500;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase}
+  nav{display:flex;gap:3px;margin-left:6px}
+  nav a{padding:8px 14px;border-radius:10px;color:var(--muted);font-size:13.5px;text-decoration:none;font-weight:500;display:flex;gap:7px;align-items:center}
+  nav a.on{background:var(--cyan-soft);color:var(--cyan);box-shadow:inset 0 0 0 1px rgb(104 225 220/18%)}
+  .spacer{flex:1}
+  .pick{font-size:12.5px;color:var(--muted);background:var(--raised);border:1px solid var(--line);border-radius:10px;padding:8px 13px}
+  .subbar{display:flex;align-items:center;gap:14px;padding:10px 22px;border-bottom:1px solid var(--line);background:var(--surface)}
+  .tabs{display:flex;gap:3px}
+  .tabs span{font-size:13px;padding:7px 13px;border-radius:9px;color:var(--muted);display:flex;gap:7px;align-items:center;cursor:pointer}
+  .tabs span.on{background:var(--soft);color:var(--text);box-shadow:inset 0 0 0 1px var(--line2)}
+  .cum{margin-left:auto;font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:10px}
+  .cum b{color:var(--text)}
+  .btn{font-size:12px;padding:7px 12px;border-radius:9px;border:1px solid var(--line);background:var(--raised);color:var(--muted);display:inline-flex;gap:6px;align-items:center}
+  .btn.warn{color:var(--coral)}
+  .body{flex:1;display:flex;min-height:0}
+  .main{flex:1;min-width:0;overflow:auto;padding:16px 20px}
+  .side{flex:0 0 340px;border-left:1px solid var(--line);overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:14px}
+  /* entities toolbar */
+  .etools{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .search{flex:1;display:flex;align-items:center;gap:9px;background:var(--raised);border:1px solid var(--line);border-radius:10px;padding:9px 13px;color:var(--quiet);font-size:13px}
+  .chips{display:flex;gap:5px}
+  .chip{font-size:11.5px;padding:6px 11px;border-radius:8px;color:var(--muted);background:var(--raised);border:1px solid var(--line);cursor:pointer}
+  .chip.on{background:var(--cyan-soft);color:var(--cyan);border-color:rgb(104 225 220/22%)}
+  .count{font-size:11.5px;color:var(--quiet);margin:0 2px 10px}
+  /* entity rows */
+  .ent{background:var(--surface);border:1px solid var(--line);border-radius:12px;margin-bottom:8px;overflow:hidden}
+  .erow{display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer}
+  .ekind{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:14px;flex:none}
+  .k-mob{background:var(--coral-soft);color:var(--coral)} .k-obj{background:var(--amber-soft);color:var(--amber)} .k-npc{background:#123227;color:var(--green)} .k-exp{background:var(--violet-soft);color:var(--violet)}
+  .ename{font-weight:600;font-size:13.5px} .emeta{font-size:11.5px;color:var(--quiet);margin-top:2px;display:flex;gap:10px}
+  .movetag{font-size:9.5px;padding:1px 7px;border-radius:5px;background:var(--amber-soft);color:var(--amber)}
+  .insttag{font-size:9.5px;padding:1px 7px;border-radius:5px;background:var(--coral-soft);color:var(--coral)}
+  .eright{margin-left:auto;display:flex;align-items:center;gap:16px;font-size:12px;color:var(--muted)}
+  .eright b{color:var(--text)}
+  .pv{font-size:9.5px;padding:1px 7px;border-radius:5px}.pv-seen{background:var(--cyan-soft);color:var(--cyan)}.pv-q{background:var(--amber-soft);color:var(--amber)}
+  .sightings{border-top:1px solid var(--line);padding:6px 14px 12px 56px;background:var(--bg)}
+  .sight{display:flex;align-items:center;gap:12px;font-size:12px;padding:7px 0;border-bottom:1px solid #131c25;color:var(--muted)}
+  .sight:last-child{border:none}.sight .rm{color:var(--text);width:120px}.sight .tm{color:var(--quiet);width:150px}
+  .sight a{color:var(--cyan);text-decoration:none;margin-left:auto}
+  .snote{font-size:11.5px;color:var(--amber);margin-top:8px;display:flex;gap:7px;align-items:center}
+  .pager{display:flex;align-items:center;gap:8px;justify-content:center;margin-top:10px;font-size:12px;color:var(--muted)}
+  .pager span{padding:5px 10px;border:1px solid var(--line);border-radius:8px;background:var(--raised)}
+  /* side cards */
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:14px 15px;box-shadow:var(--shadow)}
+  .card h3{margin:0 0 11px;font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--quiet);font-weight:600;display:flex;align-items:center;gap:8px}
+  .card h3 .c{margin-left:auto;font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none}
+  .vit{display:flex;flex-direction:column;gap:8px}
+  .vrow{display:flex;align-items:center;gap:10px;font-size:12px}.vrow .l{width:40px;color:var(--muted)}
+  .bar{flex:1;height:8px;border-radius:6px;background:var(--soft);overflow:hidden}.bar i{display:block;height:100%}
+  .vrow .n{width:56px;text-align:right;color:var(--muted)}
+  .cond{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 4px}
+  .cchip{font-size:11.5px;padding:4px 10px;border-radius:8px;display:inline-flex;gap:6px;align-items:center}
+  .c-warn{background:var(--amber-soft);color:var(--amber)} .c-bad{background:var(--coral-soft);color:var(--coral)} .c-ok{background:#123227;color:var(--green)}
+  .condhint{font-size:10.5px;color:var(--quiet);margin-top:6px}
+  .kv{display:flex;justify-content:space-between;font-size:12.5px;padding:6px 0;border-bottom:1px solid #131c25}.kv:last-of-type{border:none}.kv .v{font-weight:600}
+  .reset{display:flex;gap:8px;margin-top:12px}
+  .reset .btn{flex:1;justify-content:center}
+  .prov{font-size:11px;color:var(--quiet);margin-top:9px;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand"><span class="mk">◎</span><span>Boukensha<small>Observatory</small></span></div>
+    <nav>
+      <a href="#"><svg class="i" viewBox="0 0 24 24" style="font-size:15px"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> Live</a>
+      <a href="#"><svg class="i" viewBox="0 0 24 24" style="font-size:15px"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg> Sessions</a>
+      <a href="#"><svg class="i" viewBox="0 0 24 24" style="font-size:15px"><path d="M4 20V4M4 20h16M8 16v-5M13 16V8M18 16v-8"/></svg> Experiments</a>
+      <a class="on" href="#"><svg class="i" viewBox="0 0 24 24" style="font-size:15px"><path d="M4 19V5a2 2 0 012-2h13v18H6a2 2 0 01-2-2z"/></svg> Knowledge</a>
+    </nav>
+    <div class="spacer"></div>
+    <div class="pick">Player: poucet ▾</div>
+  </header>
+
+  <div class="subbar">
+    <div class="tabs">
+      <span><svg class="i" viewBox="0 0 24 24" style="font-size:14px"><path d="M9 4v16M15 4v16M3 9l6-5 6 5 6-5v11l-6 5-6-5-6 5z"/></svg> Learned map</span>
+      <span class="on"><svg class="i" viewBox="0 0 24 24" style="font-size:14px"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0112 0v1"/></svg> Entities</span>
+      <span><svg class="i" viewBox="0 0 24 24" style="font-size:14px"><path d="M3 3v18h18M7 14l4-4 3 3 5-6"/></svg> Progression</span>
+      <span><svg class="i" viewBox="0 0 24 24" style="font-size:14px"><path d="M12 2l3 7h7l-6 4 2 7-6-4-6 4 2-7-6-4h7z"/></svg> Milestones</span>
+    </div>
+    <div class="cum"><span><svg class="i" viewBox="0 0 24 24" style="font-size:12px"><path d="M21 12a9 9 0 11-6.2-8.6"/><path d="M21 3v6h-6"/></svg> Cumulative memory · <b>6 sessions</b> since Jul 12</span>
+      <span class="btn"><svg class="i" viewBox="0 0 24 24" style="font-size:13px"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Snapshot</span>
+      <span class="btn warn"><svg class="i" viewBox="0 0 24 24" style="font-size:13px"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg> Reset memory…</span>
+    </div>
+  </div>
+
+  <div class="body">
+    <div class="main">
+      <div class="etools">
+        <div class="search"><svg class="i" viewBox="0 0 24 24" style="font-size:15px"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg> Search entities…</div>
+        <div class="chips"><span class="chip on">All</span><span class="chip">Mobs</span><span class="chip">Objects</span><span class="chip">NPCs</span><span class="chip">Expected / unseen</span></div>
+      </div>
+      <div class="count">63 entities · grouped by type · sorted by last seen · showing 20</div>
+
+      <!-- moving / multi-instance entity, expanded -->
+      <div class="ent">
+        <div class="erow">
+          <span class="ekind k-mob">☠</span>
+          <div><div class="ename">a large kobold <span class="movetag">moves</span> <span class="insttag">≥2 instances</span></div>
+            <div class="emeta"><span>hostile mob</span><span>last seen turn 78</span></div></div>
+          <div class="eright"><span><b>7</b> sightings</span><span><b>3</b> rooms</span><span class="pv pv-seen">observed</span>
+            <svg class="i" viewBox="0 0 24 24" style="font-size:14px;color:var(--cyan)"><path d="M6 9l6 6 6-6"/></svg></div>
+        </div>
+        <div class="sightings">
+          <div class="sight"><span class="rm">Dark Alley</span><span class="tm mono">t44 · t62 · t78</span><span>×3 · instance A/B</span><a href="#">open session →</a></div>
+          <div class="sight"><span class="rm">A Nexus</span><span class="tm mono">t20 · t31</span><span>×2</span><a href="#">open session →</a></div>
+          <div class="sight"><span class="rm">Back Street</span><span class="tm mono">t70 · t74</span><span>×2</span><a href="#">open session →</a></div>
+          <div class="snote"><svg class="i" viewBox="0 0 24 24" style="font-size:13px"><path d="M12 9v4M12 17h.01M10.3 3.9L2 18a2 2 0 001.7 3h16.6a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>
+            Appears in multiple rooms: treated as a mobile/respawning mob. Two instances were seen at once on turn 62. Not merged into one location.</div>
+        </div>
+      </div>
+
+      <!-- collapsed rows -->
+      <div class="ent"><div class="erow"><span class="ekind k-npc">🧑</span>
+        <div><div class="ename">the baker</div><div class="emeta"><span>shopkeeper · stationary</span><span>last seen turn 58</span></div></div>
+        <div class="eright"><span><b>5</b> sightings</span><span><b>1</b> room</span><span class="pv pv-seen">observed</span><svg class="i" viewBox="0 0 24 24" style="font-size:14px;color:var(--quiet)"><path d="M9 6l6 6-6 6"/></svg></div></div></div>
+
+      <div class="ent"><div class="erow"><span class="ekind k-obj">⚷</span>
+        <div><div class="ename">a brass key</div><div class="emeta"><span>object · held</span><span>picked up turn 23</span></div></div>
+        <div class="eright"><span><b>1</b> sighting</span><span><b>1</b> room</span><span class="pv pv-seen">held</span><svg class="i" viewBox="0 0 24 24" style="font-size:14px;color:var(--quiet)"><path d="M9 6l6 6-6 6"/></svg></div></div></div>
+
+      <div class="ent"><div class="erow"><span class="ekind k-mob">🐀</span>
+        <div><div class="ename">a sewer rat <span class="movetag">moves</span></div><div class="emeta"><span>hostile mob</span><span>last seen turn 45</span></div></div>
+        <div class="eright"><span><b>9</b> sightings</span><span><b>4</b> rooms</span><span class="pv pv-seen">observed</span><svg class="i" viewBox="0 0 24 24" style="font-size:14px;color:var(--quiet)"><path d="M9 6l6 6-6 6"/></svg></div></div></div>
+
+      <div class="ent"><div class="erow"><span class="ekind k-exp">👹</span>
+        <div><div class="ename">Massive Minotaur</div><div class="emeta"><span>objective target · never seen</span><span>expected in lair</span></div></div>
+        <div class="eright"><span><b>0</b> sightings</span><span>?? room</span><span class="pv pv-q">expected · unseen</span><svg class="i" viewBox="0 0 24 24" style="font-size:14px;color:var(--quiet)"><path d="M9 6l6 6-6 6"/></svg></div></div></div>
+
+      <div class="pager"><span>‹ prev</span><span style="color:var(--text)">1</span><span>2</span><span>3</span><span>4</span><span>next ›</span></div>
+    </div>
+
+    <!-- side: player state + cumulative -->
+    <div class="side">
+      <div class="card">
+        <h3>Player state <span class="c">poucet · lvl 4</span></h3>
+        <div class="vit">
+          <div class="vrow"><span class="l">HP</span><span class="bar"><i style="width:58%;background:linear-gradient(90deg,var(--coral),var(--amber))"></i></span><span class="n mono">41/71</span></div>
+          <div class="vrow"><span class="l">Mana</span><span class="bar"><i style="width:82%;background:linear-gradient(90deg,var(--cyan),var(--violet))"></i></span><span class="n mono">96/117</span></div>
+          <div class="vrow"><span class="l">Move</span><span class="bar"><i style="width:70%;background:linear-gradient(90deg,var(--green),var(--cyan))"></i></span><span class="n mono">58/83</span></div>
+        </div>
+        <div class="cond">
+          <span class="cchip c-warn">⚠ Hungry</span>
+          <span class="cchip c-warn">⚠ Thirsty</span>
+          <span class="cchip c-bad">☠ Poisoned</span>
+          <span class="cchip c-ok">✓ Standing</span>
+        </div>
+        <div class="condhint">Conditions parsed from the MUD condition/prompt lines · hunger &amp; thirst affect regen and can interrupt travel</div>
+      </div>
+
+      <div class="card">
+        <h3>Cumulative memory <span class="c">per player</span></h3>
+        <div class="kv"><span>First learned</span><span class="v">Jul 12 · session J1-a</span></div>
+        <div class="kv"><span>Sessions merged</span><span class="v">6</span></div>
+        <div class="kv"><span>Rooms known</span><span class="v">41</span></div>
+        <div class="kv"><span>Entities known</span><span class="v">63</span></div>
+        <div class="reset">
+          <span class="btn"><svg class="i" viewBox="0 0 24 24" style="font-size:13px"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/></svg> Snapshot</span>
+          <span class="btn warn"><svg class="i" viewBox="0 0 24 24" style="font-size:13px"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg> Reset…</span>
+        </div>
+        <div class="prov">Reset clears this player's knowledge store and starts fresh next session. A snapshot is taken automatically first, so it's recoverable. Each fact shows which session first learned it (provenance).</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Boukensha Observatory: Knowledge (mockup)</title>
+<style>
+  :root{color-scheme:dark;
+    --bg:#080b0f;--surface:#0d1218;--raised:#111820;--soft:#151d26;
+    --line:#1d2833;--line2:#2b3947;--text:#edf4f8;--muted:#8493a1;--quiet:#596775;
+    --cyan:#68e1dc;--cyan-soft:#163738;--amber:#eac06a;--amber-soft:#3b301d;
+    --coral:#ff8178;--coral-soft:#3e2425;--violet:#b7a7ff;--violet-soft:#292640;--green:#8bdfa9;
+    --shadow:0 24px 70px rgb(0 0 0 / 32%);}
+  body.light{--bg:#eef2f6;--surface:#ffffff;--raised:#f4f7fa;--soft:#e9eef4;--line:#dde4ec;--line2:#c6d0db;--text:#12202b;--muted:#4e5d6b;--quiet:#8394a2;--cyan:#0c8f88;--cyan-soft:#d3efed;--amber:#9a6f00;--coral:#d3454f;--violet:#5a4bc4;--green:#1f9256;--shadow:0 18px 44px rgb(20 40 60 / 12%);}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  svg.i{width:1em;height:1em;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.125em}
+  .app{display:flex;flex-direction:column;height:100vh}
+  header{display:flex;align-items:center;gap:16px;padding:13px 22px;border-bottom:1px solid var(--line);background:var(--surface)}
+  .brand{display:flex;align-items:center;gap:11px;font-weight:600;font-size:15px}
+  .brand .mk{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;color:var(--cyan);background:radial-gradient(120% 120% at 30% 20%,#123639,#0a171c);box-shadow:inset 0 0 0 1px rgb(104 225 220/18%)}
+  .brand small{display:block;color:var(--quiet);font-weight:500;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase}
+  nav{display:flex;gap:3px;margin-left:6px}
+  nav a{padding:8px 14px;border-radius:10px;color:var(--muted);font-size:13.5px;text-decoration:none;font-weight:500;display:flex;gap:7px;align-items:center}
+  nav a.on{background:var(--cyan-soft);color:var(--cyan);box-shadow:inset 0 0 0 1px rgb(104 225 220/18%)}
+  .spacer{flex:1}
+  .pick{font-size:12.5px;color:var(--muted);background:var(--raised);border:1px solid var(--line);border-radius:10px;padding:8px 13px}
+  .subbar{display:flex;align-items:center;gap:14px;padding:10px 22px;border-bottom:1px solid var(--line);background:var(--surface)}
+  .tabs{display:flex;gap:3px}
+  .tabs span{font-size:13px;padding:7px 13px;border-radius:9px;color:var(--muted);display:flex;gap:7px;align-items:center;cursor:pointer}
+  .tabs span.on{background:var(--soft);color:var(--text);box-shadow:inset 0 0 0 1px var(--line2)}
+  .quar{margin-left:auto;font-size:11px;color:var(--quiet);display:flex;align-items:center;gap:7px}
+  .toggle{display:inline-flex;gap:2px;background:var(--raised);border:1px solid var(--line);border-radius:9px;padding:3px}
+  .toggle span{font-size:11.5px;padding:5px 10px;border-radius:6px;color:var(--muted);cursor:pointer}
+  .toggle span.on{background:var(--cyan-soft);color:var(--cyan)}
+  .body{flex:1;display:flex;min-height:0}
+  .pane{min-width:0;display:flex;flex-direction:column}
+  .pane.map{flex:0 0 54%;border-right:1px solid var(--line)}
+  .pane.side{flex:1;overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:14px}
+  .ph{display:flex;align-items:center;gap:8px;padding:11px 16px;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--quiet);font-weight:600;border-bottom:1px solid var(--line)}
+  .ph .toggle{margin-left:auto}
+  .mapwrap{flex:1;position:relative;background:radial-gradient(700px 460px at 50% 42%,var(--soft),var(--bg))}
+  svg.map{display:block;width:100%;height:100%}
+  .rl{font-size:10.5px;fill:var(--muted)}.rl.cur{fill:var(--text);font-weight:600}
+  .mlegend{position:absolute;left:14px;bottom:14px;background:var(--raised);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:11px;color:var(--muted)}
+  .mlegend .r{display:flex;align-items:center;gap:8px;margin:4px 0}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:14px 15px;box-shadow:var(--shadow)}
+  .card h3{margin:0 0 10px;font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--quiet);font-weight:600;display:flex;align-items:center;gap:8px}
+  .card h3 .c{margin-left:auto;font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none}
+  /* player state */
+  .vit{display:flex;flex-direction:column;gap:8px}
+  .vrow{display:flex;align-items:center;gap:10px;font-size:12px}.vrow .l{width:40px;color:var(--muted)}
+  .bar{flex:1;height:8px;border-radius:6px;background:var(--soft);overflow:hidden}.bar i{display:block;height:100%}
+  .vrow .n{width:56px;text-align:right;color:var(--muted)}
+  .lvl{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .lvl .b{width:38px;height:38px;border-radius:10px;background:var(--cyan-soft);color:var(--cyan);display:grid;place-items:center;font-weight:700;font-size:15px}
+  .lvl .xp{flex:1}.lvl .xp .t{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:5px}
+  .inv{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+  .inv span{font-size:11.5px;background:var(--soft);border:1px solid var(--line);border-radius:7px;padding:4px 9px;color:var(--text)}
+  /* entities */
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{text-align:left;color:var(--quiet);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;padding:0 0 7px;font-weight:600}
+  td{padding:8px 0;border-top:1px solid #131c25;color:var(--muted)}
+  td .nm{color:var(--text);font-weight:600}
+  .pv{font-size:9.5px;padding:1px 6px;border-radius:5px}
+  .pv-seen{background:var(--cyan-soft);color:var(--cyan)} .pv-q{background:var(--amber-soft);color:var(--amber)}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+  /* milestones */
+  .mile{position:relative;padding-left:20px}
+  .mile:before{content:"";position:absolute;left:5px;top:4px;bottom:4px;width:2px;background:var(--line)}
+  .mrow{position:relative;padding:0 0 13px}
+  .mrow:last-child{padding-bottom:0}
+  .mrow .d{position:absolute;left:-18px;top:2px;width:11px;height:11px;border-radius:50%;border:2px solid var(--surface)}
+  .mrow .t{font-size:12.5px;font-weight:600}.mrow .s{font-size:11px;color:var(--quiet)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand"><span class="mk">◎</span><span>Boukensha<small>Observatory</small></span></div>
+    <nav>
+      <a href="#"><svg class="i" viewBox="0 0 24 24" style="font-size:15px"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> Live</a>
+      <a href="#"><svg class="i" viewBox="0 0 24 24" style="font-size:15px"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg> Sessions</a>
+      <a href="#"><svg class="i" viewBox="0 0 24 24" style="font-size:15px"><path d="M4 20V4M4 20h16M8 16v-5M13 16V8M18 16v-8"/></svg> Experiments</a>
+      <a class="on" href="#"><svg class="i" viewBox="0 0 24 24" style="font-size:15px"><path d="M4 19V5a2 2 0 012-2h13v18H6a2 2 0 01-2-2z"/></svg> Knowledge</a>
+    </nav>
+    <div class="spacer"></div>
+    <div class="pick">Player: poucet ▾</div>
+  </header>
+
+  <div class="subbar">
+    <div class="tabs">
+      <span class="on"><svg class="i" viewBox="0 0 24 24" style="font-size:14px"><path d="M9 4v16M15 4v16M3 9l6-5 6 5 6-5v11l-6 5-6-5-6 5z"/></svg> Learned map</span>
+      <span><svg class="i" viewBox="0 0 24 24" style="font-size:14px"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0112 0v1"/></svg> Entities</span>
+      <span><svg class="i" viewBox="0 0 24 24" style="font-size:14px"><path d="M3 3v18h18M7 14l4-4 3 3 5-6"/></svg> Progression</span>
+      <span><svg class="i" viewBox="0 0 24 24" style="font-size:14px"><path d="M12 2l3 7h7l-6 4 2 7-6-4-6 4 2-7-6-4h7z"/></svg> Milestones</span>
+    </div>
+    <div class="quar"><svg class="i" viewBox="0 0 24 24" style="font-size:13px"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg> Ground truth is shown for comparison only: never fed back to the agent</div>
+  </div>
+
+  <div class="body">
+    <!-- learned map with belief-vs-truth -->
+    <div class="pane map">
+      <div class="ph">Agent's learned world · 41 rooms · 11 frontier
+        <div class="toggle"><span class="on">Learned</span><span>Truth</span><span>Diff</span></div></div>
+      <div class="mapwrap">
+        <svg class="map" viewBox="0 0 640 500" preserveAspectRatio="xMidYMid meet">
+          <g stroke="#25333f" stroke-width="2" fill="none">
+            <path d="M110,250 L230,250"/><path d="M230,250 L230,140"/><path d="M230,250 L360,250"/>
+            <path d="M360,250 L360,370"/><path d="M360,250 L480,200"/>
+            <!-- unverified reverse edge (risk) -->
+            <path d="M480,200 L560,150" stroke="#ff8178" stroke-width="2" stroke-dasharray="4 4"/>
+          </g>
+          <g>
+            <rect x="93" y="233" width="34" height="34" rx="8" fill="#132a1e" stroke="#2b5c48"/><text class="rl" x="110" y="287" text-anchor="middle">Temple</text>
+            <rect x="213" y="233" width="34" height="34" rx="8" fill="#14212e" stroke="#2b3947"/><text class="rl" x="230" y="287" text-anchor="middle">Temple Sq</text>
+            <rect x="213" y="123" width="34" height="34" rx="8" fill="#14212e" stroke="#2b3947"/><text class="rl" x="230" y="115" text-anchor="middle">Market Sq</text>
+            <rect x="343" y="233" width="34" height="34" rx="8" fill="#14212e" stroke="#2b3947"/><text class="rl" x="360" y="287" text-anchor="middle">A Nexus</text>
+            <!-- duplicate-title collision (belief vs truth) -->
+            <rect x="343" y="353" width="34" height="34" rx="8" fill="#2c2416" stroke="#eac06a" stroke-width="2"/><text class="rl" x="360" y="407" text-anchor="middle" style="fill:#eac06a">White Sq · 2 candidates ⚠</text>
+            <rect x="463" y="183" width="34" height="34" rx="8" fill="#14212e" stroke="#2b3947"/><text class="rl" x="480" y="175" text-anchor="middle">Dark Alley</text>
+            <!-- unverified room -->
+            <rect x="543" y="133" width="34" height="34" rx="8" fill="none" stroke="#ff8178" stroke-dasharray="4 4"/><text class="rl" x="560" y="125" text-anchor="middle" style="fill:#ff8178">Back St · unverified</text>
+            <!-- frontier -->
+            <rect x="213" y="53" width="34" height="34" rx="8" fill="none" stroke="#26374b" stroke-dasharray="3 4"/><text class="rl" x="230" y="46" text-anchor="middle" style="fill:#4a5c74">? north</text>
+            <!-- mob + object glyphs -->
+            <g transform="translate(497,183)"><circle r="7" fill="#3a1620" stroke="#ff8178"/><text x="0" y="3" text-anchor="middle" font-size="8" fill="#ff8178">☠</text></g>
+            <g transform="translate(377,233)"><circle r="7" fill="#2c2416" stroke="#5c4a2b"/><text x="0" y="3" text-anchor="middle" font-size="8" fill="#eac06a">⚷</text></g>
+          </g>
+        </svg>
+        <div class="mlegend">
+          <div class="r"><span class="dot" style="background:#2b5c48"></span>known room</div>
+          <div class="r"><span style="width:12px;height:12px;border:2px solid #eac06a;border-radius:3px;display:inline-block"></span>duplicate-title collision (belief≠truth)</div>
+          <div class="r"><span style="width:12px;height:2px;background:#ff8178;display:inline-block"></span>unverified reverse edge (risk)</div>
+          <div class="r"><span style="width:12px;height:12px;border:2px dashed #26374b;border-radius:3px;display:inline-block"></span>frontier</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- side panels -->
+    <div class="pane side">
+      <div class="card">
+        <h3>Player state <span class="c">poucet · lvl 4</span></h3>
+        <div class="lvl"><span class="b">4</span><div class="xp"><div class="t"><span>XP</span><span>2,140 / 3,000</span></div><div class="bar"><i style="width:71%;background:linear-gradient(90deg,var(--cyan),var(--violet))"></i></div></div></div>
+        <div class="vit">
+          <div class="vrow"><span class="l">HP</span><span class="bar"><i style="width:58%;background:linear-gradient(90deg,var(--coral),var(--amber))"></i></span><span class="n mono">41/71</span></div>
+          <div class="vrow"><span class="l">Mana</span><span class="bar"><i style="width:82%;background:linear-gradient(90deg,var(--cyan),var(--violet))"></i></span><span class="n mono">96/117</span></div>
+          <div class="vrow"><span class="l">Move</span><span class="bar"><i style="width:70%;background:linear-gradient(90deg,var(--green),var(--cyan))"></i></span><span class="n mono">58/83</span></div>
+        </div>
+        <div class="inv"><span>⚷ a brass key</span><span>🥐 a danish pastry</span><span>🍞 bread ×2</span><span>a wooden club</span></div>
+      </div>
+
+      <div class="card">
+        <h3>Entities sighted <span class="c">14 known</span></h3>
+        <table>
+          <tr><th>Entity</th><th>Where</th><th>Seen</th><th>Provenance</th></tr>
+          <tr><td><span class="dot" style="background:#ff8178"></span><span class="nm">a large kobold</span></td><td>Dark Alley</td><td>×3</td><td><span class="pv pv-seen">observed</span></td></tr>
+          <tr><td><span class="dot" style="background:#8bdfa9"></span><span class="nm">the baker</span></td><td>The Bakery</td><td>×5</td><td><span class="pv pv-seen">observed</span></td></tr>
+          <tr><td><span class="dot" style="background:#eac06a"></span><span class="nm">a brass key</span></td><td>A Nexus</td><td>×1</td><td><span class="pv pv-seen">held</span></td></tr>
+          <tr><td><span class="dot" style="background:#b7a7ff"></span><span class="nm">Massive Minotaur</span></td><td>?? lair</td><td>0</td><td><span class="pv pv-q">expected · unseen</span></td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>Milestones &amp; progression</h3>
+        <div class="mile">
+          <div class="mrow"><span class="d" style="background:var(--cyan)"></span><div class="t">Reached the Bakery</div><div class="s">turn 12 · first objective area</div></div>
+          <div class="mrow"><span class="d" style="background:var(--green)"></span><div class="t">Level 2 → 3</div><div class="s">turn 20 · killed 3 kobolds</div></div>
+          <div class="mrow"><span class="d" style="background:var(--coral)"></span><div class="t">First death</div><div class="s">turn 45 · rat swarm · respawned at Temple</div></div>
+          <div class="mrow"><span class="d" style="background:var(--green)"></span><div class="t">Level 4</div><div class="s">turn 70 · current</div></div>
+          <div class="mrow"><span class="d" style="background:var(--amber)"></span><div class="t">Located Minotaur lair (hearsay)</div><div class="s">turn 82 · under-leveled to enter</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

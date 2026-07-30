@@ -8,6 +8,9 @@ belief diverged from reality, and what the divergence cost.
 The reference monitor and the Week 0 visualizer set a useful floor. They do not
 set the architecture or product ceiling.
 
+`product_spec.md` defines the feature-level interaction contracts and acceptance
+gates. The HTML files in `mockups/` define the visual references.
+
 ## Product vision
 
 The observatory should make four difficult questions easy to answer:

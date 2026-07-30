@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Boukensha Observatory: Live cockpit (mockup)</title>
+<style>
+  :root{
+    --bg:#080b0f; --bg2:#0d1218; --panel:#0d1218; --panel2:#111820; --line:#1d2833;
+    --ink:#edf4f8; --ink2:#8493a1; --ink3:#596775;
+    --teal:#68e1dc; --aqua:#5db4ff; --violet:#b7a7ff; --amber:#eac06a; --rose:#ff8178; --good:#8bdfa9;
+    --danger:#ff5d6c;
+    --grid:#121a28;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .mono{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace}
+  .app{display:flex;flex-direction:column;height:100vh}
+  /* ---- header ---- */
+  header{display:flex;align-items:center;gap:18px;padding:12px 20px;border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#0e141e,#0b0f17)}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:600}
+  .brand .mk{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;
+    background:radial-gradient(circle at 30% 30%,#123,#0b1a24);border:1px solid #1c3a44;color:var(--teal);font-size:16px}
+  .brand small{display:block;color:var(--ink3);font-weight:500;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+  nav{display:flex;gap:4px;margin-left:8px}
+  nav a{padding:7px 14px;border-radius:9px;color:var(--ink2);font-size:13.5px;text-decoration:none;font-weight:500}
+  nav a.on{background:#12202b;color:var(--teal);box-shadow:inset 0 0 0 1px #1d3a44}
+  .spacer{flex:1}
+  .pill{display:flex;align-items:center;gap:9px;padding:7px 13px;border-radius:10px;background:var(--panel);
+    border:1px solid var(--line);font-size:13px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 0 0 rgba(95,221,157,.6);
+    animation:pulse 1.8s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(95,221,157,.5)}70%{box-shadow:0 0 0 7px rgba(95,221,157,0)}100%{box-shadow:0 0 0 0 rgba(95,221,157,0)}}
+  .pill small{color:var(--ink3);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;display:block}
+  .ask{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;background:var(--panel);
+    border:1px solid var(--line);color:var(--ink3);font-size:13px;cursor:text}
+  .ask kbd{margin-left:6px;padding:2px 6px;border-radius:5px;background:#0c1320;border:1px solid var(--line);font-size:11px;color:var(--ink2)}
+  /* ---- body ---- */
+  .body{flex:1;display:flex;min-height:0}
+  .stage{position:relative;flex:1;min-width:0;background:
+    radial-gradient(1200px 600px at 60% 30%,#0d1622,transparent),var(--bg)}
+  .stagehead{position:absolute;top:14px;left:18px;z-index:5;display:flex;gap:10px;align-items:center}
+  .chip{padding:5px 11px;border-radius:999px;font-size:12px;background:#0f1b26cc;border:1px solid var(--line);
+    color:var(--ink2);backdrop-filter:blur(6px)}
+  .chip b{color:var(--ink)}
+  .stagetools{position:absolute;top:14px;right:18px;z-index:5;display:flex;gap:8px}
+  .tool{width:34px;height:34px;border-radius:9px;background:#0f1b26cc;border:1px solid var(--line);
+    display:grid;place-items:center;color:var(--ink2);font-size:14px;backdrop-filter:blur(6px)}
+  .tool.on{color:var(--teal);border-color:#1d3a44}
+  svg{display:block;width:100%;height:100%}
+  /* room label */
+  .rlabel{font-size:10.5px;fill:var(--ink2)}
+  .rlabel.cur{fill:var(--ink);font-weight:600}
+  /* ---- combat spotlight ---- */
+  .combat{position:absolute;left:18px;bottom:120px;width:340px;z-index:6;
+    background:linear-gradient(180deg,#1a0f14,#140b10);border:1px solid #3a1f28;border-radius:14px;
+    box-shadow:0 18px 50px -20px #000;overflow:hidden}
+  .combat .ch{display:flex;align-items:center;gap:9px;padding:11px 14px;border-bottom:1px solid #3a1f28;
+    background:#20111a}
+  .combat .ch .ic{width:26px;height:26px;border-radius:8px;background:#3a1620;display:grid;place-items:center;color:var(--rose)}
+  .combat .ch b{font-size:13.5px}
+  .combat .ch small{color:var(--ink3);font-size:11px}
+  .combat .lines{padding:10px 14px;font-size:12px;line-height:1.7}
+  .combat .lines .mono{display:block}
+  .hit{color:var(--ink2)} .crit{color:var(--amber)} .dmgin{color:var(--rose)} .kill{color:var(--good);font-weight:600}
+  /* thought callout */
+  .thought{position:absolute;z-index:6;max-width:250px;background:#0f1a24ee;border:1px solid #21384a;border-radius:12px;
+    padding:10px 12px;font-size:12.5px;color:var(--ink);line-height:1.5;box-shadow:0 12px 30px -14px #000}
+  .thought small{display:block;color:var(--aqua);font-size:10px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:3px}
+  .thought:after{content:"";position:absolute;left:24px;bottom:-7px;width:12px;height:12px;background:#0f1a24;
+    border-right:1px solid #21384a;border-bottom:1px solid #21384a;transform:rotate(45deg)}
+  /* toast */
+  .toast{position:absolute;top:64px;left:50%;transform:translateX(-50%);z-index:7;display:flex;gap:9px;align-items:center;
+    padding:9px 16px;border-radius:999px;background:#12241b;border:1px solid #22462f;color:var(--good);font-size:13px;font-weight:600;
+    box-shadow:0 12px 30px -14px #000}
+  /* legend */
+  .legend{position:absolute;right:18px;bottom:24px;z-index:5;background:#0e1824cc;border:1px solid var(--line);
+    border-radius:12px;padding:11px 13px;font-size:11.5px;color:var(--ink2);backdrop-filter:blur(6px);width:186px}
+  .legend h5{margin:0 0 8px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);font-weight:600}
+  .legend .row{display:flex;align-items:center;gap:8px;margin:5px 0}
+  .sw{width:14px;height:14px;border-radius:4px;flex:none}
+  .hint{position:absolute;left:50%;bottom:96px;transform:translateX(-50%);z-index:5;font-size:11.5px;color:var(--ink3)}
+  /* ---- right rail ---- */
+  aside{width:320px;flex:none;border-left:1px solid var(--line);background:var(--bg2);
+    display:flex;flex-direction:column;overflow:auto}
+  .card{padding:14px 16px;border-bottom:1px solid var(--line)}
+  .card h4{margin:0 0 3px;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);font-weight:600}
+  .obj b{font-size:15px}
+  .obj .sub{color:var(--ink2);font-size:12.5px;margin-top:3px}
+  .prog{height:6px;border-radius:6px;background:#0c1320;margin-top:9px;overflow:hidden}
+  .prog i{display:block;height:100%;width:44%;background:linear-gradient(90deg,var(--teal),var(--aqua))}
+  .brchip{display:inline-flex;gap:6px;align-items:center;margin-top:9px;font-size:11.5px;color:var(--ink2);
+    background:#12100c;border:1px solid #33291200;padding:0}
+  .belief{display:flex;gap:8px;margin-top:10px}
+  .belief div{flex:1;background:#0c131d;border:1px solid var(--line);border-radius:9px;padding:8px 10px}
+  .belief small{display:block;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+  .belief b{font-size:12.5px}
+  .belief .warn b{color:var(--amber)}
+  /* vitals */
+  .vit{display:flex;flex-direction:column;gap:9px;margin-top:4px}
+  .vrow{display:flex;align-items:center;gap:10px;font-size:12px}
+  .vrow .lab{width:44px;color:var(--ink2)}
+  .bar{flex:1;height:8px;border-radius:6px;background:#0c1320;overflow:hidden}
+  .bar i{display:block;height:100%}
+  .vrow .num{width:58px;text-align:right;color:var(--ink2)}
+  /* economics */
+  .econ{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+  .stat{background:#0c131d;border:1px solid var(--line);border-radius:10px;padding:10px 11px}
+  .stat .k{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+  .stat .v{font-size:18px;font-weight:600;margin-top:3px}
+  .stat .v small{font-size:11px;color:var(--ink3);font-weight:500}
+  .stat.wide{grid-column:1 / -1}
+  .spark{height:26px;margin-top:6px}
+  .delta.up{color:var(--rose)} .delta.dn{color:var(--good)}
+  .minirow{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink2);margin-top:6px}
+  .actv{display:flex;align-items:center;gap:9px;font-size:13px}
+  .actv .ic{width:28px;height:28px;border-radius:8px;background:#3a1620;display:grid;place-items:center;color:var(--rose)}
+  /* ---- timeline spine ---- */
+  .spine{height:88px;flex:none;border-top:1px solid var(--line);background:var(--bg2);position:relative;padding:0 16px}
+  .spine .sh{display:flex;justify-content:space-between;align-items:center;padding:9px 2px 4px}
+  .spine .sh small{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+  .spine .sh .rt{color:var(--ink2);font-size:12px}
+  .track{position:relative;height:38px;margin-top:2px}
+  .axis{position:absolute;left:0;right:0;top:19px;height:2px;background:#16202e}
+  .ev{position:absolute;top:11px;width:14px;height:14px;border-radius:50%;transform:translateX(-50%);
+    border:2px solid var(--bg2)}
+  .ev.small{width:9px;height:9px;top:14px}
+  .cur{position:absolute;top:2px;height:34px;width:2px;background:var(--teal);transform:translateX(-50%)}
+  .cur:after{content:"";position:absolute;top:-4px;left:-4px;width:10px;height:10px;border-radius:50%;background:var(--teal)}
+  .costline{position:absolute;left:0;right:0;bottom:2px;height:22px}
+  .tlab{position:absolute;font-size:10px;color:var(--ink3);transform:translateX(-50%);top:30px;white-space:nowrap}
+
+  .agentcard .curgoal{font-size:12.5px;color:var(--ink2);margin-bottom:9px}
+  .agentcard .curgoal b{color:var(--ink)}
+  .compose{display:flex;gap:7px}
+  .compose input{flex:1;background:#0c131d;border:1px solid #21384a;border-radius:9px;padding:9px 11px;color:var(--ink);font-size:12.5px;outline:none}
+  .compose button{background:#12202b;color:var(--teal);border:1px solid #1d3a44;border-radius:9px;padding:0 14px;font-size:12.5px;font-weight:600}
+  .quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+  .quick span{font-size:11px;color:var(--ink2);background:#0c131d;border:1px solid var(--line);border-radius:7px;padding:5px 9px}
+  .ghint{font-size:10.5px;color:var(--ink3);margin-top:9px;line-height:1.4}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand"><span class="mk">◎</span><span>Boukensha<small>Observatory</small></span></div>
+    <nav>
+      <a class="on" href="#">Live</a>
+      <a href="#">Sessions</a>
+      <a href="#">Experiments</a>
+      <a href="#">Knowledge</a>
+    </nav>
+    <div class="spacer"></div>
+    <div class="pill"><span class="dot"></span><span><small>Live session</small>poucet · c27b19ab</span></div>
+    <div class="ask">Ask about this session<kbd>⌘K</kbd></div>
+  </header>
+
+  <div class="body">
+    <!-- ============ STAGE / MAP ============ -->
+    <div class="stage">
+      <div class="stagehead">
+        <span class="chip">Turn <b>47</b> / iteration <b>47</b></span>
+        <span class="chip">Zone <b>Midgaard</b></span>
+        <span class="chip">Learned world <b>34 rooms</b> · 11 frontier</span>
+      </div>
+      <div class="stagetools">
+        <span class="tool on" title="Follow camera">⌖</span>
+        <span class="tool" title="Zoom in">+</span>
+        <span class="tool" title="Zoom out">−</span>
+        <span class="tool" title="Voice">🔊</span>
+      </div>
+
+      <div class="toast">▲ LEVEL UP: now level 4</div>
+
+      <svg viewBox="0 0 900 620" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+            <path d="M0,1 L6,4 L0,7" fill="none" stroke="#33465e" stroke-width="1.2"/>
+          </marker>
+          <radialGradient id="curglow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#4fd6c9" stop-opacity=".55"/>
+            <stop offset="100%" stop-color="#4fd6c9" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+
+        <!-- edges -->
+        <g stroke-width="2" fill="none">
+          <path d="M170,300 L300,300" stroke="#2a3purple" style="stroke:#243449"/>
+          <path d="M300,300 L300,190" style="stroke:#243449"/>
+          <path d="M300,300 L440,300" style="stroke:#243449"/>
+          <path d="M440,300 L440,430" style="stroke:#243449"/>
+          <path d="M440,300 L580,240" style="stroke:#243449"/>
+          <path d="M580,240 L700,240" style="stroke:#243449"/>
+          <!-- recent path highlight -->
+          <path d="M300,300 L440,300 L580,240" style="stroke:#2f6b6f;stroke-dasharray:2 6" stroke-width="2.5"/>
+          <!-- frontier edges (ghost) -->
+          <path d="M700,240 L810,240" style="stroke:#1b2636;stroke-dasharray:3 6"/>
+          <path d="M300,190 L300,110" style="stroke:#1b2636;stroke-dasharray:3 6"/>
+          <path d="M440,430 L560,470" style="stroke:#1b2636;stroke-dasharray:3 6"/>
+        </g>
+
+        <!-- rooms: visited (sector colored) -->
+        <!-- helper style via inline -->
+        <g>
+          <!-- Temple / start -->
+          <rect x="150" y="282" width="36" height="36" rx="7" fill="#183a2e" stroke="#2b5c48"/>
+          <text class="rlabel" x="168" y="336" text-anchor="middle">Temple of Midgaard</text>
+
+          <rect x="282" y="282" width="36" height="36" rx="7" fill="#1c3350" stroke="#2f5680"/>
+          <text class="rlabel" x="300" y="336" text-anchor="middle">Temple Square</text>
+
+          <rect x="282" y="172" width="36" height="36" rx="7" fill="#1c3350" stroke="#2f5680"/>
+          <text class="rlabel" x="300" y="164" text-anchor="middle">Market Square</text>
+
+          <rect x="422" y="282" width="36" height="36" rx="7" fill="#1c3350" stroke="#2f5680"/>
+          <text class="rlabel" x="440" y="336" text-anchor="middle">Common Square</text>
+
+          <rect x="422" y="412" width="36" height="36" rx="7" fill="#3a2f18" stroke="#5c4a2b"/>
+          <text class="rlabel" x="440" y="466" text-anchor="middle">Grocer</text>
+
+          <!-- current room (combat) -->
+          <circle cx="598" cy="258" r="46" fill="url(#curglow)"/>
+          <rect x="580" y="240" width="36" height="36" rx="7" fill="#3a1620" stroke="#ff5d6c" stroke-width="2">
+          </rect>
+          <text class="rlabel cur" x="598" y="228" text-anchor="middle">A Dark Alley</text>
+
+          <!-- visited beyond -->
+          <rect x="682" y="222" width="36" height="36" rx="7" fill="#1c3350" stroke="#2f5680"/>
+          <text class="rlabel" x="700" y="212" text-anchor="middle">Back Street</text>
+
+          <!-- frontier ghosts -->
+          <rect x="792" y="222" width="36" height="36" rx="7" fill="none" stroke="#26374b" stroke-dasharray="3 4"/>
+          <text class="rlabel" x="810" y="212" text-anchor="middle" style="fill:#4a5c74">?</text>
+          <rect x="282" y="92" width="36" height="36" rx="7" fill="none" stroke="#26374b" stroke-dasharray="3 4"/>
+          <text class="rlabel" x="300" y="84" text-anchor="middle" style="fill:#4a5c74">?</text>
+          <rect x="542" y="452" width="36" height="36" rx="7" fill="none" stroke="#26374b" stroke-dasharray="3 4"/>
+
+          <!-- ambiguous duplicate-title candidate (dashed ?) -->
+          <rect x="150" y="412" width="36" height="36" rx="7" fill="none" stroke="#6a5a2a" stroke-dasharray="4 3"/>
+          <text class="rlabel" x="168" y="466" text-anchor="middle" style="fill:#b79a4a">Alley? ×2</text>
+
+          <!-- mob sighting badge -->
+          <circle cx="612" cy="246" r="5" fill="#ff5d6c" stroke="#140b10" stroke-width="1.5"/>
+          <circle cx="694" cy="212" r="4" fill="#f5c463" stroke="#0b0f17" stroke-width="1.3"/>
+        </g>
+      </svg>
+
+      <!-- agent thought callout near current room -->
+      <div class="thought" style="right:150px;top:150px">
+        <small>Agent · thinking</small>
+        A kobold blocks the alley east. I'll fight through: the minotaur lair should be past Back Street.
+      </div>
+
+      <!-- combat spotlight -->
+      <div class="combat">
+        <div class="ch">
+          <span class="ic">⚔</span>
+          <div><b>In combat: a large kobold</b><br><small>round 3 · started turn 46</small></div>
+        </div>
+        <div class="lines mono">
+          <span class="hit">You hit the kobold <b style="color:#e6edf6">hard</b>. (14)</span>
+          <span class="dmgin">The kobold's claw rakes you. (−6)</span>
+          <span class="crit">You land a <b>critical</b> slash! (23)</span>
+          <span class="kill">The kobold is dead! You gain 180 xp.</span>
+        </div>
+      </div>
+
+      <div class="legend">
+        <h5>Legend</h5>
+        <div class="row"><span class="sw" style="background:#1c3350;border:1px solid #2f5680"></span>Visited (sector color)</div>
+        <div class="row"><span class="sw" style="background:#3a1620;border:1px solid #ff5d6c"></span>Current · combat</div>
+        <div class="row"><span class="sw" style="background:none;border:1px dashed #26374b"></span>Frontier (unexplored)</div>
+        <div class="row"><span class="sw" style="background:none;border:1px dashed #6a5a2a"></span>Ambiguous (dup title)</div>
+        <div class="row"><span class="sw" style="background:#ff5d6c;border-radius:50%"></span>Mob sighting</div>
+      </div>
+
+      <div class="hint">Click any room, event, or cost point to open its evidence: summary → wire.</div>
+    </div>
+
+    <!-- ============ RIGHT RAIL ============ -->
+    <aside>
+      <div class="card obj">
+        <h4>Objective</h4>
+        <b>Find & kill the Massive Minotaur</b>
+        <div class="sub">north of the Temple · newbie area</div>
+        <div class="prog"><i></i></div>
+        <div class="belief">
+          <div><small>Agent believes</small><b>Exploring east</b></div>
+          <div class="warn"><small>Observed</small><b>In combat</b></div>
+        </div>
+      </div>
+
+      <div class="card agentcard">
+        <h4>Direct the agent</h4>
+        <div class="curgoal">Current goal: <b>Find &amp; kill the Massive Minotaur</b></div>
+        <div class="compose"><input placeholder="Set or change the goal, or nudge…"/><button>Send</button></div>
+        <div class="quick"><span>↻ Reconsider route</span><span>⤴ Head to the lair</span><span>✎ Replace goal</span></div>
+        <div class="ghint">Delivered to the agent (mortal) on this live session · asks you to confirm before it takes effect · never writes to the game world directly.</div>
+      </div>
+      <div class="card">
+        <h4>Vitals</h4>
+        <div class="vit">
+          <div class="vrow"><span class="lab">HP</span><span class="bar"><i style="width:58%;background:linear-gradient(90deg,#ff5d6c,#f5c463)"></i></span><span class="num mono">41/71</span></div>
+          <div class="vrow"><span class="lab">Mana</span><span class="bar"><i style="width:82%;background:linear-gradient(90deg,#5db4ff,#9a8cff)"></i></span><span class="num mono">96/117</span></div>
+          <div class="vrow"><span class="lab">Move</span><span class="bar"><i style="width:70%;background:linear-gradient(90deg,#5fdd9d,#4fd6c9)"></i></span><span class="num mono">58/83</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>Live economics</h4>
+        <div class="econ">
+          <div class="stat"><div class="k">Spend so far</div><div class="v">$0.118 <small>/ $0.50 cap</small></div></div>
+          <div class="stat"><div class="k">Cost / turn</div><div class="v">$0.0025 <small class="delta up">▲ 22%</small></div></div>
+          <div class="stat wide">
+            <div class="k">Cost per turn: last 20</div>
+            <svg class="spark" viewBox="0 0 260 26" preserveAspectRatio="none">
+              <polyline fill="none" stroke="#4fd6c9" stroke-width="1.6"
+                points="0,20 14,19 28,18 42,17 56,17 70,15 84,16 98,13 112,14 126,11 140,12 154,9 168,10 182,8 196,9 210,6 224,10 238,5 252,7"/>
+              <polygon fill="#4fd6c922" points="0,26 0,20 14,19 28,18 42,17 56,17 70,15 84,16 98,13 112,14 126,11 140,12 154,9 168,10 182,8 196,9 210,6 224,10 238,5 252,7 252,26"/>
+            </svg>
+            <div class="minirow"><span>context growth drives the climb</span><span class="mono">↑</span></div>
+          </div>
+          <div class="stat"><div class="k">Tokens · in/out</div><div class="v" style="font-size:14px">12.4k <small>/ 480</small></div></div>
+          <div class="stat"><div class="k">Cache hit</div><div class="v">73%</div></div>
+          <div class="stat wide">
+            <div class="minirow" style="margin-top:0"><span>Context window</span><span class="mono">12.9k / 200k</span></div>
+            <div class="prog" style="margin-top:6px"><i style="width:6.5%;background:linear-gradient(90deg,#5db4ff,#9a8cff)"></i></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>Activity</h4>
+        <div class="actv"><span class="ic">⚔</span><span>Fighting: resolving combat before moving east</span></div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ============ TIMELINE SPINE ============ -->
+  <div class="spine">
+    <div class="sh"><small>Journey timeline</small><span class="rt">turn 47 · following live &nbsp;·&nbsp; $0.118 spent</span></div>
+    <div class="track">
+      <div class="axis"></div>
+      <!-- cost curve behind -->
+      <svg class="costline" viewBox="0 0 900 22" preserveAspectRatio="none">
+        <polyline fill="none" stroke="#243449" stroke-width="1.4"
+          points="10,18 60,17 120,16 180,17 240,15 300,14 360,15 420,12 480,13 540,11 600,12 660,9 720,10 780,8 840,6 880,7"/>
+      </svg>
+      <!-- events -->
+      <div class="ev small" style="left:2%;background:#2f5680"></div>
+      <div class="ev small" style="left:12%;background:#2f5680"></div>
+      <div class="ev" style="left:24%;background:#5db4ff" title="entered room"></div>
+      <div class="ev small" style="left:33%;background:#2f5680"></div>
+      <div class="ev" style="left:46%;background:#f5c463" title="level up"></div>
+      <div class="ev small" style="left:55%;background:#2f5680"></div>
+      <div class="ev" style="left:66%;background:#ff5d6c" title="combat"></div>
+      <div class="ev small" style="left:74%;background:#2f5680"></div>
+      <div class="ev" style="left:86%;background:#ff5d6c" title="combat"></div>
+      <div class="cur" style="left:92%"></div>
+      <div class="tlab" style="left:24%">room</div>
+      <div class="tlab" style="left:46%">level up</div>
+      <div class="tlab" style="left:86%">combat</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
