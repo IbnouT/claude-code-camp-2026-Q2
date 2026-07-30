@@ -111,9 +111,11 @@ events. Labels and archival metadata do not rewrite the manifest.
         <session_id>/
           session.json
           control.token
+          control-state.json
           agent.jsonl
           gateway.db
-          reset-receipts.jsonl
+          admin.db
+          reset-progress.jsonl
       archive/
 ```
 
@@ -159,7 +161,10 @@ stateDiagram-v2
 ```
 
 Discovery reconciles registry rows with manifests and locks. It never trusts a
-reused process id. Stopping a session targets only its process group.
+reused process id. Launcher process state and gateway control state retain
+explicit source labels. The gateway projection wins for control state, while
+the registry wins for process state. Stopping a session targets only its
+process group.
 
 ## Process lifecycle
 
@@ -194,6 +199,9 @@ The launcher constructs child environments from allowlists:
 - The gateway receives only the selected player secret and public settings.
 - The one-shot admin child receives only the admin secret and verified reset
   target.
+- The gateway resolves the named admin secret from the shared secret file only
+  when it creates the one-shot child. It does not add that value to its process
+  environment.
 - No child inherits the complete parent environment by default.
 - The mortal agent never receives the admin secret or another profile secret.
 
@@ -232,7 +240,7 @@ sequenceDiagram
     G->>A: baseline and immutable target over stdin
     A->>A: authenticate and apply admin reset
     A-->>G: signed result without credentials
-    G->>M: score and look verification
+    G->>M: save, reconnect, score and look verification
     G-->>C: receipt and resulting state
     G->>G: resume or quarantine
 ```
@@ -246,8 +254,8 @@ Failure behavior:
 
 - A timeout before game mutation aborts and resumes with a failure receipt.
 - A partial game mutation causes `quarantined`.
-- Quarantine blocks model and game commands except status, retry reset, save,
-  and stop.
+- Quarantine blocks mortal model and game commands. Only linked reset retry and
+  process stop remain available.
 - No fictional in-game rollback is attempted.
 - A successful retry appends a linked receipt and resumes only after mortal
   verification.

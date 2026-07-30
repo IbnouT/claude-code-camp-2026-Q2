@@ -44,6 +44,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         rows = registry.sessions(player_id=arguments.player_profile)
     finally:
         registry.close()
+    rows = [_with_control_state(row) for row in rows]
     if arguments.json:
         print(json.dumps(rows, indent=2, sort_keys=True))
         return 0
@@ -53,9 +54,31 @@ def main(argv: Sequence[str] | None = None) -> int:
     for row in rows:
         print(
             f"{row['session_id']}  {row['player_id']}  "
-            f"{row['character']}  {row['state']}"
+            f"{row['character']}  process={row['process_state']}  "
+            f"control={row['control_state'] or 'not-captured'}"
         )
     return 0
+
+
+def _with_control_state(row: dict) -> dict:
+    """Join launcher process state with the gateway's live control projection."""
+    enriched = dict(row)
+    enriched["process_state"] = row["state"]
+    enriched["process_state_source"] = "launcher_registry"
+    projection = Path(str(row["session_dir"])) / "control-state.json"
+    control_state = None
+    if projection.is_file():
+        try:
+            value = json.loads(projection.read_text(encoding="utf-8"))
+            if isinstance(value, dict) and isinstance(value.get("state"), str):
+                control_state = value["state"]
+        except (OSError, json.JSONDecodeError):
+            control_state = "capture_gap"
+    enriched["control_state"] = control_state
+    enriched["control_state_source"] = (
+        "gateway_projection" if control_state is not None else "not_captured"
+    )
+    return enriched
 
 
 if __name__ == "__main__":

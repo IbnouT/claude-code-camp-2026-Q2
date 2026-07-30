@@ -24,6 +24,7 @@ from .profiles import (
 )
 from .raw import Role, send_raw
 from .results import CommandFailure, CommandObservation
+from .reset_control import ResetControlServer, ResetCoordinator
 from .session import Session
 from .settings import GatewaySettings
 
@@ -223,6 +224,7 @@ async def serve(
     run_id = settings.gateway_session_id or f"mcp-{uuid.uuid4().hex[:12]}"
     record_profile(journal, run_id, surface)
     session: Session | None = None
+    control: ResetControlServer | None = None
 
     async def game_session() -> Session:
         nonlocal session
@@ -281,6 +283,15 @@ async def serve(
         )
 
     try:
+        if settings.control_socket is not None and settings.session_dir is not None:
+            await game_session()
+            coordinator = ResetCoordinator(settings, session=lambda: session)
+            control = ResetControlServer(
+                settings.control_socket,
+                settings.session_dir / "control.token",
+                coordinator,
+            )
+            await control.start()
         async with stdio_server() as (read, write):
             await server.run(
                 read,
@@ -288,6 +299,8 @@ async def serve(
                 server.create_initialization_options(),
             )
     finally:
+        if control is not None:
+            await control.close()
         if session is not None:
             await session.close()
         journal.close()

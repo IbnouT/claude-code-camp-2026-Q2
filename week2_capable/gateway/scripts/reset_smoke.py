@@ -1,71 +1,50 @@
-"""Apply two live resets and compare mortal-observable state."""
+"""Apply two resets through one selected live gateway and compare receipts."""
 
 from __future__ import annotations
 
 import argparse
-import asyncio
-import os
 from pathlib import Path
 
-from admin_process.reset import ResetPlan
-from mud_gateway.admin import AdminSession
-from mud_gateway.journal import Journal
-from mud_gateway.session import Session
+from mud_gateway.reset_client import request_reset
 
 
-async def gate(
-    *,
-    player_name: str,
-    player_password: str,
-    admin_name: str,
-    admin_password: str,
-    database: Path,
-) -> int:
-    journal = Journal(database)
-    player = Session(journal, name=player_name, password=player_password)
-    admin = AdminSession(journal, name=admin_name, password=admin_password)
-    try:
-        await player.open()
-        await admin.open()
-        plan = ResetPlan()
-        first = await plan.apply(admin, player, player_name)
-        second = await plan.apply(admin, player, player_name)
-        differences = first.state.differences(second.state)
-        passed = first.ok and second.ok and not differences
-        print(f"  first reset  : ok={first.ok} unread={first.state.unread}")
-        print(f"  second reset : ok={second.ok} unread={second.state.unread}")
-        print(f"  differences  : {differences}")
-        print(f"\n  RESET SMOKE: {'PASS' if passed else 'FAIL'}")
-        return 0 if passed else 1
-    finally:
-        await admin.close()
-        await player.close()
-        journal.close()
+def gate(session_dir: Path) -> int:
+    first = request_reset(session_dir)
+    second = request_reset(session_dir)
+    first_state = first.get("state")
+    second_state = second.get("state")
+    differences = {} if first_state == second_state else {
+        "state": (first_state, second_state)
+    }
+    passed = (
+        first.get("ok") is True
+        and second.get("ok") is True
+        and not differences
+    )
+    print(
+        f"  first reset  : ok={first.get('ok')} "
+        f"unread={first.get('unread')}"
+    )
+    print(
+        f"  second reset : ok={second.get('ok')} "
+        f"unread={second.get('unread')}"
+    )
+    print(f"  differences  : {differences}")
+    print(f"\n  RESET SMOKE: {'PASS' if passed else 'FAIL'}")
+    return 0 if passed else 1
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--player", default=os.environ.get("MUD_NAME", "poucet"))
-    parser.add_argument("--admin", default=os.environ.get("MUD_ADMIN_NAME", "admin"))
-    parser.add_argument("--db", type=Path, required=True)
-    arguments = parser.parse_args()
-    player_password = os.environ.get("MUD_PASSWORD")
-    admin_password = os.environ.get("MUD_ADMIN_PASSWORD")
-    if not player_password or not admin_password:
-        parser.error("MUD_PASSWORD and MUD_ADMIN_PASSWORD are required")
-    raise SystemExit(
-        asyncio.run(
-            gate(
-                player_name=arguments.player,
-                player_password=player_password,
-                admin_name=arguments.admin,
-                admin_password=admin_password,
-                database=arguments.db,
-            )
-        )
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--session-dir",
+        type=Path,
+        required=True,
+        help="selected live .boukensha/profiles/<player>/sessions/<session>",
     )
+    arguments = parser.parse_args()
+    raise SystemExit(gate(arguments.session_dir))
 
 
 if __name__ == "__main__":
     main()
-

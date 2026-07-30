@@ -1,113 +1,46 @@
-"""Repeatable benchmark reset, verified through the mortal connection."""
+"""Typed privileged half of a reset for an authenticated mortal session."""
 
 from __future__ import annotations
 
-import re
 import uuid
 from dataclasses import dataclass
+from typing import Callable
 
-from mud_gateway.admin import FED, TEMPLE, AdminSession
-from mud_gateway.session import Session
-
-DEFAULT_FIELDS: dict[str, int] = {
-    "level": 1,
-    "exp": 0,
-    "gold": 0,
-    "bank": 0,
-    "align": 0,
-    "hunger": FED,
-    "thirst": FED,
-    "drunk": 0,
-}
-SCORE_PATTERNS = {
-    "hit": re.compile(r"You have (\d+)\((\d+)\) hit"),
-    "mana": re.compile(r"(\d+)\((\d+)\) mana"),
-    "move": re.compile(r"(\d+)\((\d+)\) movement"),
-    "exp": re.compile(r"You have (\d+) exp,"),
-    "gold": re.compile(r"(\d+) gold coins"),
-    "level": re.compile(r"\(level (\d+)\)"),
-    "align": re.compile(r"alignment is (-?\d+)"),
-}
-POSITION = re.compile(r"You are (standing|sitting|resting|sleeping)\.")
-HUNGRY = re.compile(r"You are hungry\.")
-THIRSTY = re.compile(r"You are thirsty\.")
-
-
-@dataclass(frozen=True)
-class ObservedState:
-    level: int | None = None
-    hit: tuple[int, int] | None = None
-    mana: tuple[int, int] | None = None
-    move: tuple[int, int] | None = None
-    gold: int | None = None
-    exp: int | None = None
-    align: int | None = None
-    position: str | None = None
-    hungry: bool | None = None
-    thirsty: bool | None = None
-    room_title: str | None = None
-    exits: tuple[str, ...] | None = None
-
-    @property
-    def unread(self) -> list[str]:
-        return [
-            name
-            for name in self.__dataclass_fields__
-            if getattr(self, name) is None
-        ]
-
-    def differences(self, other: "ObservedState") -> dict[str, tuple[object, object]]:
-        return {
-            name: (getattr(self, name), getattr(other, name))
-            for name in self.__dataclass_fields__
-            if getattr(self, name) != getattr(other, name)
-        }
+from mud_gateway.admin import AdminSession
+from mud_gateway.baseline import DEFAULT_FIELDS, TEMPLE
 
 
 @dataclass(frozen=True)
 class ResetOutcome:
     reset_id: str
     player: str
-    state: ObservedState
+    session_id: str
+    located: tuple[int, str] | None
     drift: dict[str, tuple[object, object]]
     applied: tuple[str, ...]
 
     @property
     def ok(self) -> bool:
-        return not self.drift and not self.state.unread
+        return not self.drift
 
 
 class ResetConflict(RuntimeError):
     """The benchmark character is not exclusively owned by the reset process."""
 
 
-def parse_score(text: str) -> dict[str, object]:
-    found: dict[str, object] = {}
-    for name, pattern in SCORE_PATTERNS.items():
-        match = pattern.search(text)
-        if match:
-            found[name] = (
-                (int(match.group(1)), int(match.group(2)))
-                if name in {"hit", "mana", "move"}
-                else int(match.group(1))
-            )
-    posture = POSITION.search(text)
-    if posture:
-        found["position"] = posture.group(1)
-    found["hungry"] = bool(HUNGRY.search(text))
-    found["thirsty"] = bool(THIRSTY.search(text))
-    return found
+class ResetMutationError(RuntimeError):
+    """A privileged reset failed after zero or more mutations."""
 
-
-async def observe_mortal(player: Session) -> ObservedState:
-    score = await player.command("score")
-    look = await player.command("look")
-    facts = parse_score(score.text)
-    snapshot = player.observations.snapshot()
-    if snapshot.room is not None:
-        facts["room_title"] = snapshot.room.title
-        facts["exits"] = snapshot.room.exits
-    return ObservedState(**facts)
+    def __init__(
+        self,
+        message: str,
+        *,
+        reset_id: str,
+        applied: tuple[str, ...],
+    ) -> None:
+        super().__init__(message)
+        self.reset_id = reset_id
+        self.applied = applied
 
 
 class ResetPlan:
@@ -116,19 +49,32 @@ class ResetPlan:
         fields: dict[str, int] | None = None,
         *,
         room: int = TEMPLE,
+        reset_id: str | None = None,
+        on_progress: Callable[[str], None] | None = None,
     ) -> None:
         self.fields = dict(DEFAULT_FIELDS if fields is None else fields)
         self.room = room
+        self.reset_id = reset_id
+        self.on_progress = on_progress
 
     async def apply(
-        self, admin: AdminSession, player: Session, player_name: str
+        self,
+        admin: AdminSession,
+        player_name: str,
+        *,
+        session_id: str,
     ) -> ResetOutcome:
-        reset_id = uuid.uuid4().hex
+        reset_id = self.reset_id or uuid.uuid4().hex
         journal = admin.journal
         journal.append(
             admin.session.id,
             "reset_started",
-            {"reset_id": reset_id, "player": player_name, "room": self.room},
+            {
+                "reset_id": reset_id,
+                "player": player_name,
+                "session_id": session_id,
+                "room": self.room,
+            },
         )
         active = await admin.locate_all(player_name)
         if len(active) != 1:
@@ -146,72 +92,64 @@ class ResetPlan:
                 f"reset requires one active {player_name!r} session, found {len(active)}"
             )
         applied: list[str] = []
-        await admin.restore(player_name)
-        applied.append("restore")
-        for name, value in self.fields.items():
-            await admin.set_field(player_name, name, value)
-            applied.append(name)
-        # Location is applied last. Some character mutations can reload the
-        # target, so transferring earlier does not establish the final state.
-        await admin.goto(self.room)
-        applied.append("goto")
-        await admin.transfer(player_name)
-        applied.append("transfer")
-
-        await player.command("save")
-        applied.append("save")
-        await player.close()
-        await player.open()
-        applied.append("reconnect")
-        state = await observe_mortal(player)
-        located = await admin.locate(player_name)
-        drift = self.verify(state, located=located)
+        try:
+            await admin.restore(player_name)
+            self._record(applied, "restore")
+            for name, value in self.fields.items():
+                await admin.set_field(player_name, name, value)
+                self._record(applied, name)
+            # Location is applied last. Some character mutations can reload the
+            # target, so transferring earlier does not establish the final state.
+            await admin.goto(self.room)
+            self._record(applied, "goto")
+            await admin.transfer(player_name)
+            self._record(applied, "transfer")
+            located = await admin.locate(player_name)
+        except Exception as error:
+            journal.append(
+                admin.session.id,
+                "reset_failed",
+                {
+                    "reset_id": reset_id,
+                    "player": player_name,
+                    "session_id": session_id,
+                    "applied": applied,
+                    "error_type": type(error).__name__,
+                },
+            )
+            raise ResetMutationError(
+                str(error),
+                reset_id=reset_id,
+                applied=tuple(applied),
+            ) from error
+        drift: dict[str, tuple[object, object]] = {}
+        if located is None:
+            drift["room"] = (self.room, None)
+        elif located[0] != self.room:
+            drift["room"] = (self.room, located[0])
         journal.append(
             admin.session.id,
-            "reset_verified",
+            "reset_applied",
             {
                 "reset_id": reset_id,
                 "player": player_name,
-                "ok": not drift and not state.unread,
-                "unread": state.unread,
+                "session_id": session_id,
+                "ok": not drift,
+                "located": located,
                 "drift": drift,
                 "applied": applied,
             },
         )
-        return ResetOutcome(reset_id, player_name, state, drift, tuple(applied))
+        return ResetOutcome(
+            reset_id,
+            player_name,
+            session_id,
+            located,
+            drift,
+            tuple(applied),
+        )
 
-    def verify(
-        self,
-        state: ObservedState,
-        *,
-        located: tuple[int, str] | None = None,
-    ) -> dict[str, tuple[object, object]]:
-        expected: dict[str, object] = {
-            "level": self.fields.get("level"),
-            "gold": self.fields.get("gold"),
-            "exp": self.fields.get("exp"),
-            "align": self.fields.get("align"),
-            "hungry": not bool(self.fields.get("hunger", 0)),
-            "thirsty": not bool(self.fields.get("thirst", 0)),
-        }
-        drift = {
-            name: (wanted, getattr(state, name))
-            for name, wanted in expected.items()
-            if wanted is not None and getattr(state, name) != wanted
-        }
-        for name in ("hit", "mana", "move"):
-            pair = getattr(state, name)
-            if pair is not None and pair[0] != pair[1]:
-                drift[name] = ("full", pair)
-        if located is not None:
-            room, title = located
-            if room != self.room:
-                drift["room"] = (self.room, room)
-            if (
-                state.room_title is not None
-                and state.room_title.casefold() != title.casefold()
-            ):
-                drift["room_title"] = (title, state.room_title)
-        else:
-            drift["room"] = (self.room, None)
-        return drift
+    def _record(self, applied: list[str], operation: str) -> None:
+        applied.append(operation)
+        if self.on_progress is not None:
+            self.on_progress(operation)

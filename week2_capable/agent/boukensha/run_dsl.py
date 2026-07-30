@@ -16,7 +16,9 @@ registers ad-hoc tools inline without reaching the registry behind it.
 
 from __future__ import annotations
 
+import os
 import sys
+from pathlib import Path
 from typing import Any, Callable, NamedTuple, TextIO
 
 from .agent import Agent
@@ -24,12 +26,13 @@ from .backends import Backend, backend_for
 from .client import Client, Transport
 from .config import Config
 from .context import Context
-from .errors import McpServerError, McpToolCollisionError
+from .errors import ConfigError, McpServerError, McpToolCollisionError
 from .logger import Logger
 from .message import Message
 from .prompt_builder import PromptBuilder
 from .registry import Registry
 from .repl import Repl
+from .session_control import SessionControlError, reset_selected_session
 from .tasks import Player
 from .tools import mcp as mcp_host
 from .version import __version__
@@ -199,6 +202,23 @@ def _assemble(*,
     # adds collides against an MCP tool exactly as two servers would, and both
     # are present when the prompt builder snapshots the toolset below.
     servers = _register_mcp_servers(registry, cfg.mcp_servers())
+    reset_baseline = os.environ.get("BOUKENSHA_RESET_BASELINE")
+    if reset_baseline:
+        session_dir = os.environ.get("BOUKENSHA_SESSION_DIR")
+        if not session_dir:
+            raise ConfigError(
+                "a reset baseline requires the launcher runtime session"
+            )
+        try:
+            reset_selected_session(
+                Path(session_dir),
+                reset_baseline,
+                timeout=float(
+                    os.environ.get("BOUKENSHA_RESET_CLIENT_TIMEOUT", "45")
+                ),
+            )
+        except SessionControlError as error:
+            raise ConfigError(f"gateway reset failed: {error}") from error
     if setup is not None:
         setup(RunDSL(registry))
 

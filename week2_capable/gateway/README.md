@@ -18,7 +18,8 @@ flowchart LR
     A["Boukensha"] -- MCP stdio --> P["session profile"]
     P --> M["generated command surface"]
     M --> S
-    B["benchmark harness"] -- local socket --> R["separate admin process"]
+    B["benchmark harness"] -- selected session control --> S
+    S -- one-shot stdin --> R["admin child"]
     R --> G
 ```
 
@@ -34,6 +35,9 @@ gateway/
 │   └── server.py
 ├── mud_gateway/
 │   ├── admin.py
+│   ├── baseline.py
+│   ├── reset_client.py
+│   ├── reset_control.py
 │   ├── wire.py
 │   ├── session.py
 │   ├── journal.py
@@ -72,6 +76,7 @@ The editable install follows source changes without reinstalling:
 ```bash
 boukensha-gateway --prove
 boukensha-gateway-admin --help
+boukensha-gateway-reset --help
 boukensha-gateway-api --help
 ```
 
@@ -108,6 +113,9 @@ The `gateway:` block owns these durable settings:
 | `api.port` | `8765` | Live API bind port |
 | `admin.character` | `admin` | Immortal reset character |
 | `admin.password_env` | `MUD_ADMIN_PASSWORD` | Secret name for the immortal identity |
+| `reset.pause_timeout_seconds` | `15` | Wait for an in-flight mortal command |
+| `reset.child_timeout_seconds` | `30` | Bound one privileged reset child |
+| `reset.client_timeout_seconds` | `45` | Bound a control request |
 
 The four surface presets are `direct-full`, `direct-core`, `hybrid-full`, and
 `hybrid-core`. `disable` wins over `enable`. `send_raw` is controlled only by
@@ -157,16 +165,37 @@ The matching secrets may live in the shared `.env` or in a profile-specific
 | --- | --- |
 | `MUD_PASSWORD` | Example `poucet` profile |
 | `MUD_PASSWORD_TESTER` | Example `tester` profile |
-| `MUD_ADMIN_PASSWORD` | Separate administrator reset process |
+| `MUD_ADMIN_PASSWORD` | One-shot administrator reset child |
 
 Player and administrator identities use distinct secret names. The
 administrator block never contains a player target. Reset targets are selected
-per operation rather than stored as installation-level configuration.
+per operation rather than stored as installation-level configuration. During a
+launcher-managed reset, the gateway reads the named admin value from the shared
+secret file only when it creates the one-shot child. The admin value never
+enters the mortal agent or gateway process environment.
 
 `BOUKENSHA_DIR` is the only configuration environment variable. It points to
 the directory containing `settings.yaml` and `.env`. Without it, the gateway
 finds the nearest `.boukensha` directory, then falls back to
 `~/.boukensha`.
+
+Runtime paths are fixed conventions because changing one side independently
+would break identity and evidence joins:
+
+| Convention | Location or rule |
+| --- | --- |
+| registry | `.boukensha/registry.db` |
+| character locks | `.boukensha/locks/<character-digest>.lock` |
+| session evidence | `.boukensha/profiles/<player>/sessions/<session>/` |
+| control token | `control.token` inside the protected session |
+| control socket | short system-temporary path derived from the session id |
+| gateway journal | `gateway.db` inside the selected session |
+| reset baseline | versioned manifest in `mud_gateway.baseline` |
+| legacy import source | explicit path passed to `boukensha-sessions import-legacy` |
+
+These are not environment configuration knobs. The launcher creates and binds
+them atomically. `BOUKENSHA_*` values used between supervised child processes
+are internal runtime metadata, not settings users should export by hand.
 
 CLI profile and allowlist flags remain available for one-off surface proofs.
 Normal agent and API launches read YAML and need no repeated settings:
@@ -198,8 +227,15 @@ boukensha-gateway-api
 - Profile identity, capability digest, coverage, and schema bytes are recorded.
 - Named profiles deny `send_raw`. An explicit allowlist can enable it, and
   every use records a capability-gap event with its reason.
-- Immortal credentials and typed admin operations stay in a separate process.
-- Two identical resets must produce identical fully read mortal state.
+- Reset pauses the selected authenticated mortal session at a command boundary.
+- A one-shot admin child receives one typed stdin request and only the admin
+  secret.
+- Mortal `save`, reconnect, `score`, and `look` verify the reset on that same
+  session.
+- Failure before mutation resumes with a receipt. Partial mutation quarantines
+  the session until a linked retry succeeds or the session stops.
+- Gateway control state is projected beside the session evidence. Discovery
+  labels it separately from launcher-owned process state.
 - Live SSE and historical replay use one deterministic event serializer.
 - Live readers tail committed sequence cursors across process boundaries.
 - `Last-Event-ID` resumes from the durable journal sequence.
@@ -259,11 +295,11 @@ uv run python -m mud_gateway.mcp_server \
   --profile direct-full --allow look,move,send_raw --prove
 ```
 
-Run the repeatable live reset gate:
+Run the repeatable live reset gate against a selected active session:
 
 ```bash
 uv run python scripts/reset_smoke.py \
-  --player-profile poucet --db /tmp/gateway-reset-smoke.db
+  --session-dir ../../.boukensha/profiles/poucet/sessions/<session-id>
 ```
 
 Serve live and replay views locally:

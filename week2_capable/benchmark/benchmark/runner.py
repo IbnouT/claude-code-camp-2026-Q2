@@ -2,17 +2,19 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
+import sqlite3
 import subprocess
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Callable, Mapping, Sequence
 
 from .config import AttemptConfig, Repository
 from .journeys import Journey
 from .metrics import AttemptMetrics, measure_attempt
-from .reset import ResetResult, reset_once
 
 
 class BudgetError(RuntimeError):
@@ -57,13 +59,6 @@ class Budget:
         self.spent = round(self.spent + cost_usd, 8)
 
 
-_AGENT_LAUNCH = (
-    "import os; from boukensha import run; "
-    "print(run(os.environ['BOUKENSHA_BENCHMARK_TASK'], "
-    "log=os.environ['BOUKENSHA_BENCHMARK_LOG']))"
-)
-
-
 def prove_surface(
     command: Sequence[str] = ("boukensha-gateway",),
     *,
@@ -101,36 +96,15 @@ def run_attempt(
     attempt_id: str,
     proof: SurfaceProof,
     environment: Mapping[str, str] | None = None,
-    resetter: Callable[..., ResetResult] = reset_once,
     launcher: Callable[..., subprocess.CompletedProcess[str]] | None = None,
 ) -> AttemptMetrics:
-    """Reset first, then launch exactly one agent turn and measure both logs."""
+    """Launch one isolated runtime that resets before its first model call."""
     combined = {**os.environ, **(environment or {}), **config.environment()}
-    try:
-        reset_result = resetter(
-            socket_path=config.admin_socket,
-            journal_path=config.admin_journal,
-            environment=combined,
-        )
-    except Exception as error:
-        return measure_attempt(
-            attempt_id=attempt_id,
-            journey=journey,
-            agent_log=config.agent_log,
-            gateway_journal=config.gateway_journal,
-            wall_ms=0,
-            process_ok=False,
-            schema_bytes=proof.schema_bytes,
-            schema_token_estimate=proof.schema_token_estimate,
-            result_mode=config.result_mode,
-            error=_redact(f"reset failed: {error}", combined),
-            models_path=repository.agent / "boukensha" / "models.yaml",
-        )
-
     launch = launcher or _launch_agent
     started = time.monotonic()
     completed = launch(repository=repository, journey=journey, config=config, environment=combined)
     wall_ms = round((time.monotonic() - started) * 1000)
+    agent_log, gateway_journal = _runtime_evidence(config)
     error = (
         None if completed.returncode == 0
         else _redact(completed.stderr.strip(), combined)
@@ -138,14 +112,14 @@ def run_attempt(
     return measure_attempt(
         attempt_id=attempt_id,
         journey=journey,
-        agent_log=config.agent_log,
-        gateway_journal=config.gateway_journal,
+        agent_log=agent_log,
+        gateway_journal=gateway_journal,
         wall_ms=wall_ms,
         process_ok=completed.returncode == 0,
         schema_bytes=proof.schema_bytes,
         schema_token_estimate=proof.schema_token_estimate,
         result_mode=config.result_mode,
-        reset_id=reset_result.reset_id,
+        reset_id=_reset_id(gateway_journal),
         error=error,
         models_path=repository.agent / "boukensha" / "models.yaml",
     )
@@ -158,19 +132,85 @@ def _launch_agent(
     config: AttemptConfig,
     environment: Mapping[str, str],
 ) -> subprocess.CompletedProcess[str]:
-    env = {
-        **environment,
-        "BOUKENSHA_BENCHMARK_TASK": journey.order,
-        "BOUKENSHA_BENCHMARK_LOG": str(config.agent_log),
-    }
+    env = dict(environment)
     return subprocess.run(
-        ["uv", "run", "--project", str(repository.agent), "python", "-c", _AGENT_LAUNCH],
+        [
+            "uv",
+            "run",
+            "--project",
+            str(repository.agent),
+            "boukensha",
+            "--task-stdin",
+            "--reset-baseline",
+            "level1-temple@1",
+            "--player-profile",
+            config.player_profile,
+        ],
         cwd=repository.agent,
         env=env,
+        input=journey.order + "\n",
         capture_output=True,
         text=True,
         check=False,
     )
+
+
+def _runtime_evidence(config: AttemptConfig) -> tuple[Path, Path]:
+    registry = config.directory / "registry.db"
+    if not registry.is_file():
+        return (
+            config.directory / "missing-agent.jsonl",
+            config.directory / "missing-gateway.db",
+        )
+    database = sqlite3.connect(registry)
+    try:
+        row = database.execute(
+            """
+            SELECT session_dir
+            FROM sessions
+            WHERE player_id = ?
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+            (config.player_profile,),
+        ).fetchone()
+    finally:
+        database.close()
+    if row is None:
+        return (
+            config.directory / "missing-agent.jsonl",
+            config.directory / "missing-gateway.db",
+        )
+    session_dir = Path(str(row[0]))
+    return session_dir / "agent.jsonl", session_dir / "gateway.db"
+
+
+def _reset_id(gateway_journal: Path) -> str | None:
+    if not gateway_journal.is_file():
+        return None
+    database = sqlite3.connect(gateway_journal)
+    try:
+        row = database.execute(
+            """
+            SELECT payload
+            FROM events
+            WHERE kind = 'reset_receipt'
+            ORDER BY seq DESC
+            LIMIT 1
+            """
+        ).fetchone()
+    except sqlite3.DatabaseError:
+        return None
+    finally:
+        database.close()
+    if row is None:
+        return None
+    try:
+        payload = json.loads(str(row[0]))
+    except json.JSONDecodeError:
+        return None
+    value = payload.get("reset_id") if isinstance(payload, dict) else None
+    return value if isinstance(value, str) and value else None
 
 
 def _field(output: str, label: str) -> str:

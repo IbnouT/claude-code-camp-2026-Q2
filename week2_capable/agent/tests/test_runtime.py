@@ -20,6 +20,7 @@ from boukensha.runtime import (
     SessionRegistry,
     import_legacy_session,
 )
+from boukensha.runtime_cli import _with_control_state
 
 WORKER = Path(__file__).with_name("runtime_worker.py")
 
@@ -265,3 +266,25 @@ def test_crash_recovery_reconciles_registry_after_kernel_releases_lock() -> None
             assert states[replacement.identity.session_id] == "starting"
         finally:
             replacement.close()
+
+
+def test_discovery_labels_process_and_gateway_control_state_sources(
+    tmp_path: Path,
+) -> None:
+    session_dir = tmp_path / "session"
+    session_dir.mkdir()
+    (session_dir / "control-state.json").write_text(
+        '{"schema_version":1,"state":"quarantined"}\n',
+        encoding="utf-8",
+    )
+
+    row = _with_control_state({
+        "session_id": "session-1",
+        "session_dir": str(session_dir),
+        "state": "running",
+    })
+
+    assert row["process_state"] == "running"
+    assert row["process_state_source"] == "launcher_registry"
+    assert row["control_state"] == "quarantined"
+    assert row["control_state_source"] == "gateway_projection"

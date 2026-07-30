@@ -7,6 +7,7 @@ import os
 import signal
 import subprocess
 import sys
+from pathlib import Path
 from typing import Sequence
 
 from .config import Config
@@ -20,6 +21,7 @@ PROVIDER_SECRET_NAMES = {
     "ollama_cloud": "OLLAMA_API_KEY",
     "openai": "OPENAI_API_KEY",
 }
+STOP_TIMEOUT_SECONDS = 10.0
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -42,7 +44,22 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--player-profile",
         help="configured player profile, default gateway.connection.player_profile",
     )
+    parser.add_argument(
+        "--task-stdin",
+        action="store_true",
+        help="run one task read from stdin instead of opening the interactive UI",
+    )
+    parser.add_argument(
+        "--reset-baseline",
+        metavar="NAME@VERSION",
+        help="reset the selected authenticated session before the first model call",
+    )
     arguments = parser.parse_args(argv)
+    task = sys.stdin.read().strip() if arguments.task_stdin else None
+    if arguments.task_stdin and not task:
+        parser.error("--task-stdin received an empty task")
+    if arguments.reset_baseline and not arguments.task_stdin:
+        parser.error("--reset-baseline requires --task-stdin")
 
     config = Config()
     player_id = arguments.player_profile or config.mud_player_profile
@@ -68,6 +85,31 @@ def main(argv: Sequence[str] | None = None) -> int:
         parent=os.environ,
         secrets=secrets,
     )
+    admin_secret_file = Path(
+        os.environ.get("BOUKENSHA_ADMIN_SECRET_FILE", config.dir / ".env")
+    ).expanduser()
+    if admin_secret_file.is_file():
+        child_env["BOUKENSHA_ADMIN_SECRET_FILE"] = str(admin_secret_file)
+    if task is not None:
+        child_env["BOUKENSHA_LAUNCH_TASK"] = task
+    if arguments.reset_baseline:
+        child_env["BOUKENSHA_RESET_BASELINE"] = arguments.reset_baseline
+        raw_timeout = config.dig(
+            "gateway",
+            "reset",
+            "client_timeout_seconds",
+        )
+        try:
+            reset_timeout = 45.0 if raw_timeout is None else float(raw_timeout)
+        except (TypeError, ValueError) as error:
+            raise ConfigError(
+                "gateway.reset.client_timeout_seconds must be a number"
+            ) from error
+        if reset_timeout <= 0:
+            raise ConfigError(
+                "gateway.reset.client_timeout_seconds must be positive"
+            )
+        child_env["BOUKENSHA_RESET_CLIENT_TIMEOUT"] = str(reset_timeout)
     process: subprocess.Popen | None = None
     exit_code = 1
     try:
@@ -82,7 +124,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     finally:
         if process is not None and process.poll() is None:
             runtime.terminate_process_group(process.pid)
-            process.wait()
+            try:
+                process.wait(timeout=STOP_TIMEOUT_SECONDS)
+            except subprocess.TimeoutExpired:
+                runtime.terminate_process_group(process.pid, signal.SIGKILL)
+                process.wait()
             exit_code = process.returncode
         runtime.close(exit_code=exit_code)
 

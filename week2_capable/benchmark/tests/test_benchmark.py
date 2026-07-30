@@ -5,13 +5,21 @@ import subprocess
 from pathlib import Path
 
 import pytest
+import yaml
 
-from benchmark.config import Repository, _UNIX_SOCKET_PATH_LIMIT, create_attempt
+from benchmark.config import Repository, create_attempt
 from benchmark.journeys import J1, J2, judge
 from benchmark.metrics import AttemptMetrics, aggregate, week1_corpus
 from benchmark.metrics import measure_attempt
 from benchmark.report import write_markdown
-from benchmark.runner import Budget, BudgetError, SurfaceProof, _redact, run_attempt
+from benchmark.runner import (
+    Budget,
+    BudgetError,
+    SurfaceProof,
+    _launch_agent,
+    _redact,
+    run_attempt,
+)
 
 
 def test_overlay_is_secret_free_and_pins_gateway_profile(tmp_path: Path) -> None:
@@ -21,31 +29,51 @@ def test_overlay_is_secret_free_and_pins_gateway_profile(tmp_path: Path) -> None
     assert "boukensha-gateway" in text
     assert "direct-full" in text
     assert "result_mode: full" in text
-    assert "MUD_PASSWORD" not in text
+    assert attempt.player_profile == "poucet"
+    assert attempt.player_password_env == "MUD_PASSWORD"
+    assert attempt.admin_password_env == "MUD_ADMIN_PASSWORD"
+    assert "player-secret" not in text
     assert not (tmp_path / ".env").exists()
     assert attempt.max_turn_cost > 0
 
 
-def test_attempt_uses_short_external_admin_socket(tmp_path: Path) -> None:
+def test_one_off_player_becomes_an_ephemeral_secret_free_profile(
+    tmp_path: Path,
+) -> None:
     repository = Repository.discover()
-    deep = tmp_path / ("nested-" * 20)
-    attempt = create_attempt(repository, deep)
-    assert attempt.admin_socket.parent != attempt.directory
-    assert len(bytes(attempt.admin_socket)) <= _UNIX_SOCKET_PATH_LIMIT
+    attempt = create_attempt(
+        repository,
+        tmp_path,
+        player_character="NewTester",
+    )
+    settings = yaml.safe_load((tmp_path / "settings.yaml").read_text())
+
+    assert attempt.player_profile == "benchmark-cli"
+    assert attempt.player_password_env == "BOUKENSHA_PLAYER_PASSWORD"
+    assert settings["gateway"]["connection"]["player_profile"] == "benchmark-cli"
+    assert settings["gateway"]["players"]["benchmark-cli"] == {
+        "character": "NewTester",
+        "password_env": "BOUKENSHA_PLAYER_PASSWORD",
+    }
+    assert not (tmp_path / ".env").exists()
 
 
-def test_reset_failure_prevents_agent_launch(tmp_path: Path) -> None:
+def test_reset_failure_is_a_setup_failure_before_any_model_evidence(
+    tmp_path: Path,
+) -> None:
     repository = Repository.discover()
     attempt = create_attempt(repository, tmp_path)
     launched = False
 
-    def fail_reset(**_: object) -> object:
-        raise RuntimeError("no reset")
-
     def launch(**_: object) -> subprocess.CompletedProcess[str]:
         nonlocal launched
         launched = True
-        return subprocess.CompletedProcess([], 0, "", "")
+        return subprocess.CompletedProcess(
+            [],
+            2,
+            "",
+            "gateway reset failed: admin unavailable",
+        )
 
     row = run_attempt(
         repository=repository,
@@ -53,12 +81,41 @@ def test_reset_failure_prevents_agent_launch(tmp_path: Path) -> None:
         journey=J1,
         attempt_id="blocked",
         proof=SurfaceProof("direct-full", 25, 100, 25, "abc", "PASS"),
-        resetter=fail_reset,
         launcher=launch,
     )
-    assert not launched
+    assert launched
     assert row.status == "incomplete"
-    assert row.error == "reset failed: no reset"
+    assert row.error == "gateway reset failed: admin unavailable"
+
+
+def test_attempt_uses_supervised_selected_session_reset(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = Repository.discover()
+    attempt = create_attempt(repository, tmp_path, player_profile="poucet")
+    captured: dict[str, object] = {}
+
+    def run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        captured["command"] = command
+        captured.update(kwargs)
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr("benchmark.runner.subprocess.run", run)
+    _launch_agent(
+        repository=repository,
+        journey=J1,
+        config=attempt,
+        environment={"BOUKENSHA_DIR": str(tmp_path)},
+    )
+
+    command = captured["command"]
+    assert isinstance(command, list)
+    assert "boukensha" in command
+    assert command[-2:] == ["--player-profile", "poucet"]
+    assert "--task-stdin" in command
+    assert command[command.index("--reset-baseline") + 1] == "level1-temple@1"
+    assert captured["input"] == J1.order + "\n"
 
 
 def test_unpriced_and_incomplete_attempts_do_not_aggregate(tmp_path: Path) -> None:

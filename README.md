@@ -41,6 +41,15 @@ before the agent faces a private game world.
    Every launch creates an isolated player session under
    `.boukensha/profiles/<player>/sessions/<session>/`.
 
+   A benchmark or script can use the same launcher and verify a clean baseline
+   before the first model call:
+
+   ```bash
+   printf '%s\n' 'Find the bakery and read the menu.' | \
+     week2_capable/bin/agent --task-stdin \
+     --reset-baseline level1-temple@1 --player-profile tester
+   ```
+
 ## Repository structure
 
 - [`week0_explore/`](week0_explore/): MUD infrastructure, world exploration,

@@ -47,11 +47,16 @@ class GatewaySettings:
     api_port: int = 8765
     admin_character: str = "admin"
     admin_password_env: str = "MUD_ADMIN_PASSWORD"
+    reset_pause_timeout: float = 15.0
+    reset_child_timeout: float = 30.0
+    reset_client_timeout: float = 45.0
     agent_id: str | None = None
     session_id: str | None = None
     gateway_session_id: str | None = None
     experiment_id: str | None = None
     run_id: str | None = None
+    session_dir: Path | None = None
+    control_socket: Path | None = None
 
     @classmethod
     def load(cls) -> "GatewaySettings":
@@ -62,6 +67,7 @@ class GatewaySettings:
         surface = _mapping(configured, "surface")
         api = _mapping(configured, "api")
         admin = _mapping(configured, "admin")
+        reset = _mapping(configured, "reset")
         root = config_dir.parent
         selected = _profile_id(
             os.environ.get("BOUKENSHA_PLAYER_ID")
@@ -103,11 +109,28 @@ class GatewaySettings:
             api_port=_port(api.get("port"), 8765, "gateway.api.port"),
             admin_character=_string(admin.get("character"), "admin"),
             admin_password_env=admin_password_env,
+            reset_pause_timeout=_positive_float(
+                reset.get("pause_timeout_seconds"),
+                15.0,
+                "gateway.reset.pause_timeout_seconds",
+            ),
+            reset_child_timeout=_positive_float(
+                reset.get("child_timeout_seconds"),
+                30.0,
+                "gateway.reset.child_timeout_seconds",
+            ),
+            reset_client_timeout=_positive_float(
+                reset.get("client_timeout_seconds"),
+                45.0,
+                "gateway.reset.client_timeout_seconds",
+            ),
             agent_id=os.environ.get("BOUKENSHA_AGENT_ID"),
             session_id=os.environ.get("BOUKENSHA_SESSION_ID"),
             gateway_session_id=os.environ.get("BOUKENSHA_GATEWAY_SESSION_ID"),
             experiment_id=os.environ.get("BOUKENSHA_EXPERIMENT_ID"),
             run_id=os.environ.get("BOUKENSHA_RUN_ID"),
+            session_dir=_environment_path("BOUKENSHA_SESSION_DIR"),
+            control_socket=_environment_path("BOUKENSHA_CONTROL_SOCKET"),
         )
 
     @property
@@ -173,6 +196,11 @@ def _config_dir() -> Path:
     return Path.home() / ".boukensha"
 
 
+def _environment_path(name: str) -> Path | None:
+    value = os.environ.get(name)
+    return None if not value else Path(value).expanduser().resolve()
+
+
 def _load(path: Path) -> dict[str, Any]:
     if not path.is_file():
         return {}
@@ -184,7 +212,7 @@ def _load(path: Path) -> dict[str, Any]:
         raise GatewaySettingsError("settings.yaml: 'gateway' must be a mapping")
     _known(
         configured,
-        {"connection", "players", "journal", "surface", "api", "admin"},
+        {"connection", "players", "journal", "surface", "api", "admin", "reset"},
         "gateway",
     )
     sections = {
@@ -192,6 +220,11 @@ def _load(path: Path) -> dict[str, Any]:
         "surface": {"profile", "enable", "disable", "allow_raw"},
         "api": {"host", "port"},
         "admin": {"character", "password_env"},
+        "reset": {
+            "pause_timeout_seconds",
+            "child_timeout_seconds",
+            "client_timeout_seconds",
+        },
     }
     for name, keys in sections.items():
         _known(_mapping(configured, name), keys, f"gateway.{name}")
@@ -271,6 +304,16 @@ def _port(value: Any, default: int, label: str) -> int:
     if not 1 <= port <= 65535:
         raise GatewaySettingsError(f"{label} must be between 1 and 65535")
     return port
+
+
+def _positive_float(value: Any, default: float, label: str) -> float:
+    try:
+        number = default if value is None else float(value)
+    except (TypeError, ValueError) as error:
+        raise GatewaySettingsError(f"{label} must be a number") from error
+    if number <= 0:
+        raise GatewaySettingsError(f"{label} must be positive")
+    return number
 
 
 def _path(value: Any, root: Path) -> Path:

@@ -22,6 +22,18 @@ from .tool_result import RESULT_MODES, result_mode
 
 #: Default config directory for a real install.
 DEFAULT_DIR = Path.home() / ".boukensha"
+GATEWAY_RUNTIME_ENV = frozenset({
+    "BOUKENSHA_AGENT_ID",
+    "BOUKENSHA_ADMIN_SECRET_FILE",
+    "BOUKENSHA_CONTROL_SOCKET",
+    "BOUKENSHA_DIR",
+    "BOUKENSHA_EXPERIMENT_ID",
+    "BOUKENSHA_GATEWAY_SESSION_ID",
+    "BOUKENSHA_PLAYER_ID",
+    "BOUKENSHA_RUN_ID",
+    "BOUKENSHA_SESSION_DIR",
+    "BOUKENSHA_SESSION_ID",
+})
 
 
 class Config:
@@ -106,7 +118,7 @@ class Config:
             is_gateway = Path(command).name == "boukensha-gateway"
             if is_gateway:
                 for key, value in os.environ.items():
-                    if key.startswith("BOUKENSHA_"):
+                    if key in GATEWAY_RUNTIME_ENV:
                         resolved_env.setdefault(key, value)
                 profile = self.mud_profile()
                 password_name = str(

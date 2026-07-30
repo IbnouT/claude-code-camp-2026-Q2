@@ -54,6 +54,10 @@ gateway:
   admin:
     character: builder
     password_env: MUD_ADMIN_PASSWORD
+  reset:
+    pause_timeout_seconds: 7
+    child_timeout_seconds: 11
+    client_timeout_seconds: 19
 """,
     )
     monkeypatch.setenv("HERO_PASSWORD", "hero-secret")
@@ -70,6 +74,9 @@ gateway:
     assert settings.api_host == "0.0.0.0"
     assert settings.api_port == 9000
     assert settings.admin_character == "builder"
+    assert settings.reset_pause_timeout == 7
+    assert settings.reset_child_timeout == 11
+    assert settings.reset_client_timeout == 19
     assert "cast_spell" in settings.effective_profile().allowed
     assert "send_raw" in settings.effective_profile().allowed
     assert "tell" not in settings.effective_profile().allowed
@@ -158,4 +165,18 @@ gateway:
     )
 
     with pytest.raises(GatewaySettingsError, match="must differ"):
+        GatewaySettings.load()
+
+
+def test_reset_timeouts_must_be_positive(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _configure(
+        tmp_path,
+        monkeypatch,
+        "gateway:\n  reset:\n    child_timeout_seconds: 0\n",
+    )
+
+    with pytest.raises(GatewaySettingsError, match="must be positive"):
         GatewaySettings.load()

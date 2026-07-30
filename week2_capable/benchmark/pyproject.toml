@@ -5,6 +5,7 @@ description = "Cost and correctness benchmarks for Boukensha game journeys"
 requires-python = ">=3.12"
 dependencies = [
   "pyyaml>=6.0,<7",  # reads the public agent settings into an isolated overlay
+  "python-dotenv>=1.0,<2",  # resolves profile secrets without copying them into attempts
 ]
 
 [project.scripts]

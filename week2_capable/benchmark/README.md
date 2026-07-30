@@ -5,9 +5,10 @@ same installed gateway used by the agent REPL and TUI.
 
 ```mermaid
 flowchart LR
-    B["E1 harness"] -->|"private reset"| A["gateway admin"]
-    B -->|"one agent turn"| P["Boukensha"]
+    B["E1 harness"] -->|"one supervised runtime"| P["Boukensha launcher"]
     P -->|"MCP direct-full"| G["gateway"]
+    B -->|"reset-before-model policy"| P
+    G -->|"one-shot stdin"| A["admin child"]
     A --> M["MUD"]
     G --> M
     P --> L["agent JSONL"]
@@ -26,8 +27,11 @@ uv tool install --editable ./week2_capable/gateway --force
 uv tool install --editable ./week2_capable/benchmark --force
 ```
 
-The repository `.boukensha/.env` supplies provider and MUD credentials to a
-live run. The benchmark overlay copies public settings only.
+The repository configuration names player profiles. Each profile maps a public
+character to the environment variable holding its password. The benchmark
+overlay copies public settings only. Each attempt uses the normal launcher,
+runtime registry, per-player session layout, and selected gateway control
+endpoint.
 
 ## Run
 
@@ -43,6 +47,31 @@ A live attempt requires both an explicit spend flag and a cumulative cap:
 ```console
 uv run --no-project --env-file .boukensha/.env boukensha-e1 --spend --cap 10
 ```
+
+`--player-profile <id>` selects a configured player without editing
+`settings.yaml`. Without it, the benchmark uses
+`gateway.connection.player_profile`.
+
+For interactive or piped automation, `--password-stdin` overrides the selected
+profile's configured password source without exposing a secret in process
+arguments:
+
+```console
+printf '%s' "$PLAYER_PASSWORD" | boukensha-e1 \
+  --player-profile tester --password-stdin --spend --cap 3
+```
+
+For a one-off character that is not in `settings.yaml`, combine `--player`
+with `--password-stdin`:
+
+```console
+printf '%s' "$PLAYER_PASSWORD" | boukensha-e1 \
+  --player NewTester --password-stdin --spend --cap 3
+```
+
+The one-off identity exists only in the attempt's secret-free settings
+overlay. A visible `--password` option is deliberately unavailable because
+command arguments can leak through shell history and process inspection.
 
 `--result-mode raw|minimal|full` selects the model-facing result shape for an
 isolated run. The gateway journal always retains the complete typed envelope.
@@ -61,8 +90,10 @@ uv run --no-project --env-file .boukensha/.env boukensha-e1 \
 ```
 
 Runtime artifacts go under `.boukensha/benchmarks/e1/`. A reset failure blocks
-the agent process, is counted separately from journey outcomes, and stops the
-batch for correction. It does not consume the requested sample count. An
+the first model call, is counted separately from journey outcomes, and stops
+the batch for correction. The reset acts on the gateway session created for
+that exact attempt. It never opens a second mortal connection. A setup failure
+does not consume the requested sample count. An
 unpriced model attempt is recorded for diagnosis but stops the paid sequence
 and never enters aggregates.
 

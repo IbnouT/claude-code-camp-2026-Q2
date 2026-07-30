@@ -21,7 +21,9 @@ from __future__ import annotations
 import asyncio
 import re
 import uuid
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from typing import AsyncIterator
 
 from .journal import Journal
 from .observe import Observation, WireReference
@@ -45,6 +47,14 @@ ENTRY_STEPS = 6
 
 class LoginFailed(Exception):
     pass
+
+
+class SessionPaused(RuntimeError):
+    """A control operation owns the next command boundary."""
+
+
+class SessionQuarantined(RuntimeError):
+    """A partial reset prevents further mortal commands."""
 
 
 @dataclass
@@ -90,6 +100,7 @@ class Session:
                                   on_wire=self._journal_wire)
         self._logged_in = False
         self._command_lock = asyncio.Lock()
+        self._control_state = "running"
         self.trace_id: str | None = None
         self.observations = ObservationPipeline(journal, self.id)
 
@@ -137,46 +148,24 @@ class Session:
     def logged_in(self) -> bool:
         return self._logged_in
 
+    @property
+    def control_state(self) -> str:
+        return self._control_state
+
     # -- commands -----------------------------------------------------------
 
     async def command(self, line: str, *, trace_id: str | None = None) -> Reply:
         """Send one line and collect its reply, with the window aligned first."""
+        self._assert_commands_allowed()
         async with self._command_lock:
-            trace = trace_id or self.trace_id
-            source_after = self.journal.last_seq(self.id)
-            pending = await self.transport.drain_pending()
-            if pending:
-                self.journal.append(self.id, "unsolicited",
-                                    {"bytes": len(pending),
-                                     "text": strip_ansi(pending).decode("latin-1")},
-                                    trace_id=trace)
-            await self.transport.send(line)
-            raw = await self.transport.read_until(PROMPT, quiet=0.6)
-            event = self.journal.append(
-                self.id, "command",
-                {"line": line, "reply_bytes": len(raw),
-                 "complete": bool(PROMPT.search(raw)),
-                 "unsolicited_bytes": len(pending)},
-                trace_id=trace)
-            wire_ref = self._wire_reference(source_after, event.seq, raw)
-            attempted_move = line.casefold() if line.casefold() in {
-                "north", "south", "east", "west", "up", "down",
-                "n", "s", "e", "w", "u", "d",
-            } else None
-            observations, position = self.observations.ingest(
-                raw,
-                wire_ref,
-                attempted_move=attempted_move,
-                trace_id=trace,
-            )
-            return Reply(command=line, raw=raw, unsolicited=pending,
-                         complete=bool(PROMPT.search(raw)), seq=event.seq,
-                         wire_ref=wire_ref, observations=observations,
-                         position=position)
+            self._assert_commands_allowed()
+            return await self._command_unlocked(line, trace_id=trace_id)
 
     async def poll(self, *, trace_id: str | None = None) -> Reply:
         """Return unsolicited output without sending a game command."""
+        self._assert_commands_allowed()
         async with self._command_lock:
+            self._assert_commands_allowed()
             source_after = self.journal.last_seq(self.id)
             pending = await self.transport.drain_pending()
             event = self.journal.append(
@@ -205,7 +194,126 @@ class Session:
                 position=position,
             )
 
+    @asynccontextmanager
+    async def pause(self, *, timeout: float) -> AsyncIterator[None]:
+        """Own the next safe command boundary for one control operation."""
+        if self._control_state == "quarantined":
+            raise SessionQuarantined(
+                "session is quarantined, only an explicit reset retry or stop is allowed"
+            )
+        try:
+            await asyncio.wait_for(self._command_lock.acquire(), timeout=timeout)
+        except TimeoutError as error:
+            raise SessionPaused(
+                "timed out waiting for the current mortal command to finish"
+            ) from error
+        self._control_state = "paused"
+        self.journal.append(self.id, "control_state", {"state": "paused"})
+        try:
+            yield
+        finally:
+            if self._control_state == "paused":
+                self._control_state = "running"
+                self.journal.append(self.id, "control_state", {"state": "running"})
+            self._command_lock.release()
+
+    def quarantine(self, reason: str) -> None:
+        """Fail closed after game mutation whose final state is unverified."""
+        self._control_state = "quarantined"
+        self.journal.append(
+            self.id,
+            "control_state",
+            {"state": "quarantined", "reason": reason},
+        )
+
+    def allow_reset_retry(self) -> None:
+        """Allow only the reset coordinator to retry a quarantined session."""
+        if self._control_state != "quarantined":
+            raise RuntimeError("reset retry requires a quarantined session")
+        self._control_state = "running"
+
+    async def reset_command(self, line: str) -> Reply:
+        """Run a verification command while the reset coordinator owns the lock."""
+        if not self._command_lock.locked():
+            raise RuntimeError("reset command requires the paused command boundary")
+        return await self._command_unlocked(line)
+
+    async def reconnect_for_reset(self) -> None:
+        """Reconnect the selected character without opening a second mortal session."""
+        if not self._command_lock.locked():
+            raise RuntimeError("reset reconnect requires the paused command boundary")
+        await self.transport.close()
+        self._logged_in = False
+        self.journal.append(
+            self.id,
+            "session_reconnect",
+            {"character": self.name, "reason": "verified_reset"},
+        )
+        await self.open()
+
     # -- internals ----------------------------------------------------------
+
+    def _assert_commands_allowed(self) -> None:
+        if self._control_state == "paused":
+            raise SessionPaused("session is paused for a control operation")
+        if self._control_state == "quarantined":
+            raise SessionQuarantined(
+                "session is quarantined after an incomplete reset"
+            )
+
+    async def _command_unlocked(
+        self,
+        line: str,
+        *,
+        trace_id: str | None = None,
+    ) -> Reply:
+        trace = trace_id or self.trace_id
+        source_after = self.journal.last_seq(self.id)
+        pending = await self.transport.drain_pending()
+        if pending:
+            self.journal.append(
+                self.id,
+                "unsolicited",
+                {
+                    "bytes": len(pending),
+                    "text": strip_ansi(pending).decode("latin-1"),
+                },
+                trace_id=trace,
+            )
+        await self.transport.send(line)
+        raw = await self.transport.read_until(PROMPT, quiet=0.6)
+        event = self.journal.append(
+            self.id,
+            "command",
+            {
+                "line": line,
+                "reply_bytes": len(raw),
+                "complete": bool(PROMPT.search(raw)),
+                "unsolicited_bytes": len(pending),
+            },
+            trace_id=trace,
+        )
+        wire_ref = self._wire_reference(source_after, event.seq, raw)
+        attempted_move = line.casefold() if line.casefold() in {
+            "north", "south", "east", "west", "up", "down",
+            "n", "s", "e", "w", "u", "d",
+        } else None
+        observations, position = self.observations.ingest(
+            raw,
+            wire_ref,
+            attempted_move=attempted_move,
+            trace_id=trace,
+        )
+        return Reply(
+            command=line,
+            raw=raw,
+            unsolicited=pending,
+            complete=bool(PROMPT.search(raw)),
+            seq=event.seq,
+            wire_ref=wire_ref,
+            observations=observations,
+            position=position,
+        )
 
     def _journal_wire(self, event: WireEvent) -> None:
         """Every byte, both directions, with credentials recorded as a length only."""

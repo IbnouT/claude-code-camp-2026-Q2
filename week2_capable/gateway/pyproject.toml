@@ -16,6 +16,7 @@ dependencies = [
 [project.scripts]
 boukensha-gateway = "mud_gateway.mcp_server:main"
 boukensha-gateway-admin = "admin_process.server:main"
+boukensha-gateway-reset = "mud_gateway.reset_client:main"
 boukensha-gateway-api = "mud_gateway.api:main"
 
 [project.optional-dependencies]

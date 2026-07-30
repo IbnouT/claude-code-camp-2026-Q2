@@ -29,6 +29,19 @@ acquires the character lock, writes the manifest, starts the agent and its
 gateway, then records the final lifecycle state. The REPL and TUI show the
 selected player and session.
 
+Automation can run one task through the same supervisor and request a verified
+baseline before any model call:
+
+```bash
+printf '%s\n' 'Find the bakery and read the menu.' | \
+  uv run boukensha --task-stdin --reset-baseline level1-temple@1 \
+  --player-profile tester
+```
+
+The task and passwords never enter command arguments. Reset targets the
+gateway session created by this launch. It pauses that authenticated connection
+instead of opening another mortal login.
+
 Inspect registered sessions or import an old flat recording:
 
 ```bash
@@ -156,10 +169,23 @@ Runtime evidence is isolated by player and session:
     ├── .env
     └── sessions/<session_id>/
         ├── session.json
+        ├── control.token
+        ├── control-state.json
         ├── agent.jsonl
-        └── gateway.db
+        ├── gateway.db
+        ├── admin.db
+        └── reset-progress.jsonl
 ```
 
 The registry and immutable manifest provide identity. File modification time is
 never used to decide which session is active. Imported legacy recordings use
-the same hierarchy and retain explicit capture gaps.
+the same hierarchy and retain explicit capture gaps. Session discovery reports
+launcher process state and gateway control state as separate, labelled facts.
+The gateway projection wins for `running`, `paused`, or `quarantined` control
+state. The registry remains authoritative for process lifecycle.
+
+Registry, lock, session, token, and control-socket locations are fixed runtime
+conventions documented in the gateway README. They are not hidden environment
+settings. Legacy import always names its source path explicitly. Launcher
+shutdown allows a child process group 10 seconds to stop, then kills it so a
+stale child cannot retain the character lock.

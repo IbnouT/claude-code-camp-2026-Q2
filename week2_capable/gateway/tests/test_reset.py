@@ -4,15 +4,9 @@ from types import SimpleNamespace
 
 import pytest
 
+from admin_process.reset import DEFAULT_FIELDS, ResetConflict, ResetPlan
 from mud_gateway.journal import Journal
-from admin_process.reset import (
-    DEFAULT_FIELDS,
-    ObservedState,
-    ResetConflict,
-    ResetPlan,
-    parse_score,
-)
-from mud_gateway.session import Reply
+from mud_gateway.reset_client import ObservedState, parse_score, verify
 
 SCORE = """You have 20(20) hit, 100(100) mana and 82(82) movement points.
 Your armor class is 9/10, and your alignment is 0.
@@ -49,32 +43,7 @@ class FakeAdmin:
         return (3001, "The Temple Of Midgaard")
 
 
-class FakePlayer:
-    def __init__(self, journal: Journal) -> None:
-        self.journal = journal
-        room = SimpleNamespace(
-            title="The Temple Of Midgaard",
-            exits=("n", "e", "s", "w", "d"),
-        )
-        self.observations = SimpleNamespace(
-            snapshot=lambda: SimpleNamespace(room=room)
-        )
-        self.commands: list[str] = []
-        self.lifecycle: list[str] = []
-
-    async def command(self, line: str) -> Reply:
-        self.commands.append(line)
-        text = SCORE if line == "score" else "The Temple Of Midgaard"
-        return Reply(line, text.encode(), b"", True, 1)
-
-    async def close(self) -> None:
-        self.lifecycle.append("close")
-
-    async def open(self) -> None:
-        self.lifecycle.append("open")
-
-
-def test_score_parser_keeps_current_and_maximum():
+def test_score_parser_keeps_current_and_maximum() -> None:
     state = parse_score(SCORE)
     assert state["hit"] == (20, 20)
     assert state["mana"] == (100, 100)
@@ -83,37 +52,37 @@ def test_score_parser_keeps_current_and_maximum():
     assert state["hungry"] is False
 
 
-def test_default_reset_uses_fed_not_starving_values():
+def test_default_reset_uses_fed_not_starving_values() -> None:
     assert DEFAULT_FIELDS["hunger"] > 0
     assert DEFAULT_FIELDS["thirst"] > 0
 
 
-def test_unread_fields_prevent_vacuous_equality():
+def test_unread_fields_prevent_vacuous_equality() -> None:
     assert "gold" in ObservedState(level=1).unread
 
 
-async def test_two_resets_produce_identical_mortal_state(tmp_path):
+async def test_admin_applies_only_to_the_authenticated_player_name(tmp_path) -> None:
     journal = Journal(tmp_path / "journal.db")
     try:
         admin = FakeAdmin(journal)
-        player = FakePlayer(journal)
-        plan = ResetPlan()
-        first = await plan.apply(admin, player, "poucet")
-        second = await plan.apply(admin, player, "poucet")
-        assert first.ok
-        assert second.ok
-        assert first.state.differences(second.state) == {}
-        assert player.commands.count("save") == 2
-        assert player.lifecycle == ["close", "open", "close", "open"]
-        assert first.applied[-2:] == ("save", "reconnect")
-        verified = journal.since("admin-test", kind="reset_verified")
-        assert len(verified) == 2
-        assert all(event.payload["ok"] for event in verified)
+        outcome = await ResetPlan().apply(
+            admin,
+            "poucet",
+            session_id="mortal-session",
+        )
+
+        assert outcome.ok
+        assert outcome.session_id == "mortal-session"
+        assert ("restore", "poucet") in admin.calls
+        assert ("transfer", "poucet") in admin.calls
+        applied = journal.since("admin-test", kind="reset_applied")
+        assert len(applied) == 1
+        assert applied[0].payload["session_id"] == "mortal-session"
     finally:
         journal.close()
 
 
-def test_verify_detects_drift_and_partial_vitals():
+def test_verify_detects_drift_and_partial_vitals() -> None:
     state = ObservedState(
         level=1,
         hit=(3, 20),
@@ -128,15 +97,12 @@ def test_verify_detects_drift_and_partial_vitals():
         room_title="The Temple Of Midgaard",
         exits=("n",),
     )
-    drift = ResetPlan().verify(
-        state,
-        located=(3001, "The Temple Of Midgaard"),
-    )
+    drift = verify(state, located=(3001, "The Temple Of Midgaard"))
     assert drift["gold"] == (0, 7)
     assert drift["hit"] == ("full", (3, 20))
 
 
-def test_verify_rejects_the_wrong_starting_room():
+def test_verify_rejects_the_wrong_starting_room() -> None:
     state = ObservedState(
         level=1,
         hit=(20, 20),
@@ -151,15 +117,14 @@ def test_verify_rejects_the_wrong_starting_room():
         room_title="The Bakery",
         exits=("s",),
     )
-    drift = ResetPlan().verify(state, located=(3010, "The Bakery"))
+    drift = verify(state, located=(3010, "The Bakery"))
     assert drift["room"] == (3001, 3010)
 
 
-async def test_reset_rejects_a_concurrent_player_session(tmp_path):
+async def test_reset_rejects_a_concurrent_player_session(tmp_path) -> None:
     journal = Journal(tmp_path / "journal.db")
     try:
         admin = FakeAdmin(journal)
-        player = FakePlayer(journal)
 
         async def duplicates(player_name: str) -> tuple[tuple[int, str], ...]:
             admin.calls.append(("locate_all", player_name))
@@ -170,8 +135,11 @@ async def test_reset_rejects_a_concurrent_player_session(tmp_path):
 
         admin.locate_all = duplicates
         with pytest.raises(ResetConflict, match="found 2"):
-            await ResetPlan().apply(admin, player, "poucet")
-        assert player.commands == []
+            await ResetPlan().apply(
+                admin,
+                "poucet",
+                session_id="mortal-session",
+            )
         assert journal.since("admin-test", kind="reset_rejected")
     finally:
         journal.close()

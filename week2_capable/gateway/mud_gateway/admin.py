@@ -4,11 +4,10 @@ from __future__ import annotations
 
 import re
 
+from .baseline import FED, TEMPLE
 from .journal import Journal
 from .session import Session
 
-TEMPLE = 3001
-FED = 24
 SETTABLE = frozenset({
     "ac", "afk", "age", "align", "bank", "brief", "cha", "class", "color",
     "con", "damroll", "deleted", "dex", "drunk", "exp", "frozen", "gold",

@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 import time
 from pathlib import Path
 
@@ -44,7 +45,24 @@ def main(argv: list[str] | None = None) -> int:
         default="J1",
         help="evidence-judged game objective",
     )
+    parser.add_argument(
+        "--player-profile",
+        help="configured player profile, defaults to gateway.connection.player_profile",
+    )
+    parser.add_argument(
+        "--player",
+        help="one-off player character, requires --password-stdin",
+    )
+    parser.add_argument(
+        "--password-stdin",
+        action="store_true",
+        help="read the selected player's password from standard input",
+    )
     arguments = parser.parse_args(argv)
+    if arguments.player and arguments.player_profile:
+        parser.error("--player and --player-profile are mutually exclusive")
+    if arguments.player and not arguments.password_stdin:
+        parser.error("--player requires --password-stdin")
     journey = JOURNEYS[arguments.journey]
     repository = Repository.discover()
     proof = prove_surface(profile="direct-full")
@@ -96,6 +114,11 @@ def main(argv: list[str] | None = None) -> int:
         )
     budget = Budget(arguments.cap, sum(row.cost_usd or 0 for row in prior))
     rows = list(prior)
+    supplied_password = None
+    if arguments.password_stdin:
+        supplied_password = sys.stdin.readline().rstrip("\r\n")
+        if not supplied_password:
+            parser.error("--password-stdin received an empty password")
     while sum(row.aggregate_eligible for row in rows) < arguments.runs:
         run_number = len(rows) + 1
         attempt_id = _attempt_id(run_number, multiple=arguments.runs > 1)
@@ -104,7 +127,24 @@ def main(argv: list[str] | None = None) -> int:
             repository,
             attempt_dir,
             result_mode=arguments.result_mode,
+            player_profile=arguments.player_profile,
+            player_character=arguments.player,
         )
+        runtime_environment = dict(os.environ)
+        password = (
+            supplied_password
+            or repository.player_password(
+                config.player_profile,
+                config.player_password_env,
+            )
+        )
+        if password:
+            runtime_environment[config.player_password_env] = password
+        shared_secret_file = repository.settings_dir / ".env"
+        if shared_secret_file.is_file():
+            runtime_environment["BOUKENSHA_ADMIN_SECRET_FILE"] = str(
+                shared_secret_file
+            )
         try:
             budget.require_headroom(config.max_turn_cost)
         except BudgetError as error:
@@ -117,7 +157,7 @@ def main(argv: list[str] | None = None) -> int:
             journey=journey,
             attempt_id=attempt_id,
             proof=proof,
-            environment=os.environ,
+            environment=runtime_environment,
         )
         append_jsonl(ledger, row)
         rows.append(row)

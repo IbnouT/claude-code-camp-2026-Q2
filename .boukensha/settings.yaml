@@ -121,6 +121,14 @@ gateway:
     character: admin
     password_env: MUD_ADMIN_PASSWORD
 
+  reset:
+    # Wait for the selected mortal command to finish before failing safely.
+    pause_timeout_seconds: 15
+    # Bound the one-shot privileged child, including its MUD round trips.
+    child_timeout_seconds: 30
+    # Bound a launcher or CLI request waiting on the local control endpoint.
+    client_timeout_seconds: 45
+
 # === Secrets live in .boukensha/.env (not here) =============================
 # One per provider you use, plus administrator and player-profile passwords:
 #   ANTHROPIC_API_KEY=...   GEMINI_API_KEY=...   OPENAI_API_KEY=...

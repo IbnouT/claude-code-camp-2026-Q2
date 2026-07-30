@@ -12,21 +12,26 @@ The benchmark is a separate package at `week2_capable/benchmark/`.
 ```mermaid
 flowchart LR
     BM["benchmark<br/><small>budget · launch · verdict</small>"]
-    AP["admin process<br/><small>typed reset</small>"]
-    AG["agent<br/><small>unmodified runtime</small>"]
+    AP["admin child<br/><small>one-shot typed reset</small>"]
+    AG["agent launcher<br/><small>isolated runtime</small>"]
     GW["gateway<br/><small>direct-full profile</small>"]
     MUD(["MUD"])
     LOG["agent log + gateway journal"]
 
-    BM -->|Unix socket| AP --> MUD
-    BM -->|subprocess| AG -->|MCP| GW --> MUD
+    BM -->|subprocess + reset policy| AG -->|MCP| GW --> MUD
+    GW -->|one-shot stdin| AP --> MUD
     AG --> LOG
     GW --> LOG
     BM -->|measure| LOG
 ```
 
-- The benchmark never opens a Telnet connection.
-- Reset uses the private typed admin socket.
+- The launcher creates one selected mortal gateway session before admin
+  mutation.
+- A one-off benchmark character can be supplied at launch with its password
+  read from standard input.
+- The private admin process receives no mortal credential.
+- Reset uses the selected gateway control endpoint and authenticated session
+  id. There is no persistent privileged socket.
 - Play uses the mortal gateway MCP surface.
 - The agent and gateway run from their current packages.
 - Secrets enter through process environment and never enter benchmark output.
@@ -73,12 +78,15 @@ success rate and cost, call, correction and token distributions.
 Each attempt gets:
 
 - a temporary settings overlay pointing the agent at the gateway
-- a dedicated agent JSONL log
-- a dedicated gateway SQLite journal
+- a launcher-owned session manifest and registry row
+- a dedicated per-session agent JSONL log
+- a dedicated per-session gateway SQLite journal
+- a one-shot admin journal and durable mutation progress
 - a reset request before the model is called
 
-The overlay contains no secrets. The command runs with the repository
-`.boukensha/.env` loaded into the environment.
+The overlay contains no secrets. The launcher resolves the selected mortal
+secret. The gateway reads only the named admin secret at one-shot child
+creation. Neither secret enters benchmark output.
 
 ## Cost safety
 
@@ -100,7 +108,6 @@ reset-verified J1 attempts per mode under an approved cumulative cap.
 | File | Responsibility |
 |---|---|
 | `benchmark/config.py` | temporary gateway settings overlay |
-| `benchmark/reset.py` | typed admin-socket reset client |
 | `benchmark/journeys.py` | journey orders and success predicates |
 | `benchmark/metrics.py` | agent and gateway measurements |
 | `benchmark/runner.py` | process lifecycle and attempt isolation |
@@ -123,7 +130,7 @@ reset-verified J1 attempts per mode under an approved cumulative cap.
 Offline:
 
 - dry run proves the gateway command and 25-tool `direct-full` surface
-- reset failure prevents agent launch
+- reset failure prevents the first model call
 - incomplete or unpriced runs never enter baseline aggregates
 - setup failures are reported outside the journey success denominator
 - multi-run aggregates include success rate and distribution statistics
