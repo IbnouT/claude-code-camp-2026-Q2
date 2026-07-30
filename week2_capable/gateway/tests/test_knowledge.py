@@ -236,6 +236,44 @@ def test_snapshot_reset_and_restore_append_history(tmp_path: Path) -> None:
         "retract",
         "assert",
     ]
+    assert store.snapshots() == [snapshot]
+    assert [
+        (item.operation, item.snapshot_id, item.assertions)
+        for item in store.recoveries()
+    ] == [
+        ("reset", snapshot.snapshot_id, 1),
+        ("restore", snapshot.snapshot_id, 1),
+    ]
+
+
+def test_read_contract_exposes_assertion_history_and_all_supports(
+    tmp_path: Path,
+) -> None:
+    store = KnowledgeStore(tmp_path / "knowledge.db", player_id="alpha")
+    first = store.assert_fact(
+        "room:r1",
+        "title",
+        "The Bakery",
+        layer="learned",
+        confidence="medium",
+        evidence=evidence("s1", 5),
+    )
+    store.assert_fact(
+        "room:r1",
+        "title",
+        "The Bakery",
+        layer="learned",
+        confidence="high",
+        evidence=evidence("s2", 9),
+    )
+
+    history = store.assertions(fact_id=first.fact_id)
+    assert [item.assertion_id for item in history] == [first.assertion_id]
+    assert history[0].latest_evidence.session_id == "s2"
+    assert [
+        (item.session_id, item.source_seq)
+        for item in store.evidence_for(first.assertion_id)
+    ] == [("s1", 5), ("s2", 9)]
 
 
 def test_snapshot_verification_detects_assertion_content_tampering(

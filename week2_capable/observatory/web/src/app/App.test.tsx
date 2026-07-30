@@ -41,10 +41,12 @@ const sessions = [
 ];
 
 let controlRequests: unknown[] = [];
+let recoveryRequests: unknown[] = [];
 
 describe("observatory product shell", () => {
   beforeEach(() => {
     controlRequests = [];
+    recoveryRequests = [];
     window.history.replaceState(null, "", "/?space=live");
     vi.stubGlobal("fetch", vi.fn(async (
       input: RequestInfo | URL,
@@ -92,6 +94,56 @@ describe("observatory product shell", () => {
             },
           },
         });
+      }
+      const knowledgeMatch = url.pathname.match(
+        /^\/api\/players\/(alpha|beta)\/knowledge$/,
+      );
+      if (knowledgeMatch && (!init?.method || init.method === "GET")) {
+        const knowledgePlayer = knowledgeMatch[1] ?? "alpha";
+        return jsonResponse({
+          version: 1,
+          player_id: knowledgePlayer,
+          state: "ready",
+          source: "per-player durable knowledge",
+          cdc_cursor: 1,
+          metrics: [{
+            id: "assertions",
+            label: "Assertions",
+            value: 1,
+            detail: "One retained assertion",
+          }],
+          assertions: [{
+            assertion_id: `${knowledgePlayer}-assertion`,
+            fact_id: "room:shared:title",
+            subject: "room:shared",
+            predicate: "title",
+            value: `${knowledgePlayer} Bakery`,
+            layer: "learned",
+            status: "active",
+            confidence: "high",
+            current: true,
+            conflict_group: null,
+            evidence: [{
+              session_id: `gateway-${knowledgePlayer}`,
+              source_seq: 1,
+              wire_digest: `wire-${knowledgePlayer}`,
+              parser_version: "rules-1",
+              method: "room-frame",
+              observed_at: 1,
+            }],
+          }],
+          changes: [],
+          snapshots: [],
+          recoveries: [],
+          capture_gaps: [],
+        });
+      }
+      if (
+        url.pathname === "/api/players/alpha/knowledge/recovery"
+        && init?.method === "POST"
+      ) {
+        recoveryRequests.push(JSON.parse(String(init.body)));
+        return jsonResponse({ ok: true, action: "reset" });
       }
       const selected = url.pathname.includes("session-beta") ? "beta" : "alpha";
       if (url.pathname.endsWith("/replay")) {
@@ -157,13 +209,19 @@ describe("observatory product shell", () => {
       .not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Direct the agent/ }))
       .not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Search knowledge" })).toBeVisible();
-    expect(screen.getByText(/Separate what the player learned/)).toBeVisible();
+    expect(
+      await screen.findByRole("button", { name: "Search knowledge" }),
+    ).toBeVisible();
+    expect(
+      screen.getByText(/Learned state, contradictions, and recovery history/),
+    ).toBeVisible();
 
     await user.click(screen.getByRole("button", { name: "Sessions" }));
-    expect(screen.getByRole("combobox", { name: "Session" })).toBeVisible();
+    expect(
+      await screen.findByRole("combobox", { name: "Session" }),
+    ).toBeVisible();
     expect(screen.getByRole("button", { name: "Load recorded evidence" }))
-      .toBeDisabled();
+      .toBeEnabled();
   });
 
   it("opens deterministic Ask from the scoped Live workspace action", async () => {
@@ -177,6 +235,32 @@ describe("observatory product shell", () => {
     ).toBeVisible();
     await user.keyboard("{Escape}");
     expect(screen.getByRole("button", { name: "Ask about this run" })).toHaveFocus();
+  });
+
+  it("confirms knowledge reset against the selected live sequence", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole("button", { name: "Knowledge" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Snapshot & reset" }),
+    );
+    const dialog = screen.getByRole("dialog", {
+      name: "Snapshot and reset knowledge?",
+    });
+    expect(within(dialog).getByText(/exact sequence/)).toHaveTextContent("2");
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: "Confirm snapshot and reset",
+      }),
+    );
+    await waitFor(() => expect(recoveryRequests).toHaveLength(1));
+    expect(recoveryRequests[0]).toMatchObject({
+      action: "reset",
+      session_id: "session-alpha",
+      expected_sequence: 2,
+      confirmed: true,
+      snapshot_id: null,
+    });
   });
 
   it("sends operator guidance only to the selected live session", async () => {
@@ -228,6 +312,39 @@ describe("observatory product shell", () => {
       .toHaveValue("session-beta");
     expect(screen.getByRole("button", { name: "Control unavailable" }))
       .toBeDisabled();
+  });
+
+  it("reopens a verified incident without polling live sources", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole("heading", { name: "Living world" });
+    await user.click(screen.getByRole("button", { name: "Sessions" }));
+    const payload = offlineIncidentPayload();
+    const file = new File([
+      JSON.stringify({
+        kind: "boukensha.observatory.incident",
+        version: 2,
+        digest: await digest(payload),
+        payload,
+      }),
+    ], "incident.json", { type: "application/json" });
+    const input = document.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+
+    await user.upload(input, file);
+
+    expect(
+      await screen.findByText("Offline · integrity-verified incident capsule"),
+    ).toBeVisible();
+    expect(screen.getByRole("combobox", { name: "Player" })).toHaveValue(
+      "offline-player",
+    );
+    expect(screen.queryByRole("button", { name: "Ask why" }))
+      .not.toBeInTheDocument();
+    const callsAfterOpen = vi.mocked(fetch).mock.calls.length;
+    await new Promise((resolve) => window.setTimeout(resolve, 2_100));
+    expect(vi.mocked(fetch).mock.calls).toHaveLength(callsAfterOpen);
   });
 });
 
@@ -337,5 +454,139 @@ function snapshotFor(player: string) {
       trace_id: `trace-${player}`,
     }],
     capture_gaps: player === "alpha" ? ["agent_events_incomplete"] : [],
+  };
+}
+
+async function digest(value: unknown): Promise<string> {
+  const buffer = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(JSON.stringify(value)),
+  );
+  return [...new Uint8Array(buffer)]
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function offlineIncidentPayload() {
+  return {
+    generated_at: "2026-07-30T12:00:00Z",
+    title: "Offline J2 incident",
+    player_id: "offline-player",
+    source_versions: { capsule: "2", repository: "test" },
+    investigation: {
+      version: 1,
+      source_kind: "experiment_sample",
+      correlation: "Portable recorded evidence.",
+      run: {
+        id: "offline-run",
+        label: "J2 · offline",
+        journey: "J2",
+        attempt: "offline",
+        success: false,
+        stop_reason: "completed",
+        iterations: 1,
+        cost_usd: 0.01,
+        result_mode: "full",
+      },
+      player_id: "offline-player",
+      agent_session_id: "agent-offline",
+      gateway_session_id: "gateway-offline",
+      objective: "Find the minotaur",
+      model: "recorded-model",
+      records: [{
+        id: "gateway:4",
+        parent_id: null,
+        source: "gateway",
+        form: "parsed",
+        kind: "observation",
+        label: "Observed Temple",
+        sequence: 4,
+        at: "2026-07-30T12:00:00Z",
+        trace_id: "trace-offline",
+        iteration: 1,
+        turn: 1,
+        room_id: "place:1",
+        duration_ms: 0,
+        cost_usd: 0,
+        tokens: 0,
+        status: "complete",
+        preview: "Temple",
+        fields: { title: "Temple" },
+        source_ref: "gateway event 4",
+        capture_gaps: [],
+      }],
+      diagnostics: [],
+      diagnostic_coverage: [],
+      lens: Object.fromEntries(
+        ["wire", "parsed", "rendered", "believed", "truth"].map((form) => [
+          form,
+          {
+            state: form === "parsed" ? "available" : "missing",
+            title: form,
+            text: form === "parsed" ? "Temple" : "Not retained",
+            citations: form === "parsed" ? ["gateway:4"] : [],
+          },
+        ]),
+      ),
+      world: {
+        nodes: [],
+        edges: [],
+        current_title: null,
+        current_confidence: "unknown",
+        candidates: [],
+        candidate_details: [],
+        duplicate_titles: [],
+        objective_beacons: [],
+        parse_miss_rate: 0,
+        parse_misses: [],
+        unknown_positions: 0,
+      },
+      cost: {
+        total_usd: 0,
+        response_total_usd: 0,
+        raw_response_total_usd: 0,
+        reconciliation_delta_usd: 0,
+        complete: false,
+        completeness_detail: "Complete through the selected prefix.",
+        fresh_input_tokens: 0,
+        cache_read_tokens: 0,
+        cache_write_tokens: 0,
+        output_tokens: 0,
+        points: [],
+      },
+      capture_gaps: ["offline capsule is limited to its selected prefix"],
+    },
+    knowledge: {
+      version: 1,
+      player_id: "offline-player",
+      state: "ready",
+      source: "per-player durable knowledge",
+      cdc_cursor: 0,
+      metrics: [],
+      assertions: [],
+      changes: [],
+      snapshots: [],
+      recoveries: [],
+      capture_gaps: [],
+    },
+    history: {
+      player_id: "offline-player",
+      total_runs: 1,
+      successful_runs: 0,
+      failed_runs: 1,
+      items: [],
+    },
+    selection: {
+      selected_record_id: "gateway:4",
+      diagnostic_id: null,
+      lens: "evidence",
+    },
+    annotations: [],
+    redaction: {
+      policy: "credentials and local paths removed at export",
+      replacements: 0,
+      local_paths_included: false,
+      credentials_included: false,
+    },
   };
 }

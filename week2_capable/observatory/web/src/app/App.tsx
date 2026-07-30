@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import type { Space } from "./shellTypes";
 import { shellFixture } from "./shellFixture";
 import { useCapabilities } from "./useCapabilities";
@@ -6,6 +12,10 @@ import { usePreferences } from "./usePreferences";
 import { useRuntimeCatalog } from "../data/useRuntimeCatalog";
 import { useRecordedSessions } from "../data/useRecordedSessions";
 import { useSessionStream } from "../data/useSessionStream";
+import {
+  readIncident,
+  type IncidentCapsule,
+} from "../data/incidents";
 import { CanonicalHeader } from "../components/shell/CanonicalHeader";
 import { AgentControlDialog } from "../components/shell/AgentControlDialog";
 import type {
@@ -14,9 +24,25 @@ import type {
 } from "../components/shell/AgentControlDialog";
 import { InvestigationShell } from "../components/shell/InvestigationShell";
 import { SearchDialog } from "../components/shell/SearchDialog";
-import { LiveCockpit } from "../components/live/LiveCockpit";
-import { SessionsWorkspace } from "../components/sessions/SessionsWorkspace";
-import { ExperimentsWorkspace } from "../components/experiments/ExperimentsWorkspace";
+
+const LiveCockpit = lazy(async () => ({
+  default: (await import("../components/live/LiveCockpit")).LiveCockpit,
+}));
+const SessionsWorkspace = lazy(async () => ({
+  default: (
+    await import("../components/sessions/SessionsWorkspace")
+  ).SessionsWorkspace,
+}));
+const ExperimentsWorkspace = lazy(async () => ({
+  default: (
+    await import("../components/experiments/ExperimentsWorkspace")
+  ).ExperimentsWorkspace,
+}));
+const KnowledgeWorkspace = lazy(async () => ({
+  default: (
+    await import("../components/knowledge/KnowledgeWorkspace")
+  ).KnowledgeWorkspace,
+}));
 
 function spaceFromUrl(): Space {
   const requested = new URL(window.location.href).searchParams.get("space");
@@ -30,7 +56,11 @@ function spaceFromUrl(): Space {
 export function App() {
   const capabilities = useCapabilities();
   const preferences = usePreferences();
-  const runtime = useRuntimeCatalog();
+  const [offlineCapsule, setOfflineCapsule] =
+    useState<IncidentCapsule | null>(null);
+  const [offlineError, setOfflineError] = useState<string | null>(null);
+  const online = offlineCapsule === null;
+  const runtime = useRuntimeCatalog(online);
   const [space, setSpace] = useState<Space>(spaceFromUrl);
   const [player, setPlayer] = useState(
     () => new URL(window.location.href).searchParams.get("player") ?? "",
@@ -45,7 +75,7 @@ export function App() {
   const [recordedRun, setRecordedRun] = useState(
     () => new URL(window.location.href).searchParams.get("run") ?? "",
   );
-  const recorded = useRecordedSessions(recordedRun);
+  const recorded = useRecordedSessions(recordedRun, online);
   const [searchOpen, setSearchOpen] = useState(false);
   const [controlOpen, setControlOpen] = useState(false);
   const liveSessionsForPlayer = runtime.catalog.sessions.filter(
@@ -54,7 +84,7 @@ export function App() {
   const selectedSession = runtime.catalog.sessions.find(
     (candidate) => candidate.id === liveSession,
   ) ?? null;
-  const live = useSessionStream(selectedSession);
+  const live = useSessionStream(online ? selectedSession : null);
   const playerOptions = useMemo(() => {
     const options = new Map(
       runtime.catalog.players.map((candidate) => [
@@ -75,8 +105,15 @@ export function App() {
         });
       }
     }
+    if (offlineCapsule && !options.has(offlineCapsule.payload.player_id)) {
+      options.set(offlineCapsule.payload.player_id, {
+        id: offlineCapsule.payload.player_id,
+        label: `${offlineCapsule.payload.player_id} · offline`,
+        detail: "Sanitized incident capsule",
+      });
+    }
     return [...options.values()];
-  }, [recorded.catalog, runtime.catalog.players]);
+  }, [offlineCapsule, recorded.catalog, runtime.catalog.players]);
   const availablePlayerOptions = playerOptions.length > 0
     ? playerOptions
     : [{
@@ -106,6 +143,16 @@ export function App() {
       label: `${candidate.success ? "✓" : "!"} ${candidate.journey} · ${candidate.result_mode} · ${candidate.iterations} turns`,
       detail: "Recorded experiment sample",
     }));
+  if (
+    offlineCapsule
+    && offlineCapsule.payload.player_id === player
+  ) {
+    recordedSessionOptions.unshift({
+      id: offlineCapsule.payload.investigation.run.id,
+      label: `Offline · ${offlineCapsule.payload.title}`,
+      detail: "Integrity-verified incident capsule",
+    });
+  }
   const sessionOptions = space === "sessions"
     ? (
       recordedSessionOptions.length > 0
@@ -117,7 +164,13 @@ export function App() {
         }]
     )
     : liveSessionOptions;
-  const headerSession = space === "sessions" ? recordedRun : liveSession;
+  const headerSession = space === "sessions"
+    ? (
+      offlineCapsule?.payload.player_id === player
+        ? offlineCapsule.payload.investigation.run.id
+        : recordedRun
+    )
+    : liveSession;
 
   useEffect(() => {
     if (playerOptions.length === 0) {
@@ -141,7 +194,10 @@ export function App() {
     const selectedPlayerExists = playerOptions.some(
       (candidate) => candidate.id === player,
     );
-    if (runtime.loading && !selectedPlayerExists) {
+    if (
+      (runtime.loading || recorded.loadingCatalog)
+      && !selectedPlayerExists
+    ) {
       return;
     }
     const nextPlayer = selectedPlayerExists
@@ -169,6 +225,7 @@ export function App() {
     liveSession,
     player,
     playerOptions,
+    recorded.loadingCatalog,
     runtime.catalog,
     runtime.loading,
     space,
@@ -226,6 +283,7 @@ export function App() {
         (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k"
         || event.key === "/"
       ) {
+        if (!online) return;
         event.preventDefault();
         setSearchOpen(true);
       }
@@ -235,7 +293,7 @@ export function App() {
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, []);
+  }, [online]);
 
   return (
     <div className="app-shell">
@@ -247,6 +305,9 @@ export function App() {
         sessions={sessionOptions}
         theme={preferences.theme}
         onPlayerChange={(nextPlayer) => {
+          if (offlineCapsule?.payload.player_id !== nextPlayer) {
+            setOfflineCapsule(null);
+          }
           setPlayer(nextPlayer);
           const nextSession = runtime.catalog.sessions.find(
             (candidate) => candidate.player_id === nextPlayer && candidate.live,
@@ -264,29 +325,95 @@ export function App() {
           );
           setRecordedRun(nextRecorded?.id ?? "");
         }}
-        onSessionChange={
-          space === "sessions" ? setRecordedRun : setLiveSession
-        }
+        onSessionChange={(sessionId) => {
+          if (space !== "sessions") {
+            setLiveSession(sessionId);
+            return;
+          }
+          if (
+            offlineCapsule
+            && sessionId === offlineCapsule.payload.investigation.run.id
+          ) return;
+          setOfflineCapsule(null);
+          setRecordedRun(sessionId);
+        }}
         onSpaceChange={setSpace}
         onThemeChange={preferences.setTheme}
+        onLoadEvidence={(file) => {
+          setOfflineError(null);
+          void readIncident(file)
+            .then((capsule) => {
+              setSearchOpen(false);
+              setControlOpen(false);
+              setOfflineCapsule(capsule);
+              setPlayer(capsule.payload.player_id);
+              setSpace("sessions");
+              const url = new URL(window.location.href);
+              url.searchParams.set("space", "sessions");
+              url.searchParams.set("player", capsule.payload.player_id);
+              url.searchParams.set(
+                "record",
+                capsule.payload.selection.selected_record_id,
+              );
+              url.searchParams.set("lens", capsule.payload.selection.lens);
+              window.history.pushState(null, "", url);
+              window.dispatchEvent(new PopStateEvent("popstate"));
+            })
+            .catch((error: unknown) => {
+              setOfflineError(
+                error instanceof Error
+                  ? error.message
+                  : "The incident capsule could not be opened.",
+              );
+            });
+        }}
       />
       <main className="app-main">
+        <Suspense fallback={<div className="workspace-empty">Opening workspace…</div>}>
         {space === "live" ? (
           <LiveCockpit
             capabilities={capabilities}
             live={live}
             session={selectedSession}
             onOpenControl={() => setControlOpen(true)}
-            onOpenSearch={() => setSearchOpen(true)}
+            onOpenSearch={() => {
+              if (online) setSearchOpen(true);
+            }}
           />
         ) : space === "sessions" ? (
           <SessionsWorkspace
-            investigation={recorded.investigation}
-            loading={
-              recorded.loadingCatalog || recorded.loadingInvestigation
+            investigation={
+              offlineCapsule?.payload.investigation
+              ?? recorded.investigation
             }
-            error={recorded.error}
-            onOpenSearch={() => setSearchOpen(true)}
+            loading={
+              offlineCapsule
+                ? false
+                : recorded.loadingCatalog || recorded.loadingInvestigation
+            }
+            error={offlineError ?? (offlineCapsule ? null : recorded.error)}
+            sourceState={offlineCapsule ? "offline" : "recorded"}
+            incident={{
+              annotations: offlineCapsule?.payload.annotations ?? [],
+              sourceVersions: offlineCapsule?.payload.source_versions ?? {},
+              redactionPolicy: (
+                offlineCapsule?.payload.redaction.policy
+                ?? null
+              ),
+              history: offlineCapsule?.payload.history ?? null,
+            }}
+            onOpenSearch={() => {
+              if (online) setSearchOpen(true);
+            }}
+            onOpenRun={(runId) => {
+              if (!online) return;
+              const run = recorded.catalog.find(
+                (candidate) => candidate.id === runId,
+              );
+              if (run) setPlayer(run.player_id);
+              setRecordedRun(runId);
+              setSpace("sessions");
+            }}
           />
         ) : space === "experiments" ? (
           <ExperimentsWorkspace
@@ -301,16 +428,52 @@ export function App() {
             }}
           />
         ) : (
-          <InvestigationShell
-            activeSpace={space}
-            capabilities={capabilities}
-            fixture={shellFixture}
-            onOpenControl={() => setControlOpen(true)}
+          <KnowledgeWorkspace
+            playerId={player}
+            recoverySession={(() => {
+              const candidate = (
+                selectedSession?.player_id === player
+                  ? selectedSession
+                  : liveSessionsForPlayer.find((item) => item.live)
+              );
+              return candidate
+                ? {
+                  id: candidate.id,
+                  latestSequence: candidate.latest_seq,
+                  available: (
+                    candidate.live
+                    && candidate.control_state === "running"
+                  ),
+                }
+                : null;
+            })()}
             onOpenSearch={() => setSearchOpen(true)}
+            onOpenEvidence={(sessionId, sequence) => {
+              const correlated = recorded.catalog.find(
+                (candidate) => (
+                  candidate.player_id === player
+                  && candidate.gateway_session_id === sessionId
+                ),
+              );
+              const url = new URL(window.location.href);
+              if (correlated) {
+                url.searchParams.set("space", "sessions");
+                url.searchParams.set("run", correlated.id);
+                url.searchParams.set("record", `gateway:${sequence}`);
+                url.searchParams.set("lens", "evidence");
+                setRecordedRun(correlated.id);
+                setSpace("sessions");
+                window.history.pushState(null, "", url);
+                return true;
+              } else {
+                return false;
+              }
+            }}
           />
         )}
+        </Suspense>
       </main>
-      <SearchDialog
+      {online ? <SearchDialog
         open={searchOpen}
         modelAvailable={capabilities.features.includes("copilot-model")}
         scope={{
@@ -403,7 +566,7 @@ export function App() {
           window.dispatchEvent(new PopStateEvent("popstate"));
           setSearchOpen(false);
         }}
-      />
+      /> : null}
       <AgentControlDialog
         open={controlOpen}
         selectedPlayer={player}

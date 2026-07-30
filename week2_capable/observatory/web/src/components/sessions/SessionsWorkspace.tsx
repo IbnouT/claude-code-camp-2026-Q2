@@ -26,6 +26,8 @@ import {
   Waypoints,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import "../../styles/sessions.css";
+import "../../styles/world.css";
 import type {
   RecordedSessionInvestigation,
   SessionDiagnostic,
@@ -33,18 +35,32 @@ import type {
   SessionEvidenceRecord,
   SessionsLens,
 } from "../../data/recordedSession";
+import type {
+  DiagnosticHistory,
+  InvestigatorAnnotation,
+} from "../../data/incidents";
+import { useDiagnosticHistory } from "../../data/useDiagnosticHistory";
 import {
   matchesSessionQuery,
   recordAncestry,
 } from "../../data/recordedSession";
 import { StateBadge } from "../system/StateBadge";
 import { WorldExplorer } from "../world/WorldExplorer";
+import { IncidentWorkflow } from "./IncidentWorkflow";
 
 type Props = {
   investigation: RecordedSessionInvestigation | null;
   loading: boolean;
   error: string | null;
+  sourceState: "recorded" | "offline";
+  incident: {
+    annotations: InvestigatorAnnotation[];
+    sourceVersions: Record<string, string>;
+    redactionPolicy: string | null;
+    history: DiagnosticHistory | null;
+  };
   onOpenSearch: () => void;
+  onOpenRun: (runId: string) => void;
 };
 
 const lenses: {
@@ -91,7 +107,10 @@ export function SessionsWorkspace({
   investigation,
   loading,
   error,
+  sourceState,
+  incident,
   onOpenSearch,
+  onOpenRun,
 }: Props) {
   const [lens, setLens] = useState<SessionsLens>(lensFromUrl);
   const [selectedRecordId, setSelectedRecordId] = useState(
@@ -104,6 +123,10 @@ export function SessionsWorkspace({
   const [replayStep, setReplayStep] = useState<ReplayStep>("turn");
   const [playing, setPlaying] = useState(false);
   const [savedViews, setSavedViews] = useState(defaultSavedViews);
+  const diagnosticHistory = useDiagnosticHistory(
+    investigation?.player_id ?? "",
+    sourceState === "recorded",
+  );
   const chronologicalRecords = useMemo(
     () => orderRecords(investigation?.records ?? []),
     [investigation],
@@ -249,6 +272,7 @@ export function SessionsWorkspace({
     <section className="sessions-workspace">
       <SessionHeader
         investigation={investigation}
+        sourceState={sourceState}
         onOpenSearch={onOpenSearch}
       />
       <div className="sessions-lensbar">
@@ -354,6 +378,21 @@ export function SessionsWorkspace({
           ))}
         </div>
       </div>
+      <IncidentWorkflow
+        runId={investigation.run.id}
+        selectedRecordId={selectedRecord?.id ?? null}
+        diagnosticId={
+          investigation.diagnostics.find(
+            (item) => item.at_record === selectedRecord?.id,
+          )?.id
+          ?? null
+        }
+        lens={lens}
+        mode={sourceState}
+        initialAnnotations={incident.annotations}
+        sourceVersions={incident.sourceVersions}
+        redactionPolicy={incident.redactionPolicy}
+      />
 
       {lens === "story" ? (
         <StoryLens
@@ -393,8 +432,11 @@ export function SessionsWorkspace({
       {lens === "diagnostics" ? (
         <DiagnosticsLens
           investigation={investigation}
+          history={incident.history ?? diagnosticHistory.history}
+          historyError={sourceState === "recorded" ? diagnosticHistory.error : null}
           selectedRecord={selectedRecord}
           onSelectRecord={selectRecord}
+          onOpenRun={onOpenRun}
         />
       ) : null}
     </section>
@@ -403,9 +445,11 @@ export function SessionsWorkspace({
 
 function SessionHeader({
   investigation,
+  sourceState,
   onOpenSearch,
 }: {
   investigation: RecordedSessionInvestigation;
+  sourceState: "recorded" | "offline";
   onOpenSearch: () => void;
 }) {
   return (
@@ -413,7 +457,9 @@ function SessionHeader({
       <div>
         <span className="evidence-relationship">
           <BookMarked size={13} aria-hidden="true" />
-          Recorded experiment sample
+          {sourceState === "offline"
+            ? "Offline · integrity-verified incident capsule"
+            : "Recorded experiment sample"}
         </span>
         <h1>
           {investigation.run.journey}
@@ -448,10 +494,12 @@ function SessionHeader({
               : "Complete"}
           </b>
         </span>
-        <button className="secondary-button" type="button" onClick={onOpenSearch}>
-          <MessageSquareText size={14} aria-hidden="true" />
-          Ask why
-        </button>
+        {sourceState === "recorded" ? (
+          <button className="secondary-button" type="button" onClick={onOpenSearch}>
+            <MessageSquareText size={14} aria-hidden="true" />
+            Ask why
+          </button>
+        ) : null}
       </div>
     </header>
   );
@@ -982,12 +1030,18 @@ function CostLens({
 
 function DiagnosticsLens({
   investigation,
+  history,
+  historyError,
   selectedRecord,
   onSelectRecord,
+  onOpenRun,
 }: {
   investigation: RecordedSessionInvestigation;
+  history: DiagnosticHistory;
+  historyError: string | null;
   selectedRecord: SessionEvidenceRecord | null;
   onSelectRecord: (record: SessionEvidenceRecord) => void;
+  onOpenRun: (runId: string) => void;
 }) {
   return (
     <div className="sessions-diagnostic-layout">
@@ -1025,6 +1079,42 @@ function DiagnosticsLens({
               .map((kind) => <span key={kind}>{kind.replaceAll("_", " ")}</span>)}
           </div>
         </details>
+        <section className="diagnostic-history">
+          <PanelTitle
+            eyebrow="This player across sessions"
+            title="Diagnostic history"
+            detail={`${history.total_runs} recorded sessions · ${history.failed_runs} unsuccessful`}
+          />
+          {history.items.map((item) => (
+            <article key={item.kind}>
+              <span>
+                <strong>{item.kind.replaceAll("_", " ")}</strong>
+                <small>
+                  {item.runs} sessions · {item.critical} critical · {
+                    item.warning
+                  } warning · {item.notice} notice
+                </small>
+              </span>
+              <div>
+                {item.run_ids.map((runId) => (
+                  <button
+                    key={runId}
+                    type="button"
+                    onClick={() => onOpenRun(runId)}
+                  >
+                    {runId}
+                  </button>
+                ))}
+              </div>
+            </article>
+          ))}
+          {history.items.length === 0 ? (
+            <p>
+              {historyError
+                ?? "No matching diagnostic is retained for this player."}
+            </p>
+          ) : null}
+        </section>
       </section>
       <EvidenceDrawer
         investigation={investigation}

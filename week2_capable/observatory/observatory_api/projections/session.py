@@ -95,6 +95,115 @@ def project_recorded_session(
     )
 
 
+def project_recorded_session_prefix(
+    bundle: RecordedSessionBundle,
+    selected_record_id: str,
+) -> RecordedSessionInvestigation:
+    """Project one exact chronological prefix without future world state."""
+
+    investigation = project_recorded_session(bundle)
+    ordered = sorted(investigation.records, key=_record_order)
+    selected_index = next(
+        (
+            index
+            for index, record in enumerate(ordered)
+            if record.id == selected_record_id
+        ),
+        None,
+    )
+    if selected_index is None:
+        raise ValueError("selected incident record is not retained")
+    records = tuple(ordered[: selected_index + 1])
+    retained = {record.id for record in records}
+    gateway_sequence = max(
+        (
+            record.sequence
+            for record in records
+            if record.source == "gateway"
+        ),
+        default=0,
+    )
+    world = project_world(
+        bundle.gateway_database,
+        through_sequence=gateway_sequence,
+        objective=investigation.objective,
+    )
+    points = tuple(
+        point
+        for point in investigation.cost.points
+        if point.record_id in retained
+    )
+    diagnostics = tuple(
+        item
+        for item in investigation.diagnostics
+        if item.at_record in retained and set(item.evidence) <= retained
+    )
+    gaps = investigation.capture_gaps
+    if len(records) < len(investigation.records):
+        gaps = (
+            *gaps,
+            "offline capsule is intentionally limited to its selected prefix",
+        )
+    return investigation.model_copy(
+        update={
+            "records": records,
+            "diagnostics": diagnostics,
+            "world": world,
+            "cost": _prefix_cost(investigation.cost, points),
+            "lens": _lens(
+                investigation.run,
+                records,
+                world.current_confidence,
+            ),
+            "capture_gaps": gaps,
+        }
+    )
+
+
+def _record_order(
+    record: SessionEvidenceRecord,
+) -> tuple[int, float, str, int, str]:
+    try:
+        stamp = datetime.fromisoformat(
+            record.at.replace("Z", "+00:00")
+        ).timestamp()
+    except ValueError:
+        return (1, 0.0, record.source, record.sequence, record.id)
+    return (0, stamp, record.source, record.sequence, record.id)
+
+
+def _prefix_cost(
+    ledger: SessionCostLedger,
+    points: tuple[SessionCostPoint, ...],
+) -> SessionCostLedger:
+    total = sum(point.cost_usd for point in points)
+    return ledger.model_copy(
+        update={
+            "total_usd": total,
+            "response_total_usd": total,
+            "raw_response_total_usd": sum(
+                point.raw_response_cost_usd for point in points
+            ),
+            "reconciliation_delta_usd": 0,
+            "complete": False,
+            "completeness_detail": (
+                "Cost is complete only through the selected offline prefix."
+            ),
+            "fresh_input_tokens": sum(
+                point.fresh_input_tokens for point in points
+            ),
+            "cache_read_tokens": sum(
+                point.cache_read_tokens for point in points
+            ),
+            "cache_write_tokens": sum(
+                point.cache_write_tokens for point in points
+            ),
+            "output_tokens": sum(point.output_tokens for point in points),
+            "points": points,
+        }
+    )
+
+
 def _summary(bundle: RecordedSessionBundle) -> RunSummary:
     record = bundle.record
     journey = str(record.get("journey_id", "unknown"))
@@ -803,6 +912,14 @@ def _lens(
     parsed = last("parsed")
     rendered = last("rendered")
     believed = last("believed")
+    truth = next(
+        (
+            record
+            for record in records
+            if record.id == "benchmark:outcome"
+        ),
+        None,
+    )
     return EvidenceLens(
         wire=_form("Retained wire evidence", wire),
         parsed=_form(
@@ -811,15 +928,23 @@ def _lens(
         ),
         rendered=_form("Latest model-facing evidence", rendered),
         believed=_form("Agent's latest retained account", believed),
-        truth=EvidenceForm(
-            state="available",
-            title="Verified experiment outcome",
-            text=(
-                "Objective satisfied."
-                if summary.success
-                else "Objective not satisfied by the verified predicate."
-            ),
-            citations=("benchmark:outcome",),
+        truth=(
+            EvidenceForm(
+                state="available",
+                title="Verified experiment outcome",
+                text=(
+                    "Objective satisfied."
+                    if summary.success
+                    else "Objective not satisfied by the verified predicate."
+                ),
+                citations=("benchmark:outcome",),
+            )
+            if truth is not None
+            else EvidenceForm(
+                state="missing",
+                title="Verified experiment outcome",
+                text="The selected prefix ends before outcome verification.",
+            )
         ),
     )
 

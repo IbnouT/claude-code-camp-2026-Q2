@@ -9,7 +9,7 @@ import os
 import secrets
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Mapping, Sequence
+from typing import Any, Awaitable, Callable, Literal, Mapping, Sequence
 
 from dotenv import dotenv_values
 from pydantic import BaseModel, ConfigDict, Field
@@ -28,18 +28,21 @@ class ControlRequest(BaseModel):
 
     protocol_version: int = 1
     request_id: str = Field(min_length=1, max_length=200)
-    action: str = "reset"
+    action: Literal["reset", "knowledge_restore"] = "reset"
     token: str = Field(min_length=16, max_length=200)
     expected_state: str = "running"
     session_id: str
     gateway_session_id: str
     player_id: str
     character: str
-    baseline_id: str
-    baseline_version: int = Field(ge=1)
+    baseline_id: str | None = None
+    baseline_version: int | None = Field(default=None, ge=1)
     expected_configuration_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
+    expected_sequence: int = Field(ge=0)
     nonce: str = Field(min_length=16, max_length=200)
     retry_of: str | None = None
+    snapshot_id: str | None = None
+    reason: str | None = Field(default=None, min_length=1, max_length=240)
 
 
 class ResetControlError(RuntimeError):
@@ -93,10 +96,13 @@ class ResetCoordinator:
         if request.protocol_version != 1 or request.action != "reset":
             raise ResetControlError("unsupported control request")
         self._validate_binding(request)
+        if request.baseline_id is None or request.baseline_version is None:
+            raise ResetControlError("reset baseline identity is required")
         selected = baseline(request.baseline_id, request.baseline_version)
         player = self._session()
         if player is None or not player.logged_in:
             raise ResetControlError("selected gateway session is not authenticated")
+        self._validate_sequence(player, request)
 
         retry = request.retry_of is not None
         if player.control_state == "quarantined":
@@ -237,6 +243,55 @@ class ResetCoordinator:
                 applied,
                 knowledge_snapshot=knowledge_snapshot,
             )
+
+    async def restore_knowledge(
+        self,
+        request: ControlRequest,
+    ) -> dict[str, Any]:
+        """Append a verified snapshot through the selected live authority."""
+
+        if request.protocol_version != 1 or request.action != "knowledge_restore":
+            raise ResetControlError("unsupported control request")
+        self._validate_binding(request)
+        player = self._session()
+        if player is None or not player.logged_in:
+            raise ResetControlError("selected gateway session is not authenticated")
+        if request.expected_state != player.control_state:
+            raise ResetControlError(
+                f"expected {request.expected_state!r}, found {player.control_state!r}"
+            )
+        self._validate_sequence(player, request)
+        if self.knowledge is None:
+            raise ResetControlError("selected session has no knowledge store")
+        if request.snapshot_id is None or request.reason is None:
+            raise ResetControlError("snapshot identity and reason are required")
+        if not self.knowledge.verify_snapshot(request.snapshot_id):
+            raise ResetControlError("knowledge snapshot is missing or invalid")
+
+        async with player.pause(timeout=self.pause_timeout):
+            restored = self.knowledge.restore(
+                request.snapshot_id,
+                reason=request.reason,
+            )
+            receipt = {
+                "ok": True,
+                "action": "knowledge_restore",
+                "request_id": request.request_id,
+                "session_id": request.session_id,
+                "gateway_session_id": request.gateway_session_id,
+                "player_id": request.player_id,
+                "snapshot_id": request.snapshot_id,
+                "reason": request.reason,
+                "assertions": restored,
+                "expected_sequence": request.expected_sequence,
+                "knowledge_change_seq": self.knowledge.last_change_seq(),
+            }
+            player.journal.append(
+                player.id,
+                "knowledge_restore_receipt",
+                receipt,
+            )
+            return receipt
 
     async def _verify_mortal(self, player: Session) -> ObservedState:
         await player.reset_command("save")
@@ -400,6 +455,14 @@ class ResetCoordinator:
             if self.manifest.get(name) != value:
                 raise ResetControlError(f"reset target mismatch for {name}")
 
+    @staticmethod
+    def _validate_sequence(player: Session, request: ControlRequest) -> None:
+        current = player.journal.last_seq(player.id)
+        if request.expected_sequence != current:
+            raise ResetControlError(
+                "selected session advanced, refresh before controlling it"
+            )
+
     def _project(self, state: str, **detail: Any) -> None:
         value = {"schema_version": 1, "state": state, **detail}
         temporary = self.state_path.with_suffix(".tmp")
@@ -458,7 +521,11 @@ class ResetControlServer:
             async with self._request_lock:
                 response = self._responses.get(request.request_id)
                 if response is None:
-                    response = await self.coordinator.reset(request)
+                    response = (
+                        await self.coordinator.reset(request)
+                        if request.action == "reset"
+                        else await self.coordinator.restore_knowledge(request)
+                    )
                     self._responses[request.request_id] = response
         except Exception as error:
             response = {

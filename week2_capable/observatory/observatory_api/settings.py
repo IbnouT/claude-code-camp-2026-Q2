@@ -19,7 +19,6 @@ class Settings:
     experiment_execution_enabled: bool = False
     experiment_max_spend_cap: float = 0
     experiment_state_root: Path | None = None
-    knowledge_db: Path | None = None
     world_root: Path | None = None
     copilot_model: str | None = None
     copilot_api_key: str | None = None
@@ -45,7 +44,6 @@ class Settings:
             experiment_execution_enabled=_experiment_execution_enabled(),
             experiment_max_spend_cap=_experiment_max_spend_cap(),
             experiment_state_root=_experiment_state_root(),
-            knowledge_db=_optional_path("OBSERVATORY_KNOWLEDGE_DB"),
             world_root=_world_root(),
             copilot_model=_optional_string(
                 "OBSERVATORY_COPILOT_MODEL",

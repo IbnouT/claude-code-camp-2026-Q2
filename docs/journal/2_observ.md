@@ -107,6 +107,12 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
   through planning, optional translation, execution, and citation navigation.
   Validating only the first planner leaves a translated query able to cross
   the very boundary the interface promises.
+- We ended up with two plausible sources of what a player knows, the cumulative
+  per-player database and a projection recomputed from a single run, and they
+  disagree by construction since a run only sees itself. The fix was rank, not
+  merge: the database is the one authoritative source and the projection is
+  demoted to a labelled per-session lens, so a reader cannot mistake one for
+  the other.
 
 ## Technical Conclusions
 

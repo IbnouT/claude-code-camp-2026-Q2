@@ -12,6 +12,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import "../../styles/experiments.css";
 import type {
   ComparisonCohort,
   ComparisonMode,

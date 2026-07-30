@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-const runId = "recorded-j2";
+export const runId = "recorded-j2";
 
 const records = [
   evidence("agent:1", null, "agent", "parsed", "session_start", 1, "Session start"),
@@ -62,7 +62,7 @@ const records = [
   },
 ];
 
-const investigation = {
+export const investigation = {
   version: 1,
   source_kind: "experiment_sample",
   correlation: "This recorded session is linked by its attempt ledger.",
@@ -235,6 +235,7 @@ export async function mockRecorded(page: Page) {
           id: runId,
           source_kind: "experiment_sample",
           player_id: "poucet-recorded",
+          gateway_session_id: "gateway-j2",
           label: "J2 · full · a1",
           journey: "J2",
           attempt: "a1",
@@ -252,6 +253,27 @@ export async function mockRecorded(page: Page) {
       status: 200,
       contentType: "application/json",
       body: JSON.stringify(investigation),
+    });
+  });
+  await page.route("**/api/diagnostic-history?player=*", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        player_id: "poucet-recorded",
+        total_runs: 1,
+        successful_runs: 0,
+        failed_runs: 1,
+        items: [{
+          kind: "false_completion",
+          runs: 1,
+          critical: 1,
+          warning: 0,
+          notice: 0,
+          latest_run: investigation.run.label,
+          run_ids: [runId],
+        }],
+      }),
     });
   });
   await page.route("**/api/ask", async (route) => {

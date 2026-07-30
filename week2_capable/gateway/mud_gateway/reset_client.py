@@ -6,6 +6,7 @@ import argparse
 import json
 import re
 import secrets
+import sqlite3
 import socket
 import sys
 from dataclasses import dataclass
@@ -122,9 +123,49 @@ def request_reset(
     session_dir: Path,
     *,
     retry_of: str | None = None,
+    expected_sequence: int | None = None,
     timeout: float = 45.0,
 ) -> dict[str, Any]:
     """Request a reset using only the selected session's immutable authority."""
+    return _request_control(
+        session_dir,
+        action="reset",
+        timeout=timeout,
+        retry_of=retry_of,
+        expected_sequence=expected_sequence,
+    )
+
+
+def request_knowledge_restore(
+    session_dir: Path,
+    *,
+    snapshot_id: str,
+    reason: str,
+    expected_sequence: int,
+    timeout: float = 45.0,
+) -> dict[str, Any]:
+    """Restore one verified snapshot through its authenticated live session."""
+
+    return _request_control(
+        session_dir,
+        action="knowledge_restore",
+        timeout=timeout,
+        snapshot_id=snapshot_id,
+        reason=reason,
+        expected_sequence=expected_sequence,
+    )
+
+
+def _request_control(
+    session_dir: Path,
+    *,
+    action: str,
+    timeout: float,
+    retry_of: str | None = None,
+    snapshot_id: str | None = None,
+    reason: str | None = None,
+    expected_sequence: int | None = None,
+) -> dict[str, Any]:
     directory = session_dir.expanduser().resolve()
     manifest = _object(directory / "session.json")
     token = (directory / "control.token").read_text(encoding="utf-8").strip()
@@ -132,7 +173,7 @@ def request_reset(
     request = {
         "protocol_version": 1,
         "request_id": secrets.token_hex(16),
-        "action": "reset",
+        "action": action,
         "token": token,
         "expected_state": "running",
         "session_id": manifest["session_id"],
@@ -142,8 +183,15 @@ def request_reset(
         "baseline_id": LEVEL1_TEMPLE.id,
         "baseline_version": LEVEL1_TEMPLE.version,
         "expected_configuration_digest": manifest["configuration_digest"],
+        "expected_sequence": (
+            _latest_sequence(directory / "gateway.db", manifest["gateway_session_id"])
+            if expected_sequence is None
+            else expected_sequence
+        ),
         "nonce": secrets.token_hex(16),
         "retry_of": retry_of,
+        "snapshot_id": snapshot_id,
+        "reason": reason,
     }
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
         client.settimeout(timeout)
@@ -162,6 +210,23 @@ def request_reset(
     if not isinstance(response, dict):
         raise ResetClientError("control receipt must be an object")
     return response
+
+
+def _latest_sequence(path: Path, session_id: object) -> int:
+    try:
+        with sqlite3.connect(
+            f"file:{path.resolve()}?mode=ro",
+            uri=True,
+        ) as database:
+            row = database.execute(
+                "SELECT COALESCE(MAX(seq), 0) FROM events WHERE session = ?",
+                (str(session_id),),
+            ).fetchone()
+    except sqlite3.Error as error:
+        raise ResetClientError(
+            "selected session sequence is unavailable"
+        ) from error
+    return int(row[0]) if row is not None else 0
 
 
 def _object(path: Path) -> dict[str, Any]:

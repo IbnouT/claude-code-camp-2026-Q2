@@ -18,6 +18,7 @@ export type RecordedSessionsState = {
 
 export function useRecordedSessions(
   selectedRun: string,
+  enabled = true,
 ): RecordedSessionsState {
   const [catalog, setCatalog] = useState<RecordedSessionCatalogItem[]>([]);
   const [investigation, setInvestigation] =
@@ -27,6 +28,10 @@ export function useRecordedSessions(
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!enabled) {
+      setLoadingCatalog(false);
+      return;
+    }
     const abort = new AbortController();
     let timer = 0;
     setLoadingCatalog(true);
@@ -58,11 +63,12 @@ export function useRecordedSessions(
       abort.abort();
       window.clearTimeout(timer);
     };
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
-    if (!selectedRun) {
+    if (!enabled || !selectedRun) {
       setInvestigation(null);
+      setLoadingInvestigation(false);
       return;
     }
     const abort = new AbortController();
@@ -91,7 +97,7 @@ export function useRecordedSessions(
         if (!abort.signal.aborted) setLoadingInvestigation(false);
       });
     return () => abort.abort();
-  }, [selectedRun]);
+  }, [enabled, selectedRun]);
 
   return useMemo(() => ({
     catalog,

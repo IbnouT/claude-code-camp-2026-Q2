@@ -76,11 +76,7 @@ async def discover(
             "Benchmark evidence",
             settings.benchmark_root,
         ),
-        _path_source(
-            "knowledge",
-            "Knowledge store",
-            settings.knowledge_db,
-        ),
+        _knowledge_source(settings.runtime_root),
         _path_source(
             "world",
             "Observer world atlas",
@@ -139,4 +135,36 @@ def _path_source(
         label=label,
         state="ready",
         detail="Configured source is readable",
+    )
+
+
+def _knowledge_source(runtime_root: Path | None) -> SourceStatus:
+    if runtime_root is None:
+        return SourceStatus(
+            id="knowledge",
+            label="Knowledge store",
+            state="disabled",
+            detail="BOUKENSHA_DIR is not configured",
+        )
+    profiles = runtime_root / "profiles"
+    if not profiles.is_dir():
+        return SourceStatus(
+            id="knowledge",
+            label="Knowledge store",
+            state="unavailable",
+            detail="No player profiles are retained",
+        )
+    stores = tuple(profiles.glob("*/knowledge.db"))
+    if not stores:
+        return SourceStatus(
+            id="knowledge",
+            label="Knowledge store",
+            state="unavailable",
+            detail="No player knowledge store is retained yet",
+        )
+    return SourceStatus(
+        id="knowledge",
+        label="Knowledge store",
+        state="ready",
+        detail=f"{len(stores)} per-player knowledge stores are readable",
     )

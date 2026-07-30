@@ -8,7 +8,11 @@ import sqlite3
 import httpx
 
 from observatory_api.app import create_app
-from observatory_api.projections.session import _objective, project_recorded_session
+from observatory_api.projections.session import (
+    _objective,
+    project_recorded_session,
+    project_recorded_session_prefix,
+)
 from observatory_api.settings import Settings
 from observatory_api.sources.recorded_session import RecordedSessionSource
 
@@ -202,6 +206,22 @@ def test_recorded_session_projection_is_correlated_navigable_and_sanitized(
         "context_churn",
     } <= findings
     assert all(item.evidence for item in result.diagnostics)
+
+
+def test_incident_prefix_does_not_project_future_world_or_truth(tmp_path):
+    source = RecordedSessionSource(_fixture(tmp_path))
+    bundle = source.load(source.catalog()[0].id)
+    assert bundle is not None
+
+    result = project_recorded_session_prefix(bundle, "gateway:4")
+
+    assert result.records[-1].id == "gateway:4"
+    assert all(node.last_seq <= 4 for node in result.world.nodes)
+    assert result.world.nodes == ()
+    assert result.world.current_title is None
+    assert result.lens.truth.state == "missing"
+    assert result.cost.total_usd == 0
+    assert not result.diagnostics
 
 
 def test_prompt_evidence_supersedes_a_generic_agent_role():

@@ -7,6 +7,7 @@ from pathlib import Path
 
 import httpx
 from mud_gateway.journal import Event
+from mud_gateway.knowledge import EvidenceRef, KnowledgeStore
 
 from observatory_api.app import create_app
 from observatory_api.incidents import canonical_payload
@@ -453,6 +454,7 @@ async def test_j2_false_completion_links_claim_to_verified_outcome(tmp_path):
     attempt.mkdir(parents=True)
     (ledger / "attempts.jsonl").write_text(
         '{"attempt_id":"a1","journey_id":"J2","status":"complete",'
+        '"profile_id":"poucet",'
         '"success":false,"stop_reason":"completed","iterations":90,'
         '"cost_usd":0.21,"result_mode":"full","parse_misses":2,'
         '"wire_sequences":[1,2],"final_state":{"position":{'
@@ -571,6 +573,7 @@ async def test_incident_capsule_is_sanitized_integrity_sealed_and_portable(
     attempt.mkdir(parents=True)
     (ledger / "attempts.jsonl").write_text(
         '{"attempt_id":"a1","journey_id":"J2","status":"complete",'
+        '"profile_id":"poucet",'
         '"success":false,"stop_reason":"completed","iterations":2,'
         '"cost_usd":0.02,"result_mode":"full","parse_misses":1,'
         '"final_state":{"position":{"title":"Crossroads",'
@@ -581,9 +584,30 @@ async def test_incident_capsule_is_sanitized_integrity_sealed_and_portable(
         '"cost_usd":0.01}\n'
         '{"phase":"turn_end","at":"now","cost_usd":0.02}\n'
     )
+    runtime_root = tmp_path / ".boukensha"
+    knowledge_path = runtime_root / "profiles" / "poucet" / "knowledge.db"
+    knowledge_path.parent.mkdir(parents=True)
+    knowledge_store = KnowledgeStore(knowledge_path, player_id="poucet")
+    knowledge_store.assert_fact(
+        "player:poucet",
+        "private.note",
+        "See /Users/reviewer/private/knowledge.txt token=knowledge-secret",
+        layer="learned",
+        confidence="high",
+        evidence=EvidenceRef(
+            session_id="session-private",
+            source_seq=1,
+            wire_digest="wire-private-1",
+            parser_version="rules-1",
+            method="test-rule",
+            observed_at=1.0,
+        ),
+    )
+    knowledge_store.close()
     app = create_app(
         Settings(
             benchmark_root=benchmark_root,
+            runtime_root=runtime_root,
             web_dist=tmp_path,
             revision="abc123",
         )
@@ -595,17 +619,21 @@ async def test_incident_capsule_is_sanitized_integrity_sealed_and_portable(
     ) as client:
         runs = (await client.get("/api/runs")).json()["runs"]
         run_id = runs[0]["id"]
-        knowledge = await client.get(f"/api/runs/{run_id}/knowledge")
+        knowledge = await client.get(
+            f"/api/runs/{run_id}/knowledge-projection"
+        )
         history = await client.get("/api/diagnostic-history")
         exported = await client.post(
             "/api/incidents/export",
             json={
                 "run_id": run_id,
-                "selected_sequence": 2,
+                "selected_record_id": "agent:2",
                 "diagnostic_id": "false-completion",
+                "lens": "diagnostics",
                 "annotations": [{
                     "id": "note-1",
-                    "at": 2,
+                    "target_id": "agent:2",
+                    "bookmark": True,
                     "text": (
                         "Check /Users/reviewer/private/run.json "
                         "token=private-value"
@@ -629,13 +657,17 @@ async def test_incident_capsule_is_sanitized_integrity_sealed_and_portable(
     )
     assert "/Users/" not in exported.text
     assert "private-value" not in exported.text
+    assert "knowledge-secret" not in exported.text
     capsule = IncidentCapsule.model_validate_json(exported.text)
     assert capsule.payload.investigation.run.id == run_id
-    assert capsule.payload.selection.selected_sequence == 2
+    assert capsule.version == 2
+    assert capsule.payload.player_id == "poucet"
+    assert capsule.payload.selection.selected_record_id == "agent:2"
+    assert capsule.payload.selection.lens == "diagnostics"
     assert capsule.payload.annotations[0].text.count("[REDACTED]") == 1
     assert "[LOCAL_PATH]" in capsule.payload.annotations[0].text
     assert capsule.payload.source_versions["repository"] == "abc123"
-    assert capsule.payload.redaction.replacements == 1
+    assert capsule.payload.redaction.replacements >= 2
     assert capsule.digest == hashlib.sha256(
         canonical_payload(capsule.payload)
     ).hexdigest()

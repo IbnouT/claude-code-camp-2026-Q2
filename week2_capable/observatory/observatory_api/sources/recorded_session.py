@@ -64,6 +64,9 @@ class RecordedSessionSource:
                         id=stable_run_id(ledger.parent.name, attempt),
                         source_kind="experiment_sample",
                         player_id=_player_id(record.get("profile_id")),
+                        gateway_session_id=_gateway_session_id(
+                            ledger.parent / "attempts" / attempt / "gateway.db"
+                        ),
                         label=f"{journey} · {mode} · {attempt}",
                         journey=journey,
                         attempt=attempt,
@@ -169,6 +172,22 @@ def _gateway_rows(path: Path) -> tuple[GatewayEvidenceRow, ...]:
             )
         )
     return tuple(result)
+
+
+def _gateway_session_id(path: Path) -> str | None:
+    if not path.is_file():
+        return None
+    try:
+        with sqlite3.connect(
+            f"file:{path.resolve()}?mode=ro",
+            uri=True,
+        ) as connection:
+            row = connection.execute(
+                "SELECT session FROM events ORDER BY seq LIMIT 1"
+            ).fetchone()
+    except sqlite3.DatabaseError:
+        return None
+    return str(row[0]) if row is not None else None
 
 
 def _inside(path: Path, root: Path) -> bool:

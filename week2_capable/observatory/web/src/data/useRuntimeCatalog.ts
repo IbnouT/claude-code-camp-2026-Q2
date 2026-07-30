@@ -16,7 +16,7 @@ export type RuntimeCatalogState = {
   error: string | null;
 };
 
-export function useRuntimeCatalog(): RuntimeCatalogState {
+export function useRuntimeCatalog(enabled = true): RuntimeCatalogState {
   const [state, setState] = useState<RuntimeCatalogState>({
     catalog: EMPTY,
     loading: true,
@@ -24,6 +24,10 @@ export function useRuntimeCatalog(): RuntimeCatalogState {
   });
 
   useEffect(() => {
+    if (!enabled) {
+      setState((current) => ({ ...current, loading: false }));
+      return;
+    }
     const abort = new AbortController();
     let timer = 0;
 
@@ -58,7 +62,7 @@ export function useRuntimeCatalog(): RuntimeCatalogState {
       abort.abort();
       window.clearTimeout(timer);
     };
-  }, []);
+  }, [enabled]);
 
   return state;
 }

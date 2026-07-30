@@ -9,6 +9,7 @@ import {
   Telescope,
   Users,
 } from "lucide-react";
+import { useRef } from "react";
 import type {
   SelectorOption,
   Space,
@@ -26,6 +27,7 @@ type Props = {
   onSessionChange: (session: string) => void;
   onSpaceChange: (space: Space) => void;
   onThemeChange: (theme: Theme) => void;
+  onLoadEvidence: (file: File) => void;
 };
 
 const spaces: {
@@ -50,7 +52,9 @@ export function CanonicalHeader({
   onSessionChange,
   onSpaceChange,
   onThemeChange,
+  onLoadEvidence,
 }: Props) {
+  const evidenceInput = useRef<HTMLInputElement>(null);
   const sessionApplies = activeSpace === "live" || activeSpace === "sessions";
   const loadApplies = activeSpace === "sessions";
 
@@ -119,16 +123,30 @@ export function CanonicalHeader({
         ) : null}
 
         {loadApplies ? (
-          <button
-            aria-label="Load recorded evidence"
-            className="header-action"
-            disabled
-            title="Offline evidence loading arrives with the Sessions workflow"
-            type="button"
-          >
-            <Download size={14} aria-hidden="true" />
-            <span>Load…</span>
-          </button>
+          <>
+            <input
+              accept=".json,application/json,application/vnd.boukensha.incident+json"
+              aria-label="Incident capsule file"
+              className="sr-only"
+              ref={evidenceInput}
+              type="file"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) onLoadEvidence(file);
+                event.target.value = "";
+              }}
+            />
+            <button
+              aria-label="Load recorded evidence"
+              className="header-action"
+              title="Open a sanitized incident capsule without live services"
+              type="button"
+              onClick={() => evidenceInput.current?.click()}
+            >
+              <Download size={14} aria-hidden="true" />
+              <span>Load…</span>
+            </button>
+          </>
         ) : null}
 
         <button

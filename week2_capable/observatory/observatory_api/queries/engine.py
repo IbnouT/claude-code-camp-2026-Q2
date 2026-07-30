@@ -11,9 +11,11 @@ from ..contracts import (
 )
 from ..execution import ExperimentExecutor
 from ..sources.benchmark import BenchmarkSource
+from ..sources.knowledge import KnowledgeSource
 from ..sources.recorded_session import RecordedSessionSource
 from ..sources.runtime import RuntimeSource
 from . import experiments as experiment_queries
+from . import knowledge as knowledge_queries
 from . import live as live_queries
 from . import recorded as recorded_queries
 from .common import missing
@@ -25,6 +27,7 @@ def answer(
     recorded: RecordedSessionSource | None = None,
     runtime: RuntimeSource | None = None,
     experiments: ExperimentExecutor | None = None,
+    knowledge: KnowledgeSource | None = None,
 ) -> AskResponse:
     """Plan and execute a supported question without arbitrary data access."""
 
@@ -60,6 +63,7 @@ def answer(
         recorded,
         runtime,
         experiments,
+        knowledge,
         query=query,
     )
 
@@ -122,6 +126,7 @@ def answer_operation(
     recorded: RecordedSessionSource | None = None,
     runtime: RuntimeSource | None = None,
     experiments: ExperimentExecutor | None = None,
+    knowledge: KnowledgeSource | None = None,
     *,
     query: ObservatoryQuery | None = None,
 ) -> AskResponse:
@@ -179,15 +184,7 @@ def answer_operation(
                 selected,
             )
     else:
-        result = missing(
-            request,
-            QueryStep(
-                operation="search_knowledge",
-                source="knowledge",
-                detail="Search only the selected player's learned state.",
-            ),
-            "configured per-player knowledge source",
-        )
+        result = knowledge_queries.search(request, knowledge, selected)
     return _grounded(result).model_copy(update={"query": selected})
 
 

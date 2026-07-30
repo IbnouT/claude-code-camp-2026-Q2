@@ -2,6 +2,7 @@ export type RecordedSessionCatalogItem = {
   id: string;
   source_kind: "experiment_sample";
   player_id: string;
+  gateway_session_id: string | null;
   label: string;
   journey: string;
   attempt: string;

@@ -31,12 +31,16 @@ from .contracts import (
     ObservatoryQuery,
 )
 from .incidents import build_capsule
+from .knowledge_contracts import KnowledgeRecoveryRequest
 from .experiments import fork_one_variable, sample_queue, validate_definition
 from .execution import ExperimentExecutor, ExperimentRequestConflict
 from .projections.history import diagnostic_history
 from .projections.knowledge import project_knowledge
 from .projections.live import project_live
-from .projections.session import project_recorded_session
+from .projections.session import (
+    project_recorded_session,
+    project_recorded_session_prefix,
+)
 from .queries import answer
 from .queries.model import ModelTranslator
 from .settings import Settings
@@ -44,6 +48,7 @@ from .sources.benchmark import BenchmarkSource
 from .sources.atlas import AtlasSource
 from .sources.comparison import rendering_comparison
 from .sources.gateway import GatewaySource
+from .sources.knowledge import KnowledgeSource, KnowledgeSourceError
 from .sources.runtime import RuntimeSource, RuntimeSourceError
 from .sources.recorded_session import RecordedSessionSource
 
@@ -63,6 +68,11 @@ def create_app(
         None
         if active.runtime_root is None
         else RuntimeSource(active.runtime_root)
+    )
+    knowledge_source = (
+        None
+        if active.runtime_root is None
+        else KnowledgeSource(active.runtime_root)
     )
     benchmark = (
         BenchmarkSource(active.benchmark_root)
@@ -328,7 +338,7 @@ def create_app(
             return JSONResponse({"error": "not_found"}, status_code=404)
         return JSONResponse(result.model_dump(mode="json"))
 
-    async def knowledge(request: Request) -> JSONResponse:
+    async def run_knowledge_projection(request: Request) -> JSONResponse:
         if benchmark is None:
             return JSONResponse(
                 {
@@ -343,8 +353,79 @@ def create_app(
         projection = project_knowledge(result)
         return JSONResponse(projection.model_dump(mode="json"))
 
-    async def history(_request: Request) -> JSONResponse:
-        if benchmark is None:
+    async def player_knowledge(request: Request) -> JSONResponse:
+        if knowledge_source is None:
+            return JSONResponse(
+                {
+                    "error": "source_disabled",
+                    "detail": "BOUKENSHA_DIR is not configured",
+                },
+                status_code=503,
+            )
+        after_value = request.query_params.get("after", "0")
+        try:
+            after = int(after_value)
+        except ValueError:
+            return JSONResponse(
+                {"error": "invalid_cursor", "detail": "after must be an integer"},
+                status_code=422,
+            )
+        if after < 0:
+            return JSONResponse(
+                {
+                    "error": "invalid_cursor",
+                    "detail": "after must not be negative",
+                },
+                status_code=422,
+            )
+        try:
+            result = knowledge_source.read(
+                request.path_params["player_id"],
+                after=after,
+            )
+        except KnowledgeSourceError as error:
+            return JSONResponse(
+                {"error": "knowledge_unavailable", "detail": str(error)},
+                status_code=422,
+            )
+        return JSONResponse(result.model_dump(mode="json"))
+
+    async def recover_player_knowledge(request: Request) -> JSONResponse:
+        if runtime is None:
+            return JSONResponse(
+                {
+                    "error": "source_disabled",
+                    "detail": "BOUKENSHA_DIR is not configured",
+                },
+                status_code=503,
+            )
+        try:
+            payload = KnowledgeRecoveryRequest.model_validate(
+                await request.json()
+            )
+            receipt = await asyncio.to_thread(
+                runtime.recover_knowledge,
+                payload.session_id,
+                player_id=request.path_params["player_id"],
+                action=payload.action,
+                expected_sequence=payload.expected_sequence,
+                snapshot_id=payload.snapshot_id,
+                reason=payload.reason,
+            )
+        except (ValidationError, ValueError) as error:
+            return JSONResponse(
+                {"error": "invalid_recovery", "detail": str(error)},
+                status_code=422,
+            )
+        except RuntimeSourceError as error:
+            return JSONResponse(
+                {"error": "recovery_rejected", "detail": str(error)},
+                status_code=409,
+            )
+        return JSONResponse(receipt)
+
+    async def history(request: Request) -> JSONResponse:
+        if benchmark is None or recorded_sessions is None:
             return JSONResponse(
                 {
                     "error": "source_disabled",
@@ -352,11 +433,19 @@ def create_app(
                 },
                 status_code=503,
             )
-        result = diagnostic_history(benchmark)
+        result = diagnostic_history(
+            benchmark,
+            recorded=recorded_sessions,
+            player_id=request.query_params.get("player"),
+        )
         return JSONResponse(result.model_dump(mode="json"))
 
     async def export_incident(request: Request) -> Response:
-        if benchmark is None:
+        if (
+            benchmark is None
+            or recorded_sessions is None
+            or knowledge_source is None
+        ):
             return JSONResponse(
                 {
                     "error": "source_disabled",
@@ -371,16 +460,36 @@ def create_app(
                 {"error": "invalid_incident", "detail": str(error)},
                 status_code=422,
             )
-        result = benchmark.investigation(payload.run_id)
-        if result is None:
+        bundle = recorded_sessions.load(payload.run_id)
+        if bundle is None:
             return JSONResponse({"error": "not_found"}, status_code=404)
-        capsule = build_capsule(
-            payload,
-            result,
-            project_knowledge(result),
-            diagnostic_history(benchmark),
-            active.revision,
-        )
+        try:
+            result = project_recorded_session_prefix(
+                bundle,
+                payload.selected_record_id,
+            )
+        except ValueError as error:
+            return JSONResponse(
+                {"error": "invalid_incident", "detail": str(error)},
+                status_code=422,
+            )
+        try:
+            capsule = build_capsule(
+                payload,
+                result,
+                knowledge_source.read(result.player_id),
+                diagnostic_history(
+                    benchmark,
+                    recorded=recorded_sessions,
+                    player_id=result.player_id,
+                ),
+                active.revision,
+            )
+        except (KnowledgeSourceError, ValueError) as error:
+            return JSONResponse(
+                {"error": "invalid_incident", "detail": str(error)},
+                status_code=422,
+            )
         safe_name = "".join(
             character
             for character in result.run.journey.casefold()
@@ -702,6 +811,7 @@ def create_app(
             recorded_sessions,
             runtime,
             experiment_executor,
+            knowledge_source,
         )
         if (
             result.tier == "model_disabled"
@@ -730,6 +840,7 @@ def create_app(
                         recorded_sessions,
                         runtime,
                         experiment_executor,
+                        knowledge_source,
                     )
                     model_spend += translation.cost_usd
                     result = translated.model_copy(
@@ -837,7 +948,19 @@ def create_app(
                 recorded_session,
             ),
             Route("/api/runs/{run_id:str}/investigation", investigation),
-            Route("/api/runs/{run_id:str}/knowledge", knowledge),
+            Route(
+                "/api/runs/{run_id:str}/knowledge-projection",
+                run_knowledge_projection,
+            ),
+            Route(
+                "/api/players/{player_id:str}/knowledge",
+                player_knowledge,
+            ),
+            Route(
+                "/api/players/{player_id:str}/knowledge/recovery",
+                recover_player_knowledge,
+                methods=["POST"],
+            ),
             Route("/api/diagnostic-history", history),
             Route("/api/incidents/export", export_incident, methods=["POST"]),
             Route("/api/comparisons", comparisons),

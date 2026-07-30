@@ -11,6 +11,7 @@ flowchart LR
     G["Gateway replay and SSE"] --> A
     E["Agent events"] --> A
     B["Recorded experiment samples"] --> A
+    K["Per-player knowledge stores"] --> A
     A --> D["One deterministic projector"]
     D --> W["Selected evidence prefix"]
     W --> L["Live and Sessions"]
@@ -41,6 +42,7 @@ Live is connected to registered runtime evidence:
 - Truth and unavailable sources remain visibly missing or incomplete.
 - Player switching replaces every session-bound evidence projection.
 - Desktop and narrow layouts retain the same information and actions.
+- Each primary workspace loads as its own bounded JavaScript and CSS chunk.
 - Keyboard focus returns to the invoking control after dialogs close.
 - Forced colors, reduced motion, and 200 percent layout remain operable.
 
@@ -78,10 +80,35 @@ Experiments turns retained cohorts into a controlled comparison:
 - Confirmed jobs persist stable sample identities, stop and resume safely, and expose retained samples through Sessions.
 - An unconfirmed request is rejected before execution policy is evaluated.
 
+Knowledge makes one player's cumulative memory inspectable:
+
+- Overview, Map, Entities, Progression, Snapshots, and History share one player.
+- Learned state, observer truth, and their Diff remain separate layers.
+- Dense maps aggregate by zone before rendering at most 120 room identities.
+- Entities preserve distinct identities and mobile or respawning sightings.
+- Progression groups vitals, equipment, conditions, milestones, and objectives.
+- Every assertion opens its history, contradictions, confidence, and supports.
+- Every support exposes its gateway session, sequence, parser, method, and wire digest.
+- Source pivots open Sessions only when the exact gateway correlation is retained.
+- Snapshot digests are verified before a restore action becomes available.
+- Reset and restore require the selected authenticated live session and exact sequence.
+- Recovery appends history and never asks the browser for a player password.
+
+Incidents preserve a reviewable moment without flattening the investigation:
+
+- Notes and bookmarks attach to stable evidence identities across replay movement.
+- Export renews redaction and seals the selected chronological prefix.
+- Prefix projection excludes future records, world state, truth, diagnostics, and cost.
+- Capsules include player-scoped knowledge, diagnostic history, source versions, and gaps.
+- Integrity is verified before the standard Sessions workspace opens the capsule.
+- Offline mode stops runtime polling and offers no control, Ask, provider, or MUD action.
+- Diagnostic prevalence links back to its contributing recorded sessions.
+
 The browser tests use deterministic representative evidence. The launched
 product reads the local runtime registry and selected session journals.
 Sessions and Experiments read explicitly correlated benchmark evidence.
-Knowledge workflows land in their owning increment.
+Knowledge reads each selected player's owned `profiles/<player>/knowledge.db`
+through the gateway's read-only `KnowledgeStore` contract.
 
 ### Reset boundary
 
@@ -171,7 +198,6 @@ variables provide process-local source paths and overrides:
 | `OBSERVATORY_EXPERIMENT_EXECUTION` | `observatory.experiments.execution_enabled` | One-run execution-policy override |
 | `OBSERVATORY_EXPERIMENT_MAX_SPEND_CAP` | `observatory.experiments.max_spend_cap_usd` | One-run hard local spend ceiling |
 | `OBSERVATORY_EXPERIMENT_STATE_ROOT` | `observatory.experiments.state_path` | Untracked definitions, jobs, and receipts |
-| `OBSERVATORY_KNOWLEDGE_DB` | disabled | Knowledge-store database |
 | `OBSERVATORY_WEB_DIST` | `web/dist` | Built frontend location |
 | `OBSERVATORY_COPILOT_MODEL` | disabled | Optional Anthropic translator model |
 | `OBSERVATORY_COPILOT_ENDPOINT` | Anthropic messages API | Translator REST endpoint |
@@ -275,8 +301,8 @@ sequenceDiagram
 - A stale, ended, mismatched, or unavailable target is rejected.
 - Operator state and applied directives become observable evidence.
 
-The read API already includes sanitized incident-capsule contracts. The
-Knowledge and incident increment adds their product workflow and offline reopen.
+Incident export is available only for an explicitly correlated recorded
+session. The loaded capsule remains visibly offline and read-only.
 
 ## Verify
 
@@ -294,6 +320,8 @@ UI changes require rendered checks at desktop and narrow widths.
 
 - Live gates time travel, return to combat, player isolation, and control.
 - Sessions gates replay, exact source reachability, Ask scope, and cost.
+- Knowledge gates player isolation, provenance, recovery, and dense rendering.
+- Incidents gate renewed redaction, integrity, exact prefixes, and offline reopen.
 - Shared gates cover focus, source failure, themes, accessibility, and overflow.
 
 ## Product hardening

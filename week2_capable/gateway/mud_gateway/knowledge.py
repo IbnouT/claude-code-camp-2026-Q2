@@ -22,6 +22,7 @@ from .knowledge_models import (
     EvidenceRef,
     KnowledgeError,
     KnowledgeInput,
+    Recovery,
     Snapshot,
 )
 from .knowledge_schema import SCHEMA
@@ -479,6 +480,38 @@ class KnowledgeStore:
             for row in self._db.execute(sql, args)
         ]
 
+    def assertions(self, *, fact_id: str | None = None) -> list[Assertion]:
+        """Return immutable assertion history for observability and rebuilds."""
+
+        sql = "SELECT assertion_id FROM assertions"
+        args: tuple[Any, ...] = ()
+        if fact_id is not None:
+            sql += " WHERE fact_id = ?"
+            args = (fact_id,)
+        sql += " ORDER BY observed_at, assertion_id"
+        return [
+            self._assertion(str(row["assertion_id"]))
+            for row in self._db.execute(sql, args)
+        ]
+
+    def evidence_for(self, assertion_id: str) -> list[EvidenceRef]:
+        """Return every distinct support retained for one assertion."""
+
+        present = self._db.execute(
+            "SELECT 1 FROM assertions WHERE assertion_id = ?",
+            (assertion_id,),
+        ).fetchone()
+        if present is None:
+            raise KnowledgeError(f"unknown assertion {assertion_id!r}")
+        return [
+            _evidence(row)
+            for row in self._db.execute(
+                "SELECT * FROM evidence_refs WHERE assertion_id = ? "
+                "ORDER BY observed_at, evidence_id",
+                (assertion_id,),
+            )
+        ]
+
     def changes_since(self, after: int = 0) -> list[Change]:
         return [
             Change(
@@ -520,6 +553,48 @@ class KnowledgeStore:
             generation=int(row["generation"]),
             at=float(row["at"]),
         )
+
+    def snapshots(self) -> list[Snapshot]:
+        """Return retained snapshots in generation order."""
+
+        return [
+            Snapshot(
+                snapshot_id=str(row["snapshot_id"]),
+                cdc_high_water=int(row["cdc_high_water"]),
+                reason=str(row["reason"]),
+                digest=str(row["digest"]),
+                generation=int(row["generation"]),
+                at=float(row["at"]),
+            )
+            for row in self._db.execute(
+                "SELECT * FROM snapshots ORDER BY generation, snapshot_id"
+            )
+        ]
+
+    def recoveries(self) -> list[Recovery]:
+        """Return append-only reset and restore history in temporal order."""
+
+        rows = self._db.execute(
+            "SELECT 'reset' AS operation, reset_id AS operation_id, "
+            "snapshot_id, reason, assertions, transaction_id, at "
+            "FROM knowledge_resets "
+            "UNION ALL "
+            "SELECT 'restore' AS operation, restore_id AS operation_id, "
+            "snapshot_id, reason, assertions, transaction_id, at "
+            "FROM restores ORDER BY at, operation_id"
+        ).fetchall()
+        return [
+            Recovery(
+                operation=str(row["operation"]),
+                operation_id=str(row["operation_id"]),
+                snapshot_id=str(row["snapshot_id"]),
+                reason=str(row["reason"]),
+                assertions=int(row["assertions"]),
+                transaction_id=str(row["transaction_id"]),
+                at=float(row["at"]),
+            )
+            for row in rows
+        ]
 
     def verify_snapshot(self, snapshot_id: str) -> bool:
         """Recompute one snapshot digest and reject missing assertion rows."""

@@ -13,6 +13,10 @@ from pathlib import Path
 from typing import Any, Iterator
 
 from mud_gateway.journal import Event
+from mud_gateway.reset_client import (
+    request_knowledge_restore,
+    request_reset,
+)
 
 
 class RuntimeSourceError(RuntimeError):
@@ -287,6 +291,58 @@ class RuntimeSource:
                 str(value.get("error") or "the agent rejected control")
             )
         return value
+
+    def recover_knowledge(
+        self,
+        session_id: str,
+        *,
+        player_id: str,
+        action: str,
+        expected_sequence: int,
+        snapshot_id: str | None,
+        reason: str,
+    ) -> dict[str, Any]:
+        """Use only the selected authenticated gateway session's authority."""
+
+        session = self.session(session_id)
+        if session is None:
+            raise RuntimeSourceError(f"unknown runtime session {session_id!r}")
+        if session.player_id != player_id:
+            raise RuntimeSourceError(
+                "selected session does not belong to the selected player"
+            )
+        if not session.live:
+            raise RuntimeSourceError("the selected session is not live")
+        if session.control_state is None:
+            raise RuntimeSourceError(
+                "the selected session has no knowledge recovery endpoint"
+            )
+        if expected_sequence != session.latest_seq:
+            raise RuntimeSourceError(
+                "the selected session advanced, refresh before controlling it"
+            )
+        directory = self._session_dir(session_id)
+        if action == "reset":
+            receipt = request_reset(
+                directory,
+                expected_sequence=expected_sequence,
+            )
+        elif action == "restore":
+            if not snapshot_id:
+                raise RuntimeSourceError("restore requires a snapshot identity")
+            receipt = request_knowledge_restore(
+                directory,
+                snapshot_id=snapshot_id,
+                reason=reason,
+                expected_sequence=expected_sequence,
+            )
+        else:
+            raise RuntimeSourceError("unsupported knowledge recovery action")
+        if receipt.get("ok") is not True:
+            raise RuntimeSourceError(
+                str(receipt.get("error") or "knowledge recovery was rejected")
+            )
+        return receipt
 
     def _session(self, row: sqlite3.Row) -> RuntimeSession:
         session_dir = self._safe_session_dir(

@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { mockRecorded } from "./recordedFixture";
 import { mockRuntime } from "./runtimeFixture";
 import { mockExperiment } from "./experimentFixture";
+import { mockKnowledge } from "./knowledgeFixture";
 
 async function renderFixture(page: Page) {
   await page.route("**/api/capabilities", async (route) => {
@@ -182,6 +183,64 @@ test("captures the B5 Experiments workbench for rendered review", async ({
   await page.getByRole("button", { name: "Use light theme" }).click();
   await page.screenshot({
     path: testInfo.outputPath("b5-experiments-replay-light.png"),
+    fullPage: true,
+  });
+});
+
+test("captures the B7 Knowledge and incident workflow", async ({
+  page,
+}, testInfo) => {
+  await renderFixture(page);
+  await mockRuntime(page);
+  await mockRecorded(page);
+  await mockKnowledge(page);
+  await page.goto("/?space=knowledge&player=poucet-recorded");
+  await expect(page.getByRole("heading", { name: "Unresolved knowledge" }))
+    .toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("b7-knowledge-overview-dark.png"),
+    fullPage: true,
+  });
+
+  await page.getByRole("button", { name: "Learned map" }).click();
+  await page.getByRole("button", { name: /Temple of Midgaard/ }).click();
+  await page.screenshot({
+    path: testInfo.outputPath("b7-knowledge-map-dark.png"),
+    fullPage: true,
+  });
+
+  await page.getByRole("button", { name: "Entities" }).click();
+  await page.screenshot({
+    path: testInfo.outputPath("b7-knowledge-entities-dark.png"),
+    fullPage: true,
+  });
+
+  await page.getByRole("button", { name: "Progression" }).click();
+  await page.screenshot({
+    path: testInfo.outputPath("b7-knowledge-progression-dark.png"),
+    fullPage: true,
+  });
+
+  await page.getByRole("button", { name: "Snapshots" }).click();
+  await page.screenshot({
+    path: testInfo.outputPath("b7-knowledge-snapshots-dark.png"),
+    fullPage: true,
+  });
+
+  await page.getByRole("button", { name: "History" }).click();
+  await page.getByRole("button", { name: "Use light theme" }).click();
+  await page.screenshot({
+    path: testInfo.outputPath("b7-knowledge-history-light.png"),
+    fullPage: true,
+  });
+
+  await page.getByRole("button", { name: "Sessions" }).click();
+  await page.getByRole("tab", { name: /Diagnostics/ }).click();
+  await expect(page.getByRole("heading", { name: "Diagnostic history" }))
+    .toBeVisible();
+  await page.getByRole("button", { name: "Incident", exact: true }).click();
+  await page.screenshot({
+    path: testInfo.outputPath("b7-incident-workflow-light.png"),
     fullPage: true,
   });
 });

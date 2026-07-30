@@ -74,6 +74,19 @@ class Snapshot:
 
 
 @dataclass(frozen=True)
+class Recovery:
+    """One append-only reset or restore linked to its verified snapshot."""
+
+    operation: str
+    operation_id: str
+    snapshot_id: str
+    reason: str
+    assertions: int
+    transaction_id: str
+    at: float
+
+
+@dataclass(frozen=True)
 class KnowledgeInput:
     """A parsed fact ready for deterministic rebuild."""
 

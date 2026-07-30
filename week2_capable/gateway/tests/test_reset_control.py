@@ -16,6 +16,7 @@ from mud_gateway.journal import Journal
 from mud_gateway.knowledge import EvidenceRef, KnowledgeStore
 from mud_gateway.reset_control import (
     ControlRequest,
+    ResetControlError,
     ResetControlServer,
     ResetCoordinator,
     _admin_environment,
@@ -124,6 +125,7 @@ def request(settings: GatewaySettings, **changes: object) -> ControlRequest:
         "baseline_id": LEVEL1_TEMPLE.id,
         "baseline_version": LEVEL1_TEMPLE.version,
         "expected_configuration_digest": DIGEST,
+        "expected_sequence": 0,
         "nonce": "nonce-" + "y" * 24,
     }
     values.update(changes)
@@ -216,6 +218,107 @@ async def test_reset_snapshots_then_retracts_learned_knowledge(
         assert knowledge.current_facts(layer="learned") == []
         assert knowledge.get_snapshot(receipt["knowledge_snapshot_id"]) is not None
         assert player.commands == ["save", "score", "look", "look"]
+    finally:
+        knowledge.close()
+        journal.close()
+
+
+async def test_restore_appends_verified_snapshot_through_selected_session(
+    tmp_path: Path,
+) -> None:
+    settings = make_settings(tmp_path)
+    journal = Journal(settings.journal)
+    player = FakeSession(journal)
+    knowledge = KnowledgeStore(tmp_path / "knowledge.db", player_id="tester")
+    knowledge.assert_fact(
+        "place:old",
+        "title",
+        "Old Room",
+        layer="learned",
+        confidence="high",
+        evidence=EvidenceRef(
+            "gateway-1",
+            1,
+            "wire-old",
+            "rules-1",
+            "room-frame",
+            1.0,
+        ),
+    )
+    snapshot = knowledge.snapshot("before correction")
+    knowledge.reset_learned(
+        reason="correction",
+        snapshot_id=snapshot.snapshot_id,
+    )
+
+    try:
+        receipt = await ResetCoordinator(
+            settings,
+            session=lambda: player,
+            knowledge=knowledge,
+        ).restore_knowledge(
+            request(
+                settings,
+                action="knowledge_restore",
+                baseline_id=None,
+                baseline_version=None,
+                snapshot_id=snapshot.snapshot_id,
+                reason="restore reviewed state",
+            )
+        )
+
+        assert receipt["ok"] is True
+        assert receipt["assertions"] == 1
+        assert knowledge.current_facts(layer="learned")
+        assert knowledge.recoveries()[-1].operation == "restore"
+        assert journal.since("gateway-1", kind="knowledge_restore_receipt")
+    finally:
+        knowledge.close()
+        journal.close()
+
+
+async def test_restore_rejects_stale_sequence_and_invalid_snapshot(
+    tmp_path: Path,
+) -> None:
+    settings = make_settings(tmp_path)
+    journal = Journal(settings.journal)
+    player = FakeSession(journal)
+    knowledge = KnowledgeStore(tmp_path / "knowledge.db", player_id="tester")
+    journal.append("gateway-1", "observation", {"kind": "room"})
+    coordinator = ResetCoordinator(
+        settings,
+        session=lambda: player,
+        knowledge=knowledge,
+    )
+
+    try:
+        with pytest.raises(ResetControlError, match="selected session advanced"):
+            await coordinator.restore_knowledge(
+                request(
+                    settings,
+                    action="knowledge_restore",
+                    baseline_id=None,
+                    baseline_version=None,
+                    snapshot_id="missing",
+                    reason="restore",
+                    expected_sequence=0,
+                )
+            )
+        with pytest.raises(
+            ResetControlError,
+            match="snapshot is missing or invalid",
+        ):
+            await coordinator.restore_knowledge(
+                request(
+                    settings,
+                    action="knowledge_restore",
+                    baseline_id=None,
+                    baseline_version=None,
+                    snapshot_id="missing",
+                    reason="restore",
+                    expected_sequence=journal.last_seq("gateway-1"),
+                )
+            )
     finally:
         knowledge.close()
         journal.close()
@@ -327,6 +430,7 @@ async def test_partial_mutation_quarantines_until_linked_retry(
             settings,
             request_id="request-2",
             retry_of=failed["reset_id"],
+            expected_sequence=journal.last_seq("gateway-1"),
         ))
         assert retried["ok"] is True
         assert retried["retry_of"] == failed["reset_id"]

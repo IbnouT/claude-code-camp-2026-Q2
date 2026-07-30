@@ -14,10 +14,10 @@ from .contracts import (
     IncidentExportRequest,
     IncidentPayload,
     IncidentSelection,
-    Investigation,
-    KnowledgeOverview,
+    RecordedSessionInvestigation,
     RedactionReport,
 )
+from .knowledge_contracts import PlayerKnowledge
 from .redaction import redact_question
 
 LOCAL_PATH = re.compile(
@@ -38,8 +38,8 @@ SENSITIVE_KEYS = {
 
 def build_capsule(
     request: IncidentExportRequest,
-    investigation: Investigation,
-    knowledge: KnowledgeOverview,
+    investigation: RecordedSessionInvestigation,
+    knowledge: PlayerKnowledge,
     history: DiagnosticHistory,
     revision: str,
 ) -> IncidentCapsule:
@@ -67,9 +67,20 @@ def build_capsule(
             return [sanitize(item) for item in value]
         return value
 
-    safe_investigation = Investigation.model_validate(
+    safe_investigation = RecordedSessionInvestigation.model_validate(
         sanitize(investigation.model_dump(mode="json"))
     )
+    safe_knowledge = PlayerKnowledge.model_validate(
+        sanitize(knowledge.model_dump(mode="json"))
+    )
+    safe_history = DiagnosticHistory.model_validate(
+        sanitize(history.model_dump(mode="json"))
+    )
+    if (
+        not safe_investigation.records
+        or safe_investigation.records[-1].id != request.selected_record_id
+    ):
+        raise ValueError("incident projection does not end at selected record")
     safe_annotations = tuple(
         annotation.model_copy(update={"text": sanitize(annotation.text)})
         for annotation in request.annotations
@@ -77,19 +88,21 @@ def build_capsule(
     payload = IncidentPayload(
         generated_at=datetime.now(UTC).isoformat(),
         title=f"{investigation.run.journey} · {investigation.run.label}",
+        player_id=investigation.player_id,
         source_versions={
-            "capsule": "1",
+            "capsule": "2",
             "investigation": "1",
             "world_projection": "1",
             "diagnostics": "1",
             "repository": revision,
         },
         investigation=safe_investigation,
-        knowledge=knowledge,
-        history=history,
+        knowledge=safe_knowledge,
+        history=safe_history,
         selection=IncidentSelection(
-            selected_sequence=request.selected_sequence,
+            selected_record_id=request.selected_record_id,
             diagnostic_id=request.diagnostic_id,
+            lens=request.lens,
         ),
         annotations=safe_annotations,
         redaction=RedactionReport(

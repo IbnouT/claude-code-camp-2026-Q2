@@ -15,6 +15,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import "../../styles/world.css";
 import type { ShellCapabilities, WorkspaceFixture } from "../../app/shellTypes";
 import type { RuntimeSession } from "../../data/liveContracts";
 import type { SessionEvidence } from "../../data/useSessionStream";

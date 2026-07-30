@@ -6,6 +6,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .knowledge_contracts import PlayerKnowledge
+
 
 class SourceStatus(BaseModel):
     """One evidence source and its current availability."""
@@ -493,6 +495,7 @@ class RecordedSessionCatalogItem(BaseModel):
     id: str
     source_kind: Literal["experiment_sample"]
     player_id: str
+    gateway_session_id: str | None
     label: str
     journey: str
     attempt: str
@@ -551,6 +554,7 @@ class DiagnosticHistoryItem(BaseModel):
     warning: int
     notice: int
     latest_run: str
+    run_ids: tuple[str, ...] = ()
 
 
 class DiagnosticHistory(BaseModel):
@@ -558,6 +562,7 @@ class DiagnosticHistory(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
+    player_id: str | None = None
     total_runs: int
     successful_runs: int
     failed_runs: int
@@ -570,7 +575,8 @@ class InvestigatorAnnotation(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     id: str = Field(min_length=1, max_length=120)
-    at: int = Field(ge=0)
+    target_id: str = Field(min_length=1, max_length=200)
+    bookmark: bool = False
     text: str = Field(min_length=1, max_length=2_000)
     created_at: str
 
@@ -581,8 +587,9 @@ class IncidentExportRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     run_id: str = Field(min_length=1, max_length=160)
-    selected_sequence: int = Field(ge=0)
+    selected_record_id: str = Field(min_length=1, max_length=200)
     diagnostic_id: str | None = Field(default=None, max_length=160)
+    lens: Literal["story", "sequence", "evidence", "cost", "diagnostics"]
     annotations: tuple[InvestigatorAnnotation, ...] = ()
 
 
@@ -591,8 +598,9 @@ class IncidentSelection(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    selected_sequence: int
+    selected_record_id: str
     diagnostic_id: str | None
+    lens: Literal["story", "sequence", "evidence", "cost", "diagnostics"]
 
 
 class RedactionReport(BaseModel):
@@ -614,8 +622,9 @@ class IncidentPayload(BaseModel):
     generated_at: str
     title: str
     source_versions: dict[str, str]
-    investigation: Investigation
-    knowledge: KnowledgeOverview
+    player_id: str
+    investigation: RecordedSessionInvestigation
+    knowledge: PlayerKnowledge
     history: DiagnosticHistory
     selection: IncidentSelection
     annotations: tuple[InvestigatorAnnotation, ...]
@@ -630,7 +639,7 @@ class IncidentCapsule(BaseModel):
     kind: Literal["boukensha.observatory.incident"] = (
         "boukensha.observatory.incident"
     )
-    version: int = 1
+    version: Literal[2] = 2
     digest: str
     payload: IncidentPayload
 
