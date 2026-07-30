@@ -13,7 +13,10 @@ export default defineConfig({
   projects: [
     {
       name: "desktop",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1440, height: 900 },
+      },
     },
     {
       name: "narrow",
@@ -26,7 +29,7 @@ export default defineConfig({
   webServer: {
     command: "cd .. && uv run boukensha-observatory --port 8791",
     url: "http://127.0.0.1:8791/api/health",
-    reuseExistingServer: false,
+    reuseExistingServer: true,
     timeout: 30_000,
   },
 });

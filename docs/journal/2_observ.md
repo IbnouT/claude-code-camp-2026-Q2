@@ -1,55 +1,90 @@
+# Week 2 Technical Documentation
+
 ## Technical Goal
 
-- Make the agent observable before making it more capable.
-- Expose the bytes, commands, state, timing and cost of a run so a failure can
-  be explained, not guessed.
+- Make the agent observable end to end: capture what the game actually sent,
+  what the agent believed, and what it cost, and be able to replay any run
+  afterwards from that evidence.
+- Build the foundation our web monitor (the Observatory) needs: every piece of
+  evidence tied to exactly one player and one session.
 
 ## Technical Uncertainty
 
-- Whether local instrumentation clarifies the agent's behaviour or just piles
-  up logs.
-- How much can be resolved without a model call.
+- I'm uncertain whether local instrumentation will actually explain the agent's
+  behaviour, or just pile up logs nobody can read.
+- I'm uncertain how much of the game's output can be understood with plain
+  parsing, without paying a model to read it.
+- I'm uncertain what really drives run cost. My assumption is bigger tool
+  results mean bigger bills, but I haven't verified it.
 
 ## Technical Hypotheses
 
-- A deterministic layer close to the game removes repeated LLM work.
-- The hard part is keeping enough raw evidence to debug without flooding the
-  agent with it.
+- A deterministic layer that sits on the telnet wire and types the game's
+  output should remove repeated LLM work and make failures explainable.
+- The hard part will be keeping the raw evidence for debugging without flooding
+  the agent's context with it.
 
 ## Technical Observations
 
-- Replaced the mud_manager with our own gateway so we own the wire a run is
-  observed and replayed from.
-- Separating capabilities from advertised profiles made comparison cheap. The
-  first fully validated grouped surface was larger than direct, 7,494 versus
-  6,290 schema bytes, so tool count alone is not a cost result.
-- Colour-aware rules typed 2,644 of 3,067 recorded lines without a model. The
-  423 misses remain linked events, turning the 13.8% residual into a measured
-  target instead of silent loss.
-- Re-deriving the Week 1 baseline exposed 451 executed calls and 447 that
-  reached later prompts, not the working figure of 448. A benchmark number
-  without a traceable counting rule is another unobserved system state.
-- The long probe crossed 17 rooms, then self-terminated after 90 calls without
-  reaching its goal. The tracker kept the duplicate entrance ambiguous instead
-  of inventing a location: a completed turn is not a completed journey.
-- A committed journal was replayable across processes but not live because its
-  callbacks stopped at the writer process. Durable sequence cursors made live
-  delivery and replay the same contract instead of two similar paths.
-- Full results were 59.8% larger than raw over identical evidence, but their
-  10-run journey costs overlapped. Representation changed the path more than
-  payload size predicted the bill.
-- Common questions mapped to typed local queries without a model. An optional
-  translator reached 6/6 for $0.001375 while seeing no run evidence.
-- A useful incident handoff was not a log bundle. It needed a sealed evidence
-  prefix, explicit missing knowledge, and investigator notes kept outside the
-  facts they explain.
-- Browser hardening caught both a dense-frontier overflow and an accessible
-  name collision that unit tests missed. Visual and semantic gates found
-  different failures.
-- Naming secret variables in public player profiles made identity selection
-  explicit without copying credentials into commands or benchmark overlays.
-- A registry can describe a session but cannot prove it is alive. A stable
-  kernel-held character lock made crash recovery and PID reuse safe by design.
+**The gateway**
+
+This week is about observability, so we own the wire. Our gateway holds the
+telnet session, records every byte in both directions, and types the output
+into one per-session journal that both live view and replay read.
+Detail: [gateway README](../../week2_capable/gateway/README.md).
+
+- We tried shrinking the agent's tool surface by grouping related actions into
+  fewer, bigger tools. It backfired: the tool count dropped but the schema grew
+  to 7,494 bytes against 6,290 for the direct 25 tools, because the parameters
+  and enums just move inside. We kept the direct surface.
+- The colour of the game's ANSI text turned out to be a strong parsing signal.
+  Room titles, combat, and prompts each have their own look, so colour-aware
+  rules type about 86% of lines with no model call. The unmatched 14% keep their
+  raw bytes, so the parser's blind spots are a list to fix, not silent loss.
+
+**Benchmarks**
+
+We benchmark short goal-driven journeys (find the bakery, read the menu),
+judged from the recorded evidence, and reset the player to the same start
+before every run. One early run silently started inside the bakery instead of
+the Temple, and its results were worthless.
+Detail: [benchmark plan](../plans/week2_observ/benchmark.md).
+
+- We ran the same journey ten times per response style. Fully structured tool
+  results are 59.8% larger than raw text, yet raw and full journey costs came
+  out nearly equal, and the stripped-down "minimal" style was the most expensive
+  of the three (28.6% over raw), because the agent needed 53.1% more calls to
+  make up for the missing information. So we now judge a response style by the
+  behaviour it produces over a whole journey, not by its size per message.
+- We gave the agent a goal it couldn't easily reach: find the Massive Minotaur
+  in the newbie zone. It gave up after 90 tool calls while reporting the journey
+  as complete. That gap, believing it finished when it hadn't, is the central
+  design idea of the Observatory's belief-versus-reality view.
+
+**Multi-player foundation**
+
+Two agents can play at once as different characters, and the Observatory
+switches between them, so isolation had to be real rather than cosmetic.
+Detail: [multiplayer plan](../plans/week2_observ/multiplayer.md).
+
+- A per-character lock is held by the kernel, so two agents cannot drive the
+  same character, and because the OS drops the lock when a process dies, a crash
+  never leaves a character wedged. A hermetic two-agent test proves nothing
+  leaks between players: files, costs, tokens, or knowledge.
+- Reset restores a named baseline through a short-lived admin child, then
+  reconnects and checks the result field by field before a run counts. When it
+  fails halfway the session is quarantined and says so. We chose not to pretend
+  a rollback happened, because the game itself cannot be rolled back.
+
+**The Observatory**
+
+The web monitor is being built against the mockups, starting from the shared
+shell and design system.
+Detail: [observatory README](../../week2_capable/observatory/README.md).
+
+- Source health became useful when it moved beside the evidence it could
+  weaken. Keeping it in the global header made instrumentation look like a
+  destination instead of an explanation.
 
 ## Technical Conclusions
 

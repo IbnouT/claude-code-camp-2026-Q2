@@ -18,67 +18,36 @@ flowchart LR
 
 ## Current interface
 
-- Three modes only: Live, Investigate, and Compare.
-- Live ingestion and replay use the same canonical event envelope.
-- Sequence cursors deduplicate at-least-once delivery and expose gaps.
-- Pausing selects an immutable prefix while live ingestion continues.
-- Session and sequence live in the URL for a shareable evidence moment.
-- Unknown event kinds remain available instead of being discarded.
-- Investigate joins benchmark outcomes to their agent causal trace.
-- A waterfall separates plans, model responses, tool calls, results, and cost.
-- The evidence lens keeps wire, parsed, rendered, believed, and truth forms
-  distinct.
-- Diagnostics explain their trigger and cite the evidence behind each finding.
-- Structured filters and saved views narrow long traces without a model call.
-- Compare joins the complete raw, minimal, and full J1 cohorts directly from
-  benchmark ledgers.
-- Representative runs align by semantic action and jump to their first
-  divergence.
-- Synchronized route fingerprints show path shape at the selected action.
-- Attention economics separates fresh, cache-read, cache-write, and output
-  tokens.
-- The same recorded tool results replay through every rendering policy without
-  a model call.
-- Recorded wire frames replay through the current canonical gateway parser to
-  expose parser drift.
-- Ask maps common natural-language investigations to typed local operations.
-- Every answer exposes its query plan, confidence, missing data, and citations.
-- Optional model translation sees only the question and operation vocabulary.
-  It never receives evidence or database access.
-- Secret-shaped question text is redacted again at the model boundary.
-- The living-world lens projects recorded positions into a distinct-place
-  journey graph.
-- Journey and neighbourhood views keep duplicate titles separate by place ID,
-  exits, and observed transitions.
-- Candidate positions, parse misses, and unknown positions stay visible.
-- Belief, inferred, and observer-truth layers report missing evidence instead
-  of synthesizing it.
-- An isolated 12,288-room capacity probe measures the canvas renderer without
-  presenting synthetic positions as game knowledge.
-- Knowledge coverage separates observed places and frontier from unavailable
-  entity, player, progression, and durable-store layers.
-- Diagnostic history shows finding prevalence across every readable run.
-- Investigator annotations remain a separate local layer and never alter
-  evidence or diagnostics.
-- Incident capsules package one selected investigation, its derived views,
-  notes, versions, and redaction report.
-- Capsule export removes credentials and local paths, then seals the payload
-  with a SHA-256 integrity digest.
-- An intact capsule reopens without gateway, benchmark, knowledge, or model
-  access.
-- Belief and observed state remain visually separate.
-- Diagnostics link failures to evidence moments.
-- The Chronicle aligns causal events with model cost.
-- Ask and search share one keyboard-accessible entry point.
-- Source health distinguishes ready, disabled, and unavailable.
-- Desktop and narrow layouts use the same information hierarchy.
+The current product shell establishes the visual and interaction system:
 
-When gateway evidence is available, the interface labels and renders it as
-such. The representative J2 state appears only when no gateway session is
-available.
+- Four destinations: Live, Sessions, Experiments, and Knowledge.
+- One context-aware header with player, applicable session, Load, and theme.
+- Persistent dark and light themes.
+- Comfortable and dense design tokens.
+- Representative Live workspace with world, objective, attention, economics,
+  activity, and evidence forms.
+- Scoped Ask entry inside the active workspace.
+- Agent-control preview only in Live.
+- Wire, Parsed, Rendered, Believed, and Truth remain distinct evidence forms.
+- Truth and unavailable sources remain visibly missing or incomplete.
+- Desktop and narrow layouts retain the same information and actions.
+- Keyboard focus returns to the invoking control after dialogs close.
+- Forced colors, reduced motion, and 200 percent layout remain operable.
 
-Configured benchmark evidence adds recorded runs to Investigate. Local paths
-and credentials never enter the browser contract.
+The shell uses representative evidence. Live delivery, deterministic replay,
+Sessions investigation, Experiments execution, and Knowledge workflows land in
+their owning increments.
+
+### Reset boundary
+
+The product surface is new. Proven infrastructure remains:
+
+| Classification | Content |
+| --- | --- |
+| Retained | Typed read API, evidence contracts, capability transport, build setup, pinned dependencies, and test harness |
+| New | App entry, product shell, destination hierarchy, tokens, styles, responsive behavior, and accessible primitives |
+| Adapted | Capability state consumed by contextual workspace status |
+| Obsolete | Earlier presentation components not imported by the new entry |
 
 ## Layout
 
@@ -176,25 +145,12 @@ OBSERVATORY_BENCHMARK_ROOT=.boukensha/benchmarks \
   ./week2_capable/bin/observatory
 ```
 
-The selected evidence moment is encoded as `?session=<id>&seq=<number>`. Opening
-that URL reconstructs the same prefix, then continues ingesting newer events
-without moving the historical cursor.
+The active destination is encoded as `?space=<name>`. Player and session remain
+explicit shell context. The live and replay increments add stable evidence
+selection to the URL.
 
-Investigations also encode the mode, run, causal sequence, diagnostic, and
-structured query in the URL. Reloading returns to the same evidence-backed
-view.
-
-The Capsules action opens the handoff workspace:
-
-- Add sequence-linked investigator notes.
-- Review knowledge coverage and open frontier.
-- See diagnostic patterns across recorded runs.
-- Export a sanitized local capsule.
-- Open a capsule from any Observatory installation, with no evidence source
-  configured.
-
-Capsules do not contain credentials or absolute source paths. A changed file
-fails its integrity check before any investigation state is rendered.
+The read API already includes sanitized incident-capsule contracts. The
+Knowledge and incident increment adds their product workflow and offline reopen.
 
 ## Verify
 
@@ -208,11 +164,9 @@ npm run test:budget
 npm run test:e2e
 ```
 
-UI changes require rendered checks at desktop and narrow widths. The shell has
-been verified against a real gateway journal and at narrow width, including
-historical selection, keyboard focus, capability fallback, and reduced-motion
-behavior. Capsule verification covers sanitization, tamper rejection, offline
-reopen, annotations, source-missing states, and the rendered handoff workspace.
+UI changes require rendered checks at desktop and narrow widths. The product
+shell verifies keyboard focus, source failure, theme persistence, 200 percent
+layout, forced colors, reduced motion, and root overflow behavior.
 
 ## Product hardening
 
@@ -220,15 +174,13 @@ The production surface keeps these gates executable from a fresh clone:
 
 | Gate | Enforced behavior |
 | --- | --- |
-| Unit | Deterministic reducers, projections, queries, redaction, and imports |
+| Unit | Components, preferences, capability contracts, redaction, and imports |
 | End to end | Desktop and 390-pixel flows in Chromium |
 | Accessibility | Automated semantic audit, forced colors, and reduced motion |
-| Failure | Gaps, corrupt rows, modified capsules, and unavailable sources |
+| Failure | Unavailable and disabled sources remain explicit |
 | Policy | Named capabilities disappear from discovery and navigation |
 | Performance | JavaScript under 300 KB raw and 90 KB gzip |
 | Performance | CSS under 60 KB raw and 12 KB gzip |
 
-The reference floor is covered by live activity, run browsing, cost, errors,
-tool use, search, and export. Observatory-native layers add causal diagnostics,
-belief versus reality, evidence time travel, living uncertainty, experiment
-comparison, grounded questions, and portable incident handoff.
+The architecture and feature acceptance contracts live in
+`docs/plans/week2_observ/observatory.md` and `product_spec.md`.

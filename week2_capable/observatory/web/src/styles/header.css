@@ -1,0 +1,233 @@
+.canonical-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  min-height: var(--header-height);
+  display: grid;
+  grid-template-columns: max-content max-content minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-5);
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--color-line);
+  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  backdrop-filter: blur(18px);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.brand-mark {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-md);
+  background: radial-gradient(
+    circle at 30% 20%,
+    var(--color-cyan-soft),
+    var(--color-surface)
+  );
+  color: var(--color-cyan);
+}
+
+.brand-name {
+  display: grid;
+  gap: 1px;
+}
+
+.brand-name strong {
+  font-size: 14px;
+}
+
+.brand-name small {
+  color: var(--color-quiet);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.space-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.space-link {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 11px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.space-link:hover {
+  background: var(--color-raised);
+  color: var(--color-text);
+}
+
+.space-link[aria-current="page"] {
+  border-color: var(--color-line-strong);
+  background: var(--color-cyan-soft);
+  color: var(--color-cyan);
+}
+
+.header-context {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.context-select,
+.header-action {
+  height: var(--control-height);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 9px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-raised);
+  color: var(--color-muted);
+}
+
+.context-select select {
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  appearance: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.session-select {
+  max-width: 150px;
+}
+
+.session-select select {
+  text-overflow: ellipsis;
+}
+
+.connection-dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--color-green);
+  box-shadow: 0 0 0 3px var(--color-green-soft);
+}
+
+.header-action {
+  font-size: 11px;
+}
+
+.header-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
+}
+
+.source-list {
+  display: grid;
+  gap: 4px;
+}
+
+.source-item {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 9px;
+  padding: 9px;
+  border-radius: var(--radius-sm);
+  background: var(--color-raised);
+}
+
+.source-symbol {
+  width: 10px;
+  height: 10px;
+  border: 2px solid currentColor;
+}
+
+.source-ready {
+  border-radius: 50%;
+  color: var(--color-green);
+  background: var(--color-green);
+}
+
+.source-unavailable {
+  transform: rotate(45deg);
+  color: var(--color-coral);
+  background: transparent;
+}
+
+.source-disabled {
+  border-style: dashed;
+  border-radius: 50%;
+  color: var(--color-quiet);
+  background: transparent;
+}
+
+.source-item > span:nth-child(2) {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.source-item strong {
+  font-size: 11px;
+}
+
+.source-item small {
+  overflow: hidden;
+  color: var(--color-muted);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.state-label {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  text-transform: uppercase;
+}
+
+.source-text-ready {
+  color: var(--color-green);
+}
+
+.source-text-unavailable {
+  color: var(--color-coral);
+}
+
+.source-text-disabled {
+  color: var(--color-quiet);
+}
+
+.capability-summary {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-2);
+  padding: var(--space-3) var(--space-2) var(--space-1);
+  border-top: 1px solid var(--color-line);
+  color: var(--color-muted);
+  font-size: 10px;
+}
+
+.capability-summary strong {
+  color: var(--color-text);
+}

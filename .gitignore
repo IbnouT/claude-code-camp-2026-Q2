@@ -32,6 +32,9 @@ settings.local.json
 # Claude Code browser tool artifacts
 .playwright-mcp/
 
+# Generated Observatory showcase media and narration
+.boukensha/showcase/
+
 # Internal working instructions, not repo content
 CLAUDE.md
 
