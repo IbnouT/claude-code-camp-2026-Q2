@@ -28,27 +28,36 @@ export function useRecordedSessions(
 
   useEffect(() => {
     const abort = new AbortController();
+    let timer = 0;
     setLoadingCatalog(true);
-    void fetch("/api/recorded-sessions", { signal: abort.signal })
-      .then(async (response) => {
+    const load = async () => {
+      try {
+        const response = await fetch("/api/recorded-sessions", {
+          signal: abort.signal,
+          cache: "no-store",
+        });
         if (!response.ok) {
           throw new Error(`recorded sessions returned ${response.status}`);
         }
-        return await response.json() as CatalogResponse;
-      })
-      .then((payload) => {
+        const payload = await response.json() as CatalogResponse;
         setCatalog(payload.sessions);
         setError(null);
-      })
-      .catch((reason: unknown) => {
+      } catch (reason) {
         if (!abort.signal.aborted) {
           setError(reason instanceof Error ? reason.message : "Catalog unavailable");
         }
-      })
-      .finally(() => {
-        if (!abort.signal.aborted) setLoadingCatalog(false);
-      });
-    return () => abort.abort();
+      } finally {
+        if (!abort.signal.aborted) {
+          setLoadingCatalog(false);
+          timer = window.setTimeout(load, 2_000);
+        }
+      }
+    };
+    void load();
+    return () => {
+      abort.abort();
+      window.clearTimeout(timer);
+    };
   }, []);
 
   useEffect(() => {

@@ -100,6 +100,10 @@ def create_attempt(
     result_mode: str = "full",
     player_profile: str | None = None,
     player_character: str | None = None,
+    model: str | None = None,
+    compaction_threshold: float | None = None,
+    max_iterations: int | None = None,
+    max_turn_cost: float | None = None,
 ) -> AttemptConfig:
     """Create a secret-free settings overlay for one run."""
     if result_mode not in RESULT_MODES:
@@ -155,6 +159,24 @@ def create_attempt(
 
     tasks = settings.get("tasks") or {}
     player = tasks.get("player") or {}
+    if model is not None:
+        if not model.strip():
+            raise BenchmarkConfigError("model must not be empty")
+        player["model"] = model
+    if compaction_threshold is not None:
+        if not 0 < compaction_threshold <= 1:
+            raise BenchmarkConfigError(
+                "compaction_threshold must be above zero and at most one"
+            )
+        player["compaction_threshold"] = compaction_threshold
+    if max_iterations is not None:
+        if max_iterations < 1:
+            raise BenchmarkConfigError("max_iterations must be positive")
+        player["max_iterations"] = max_iterations
+    if max_turn_cost is not None:
+        if max_turn_cost <= 0:
+            raise BenchmarkConfigError("max_turn_cost must be positive")
+        player["max_turn_cost"] = max_turn_cost
     try:
         max_turn_cost = float(player["max_turn_cost"])
     except (KeyError, TypeError, ValueError) as error:

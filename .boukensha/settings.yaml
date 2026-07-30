@@ -131,6 +131,23 @@ gateway:
 
 # === observatory: evidence sources and local product policy. ================
 observatory:
+  benchmark:
+    # Recorded experiment evidence. Relative paths resolve from the repository
+    # root. OBSERVATORY_BENCHMARK_ROOT remains a one-run override.
+    path: .boukensha/benchmarks
+
+  experiments:
+    # Paid execution is off by default. Enabling it only makes the server-side
+    # runner available. Every job still requires an explicit per-run
+    # confirmation after validation and maximum-spend preview.
+    execution_enabled: false
+    # Hard ceiling accepted by the workbench, independent of a smaller
+    # definition-level cap.
+    max_spend_cap_usd: 10.00
+    # Runtime definitions, jobs, and queue receipts. This directory is
+    # untracked and contains no credentials.
+    state_path: .boukensha/experiments
+
   world:
     # Observer-only CircleMUD atlas. Relative paths resolve from the repository
     # root. BOUKENSHA_WORLD remains a one-run override.

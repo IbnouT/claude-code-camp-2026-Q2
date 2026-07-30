@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mockRecorded } from "./recordedFixture";
 import { mockRuntime } from "./runtimeFixture";
+import { mockExperiment } from "./experimentFixture";
 
 async function renderFixture(page: Page) {
   await page.route("**/api/capabilities", async (route) => {
@@ -125,6 +126,43 @@ test("captures the B3 Sessions investigation for rendered review", async ({
   await page.waitForTimeout(150);
   await page.screenshot({
     path: testInfo.outputPath("b3-sessions-diagnostics-light.png"),
+    fullPage: true,
+  });
+});
+
+test("captures the B5 Experiments workbench for rendered review", async ({
+  page,
+}, testInfo) => {
+  await renderFixture(page);
+  await mockRuntime(page);
+  await mockExperiment(page);
+  await page.goto("/?space=experiments");
+  await expect(
+    page.getByRole("heading", { name: "Model-facing result rendering" }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("b5-experiments-compare-dark.png"),
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Definition", exact: true }).click();
+  await expect(page.getByText("Six stop criteria")).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("b5-experiments-definition-dark.png"),
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Run queue" }).click();
+  await page.getByRole("button", { name: "Validate effective definition" }).click();
+  await expect(page.getByRole("status")).toContainText("Validation passed");
+  await page.screenshot({
+    path: testInfo.outputPath("b5-experiments-run-dark.png"),
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Counterfactual replay" }).click();
+  await expect(page.getByText(/cannot claim how the agent would have behaved/))
+    .toBeVisible();
+  await page.getByRole("button", { name: "Use light theme" }).click();
+  await page.screenshot({
+    path: testInfo.outputPath("b5-experiments-replay-light.png"),
     fullPage: true,
   });
 });

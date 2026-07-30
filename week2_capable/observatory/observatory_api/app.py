@@ -23,10 +23,15 @@ from starlette.routing import Route
 from .capabilities import discover
 from .contracts import (
     AskRequest,
+    ExperimentRunRequest,
+    ExperimentForkRequest,
+    ExperimentValidateRequest,
     IncidentExportRequest,
     LiveControlRequest,
 )
 from .incidents import build_capsule
+from .experiments import fork_one_variable, sample_queue, validate_definition
+from .execution import ExperimentExecutor, ExperimentRequestConflict
 from .projections.history import diagnostic_history
 from .projections.knowledge import project_knowledge
 from .projections.live import project_live
@@ -69,6 +74,17 @@ def create_app(
         else None
     )
     atlas = AtlasSource(active.world_root)
+    experiment_executor = (
+        ExperimentExecutor(
+            active.experiment_state_root,
+            benchmark_root=active.benchmark_root,
+        )
+        if (
+            active.experiment_state_root is not None
+            and active.benchmark_root is not None
+        )
+        else None
+    )
     model_spend = 0.0
     translator = (
         ModelTranslator(
@@ -414,6 +430,239 @@ def create_app(
             return JSONResponse({"error": "not_found"}, status_code=404)
         return JSONResponse(result.model_dump(mode="json"))
 
+    async def run_experiment(request: Request) -> JSONResponse:
+        try:
+            payload = ExperimentRunRequest.model_validate(await request.json())
+        except (ValidationError, ValueError) as error:
+            return JSONResponse(
+                {"error": "invalid_experiment_run", "detail": str(error)},
+                status_code=422,
+            )
+        if not payload.confirmed:
+            return JSONResponse(
+                {
+                    "error": "confirmation_required",
+                    "detail": (
+                        "Paid execution requires explicit confirmation of the "
+                        "validated definition and maximum spend."
+                    ),
+                },
+                status_code=409,
+            )
+        if not active.experiment_execution_enabled:
+            return JSONResponse(
+                {
+                    "error": "execution_disabled",
+                    "detail": (
+                        "Experiment execution is disabled by local policy. "
+                        "Imported evidence remains available."
+                    ),
+                },
+                status_code=503,
+            )
+        if experiment_executor is None:
+            return JSONResponse(
+                {
+                    "error": "state_store_unavailable",
+                    "detail": "Experiment runtime state storage is not configured.",
+                },
+                status_code=503,
+            )
+        if payload.confirmed_max_spend_usd > active.experiment_max_spend_cap:
+            return JSONResponse(
+                {
+                    "error": "spend_cap_exceeded",
+                    "detail": (
+                        "The confirmed spend exceeds the configured local "
+                        "experiment ceiling."
+                    ),
+                },
+                status_code=422,
+            )
+        current = (
+            None
+            if active.benchmark_root is None
+            else rendering_comparison(active.benchmark_root)
+        )
+        if current is None:
+            return JSONResponse(
+                {"error": "registry_unavailable"},
+                status_code=503,
+            )
+        validation = validate_definition(
+            payload.definition,
+            current.registry,
+            execution_available=True,
+            local_spend_cap=active.experiment_max_spend_cap,
+        )
+        if not validation.valid:
+            return JSONResponse(
+                {
+                    "error": "validation_failed",
+                    "validation": validation.model_dump(mode="json"),
+                },
+                status_code=422,
+            )
+        if (
+            payload.confirmed_max_spend_usd
+            != payload.definition.effective_max_spend_usd
+        ):
+            return JSONResponse(
+                {
+                    "error": "confirmation_mismatch",
+                    "detail": (
+                        "Confirmed spend must equal the validated effective "
+                        "maximum spend."
+                    ),
+                },
+                status_code=409,
+            )
+        try:
+            job = experiment_executor.create(
+                request_id=payload.request_id,
+                definition=payload.definition,
+                player_profile=payload.player_profile,
+                confirmed_max_spend_usd=payload.confirmed_max_spend_usd,
+            )
+        except ExperimentRequestConflict as error:
+            return JSONResponse(
+                {"error": "request_conflict", "detail": str(error)},
+                status_code=409,
+            )
+        experiment_executor.start(job.id)
+        return JSONResponse(job.public(), status_code=202)
+
+    async def experiment_job(request: Request) -> JSONResponse:
+        if experiment_executor is None:
+            return JSONResponse({"error": "not_found"}, status_code=404)
+        try:
+            job = experiment_executor.require(request.path_params["job_id"])
+        except KeyError:
+            return JSONResponse({"error": "not_found"}, status_code=404)
+        return JSONResponse(job.public())
+
+    async def experiment_jobs(request: Request) -> JSONResponse:
+        del request
+        jobs = (
+            []
+            if experiment_executor is None
+            else [
+                job.public()
+                for job in sorted(
+                    experiment_executor.jobs.values(),
+                    key=lambda candidate: candidate.id,
+                    reverse=True,
+                )
+            ]
+        )
+        return JSONResponse({"jobs": jobs})
+
+    async def control_experiment(request: Request) -> JSONResponse:
+        if experiment_executor is None:
+            return JSONResponse({"error": "not_found"}, status_code=404)
+        try:
+            job = experiment_executor.require(request.path_params["job_id"])
+        except KeyError:
+            return JSONResponse({"error": "not_found"}, status_code=404)
+        try:
+            payload = await request.json()
+        except ValueError:
+            return JSONResponse({"error": "invalid_control"}, status_code=422)
+        action = payload.get("action") if isinstance(payload, dict) else None
+        if action == "stop":
+            await experiment_executor.stop(job.id)
+        elif action == "resume":
+            experiment_executor.start(job.id)
+        else:
+            return JSONResponse(
+                {"error": "invalid_control", "detail": "Use stop or resume."},
+                status_code=422,
+            )
+        return JSONResponse(job.public())
+
+    async def validate_experiment(request: Request) -> JSONResponse:
+        try:
+            payload = ExperimentValidateRequest.model_validate(
+                await request.json()
+            )
+        except (ValidationError, ValueError) as error:
+            return JSONResponse(
+                {"error": "invalid_experiment", "detail": str(error)},
+                status_code=422,
+            )
+        current = (
+            None
+            if active.benchmark_root is None
+            else rendering_comparison(active.benchmark_root)
+        )
+        if current is None:
+            return JSONResponse(
+                {
+                    "error": "registry_unavailable",
+                    "detail": "A typed experiment registry is not available.",
+                },
+                status_code=503,
+            )
+        result = validate_definition(
+            payload.definition,
+            current.registry,
+            execution_available=active.experiment_execution_enabled,
+            local_spend_cap=active.experiment_max_spend_cap,
+        )
+        return JSONResponse(
+            {
+                "validation": result.model_dump(mode="json"),
+                "queue": list(sample_queue(payload.definition)),
+            }
+        )
+
+    async def fork_experiment(request: Request) -> JSONResponse:
+        try:
+            payload = ExperimentForkRequest.model_validate(await request.json())
+        except (ValidationError, ValueError) as error:
+            return JSONResponse(
+                {"error": "invalid_experiment_fork", "detail": str(error)},
+                status_code=422,
+            )
+        current = (
+            None
+            if active.benchmark_root is None
+            else rendering_comparison(active.benchmark_root)
+        )
+        if current is None:
+            return JSONResponse(
+                {
+                    "error": "registry_unavailable",
+                    "detail": "A typed experiment registry is not available.",
+                },
+                status_code=503,
+            )
+        try:
+            result = fork_one_variable(
+                payload.definition,
+                arm_id=payload.arm_id,
+                feature_id=payload.feature_id,
+                value=payload.value,
+                registry=current.registry,
+            )
+        except ValueError as error:
+            return JSONResponse(
+                {"error": "invalid_experiment_fork", "detail": str(error)},
+                status_code=422,
+            )
+        if experiment_executor is not None:
+            try:
+                experiment_executor.persist_definition(result)
+            except ValueError as error:
+                return JSONResponse(
+                    {
+                        "error": "immutable_definition_conflict",
+                        "detail": str(error),
+                    },
+                    status_code=409,
+                )
+        return JSONResponse(result.model_dump(mode="json"))
+
     async def world_atlas(request: Request) -> JSONResponse:
         level = request.query_params.get("level", "overview")
         if level not in {"overview", "zone"}:
@@ -531,6 +780,27 @@ def create_app(
             Route("/api/diagnostic-history", history),
             Route("/api/incidents/export", export_incident, methods=["POST"]),
             Route("/api/comparisons", comparisons),
+            Route("/api/experiments/run", run_experiment, methods=["POST"]),
+            Route("/api/experiments/jobs", experiment_jobs),
+            Route(
+                "/api/experiments/jobs/{job_id:str}",
+                experiment_job,
+            ),
+            Route(
+                "/api/experiments/jobs/{job_id:str}/control",
+                control_experiment,
+                methods=["POST"],
+            ),
+            Route(
+                "/api/experiments/validate",
+                validate_experiment,
+                methods=["POST"],
+            ),
+            Route(
+                "/api/experiments/fork",
+                fork_experiment,
+                methods=["POST"],
+            ),
             Route("/api/world/atlas", world_atlas),
             Route(
                 "/api/comparisons/{comparison_id:str}",

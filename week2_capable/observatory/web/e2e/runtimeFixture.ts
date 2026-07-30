@@ -37,7 +37,7 @@ const sessions = [
   },
 ];
 
-export async function mockRuntime(page: Page) {
+export async function mockRuntime(page: Page, catalogDelayMs = 0) {
   await page.route("**/api/world/atlas*", async (route) => {
     const url = new URL(route.request().url());
     const selectedZone = url.searchParams.get("zone");
@@ -83,6 +83,9 @@ export async function mockRuntime(page: Page) {
     });
   });
   await page.route("**/api/sessions", async (route) => {
+    if (catalogDelayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, catalogDelayMs));
+    }
     await route.fulfill({
       status: 200,
       contentType: "application/json",

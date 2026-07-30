@@ -129,10 +129,12 @@ export function WorldExplorer({
     const viewport = mapScroll.current;
     const point = anchorId === null ? undefined : byId.get(anchorId);
     if (viewport === null || point === undefined) return;
-    viewport.scrollTo({
-      left: Math.max(0, point.x - viewport.clientWidth / 2),
-      behavior: "instant",
-    });
+    const left = Math.max(0, point.x - viewport.clientWidth / 2);
+    if (typeof viewport.scrollTo === "function") {
+      viewport.scrollTo({ left, behavior: "instant" });
+    } else {
+      viewport.scrollLeft = left;
+    }
   }, [anchorId, byId, camera, mode]);
 
   function select(node: WorldNodeData) {

@@ -89,6 +89,15 @@ uv run --no-project --env-file .boukensha/.env boukensha-e1 \
   --output-dir .boukensha/benchmarks/e1-render-raw-n10
 ```
 
+`--max-iterations N` and `--max-sample-cost USD` apply per-sample stop
+boundaries through the secret-free settings overlay. The Observatory uses
+these arguments after validating an experiment and receiving explicit spend
+confirmation. They do not replace the cumulative `--cap` boundary.
+
+The controlled runner also pins `--profile`, `--model`, and
+`--compaction-threshold` into each isolated attempt. Unsupported registry
+changes fail validation before the runner starts.
+
 Runtime artifacts go under `.boukensha/benchmarks/e1/`. A reset failure blocks
 the first model call, is counted separately from journey outcomes, and stops
 the batch for correction. The reset acts on the gateway session created for

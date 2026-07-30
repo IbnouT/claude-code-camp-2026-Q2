@@ -359,3 +359,24 @@ def test_overlay_selects_model_result_mode(tmp_path: Path) -> None:
     attempt = create_attempt(repository, tmp_path, result_mode="minimal")
     assert attempt.result_mode == "minimal"
     assert "result_mode: minimal" in (tmp_path / "settings.yaml").read_text()
+
+
+def test_overlay_applies_per_sample_iteration_and_spend_ceilings(
+    tmp_path: Path,
+) -> None:
+    repository = Repository.discover()
+    attempt = create_attempt(
+        repository,
+        tmp_path,
+        model="claude-haiku-4-5",
+        compaction_threshold=0.72,
+        max_iterations=17,
+        max_turn_cost=0.42,
+    )
+
+    text = (tmp_path / "settings.yaml").read_text()
+    assert attempt.max_turn_cost == 0.42
+    assert "max_iterations: 17" in text
+    assert "max_turn_cost: 0.42" in text
+    assert "model: claude-haiku-4-5" in text
+    assert "compaction_threshold: 0.72" in text

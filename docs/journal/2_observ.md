@@ -98,6 +98,10 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
 - Rendering the 1,878-room atlas was cheap, but it still could not locate the
   live agent without a retained stable room number. Scale and epistemic
   correlation are independent observability problems.
+- A safe experiment runner needs two budget proofs: a preflight maximum
+  derived from planned samples, and a runtime ledger that refuses the next
+  sample unless its full ceiling still fits. One cumulative cap cannot prove
+  both.
 
 ## Technical Conclusions
 

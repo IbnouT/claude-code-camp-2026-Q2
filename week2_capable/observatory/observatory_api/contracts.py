@@ -726,6 +726,131 @@ class ParserCounterfactual(BaseModel):
     typed_delta: int
 
 
+class ExperimentFeature(BaseModel):
+    """One typed configuration dimension rendered by the workbench."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    label: str
+    group: Literal["model", "tools", "rendering", "memory", "context", "policy"]
+    kind: Literal["boolean", "enum", "integer", "number", "text"]
+    description: str
+    default: bool | int | float | str
+    options: tuple[str, ...] = ()
+    minimum: float | None = None
+    maximum: float | None = None
+    source: str
+
+
+class ExperimentArmDefinition(BaseModel):
+    """One immutable arm and its effective registered configuration."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    label: str
+    values: dict[str, bool | int | float | str]
+
+
+class ExperimentStopCriteria(BaseModel):
+    """The six independent boundaries that can stop experiment execution."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    success_target: int
+    verified_predicate_required: bool
+    max_iterations_per_sample: int
+    max_wall_seconds_per_sample: int
+    max_total_cost_usd: float
+    operator_stop_enabled: bool
+
+
+class ExperimentDefinition(BaseModel):
+    """A versioned, reproducible controlled-test definition."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    version: int
+    title: str
+    objective: str
+    success_predicate: str
+    journey: str
+    starting_state: str
+    reset_strategy: str
+    reset_identity: str
+    arms: tuple[ExperimentArmDefinition, ...]
+    repetitions_per_arm: int
+    per_sample_spend_ceiling_usd: float
+    stop: ExperimentStopCriteria
+    effective_max_spend_usd: float
+    source: Literal["imported_evidence", "executable_definition"]
+    parent_definition_id: str | None = None
+    changed_feature: str | None = None
+
+
+class ExperimentValidation(BaseModel):
+    """Evidence that a definition is safe and comparable before execution."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    valid: bool
+    comparable: bool
+    execution_available: bool
+    paid_confirmation_required: bool = True
+    issues: tuple[str, ...]
+    checks: tuple[str, ...]
+
+
+class ExperimentRunRequest(BaseModel):
+    """An explicit paid-execution confirmation for one validated definition."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    request_id: str = Field(min_length=1, max_length=160)
+    definition: ExperimentDefinition
+    player_profile: str = Field(pattern=r"^[A-Za-z][A-Za-z0-9_-]*$")
+    confirmed: bool
+    confirmed_max_spend_usd: float = Field(gt=0)
+
+
+class ExperimentValidateRequest(BaseModel):
+    """A candidate definition submitted for deterministic preflight."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    definition: ExperimentDefinition
+
+
+class ExperimentForkRequest(BaseModel):
+    """A one-variable fork of an immutable experiment definition."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    definition: ExperimentDefinition
+    arm_id: str = Field(min_length=1, max_length=80)
+    feature_id: str = Field(min_length=1, max_length=160)
+    value: bool | int | float | str
+
+
+class ComparisonSample(BaseModel):
+    """One cohort member with a stable route back to Sessions."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    run_id: str
+    mode: Literal["raw", "minimal", "full"]
+    attempt: str
+    success: bool
+    setup_failure: bool
+    excluded: bool
+    exclusion_reason: str | None
+    cost_usd: float
+    turns: int
+    calls: int
+
+
 class RunComparison(BaseModel):
     """A complete J1 cohort, alignment, and deterministic replay comparison."""
 
@@ -734,7 +859,11 @@ class RunComparison(BaseModel):
     id: str
     title: str
     journey: str
+    definition: ExperimentDefinition
+    registry: tuple[ExperimentFeature, ...]
+    validation: ExperimentValidation
     cohorts: tuple[ComparisonCohort, ...]
+    samples: tuple[ComparisonSample, ...]
     lanes: tuple[ComparisonLane, ...]
     divergence: FirstDivergence
     counterfactuals: tuple[CounterfactualProjection, ...]

@@ -15,6 +15,9 @@ class Settings:
     runtime_root: Path | None = None
     agent_events: Path | None = None
     benchmark_root: Path | None = None
+    experiment_execution_enabled: bool = False
+    experiment_max_spend_cap: float = 0
+    experiment_state_root: Path | None = None
     knowledge_db: Path | None = None
     world_root: Path | None = None
     copilot_model: str | None = None
@@ -36,7 +39,10 @@ class Settings:
             ).rstrip("/"),
             runtime_root=_runtime_root(),
             agent_events=_optional_path("OBSERVATORY_AGENT_EVENTS"),
-            benchmark_root=_optional_path("OBSERVATORY_BENCHMARK_ROOT"),
+            benchmark_root=_benchmark_root(),
+            experiment_execution_enabled=_experiment_execution_enabled(),
+            experiment_max_spend_cap=_experiment_max_spend_cap(),
+            experiment_state_root=_experiment_state_root(),
             knowledge_db=_optional_path("OBSERVATORY_KNOWLEDGE_DB"),
             world_root=_world_root(),
             copilot_model=os.environ.get("OBSERVATORY_COPILOT_MODEL"),
@@ -123,6 +129,65 @@ def _world_root() -> Path | None:
                     candidate = config_dir.parent / candidate
                 return candidate.resolve() if candidate.is_dir() else None
     return find_world()
+
+
+def _benchmark_root() -> Path | None:
+    override = os.environ.get("OBSERVATORY_BENCHMARK_ROOT")
+    if override:
+        return _optional_path("OBSERVATORY_BENCHMARK_ROOT")
+    configured = _observatory_value("benchmark", "path")
+    return _resolved_path(configured) if isinstance(configured, str) else None
+
+
+def _experiment_execution_enabled() -> bool:
+    override = os.environ.get("OBSERVATORY_EXPERIMENT_EXECUTION")
+    if override is not None:
+        return override.casefold() in {"1", "true", "yes", "on"}
+    configured = _observatory_value("experiments", "execution_enabled")
+    return configured is True
+
+
+def _experiment_max_spend_cap() -> float:
+    override = os.environ.get("OBSERVATORY_EXPERIMENT_MAX_SPEND_CAP")
+    if override is not None:
+        return float(override)
+    configured = _observatory_value("experiments", "max_spend_cap_usd")
+    return float(configured) if isinstance(configured, int | float) else 0
+
+
+def _experiment_state_root() -> Path | None:
+    override = os.environ.get("OBSERVATORY_EXPERIMENT_STATE_ROOT")
+    if override:
+        return _optional_path("OBSERVATORY_EXPERIMENT_STATE_ROOT")
+    configured = _observatory_value("experiments", "state_path")
+    return _resolved_path(configured) if isinstance(configured, str) else None
+
+
+def _observatory_value(section: str, key: str) -> object:
+    config_dir = _config_dir()
+    if config_dir is None:
+        return None
+    settings_file = config_dir / "settings.yaml"
+    if not settings_file.is_file():
+        return None
+    loaded = yaml.safe_load(settings_file.read_text(encoding="utf-8")) or {}
+    observatory = loaded.get("observatory", {})
+    selected = (
+        observatory.get(section, {})
+        if isinstance(observatory, dict)
+        else {}
+    )
+    return selected.get(key) if isinstance(selected, dict) else None
+
+
+def _resolved_path(value: str) -> Path:
+    candidate = Path(value).expanduser()
+    config_dir = _config_dir()
+    if not candidate.is_absolute() and config_dir is not None:
+        candidate = config_dir.parent / candidate
+    elif not candidate.is_absolute() and os.environ.get("OBSERVATORY_PROJECT_ROOT"):
+        candidate = Path(os.environ["OBSERVATORY_PROJECT_ROOT"]) / candidate
+    return candidate.resolve()
 
 
 def _config_dir() -> Path | None:

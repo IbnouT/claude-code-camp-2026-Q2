@@ -13,10 +13,17 @@ from ..contracts import (
     ComparisonCohort,
     ComparisonLane,
     ComparisonMilestone,
+    ComparisonSample,
     CounterfactualProjection,
+    ExperimentArmDefinition,
+    ExperimentDefinition,
+    ExperimentFeature,
+    ExperimentStopCriteria,
+    ExperimentValidation,
     FirstDivergence,
     RunComparison,
 )
+from .benchmark import stable_run_id
 from ..projections.parser_replay import replay_parser
 
 Mode = Literal["raw", "minimal", "full"]
@@ -46,7 +53,15 @@ def rendering_comparison(root: Path) -> RunComparison | None:
         id="j1-rendering-n10",
         title="J1 model-facing result rendering",
         journey="J1",
+        definition=rendering_definition(),
+        registry=experiment_registry(),
+        validation=_validation(records),
         cohorts=cohorts,
+        samples=tuple(
+            _sample(mode, row)
+            for mode in MODES
+            for row in records[mode]
+        ),
         lanes=lanes,
         divergence=divergence,
         counterfactuals=counterfactuals,
@@ -78,6 +93,191 @@ def rendering_comparison(root: Path) -> RunComparison | None:
                 "cohort comparison measures total journey cost."
             ),
         ),
+    )
+
+
+def experiment_registry() -> tuple[ExperimentFeature, ...]:
+    return (
+        ExperimentFeature(
+            id="render.mode",
+            label="Model-facing result",
+            group="rendering",
+            kind="enum",
+            description=(
+                "Shapes the same typed gateway result as raw text, a minimal "
+                "envelope, or full structured evidence."
+            ),
+            default="full",
+            options=MODES,
+            source="gateway result-mode contract",
+        ),
+        ExperimentFeature(
+            id="tools.profile",
+            label="Gateway tool surface",
+            group="tools",
+            kind="enum",
+            description="Selects one versioned gateway capability projection.",
+            default="direct-full",
+            options=(
+                "direct-full",
+                "direct-core",
+                "hybrid-full",
+                "hybrid-core",
+            ),
+            source="gateway surface registry",
+        ),
+        ExperimentFeature(
+            id="model.id",
+            label="Agent model",
+            group="model",
+            kind="text",
+            description="Uses a priced model from the agent model catalog.",
+            default="claude-haiku-4-5",
+            source="agent model catalog",
+        ),
+        ExperimentFeature(
+            id="context.compaction_threshold",
+            label="Compaction threshold",
+            group="context",
+            kind="number",
+            description="Context-window fraction that triggers compaction.",
+            default=0.85,
+            minimum=0.01,
+            maximum=1,
+            source="agent task settings",
+        ),
+        ExperimentFeature(
+            id="memory.enabled",
+            label="Persistent knowledge",
+            group="memory",
+            kind="boolean",
+            description="Makes per-player learned state available to the agent.",
+            default=True,
+            source="agent knowledge contract",
+        ),
+        ExperimentFeature(
+            id="policy.max_iterations",
+            label="Maximum turns",
+            group="policy",
+            kind="integer",
+            description="Stops one sample before an unbounded agent loop.",
+            default=60,
+            minimum=1,
+            source="agent task limits",
+        ),
+    )
+
+
+def rendering_definition() -> ExperimentDefinition:
+    shared: dict[str, bool | int | float | str] = {
+        "tools.profile": "direct-full",
+        "model.id": "claude-haiku-4-5",
+        "context.compaction_threshold": 0.85,
+        "memory.enabled": True,
+        "policy.max_iterations": 60,
+    }
+    return ExperimentDefinition(
+        id="j1-rendering-n10-definition",
+        version=1,
+        title="Model-facing result rendering",
+        objective="Reach the bakery from the temple and buy a danish.",
+        success_predicate="A danish is present in the verified inventory.",
+        journey="J1",
+        starting_state="level1-temple@1",
+        reset_strategy="verified snapshot before every sample",
+        reset_identity="level1-temple@1",
+        arms=tuple(
+            ExperimentArmDefinition(
+                id=mode,
+                label={
+                    "raw": "Raw text",
+                    "minimal": "Minimal envelope",
+                    "full": "Full structure",
+                }[mode],
+                values={**shared, "render.mode": mode},
+            )
+            for mode in MODES
+        ),
+        repetitions_per_arm=10,
+        per_sample_spend_ceiling_usd=0.60,
+        stop=ExperimentStopCriteria(
+            success_target=30,
+            verified_predicate_required=True,
+            max_iterations_per_sample=60,
+            max_wall_seconds_per_sample=900,
+            max_total_cost_usd=18.00,
+            operator_stop_enabled=True,
+        ),
+        effective_max_spend_usd=18.00,
+        source="imported_evidence",
+    )
+
+
+def _validation(
+    records: dict[Mode, list[dict[str, Any]]],
+) -> ExperimentValidation:
+    resets = {
+        str(row.get("reset_id") or "")
+        for rows in records.values()
+        for row in rows
+    }
+    capabilities = {
+        str(row.get("capability_digest") or "")
+        for rows in records.values()
+        for row in rows
+    }
+    priced = all(
+        row.get("cost_usd") is not None
+        for rows in records.values()
+        for row in rows
+    )
+    issues = tuple(
+        issue
+        for condition, issue in (
+            (not all(resets), "One or more samples lack a verified reset receipt."),
+            (
+                len(capabilities) != 1 or not all(capabilities),
+                "Gateway capability digests differ or are missing.",
+            ),
+            (not priced, "One or more samples have incomplete cost evidence."),
+        )
+        if condition
+    )
+    return ExperimentValidation(
+        valid=not issues,
+        comparable=not issues,
+        execution_available=False,
+        issues=issues,
+        checks=(
+            "Every sample belongs to journey J1.",
+            "Each arm contains ten retained samples.",
+            "Reset receipts are retained and non-empty.",
+            "Gateway capability digests match across arms.",
+            "Every included sample has priced usage.",
+            "Setup failures remain separate from agent outcomes.",
+        ),
+    )
+
+
+def _sample(mode: Mode, row: dict[str, Any]) -> ComparisonSample:
+    attempt = str(row["attempt_id"])
+    setup_failure = bool(row.get("setup_failure"))
+    eligible = bool(row.get("aggregate_eligible", not setup_failure))
+    return ComparisonSample(
+        run_id=stable_run_id(f"e1-{mode}-n10", attempt),
+        mode=mode,
+        attempt=attempt,
+        success=bool(row.get("success")),
+        setup_failure=setup_failure,
+        excluded=not eligible,
+        exclusion_reason=(
+            str(row.get("error") or "Not aggregate eligible")
+            if not eligible
+            else None
+        ),
+        cost_usd=_number(row, "cost_usd"),
+        turns=int(row.get("iterations") or 0),
+        calls=int(row.get("tool_calls") or 0),
     )
 
 

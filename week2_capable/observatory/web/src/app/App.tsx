@@ -16,6 +16,7 @@ import { InvestigationShell } from "../components/shell/InvestigationShell";
 import { SearchDialog } from "../components/shell/SearchDialog";
 import { LiveCockpit } from "../components/live/LiveCockpit";
 import { SessionsWorkspace } from "../components/sessions/SessionsWorkspace";
+import { ExperimentsWorkspace } from "../components/experiments/ExperimentsWorkspace";
 
 function spaceFromUrl(): Space {
   const requested = new URL(window.location.href).searchParams.get("space");
@@ -122,9 +123,27 @@ export function App() {
     if (playerOptions.length === 0) {
       return;
     }
+    const preferredLive = runtime.catalog.sessions.find(
+      (candidate) => candidate.live,
+    );
+    if (
+      space === "live"
+      && preferredLive
+      && !runtime.catalog.sessions.some(
+        (candidate) => candidate.player_id === player,
+      )
+      && preferredLive.player_id !== player
+    ) {
+      setPlayer(preferredLive.player_id);
+      setLiveSession(preferredLive.id);
+      return;
+    }
     const selectedPlayerExists = playerOptions.some(
       (candidate) => candidate.id === player,
     );
+    if (runtime.loading && !selectedPlayerExists) {
+      return;
+    }
     const nextPlayer = selectedPlayerExists
       ? player
       : (
@@ -146,7 +165,14 @@ export function App() {
         ?? "",
       );
     }
-  }, [liveSession, player, playerOptions, runtime.catalog]);
+  }, [
+    liveSession,
+    player,
+    playerOptions,
+    runtime.catalog,
+    runtime.loading,
+    space,
+  ]);
 
   useEffect(() => {
     if (
@@ -169,7 +195,10 @@ export function App() {
     const available = recorded.catalog.filter(
       (candidate) => candidate.player_id === player,
     );
-    if (!available.some((candidate) => candidate.id === recordedRun)) {
+    const selected = recorded.catalog.find(
+      (candidate) => candidate.id === recordedRun,
+    );
+    if (!recordedRun || (selected && selected.player_id !== player)) {
       setRecordedRun(
         available.find((candidate) => candidate.journey === "J2")?.id
         ?? available[0]?.id
@@ -258,6 +287,18 @@ export function App() {
             }
             error={recorded.error}
             onOpenSearch={() => setSearchOpen(true)}
+          />
+        ) : space === "experiments" ? (
+          <ExperimentsWorkspace
+            playerProfile={player}
+            onOpenRun={(runId) => {
+              const run = recorded.catalog.find((candidate) => candidate.id === runId);
+              if (run) {
+                setPlayer(run.player_id);
+              }
+              setRecordedRun(runId);
+              setSpace("sessions");
+            }}
           />
         ) : (
           <InvestigationShell

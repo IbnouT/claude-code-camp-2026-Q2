@@ -40,6 +40,21 @@ def main(argv: list[str] | None = None) -> int:
         help="model-facing gateway result shape",
     )
     parser.add_argument(
+        "--profile",
+        choices=("direct-full",),
+        default="direct-full",
+        help="validated gateway tool surface",
+    )
+    parser.add_argument(
+        "--model",
+        help="model identifier retained in the isolated attempt overlay",
+    )
+    parser.add_argument(
+        "--compaction-threshold",
+        type=float,
+        help="context-window fraction retained in the isolated attempt overlay",
+    )
+    parser.add_argument(
         "--journey",
         choices=tuple(JOURNEYS),
         default="J1",
@@ -48,6 +63,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--player-profile",
         help="configured player profile, defaults to gateway.connection.player_profile",
+    )
+    parser.add_argument(
+        "--max-iterations",
+        type=_positive_integer,
+        help="per-sample agent iteration ceiling",
+    )
+    parser.add_argument(
+        "--max-sample-cost",
+        type=float,
+        help="per-sample agent spend ceiling",
     )
     parser.add_argument(
         "--player",
@@ -65,7 +90,7 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--player requires --password-stdin")
     journey = JOURNEYS[arguments.journey]
     repository = Repository.discover()
-    proof = prove_surface(profile="direct-full")
+    proof = prove_surface(profile=arguments.profile)
     corpus = week1_corpus(repository.week1_sessions)
     summary = {
         "surface": {
@@ -127,8 +152,13 @@ def main(argv: list[str] | None = None) -> int:
             repository,
             attempt_dir,
             result_mode=arguments.result_mode,
+            profile=arguments.profile,
             player_profile=arguments.player_profile,
             player_character=arguments.player,
+            model=arguments.model,
+            compaction_threshold=arguments.compaction_threshold,
+            max_iterations=arguments.max_iterations,
+            max_turn_cost=arguments.max_sample_cost,
         )
         runtime_environment = dict(os.environ)
         password = (

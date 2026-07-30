@@ -92,15 +92,23 @@ async def discover(
         features=tuple(
             feature
             for feature in (
-            FEATURES + ("copilot-model",)
-            if (
+                FEATURES
+                + (
+                    ("benchmark-execution",)
+                    if settings.experiment_execution_enabled
+                    else ()
+                )
+                + (
+                    ("copilot-model",)
+                    if (
                 settings.copilot_model
                 and settings.copilot_api_key
                 and settings.copilot_spend_cap > 0
                 and settings.copilot_input_rate > 0
                 and settings.copilot_output_rate > 0
-            )
-            else FEATURES
+                    )
+                    else ()
+                )
             )
             if feature not in settings.disabled_features
         ),

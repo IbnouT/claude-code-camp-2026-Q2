@@ -68,7 +68,11 @@ export type RunComparison = {
   id: string;
   title: string;
   journey: string;
+  definition: ExperimentDefinition;
+  registry: ExperimentFeature[];
+  validation: ExperimentValidation;
   cohorts: ComparisonCohort[];
+  samples: ComparisonSample[];
   lanes: ComparisonLane[];
   divergence: {
     index: number | null;
@@ -78,4 +82,72 @@ export type RunComparison = {
   counterfactuals: CounterfactualProjection[];
   parser_counterfactuals: ParserCounterfactual[];
   findings: string[];
+};
+
+export type ExperimentFeature = {
+  id: string;
+  label: string;
+  group: "model" | "tools" | "rendering" | "memory" | "context" | "policy";
+  kind: "boolean" | "enum" | "integer" | "number" | "text";
+  description: string;
+  default: boolean | number | string;
+  options: string[];
+  minimum?: number | null;
+  maximum?: number | null;
+  source: string;
+};
+
+export type ExperimentArmDefinition = {
+  id: string;
+  label: string;
+  values: Record<string, boolean | number | string>;
+};
+
+export type ExperimentDefinition = {
+  id: string;
+  version: number;
+  title: string;
+  objective: string;
+  success_predicate: string;
+  journey: string;
+  starting_state: string;
+  reset_strategy: string;
+  reset_identity: string;
+  arms: ExperimentArmDefinition[];
+  repetitions_per_arm: number;
+  per_sample_spend_ceiling_usd: number;
+  stop: {
+    success_target: number;
+    verified_predicate_required: boolean;
+    max_iterations_per_sample: number;
+    max_wall_seconds_per_sample: number;
+    max_total_cost_usd: number;
+    operator_stop_enabled: boolean;
+  };
+  effective_max_spend_usd: number;
+  source: "imported_evidence" | "executable_definition";
+  parent_definition_id: string | null;
+  changed_feature: string | null;
+};
+
+export type ExperimentValidation = {
+  valid: boolean;
+  comparable: boolean;
+  execution_available: boolean;
+  paid_confirmation_required: boolean;
+  issues: string[];
+  checks: string[];
+};
+
+export type ComparisonSample = {
+  run_id: string;
+  mode: ComparisonMode;
+  attempt: string;
+  success: boolean;
+  setup_failure: boolean;
+  excluded: boolean;
+  exclusion_reason: string | null;
+  cost_usd: number;
+  turns: number;
+  calls: number;
 };

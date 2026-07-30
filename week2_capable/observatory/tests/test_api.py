@@ -16,7 +16,11 @@ from observatory_api.projections.world import project_world, project_world_event
 from observatory_api.queries import plan_operation
 from observatory_api.redaction import redact_question
 from observatory_api.settings import Settings
-from observatory_api.sources.comparison import rendering_comparison
+from observatory_api.execution import ExperimentExecutor
+from observatory_api.sources.comparison import (
+    rendering_comparison,
+    rendering_definition,
+)
 
 
 def test_copilot_query_corpus_routes_only_supported_operations():
@@ -89,6 +93,87 @@ async def test_capability_flags_disable_only_named_features(tmp_path):
     assert "compare" not in features
     assert "copilot-local" not in features
     assert "incident-capsules" in features
+
+
+async def test_experiment_execution_requires_confirmation_before_policy(tmp_path):
+    app = create_app(
+        Settings(
+            web_dist=tmp_path,
+            experiment_execution_enabled=False,
+            experiment_max_spend_cap=10,
+        )
+    )
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        unconfirmed = await client.post(
+            "/api/experiments/run",
+            json={
+                "request_id": "test-unconfirmed",
+                "definition": rendering_definition().model_dump(mode="json"),
+                "player_profile": "poucet",
+                "confirmed": False,
+                "confirmed_max_spend_usd": 18,
+            },
+        )
+        confirmed_but_disabled = await client.post(
+            "/api/experiments/run",
+            json={
+                "request_id": "test-disabled",
+                "definition": rendering_definition().model_dump(mode="json"),
+                "player_profile": "poucet",
+                "confirmed": True,
+                "confirmed_max_spend_usd": 18,
+            },
+        )
+    assert unconfirmed.status_code == 409
+    assert unconfirmed.json()["error"] == "confirmation_required"
+    assert confirmed_but_disabled.status_code == 503
+    assert confirmed_but_disabled.json()["error"] == "execution_disabled"
+
+
+async def test_persisted_experiment_jobs_reopen_without_enabling_execution(
+    tmp_path,
+):
+    benchmark_root = tmp_path / "benchmarks"
+    state_root = tmp_path / "experiments"
+    definition = rendering_definition().model_copy(
+        update={"repetitions_per_arm": 1, "effective_max_spend_usd": 1.8}
+    )
+    executor = ExperimentExecutor(
+        state_root,
+        benchmark_root=benchmark_root,
+        repository_root=tmp_path,
+    )
+    executor.create(
+        request_id="persisted-job",
+        definition=definition,
+        player_profile="poucet",
+        confirmed_max_spend_usd=1.8,
+    )
+    app = create_app(
+        Settings(
+            web_dist=tmp_path,
+            benchmark_root=benchmark_root,
+            experiment_state_root=state_root,
+            experiment_execution_enabled=False,
+            experiment_max_spend_cap=10,
+        )
+    )
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        response = await client.get("/api/experiments/jobs")
+
+    assert response.status_code == 200
+    jobs = response.json()["jobs"]
+    assert len(jobs) == 1
+    assert jobs[0]["id"] == "persisted-job"
+    assert jobs[0]["definition"]["id"] == definition.id
 
 
 async def test_corrupt_benchmark_rows_do_not_hide_readable_runs(tmp_path):
@@ -472,6 +557,29 @@ def test_world_source_uses_shared_non_secret_settings(tmp_path, monkeypatch):
     assert Settings.from_environment().world_root == world
 
 
+def test_experiment_policy_uses_shared_non_secret_settings(tmp_path, monkeypatch):
+    config = tmp_path / ".boukensha"
+    benchmarks = config / "benchmarks"
+    config.mkdir()
+    benchmarks.mkdir()
+    (config / "settings.yaml").write_text(
+        "observatory:\n"
+        "  benchmark:\n"
+        "    path: .boukensha/benchmarks\n"
+        "  experiments:\n"
+        "    execution_enabled: true\n"
+        "    max_spend_cap_usd: 3.5\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("OBSERVATORY_BENCHMARK_ROOT", raising=False)
+    monkeypatch.delenv("BOUKENSHA_DIR", raising=False)
+    settings = Settings.from_environment()
+    assert settings.benchmark_root == benchmarks
+    assert settings.experiment_execution_enabled is True
+    assert settings.experiment_max_spend_cap == 3.5
+
+
 def test_world_projection_keeps_duplicate_titles_as_distinct_candidates(
     tmp_path,
 ):
@@ -675,6 +783,9 @@ def test_rendering_comparison_aligns_semantics_and_replays_same_results(
     replay = {item.mode: item for item in comparison.counterfactuals}
     assert replay["raw"].bytes < replay["minimal"].bytes < replay["full"].bytes
     assert comparison.cohorts[1].calls_mean == 4
+    assert len(comparison.samples) == 3
+    assert comparison.definition.stop.operator_stop_enabled is True
+    assert comparison.registry[0].id == "render.mode"
 
 
 def test_parser_counterfactual_replays_the_exact_recorded_frames(tmp_path):

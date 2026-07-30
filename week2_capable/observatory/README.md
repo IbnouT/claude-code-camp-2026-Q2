@@ -59,10 +59,29 @@ Sessions turns an explicitly selected experiment sample into an investigation:
 - Benchmark outcome enters only through the selected experiment-sample link.
 - Stable URLs restore the player, run, lens, room, and selected record.
 
+Experiments turns retained cohorts into a controlled comparison:
+
+- The objective, independent predicate, starting state, and reset identity are explicit.
+- Typed controls come from the model, gateway, agent, and policy registries.
+- Raw, minimal, and full J1 arms explain their only controlled difference.
+- Six stop criteria and maximum spend are visible before confirmation.
+- Validation rejects unknown fields, reset gaps, and inconsistent spend math.
+- One-variable forks retain their parent and exact changed feature.
+- Sample identities and queue order remain stable across stop and resume.
+- Persisted jobs reopen from the experiment library with their definition, state, spend, and collected cohort.
+- Setup failures, exclusions, agent failures, and successes stay distinct.
+- Aggregates open their contributing samples through standard Sessions routes.
+- First divergence aligns representative runs by semantic action.
+- Cost, token classes, payload size, and movement share expose attention economics.
+- Rendering and parser counterfactuals are labelled as non-causal replay.
+- Paid execution is disabled by default and requires local policy, validation, and explicit confirmation.
+- Confirmed jobs persist stable sample identities, stop and resume safely, and expose retained samples through Sessions.
+- An unconfirmed request is rejected before execution policy is evaluated.
+
 The browser tests use deterministic representative evidence. The launched
 product reads the local runtime registry and selected session journals.
-Sessions reads explicitly correlated benchmark evidence. Experiments execution
-and Knowledge workflows land in their owning increments.
+Sessions and Experiments read explicitly correlated benchmark evidence.
+Knowledge workflows land in their owning increment.
 
 ### Reset boundary
 
@@ -149,6 +168,9 @@ variables provide process-local source paths and overrides:
 | `OBSERVATORY_GATEWAY_URL` | `http://127.0.0.1:8765` | Gateway HTTP and SSE source |
 | `OBSERVATORY_AGENT_EVENTS` | disabled | Agent event source |
 | `OBSERVATORY_BENCHMARK_ROOT` | disabled | Benchmark evidence root |
+| `OBSERVATORY_EXPERIMENT_EXECUTION` | `observatory.experiments.execution_enabled` | One-run execution-policy override |
+| `OBSERVATORY_EXPERIMENT_MAX_SPEND_CAP` | `observatory.experiments.max_spend_cap_usd` | One-run hard local spend ceiling |
+| `OBSERVATORY_EXPERIMENT_STATE_ROOT` | `observatory.experiments.state_path` | Untracked definitions, jobs, and receipts |
 | `OBSERVATORY_KNOWLEDGE_DB` | disabled | Knowledge-store database |
 | `OBSERVATORY_WEB_DIST` | `web/dist` | Built frontend location |
 | `OBSERVATORY_COPILOT_MODEL` | disabled | Optional Anthropic translator model |
@@ -173,6 +195,22 @@ observatory:
   world:
     path: week0_explore/circlemud-world-parser/assets/wld
 ```
+
+Benchmark evidence and experiment policy are also durable non-secret settings:
+
+```yaml
+observatory:
+  benchmark:
+    path: .boukensha/benchmarks
+  experiments:
+    execution_enabled: false
+    max_spend_cap_usd: 10.00
+    state_path: .boukensha/experiments
+```
+
+Enabling policy does not confirm a run. Validation returns the effective
+configuration, reset identity, deterministic queue, and maximum spend. A
+separate request must explicitly confirm that spend before a runner can start.
 
 Model translation also requires `ANTHROPIC_API_KEY`. The key remains
 server-side. A user must enable model translation for the individual question,
