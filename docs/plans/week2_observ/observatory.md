@@ -178,12 +178,34 @@ changes preserve the selected run, time, room, trace, and evidence.
 
 Live answers "what is happening now?"
 
+- one active player selected from the runtime registry, with fast switching
+  between that player's live and recently ended sessions
 - live causal activity stream
-- current room, vitals, position confidence, goal, and agent status
+- current room, full player state, position confidence, goal, and agent status
 - journey map with recent path and unresolved location candidates
 - cost, context, latency, and token burn
 - instrumentation health and connection freshness
 - automatic diagnostic cards
+
+Full player state includes gold, prompt vitals, hungry, thirsty, poisoned,
+drunk, encumbered, and posture. Unknown and stale values remain visible as
+capture states. The status rail and map marker share the same projection.
+Abnormal conditions use restrained glyphs. Normal state does not become a row
+of decorative badges.
+
+The journey map has three focus modes:
+
+- Focus radius is the default. It keeps the current position and nearby known
+  rooms legible while the journey grows.
+- Grow keeps the full current journey framed as new rooms arrive.
+- Lantern limits context to roughly two supported edges from the current
+  position for moment-to-moment play.
+
+The camera can follow the agent, hold the investigator's manual framing, or fit
+the selected evidence. A room opens a compact detail popover with visits,
+entities, exits, confidence, and provenance. The objective beacon appears only
+when a cited sighting or durable knowledge assertion supports a known target
+location.
 
 The opening state prioritizes the world and current intent. Secondary measures
 stay quiet until they change or cross a meaningful threshold.
@@ -194,6 +216,8 @@ Sessions answers "why did this happen in this run?"
 
 - player and session discovery without latest-file inference
 - replay, pause, step, scrub, and synchronized spatial and temporal lenses
+- an unfoldable session sequence from lifecycle and goal revisions through
+  turns, tool calls, gateway commands, wire frames, observations, and state
 - trace waterfall from model turn to tool call, command, wire, parse, and state
 - belief versus reality comparison
 - evidence inspector for raw, parsed, rendered, and believed forms
@@ -205,13 +229,22 @@ Investigation begins from a selected session, fact, diagnostic, map location,
 timeline range, or question. The workspace keeps that subject in focus while
 the user moves between causal, spatial, cost, and evidence lenses.
 
+Replay supports automatic playback at human-readable speeds and event, turn,
+or milestone stepping. At any paused moment, "Ask why" scopes the query to the
+selected evidence prefix and opens every citation in place.
+
+Cost is a Sessions lens, not a separate destination. Totals, curves, token
+classes, and efficiency measures are clickable pivots into billed responses,
+their prompts, actions, rooms, progress, and source usage records.
+
 ### Experiments
 
 Experiments answers "which design performs better, and why?"
 
 - controlled scenario definitions with objective, baseline, success predicate,
   model, tools, rendering, parser, limits, repetitions, and spend cap
-- gateway and agent feature controls generated from the runtime registry
+- gateway and agent feature controls generated from one versioned runtime
+  registry, so a new registered flag appears without a hand-coded form change
 - reset verification before every sample
 - explicit validate, launch, resume, stop, and compare lifecycle
 - two or more runs aligned by semantic milestones
@@ -225,19 +258,45 @@ Alignment uses room transitions, tool calls, objective milestones, and verified
 state changes. Wall-clock alignment is available, but it is not the default.
 Every experiment and sample links to its full Sessions evidence.
 
+The workbench separates aggregate and per-run results. Repetitions show
+distribution, outliers, setup failures, and excluded samples. One sample may be
+watched live at a time while the remaining queue stays controlled. Stop
+criteria include success, verified predicate, iteration, time, spend, and
+operator stop.
+
+Every repetition resets the selected player and knowledge to the same versioned
+baseline, then verifies the resulting digest before a model call. A mismatch
+blocks the sample and explains the field that drifted. Forking an experiment
+shows the exact variables that changed.
+
 ### Knowledge
 
 Knowledge answers "what does this player know, and why?"
 
 - learned world with zone, cluster, and room levels of detail
 - frontier, revisits, entities, objects, and mobile sightings
-- player state, progression, inventory, and milestones
+- full player state, progression, inventory, and milestones
 - per-fact provenance, confidence, parser version, and contradictions
 - snapshots, recoverable reset, and restore
 - belief and observer-truth overlays that remain technically separate
 
 Knowledge is cumulative per player. A selected fact opens every supporting
 session and observation without flattening mobile entities or duplicate rooms.
+
+Learned, Truth, and Diff are explicit layers. Truth remains quarantined from
+agent-facing data. Knowledge reset always snapshots first. Restore appends a
+new revision instead of rewriting history.
+
+The learned world adapts to scale:
+
+- room detail for a small neighbourhood
+- clusters for dense learned regions
+- zones for the complete known world
+
+Entities support search, filters, type grouping, pagination, mobile sighting
+history, and multiple simultaneous instances. The same information remains
+usable on a narrow screen and with several Observatory instances reading the
+store concurrently.
 
 ### Ask and search
 
@@ -311,6 +370,11 @@ The narrow layout becomes a focused sequence rather than a squeezed dashboard:
 
 ### Visual grammar
 
+- One canonical header carries player, session, space, clock, source health,
+  theme, search, and control status. Feature work does not introduce competing
+  shells.
+- Design tokens define color, typography, spacing, elevation, borders, motion,
+  density, and graph semantics. Shared components consume those tokens.
 - State uses a restrained neutral foundation with semantic accents.
 - Confidence uses text, shape, border treatment, and pattern, not color alone.
 - Actual, inferred, believed, and counterfactual data have stable visual forms.
@@ -320,9 +384,10 @@ The narrow layout becomes a focused sequence rather than a squeezed dashboard:
 - Typography distinguishes prose, evidence, identifiers, and numeric measures.
 - Empty, stale, unavailable, reconnecting, and incomplete are distinct states.
 
-Dark is the primary operator theme. A high-contrast light theme supports
-daylight use and print. Theme is separate from semantic color so meaning remains
-stable.
+Dark is the default operator theme. A first-class light theme supports daylight
+use and print, with a persistent toggle and equivalent contrast, hierarchy, and
+semantic meaning. Terminal and raw-evidence surfaces remain dark in both themes
+to preserve ANSI and monospace legibility.
 
 ### Interaction model
 
@@ -571,6 +636,19 @@ launcher, carry authenticated session identity, and append their own audit
 events. The control plane can launch, stop, or revise a mortal agent goal. It
 cannot issue game commands, use administrator credentials, or mutate evidence.
 
+The control plane exposes only three operations:
+
+- launch a mortal run for a selected player with a reviewed task, model,
+  limits, tool profile, and optional reset baseline
+- stop a selected run through the launcher lifecycle
+- propose a goal revision to the selected agent's goal channel
+
+Launch presents the exact effective configuration and maximum spend before
+confirmation. Goal revisions show the active goal, proposed replacement, and
+delivery state. They require confirmation and become immutable session events.
+Failure to deliver does not change the displayed active goal. Stop and launch
+errors retain typed failure evidence and recovery guidance.
+
 ### Package shape
 
 ```text
@@ -662,6 +740,17 @@ Configuration controls:
 - observer-truth visibility
 - experimental features
 
+One runtime registry describes every user-selectable gateway and agent feature:
+
+- stable id, label, description, type, default, valid values, and dependencies
+- whether the feature affects evidence, model input, gameplay, or cost
+- whether it is safe for replay, requires reset, or requires a paid run
+- the runtime version and digest that interpreted it
+
+The runtime and experiment workbench consume the same registry. Unknown
+registry entries remain inspectable and disabled until the current client can
+render their type safely.
+
 Capabilities are reported at runtime. A disabled or unavailable source produces
 an explanation and setup action. Feature configuration is fixed for an
 investigation export so results remain reproducible.
@@ -740,6 +829,26 @@ Performance budgets are defined before implementation:
 Virtualization, workers, level of detail, and incremental projection are used
 only where measured budgets require them.
 
+## Question coverage
+
+Product acceptance follows investigation questions, not the presence of a
+widget.
+
+| Question | Primary space | Required evidence | Acceptance gate |
+| --- | --- | --- | --- |
+| What is the selected player doing now? | Live | registry, agent lifecycle, goal, gateway stream, player state | a real journey grows without manual refresh |
+| Where is the player and how certain is that location? | Live | room, exits, position candidates, confidence, wire refs | duplicate titles remain distinct and explainable |
+| Why did this action happen? | Sessions | model request, response, tool call, command, wire, parse, state | one selection traverses the complete causal chain |
+| Why did the agent stop? | Sessions | goal revisions, final claim, stop reason, verified state | the answer uses only the selected session and cites its evidence |
+| What did this turn cost and what progress did it buy? | Sessions | usage, rate snapshot, context, action, milestone | a cost point opens the billed response and outcome |
+| What evidence is missing or stale? | Sessions | source health, sequence gaps, field provenance, observed time | affected conclusions name their capture gaps |
+| Which system design performs better? | Experiments | immutable definition, reset receipt, samples, predicates, usage | aggregates and outliers open their full Sessions runs |
+| Can a new runtime feature be tested without UI code? | Experiments | versioned feature registry and effective run config | a registered typed flag appears and is persisted automatically |
+| What has this player learned across sessions? | Knowledge | per-player assertions, CDC, provenance, snapshots | a fact opens every supporting and contradicting observation |
+| Where does learned state differ from truth? | Knowledge | learned assertions and quarantined observer truth | Learned, Truth, and Diff preserve source separation |
+| Can an investigator ask in plain language? | Any selected space | typed query plan and cited returned evidence | model-disabled questions still work and every claim opens |
+| Can another person reproduce the diagnosis offline? | Sessions | sanitized evidence prefix, source versions, notes, gaps | an exported capsule reopens without credentials or live services |
+
 ## Verification strategy
 
 ### Contract and reducer tests
@@ -770,10 +879,16 @@ Playwright covers:
 
 - start from a fresh clone
 - connect to a replay and a live session
+- switch between two concurrent players without crossing evidence
 - pause, scrub, inspect evidence, and return to live
+- unfold a session from turn to wire source and ask why at the paused moment
 - recover from a dropped SSE connection
 - investigate a false completion
 - compare two runs at their first divergence
+- define an experiment from the feature registry, verify reset, watch one
+  sample, stop it, and open aggregate and per-run results
+- change Knowledge level of detail, inspect provenance, snapshot, reset, and
+  restore without deleting history
 - ask a deterministic and a model-disabled question
 - export and reopen an incident capsule
 
@@ -816,19 +931,25 @@ reports available capabilities.
 
 ### Increment 2: Live and time travel
 
-- session selector and global clock
+- player switcher, session selector, and global clock
 - causal activity timeline
 - pause, scrub, bookmarks, and return to live
-- current state, journey, cost, and instrumentation health
+- full player state, journey, cost, and instrumentation health
+- Focus radius, Grow, and Lantern map modes
+- follow, manual, and fit-selection camera modes
+- room popover, condition glyphs, and evidence-gated objective beacon
 - URL-addressable selection
 
 Exit gate: every panel reconstructs the same state at every selected sequence.
 
 ### Increment 3: Sessions investigation and diagnostics
 
+- unfoldable session sequence and automatic, event, turn, and milestone replay
 - causal waterfall
 - evidence lens
 - belief-versus-reality workspace
+- cost and context lenses with clickable source attribution
+- paused-moment "Ask why"
 - false-completion, ambiguity, loop, stall, and parse diagnostics
 - structured search and saved views
 
@@ -871,7 +992,13 @@ the model preserves the core investigation workflow.
 
 ### Increment 7: Knowledge and incident workflow
 
-- knowledge overview, frontier, entities, player, and progression
+- cumulative per-player knowledge overview, frontier, entities, player, and
+  progression
+- room, cluster, and zone levels of detail
+- entity search, filters, grouping, pagination, mobile sightings, and
+  simultaneous instances
+- Learned, Truth, and Diff layers
+- snapshot, append-only reset, and restore
 - incident capsules
 - investigator annotations
 - sanitized export and offline reopen
@@ -986,14 +1113,19 @@ and which turns added cost without adding verified information.
 ### Increment 12: Benchmark workbench
 
 - describe journeys in plain language before showing internal IDs
+- generate controls from the versioned runtime feature registry
 - select objective, start state, model, tool profile, rendering, parser, limits,
-  repetitions, and spend cap
+  repetitions, stop criteria, and spend cap
 - preview the exact controlled variables and estimated maximum spend
+- reset and verify the same baseline before every repetition
 - run only validated benchmark definitions through a separate controlled runner
 - stream attempt progress, cost, state, errors, and completion criteria
+- watch one active sample at a time
 - save immutable experiment definitions beside results
-- compare selected cohorts, individual attempts, and first divergences
+- compare aggregate distributions, individual attempts, outliers, setup
+  failures, and first divergences
 - support rerun, fork, and one-variable-at-a-time experiment creation
+- open every sample and metric in Sessions
 
 The observatory remains read-only for gameplay. Benchmark execution is an
 explicit experiment action with a confirmation boundary and a separate process.
