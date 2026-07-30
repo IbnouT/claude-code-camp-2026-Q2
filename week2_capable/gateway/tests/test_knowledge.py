@@ -94,6 +94,64 @@ def test_repeated_value_adds_support_without_duplicate_current_fact(
         ).fetchone()[0] == 2
 
 
+def test_duplicate_projection_of_the_same_wire_evidence_is_idempotent(
+    tmp_path: Path,
+) -> None:
+    store = KnowledgeStore(tmp_path / "knowledge.db", player_id="alpha")
+    source = evidence("s1", 1)
+    first = store.assert_fact(
+        "player:alpha",
+        "state.hit",
+        20,
+        layer="parsed",
+        confidence="high",
+        evidence=source,
+    )
+    second = store.assert_fact(
+        "player:alpha",
+        "state.hit",
+        20,
+        layer="parsed",
+        confidence="high",
+        evidence=source,
+    )
+
+    assert second.assertion_id == first.assertion_id
+    assert store.last_change_seq() == 1
+
+
+def test_parsed_state_appends_and_supersedes_each_value_change(
+    tmp_path: Path,
+) -> None:
+    store = KnowledgeStore(tmp_path / "knowledge.db", player_id="alpha")
+    assertion_ids = []
+    for seq, hit in enumerate((20, 18, 20), start=1):
+        assertion_ids.append(
+            store.assert_fact(
+                "player:alpha",
+                "state.hit",
+                hit,
+                layer="parsed",
+                confidence="high",
+                evidence=evidence("s1", seq),
+            ).assertion_id
+        )
+
+    current = store.current_facts(layer="parsed")[0]
+    assert current.value == 20
+    assert current.assertion_id == assertion_ids[-1]
+    assert len(set(assertion_ids)) == 3
+    assert [change.operation for change in store.changes_since()] == [
+        "assert",
+        "supersede",
+        "supersede",
+    ]
+    with sqlite3.connect(store.path) as connection:
+        assert connection.execute(
+            "SELECT COUNT(*) FROM assertions"
+        ).fetchone()[0] == 3
+
+
 def test_contradictions_coexist_until_explicit_resolution(tmp_path: Path) -> None:
     store = KnowledgeStore(tmp_path / "knowledge.db", player_id="alpha")
     first = store.assert_fact(
@@ -168,12 +226,77 @@ def test_snapshot_reset_and_restore_append_history(tmp_path: Path) -> None:
             "SELECT snapshot_id, assertions FROM restores"
         ).fetchone()
         assert restore == (snapshot.snapshot_id, 1)
+        reset = connection.execute(
+            "SELECT snapshot_id, assertions FROM knowledge_resets"
+        ).fetchone()
+        assert reset == (snapshot.snapshot_id, 1)
     assert [change.operation for change in store.changes_since()] == [
         "assert",
         "snapshot",
         "retract",
         "assert",
     ]
+
+
+def test_snapshot_verification_detects_assertion_content_tampering(
+    tmp_path: Path,
+) -> None:
+    store = KnowledgeStore(tmp_path / "knowledge.db", player_id="alpha")
+    assertion = store.assert_fact(
+        "room:r1",
+        "title",
+        "The Bakery",
+        layer="learned",
+        confidence="high",
+        evidence=evidence("s1", 1),
+    )
+    snapshot = store.snapshot("before mutation")
+    store.close()
+    with sqlite3.connect(store.path) as connection:
+        connection.execute(
+            "UPDATE assertions SET value_digest = ? WHERE assertion_id = ?",
+            ("tampered", assertion.assertion_id),
+        )
+
+    reopened = KnowledgeStore(store.path, player_id="alpha")
+    try:
+        assert reopened.verify_snapshot(snapshot.snapshot_id) is False
+    finally:
+        reopened.close()
+
+
+def test_restore_selects_snapshot_value_over_later_learned_resolution(
+    tmp_path: Path,
+) -> None:
+    store = KnowledgeStore(tmp_path / "knowledge.db", player_id="alpha")
+    original = store.assert_fact(
+        "room:r1",
+        "title",
+        "The Bakery",
+        layer="learned",
+        confidence="high",
+        evidence=evidence("s1", 1),
+    )
+    snapshot = store.snapshot("known good")
+    changed = store.assert_fact(
+        "room:r1",
+        "title",
+        "The Ruins",
+        layer="learned",
+        confidence="high",
+        evidence=evidence("s2", 1),
+    )
+    store.resolve(original.fact_id, changed.assertion_id, reason="later evidence")
+
+    store.restore(snapshot.snapshot_id, reason="operator rollback")
+
+    restored = store.current_facts(layer="learned")[0]
+    assert restored.value == "The Bakery"
+    assert restored.assertion_id not in {
+        original.assertion_id,
+        changed.assertion_id,
+    }
+    assert store.changes_since()[-1].operation == "supersede"
 
 
 def test_rebuild_records_new_parser_version_in_caller_order(tmp_path: Path) -> None:

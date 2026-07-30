@@ -202,11 +202,13 @@ class KnowledgeStore:
             raise KnowledgeError("snapshot reason must not be empty")
         with self._transaction():
             rows = self._db.execute(
-                "SELECT current_assertion_id FROM facts "
-                "WHERE current_assertion_id IS NOT NULL "
-                "ORDER BY current_assertion_id"
+                "SELECT f.fact_id, f.subject, f.predicate, f.layer, "
+                "a.assertion_id, a.value_digest "
+                "FROM facts AS f JOIN assertions AS a "
+                "ON a.assertion_id = f.current_assertion_id "
+                "ORDER BY a.assertion_id"
             ).fetchall()
-            assertion_ids = [str(row["current_assertion_id"]) for row in rows]
+            assertion_ids = [str(row["assertion_id"]) for row in rows]
             high_water = self.last_change_seq()
             generation = int(
                 self._db.execute(
@@ -215,7 +217,7 @@ class KnowledgeStore:
                 ).fetchone()["generation"]
             )
             snapshot_id = uuid.uuid4().hex
-            digest = _digest(_canonical(assertion_ids))
+            digest = _digest(_canonical(_snapshot_records(rows)))
             now = time.time()
             self._db.execute(
                 "INSERT INTO snapshots "
@@ -250,6 +252,7 @@ class KnowledgeStore:
                 f"knowledge snapshot {snapshot_id!r} is missing or invalid"
             )
         tx = uuid.uuid4().hex
+        reset_id = uuid.uuid4().hex
         now = time.time()
         rows = self._db.execute(
             "SELECT f.fact_id, f.current_assertion_id, a.* "
@@ -287,6 +290,17 @@ class KnowledgeStore:
                     "UPDATE facts SET current_assertion_id = NULL WHERE fact_id = ?",
                     (row["fact_id"],),
                 )
+                self._add_evidence(
+                    assertion_id,
+                    EvidenceRef(
+                        session_id=str(row["session_id"]),
+                        source_seq=int(row["source_seq"]),
+                        wire_digest=str(row["wire_digest"]),
+                        parser_version=str(row["parser_version"]),
+                        method=f"knowledge-reset:{reason}",
+                        observed_at=now,
+                    ),
+                )
                 self._change(
                     tx,
                     "retract",
@@ -297,6 +311,12 @@ class KnowledgeStore:
                     None,
                     now,
                 )
+            self._db.execute(
+                "INSERT INTO knowledge_resets "
+                "(reset_id, snapshot_id, reason, assertions, transaction_id, at) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (reset_id, snapshot_id, reason, len(rows), tx, now),
+            )
         return len(rows)
 
     def restore(self, snapshot_id: str, *, reason: str) -> int:
@@ -341,6 +361,7 @@ class KnowledgeStore:
                     now=now,
                     force_append=True,
                     supersedes=str(row["assertion_id"]),
+                    select_appended=True,
                 )
             self._db.execute(
                 "INSERT INTO restores "
@@ -506,16 +527,17 @@ class KnowledgeStore:
         if snapshot is None:
             return False
         rows = self._db.execute(
-            "SELECT sf.assertion_id, a.assertion_id AS present "
+            "SELECT sf.assertion_id, a.assertion_id AS present, a.value_digest, "
+            "f.fact_id, f.subject, f.predicate, f.layer "
             "FROM snapshot_facts AS sf "
             "LEFT JOIN assertions AS a ON a.assertion_id = sf.assertion_id "
+            "LEFT JOIN facts AS f ON f.fact_id = a.fact_id "
             "WHERE sf.snapshot_id = ? ORDER BY sf.assertion_id",
             (snapshot_id,),
         ).fetchall()
         if any(row["present"] is None for row in rows):
             return False
-        assertion_ids = [str(row["assertion_id"]) for row in rows]
-        return _digest(_canonical(assertion_ids)) == snapshot.digest
+        return _digest(_canonical(_snapshot_records(rows))) == snapshot.digest
 
     def close(self) -> None:
         if self._db is not None:
@@ -554,6 +576,7 @@ class KnowledgeStore:
         now: float,
         force_append: bool,
         supersedes: str | None = None,
+        select_appended: bool = False,
     ) -> Assertion:
         fact = self._db.execute(
             "SELECT * FROM facts WHERE subject = ? AND predicate = ? AND layer = ?",
@@ -579,20 +602,27 @@ class KnowledgeStore:
             "observed_at DESC, assertion_id DESC LIMIT 1",
             (fact_id, value_digest, transaction_id),
         ).fetchone()
+        temporal = layer == "parsed"
+        matching_is_current = (
+            matching is not None
+            and current is not None
+            and matching["assertion_id"] == current["assertion_id"]
+        )
         if matching is not None and (
             not force_append or matching["transaction_id"] == transaction_id
-        ):
-            self._add_evidence(str(matching["assertion_id"]), evidence)
-            self._change(
-                transaction_id,
-                "support",
-                "assertion",
-                str(matching["assertion_id"]),
-                value_digest,
-                value_digest,
-                evidence,
-                now,
-            )
+        ) and (not temporal or matching_is_current):
+            added = self._add_evidence(str(matching["assertion_id"]), evidence)
+            if added:
+                self._change(
+                    transaction_id,
+                    "support",
+                    "assertion",
+                    str(matching["assertion_id"]),
+                    value_digest,
+                    value_digest,
+                    evidence,
+                    now,
+                )
             return self._assertion(str(matching["assertion_id"]))
 
         assertion_id = uuid.uuid4().hex
@@ -601,7 +631,12 @@ class KnowledgeStore:
         equivalent_current = (
             current is not None and current["value_digest"] == value_digest
         )
-        if current is not None and not equivalent_current:
+        replaces_current = (
+            current is not None
+            and (temporal or select_appended)
+            and not equivalent_current
+        )
+        if current is not None and not equivalent_current and not replaces_current:
             status = "conflicted"
             conflict_group = (
                 str(current["conflict_group"])
@@ -635,7 +670,12 @@ class KnowledgeStore:
             ),
         )
         self._add_evidence(assertion_id, evidence)
-        if current is None or equivalent_current:
+        if (
+            current is None
+            or equivalent_current
+            or replaces_current
+            or select_appended
+        ):
             self._db.execute(
                 "UPDATE facts SET current_assertion_id = ? WHERE fact_id = ?",
                 (assertion_id, fact_id),
@@ -645,7 +685,11 @@ class KnowledgeStore:
             (
                 "assert"
                 if current is None
-                else "supersede" if equivalent_current else "conflict"
+                else (
+                    "supersede"
+                    if equivalent_current or replaces_current
+                    else "conflict"
+                )
             ),
             "assertion",
             assertion_id,
@@ -694,8 +738,8 @@ class KnowledgeStore:
             (assertion_id,),
         ).fetchone()
 
-    def _add_evidence(self, assertion_id: str, evidence: EvidenceRef) -> None:
-        self._db.execute(
+    def _add_evidence(self, assertion_id: str, evidence: EvidenceRef) -> bool:
+        cursor = self._db.execute(
             "INSERT OR IGNORE INTO evidence_refs "
             "(assertion_id, session_id, source_seq, wire_digest, parser_version, "
             "method, observed_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -709,6 +753,7 @@ class KnowledgeStore:
                 evidence.observed_at,
             ),
         )
+        return cursor.rowcount == 1
 
     def _change(
         self,
@@ -792,3 +837,17 @@ def _validate_evidence(evidence: EvidenceRef) -> None:
         raise KnowledgeError("knowledge evidence parser version must not be empty")
     if not evidence.method:
         raise KnowledgeError("knowledge evidence method must not be empty")
+
+
+def _snapshot_records(rows: Iterable[sqlite3.Row]) -> list[dict[str, str]]:
+    return [
+        {
+            "assertion_id": str(row["assertion_id"]),
+            "fact_id": str(row["fact_id"]),
+            "subject": str(row["subject"]),
+            "predicate": str(row["predicate"]),
+            "layer": str(row["layer"]),
+            "value_digest": str(row["value_digest"]),
+        }
+        for row in rows
+    ]

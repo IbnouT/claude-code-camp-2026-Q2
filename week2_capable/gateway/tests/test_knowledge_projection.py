@@ -71,6 +71,15 @@ def test_pipeline_projects_player_state_and_room_with_provenance(
         SCORE.encode("latin-1"),
         WireReference.from_bytes("gateway-alpha", 7, 9, SCORE),
     )
+    updated_score = SCORE.replace("7 gold coins", "11 gold coins")
+    pipeline.ingest(
+        updated_score.encode("latin-1"),
+        WireReference.from_bytes("gateway-alpha", 10, 12, updated_score),
+    )
+    assert {
+        (fact.subject, fact.predicate): fact.value
+        for fact in knowledge.current_facts(layer="parsed")
+    }[("player:alpha", "state.gold")] == 11
     with sqlite3.connect(knowledge.path) as connection:
         position_evidence = connection.execute(
             "SELECT COUNT(*) FROM evidence_refs AS e "

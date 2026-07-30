@@ -96,4 +96,12 @@ CREATE TABLE IF NOT EXISTS restores (
     transaction_id TEXT NOT NULL,
     at             REAL NOT NULL
 );
+CREATE TABLE IF NOT EXISTS knowledge_resets (
+    reset_id       TEXT PRIMARY KEY,
+    snapshot_id    TEXT NOT NULL REFERENCES snapshots(snapshot_id),
+    reason         TEXT NOT NULL,
+    assertions     INTEGER NOT NULL,
+    transaction_id TEXT NOT NULL,
+    at             REAL NOT NULL
+);
 """

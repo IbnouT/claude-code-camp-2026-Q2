@@ -297,9 +297,10 @@ The store keeps four layers separate:
 
 Every assertion keeps its confidence, method, parser version, gateway session,
 source sequence, wire digest, and observation time. Repeated values add
-evidence. Contradictory values coexist until an explicit resolution selects
-one. Duplicate room titles remain separate sightings, and an exit becomes
-learned only after a traversal.
+evidence. Parsed state changes append and supersede the prior current value.
+Contradictory learned values coexist until an explicit resolution selects one.
+Duplicate room titles remain separate sightings, and an exit becomes learned
+only after a traversal.
 
 CDC uses one monotonically increasing cursor per player. Source sequences remain
 provenance and are not treated as a cross-session clock. Parser rebuilds order
@@ -313,9 +314,10 @@ Reset behavior is recoverable:
 3. Append learned-fact retractions.
 4. Observe the verified starting room as new evidence.
 
-Snapshot restore appends new assertions rather than deleting history. A
-knowledge failure after game mutation quarantines the session, preserving the
-snapshot id and digest in the reset receipt.
+Snapshot restore appends and selects new assertions for the retained snapshot
+rather than deleting history. A knowledge failure after game mutation
+quarantines the session, preserving the snapshot id and digest in the reset
+receipt.
 
 Freshness is evidence-based. Prompt vitals update when received. Full hit,
 mana, move, experience, gold, quest points, level, alignment, posture, hunger,
