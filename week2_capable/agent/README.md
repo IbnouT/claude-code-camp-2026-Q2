@@ -167,6 +167,7 @@ Runtime evidence is isolated by player and session:
 ├── registry.db
 └── profiles/<player_id>/
     ├── .env
+    ├── knowledge.db
     └── sessions/<session_id>/
         ├── session.json
         ├── control.token
@@ -183,6 +184,12 @@ the same hierarchy and retain explicit capture gaps. Session discovery reports
 launcher process state and gateway control state as separate, labelled facts.
 The gateway projection wins for `running`, `paused`, or `quarantined` control
 state. The registry remains authoritative for process lifecycle.
+
+Session discovery also reports the selected player's latest knowledge CDC
+cursor and snapshot generation. It opens `knowledge.db` read-only. A missing or
+unreadable store is reported as unavailable or a capture gap, never created by
+discovery. The gateway remains the sole writer and makes no hidden polling
+commands to refresh state.
 
 Registry, lock, session, token, and control-socket locations are fixed runtime
 conventions documented in the gateway README. They are not hidden environment

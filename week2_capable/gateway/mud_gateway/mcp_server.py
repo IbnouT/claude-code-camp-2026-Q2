@@ -14,6 +14,8 @@ from typing import Any
 
 from .commands import BY_NAME, IMMORTAL, Capability
 from .journal import Journal
+from .knowledge import KnowledgeStore
+from .knowledge_projection import KnowledgeProjector
 from .profiles import (
     PROFILES,
     CapabilityUnavailable,
@@ -225,9 +227,10 @@ async def serve(
     record_profile(journal, run_id, surface)
     session: Session | None = None
     control: ResetControlServer | None = None
+    knowledge_store: KnowledgeStore | None = None
 
     async def game_session() -> Session:
-        nonlocal session
+        nonlocal knowledge_store, session
         if session is None:
             profile = settings.player(player_profile)
             password = settings.player_password(profile.id)
@@ -236,6 +239,10 @@ async def serve(
                     f"{profile.password_env} is required for player profile "
                     f"{profile.id!r}"
                 )
+            knowledge_store = KnowledgeStore(
+                settings.config_dir / "profiles" / profile.id / "knowledge.db",
+                player_id=profile.id,
+            )
             session = Session(
                 journal,
                 name=profile.character,
@@ -243,9 +250,21 @@ async def serve(
                 host=settings.host,
                 port=settings.port,
                 session_id=settings.gateway_session_id,
+                knowledge=KnowledgeProjector(
+                    knowledge_store,
+                    player_id=profile.id,
+                ),
             )
             record_profile(journal, session.id, surface)
             await session.open()
+            trace_id = uuid.uuid4().hex
+            journal.append(
+                session.id,
+                "observer_probe",
+                {"command": "score", "reason": "login_player_state"},
+                trace_id=trace_id,
+            )
+            await session.command("score", trace_id=trace_id)
         return session
 
     @server.list_tools()
@@ -285,7 +304,11 @@ async def serve(
     try:
         if settings.control_socket is not None and settings.session_dir is not None:
             await game_session()
-            coordinator = ResetCoordinator(settings, session=lambda: session)
+            coordinator = ResetCoordinator(
+                settings,
+                session=lambda: session,
+                knowledge=knowledge_store,
+            )
             control = ResetControlServer(
                 settings.control_socket,
                 settings.session_dir / "control.token",
@@ -303,6 +326,8 @@ async def serve(
             await control.close()
         if session is not None:
             await session.close()
+        if knowledge_store is not None:
+            knowledge_store.close()
         journal.close()
 
 

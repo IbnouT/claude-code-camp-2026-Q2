@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .journal import Journal
+from .knowledge_projection import KnowledgeProjector
 from .observe import (
     PARSER_VERSION,
     Coverage,
@@ -28,9 +29,16 @@ class ObservationSnapshot:
 class ObservationPipeline:
     """Parse, journal, and retain only the latest derived state."""
 
-    def __init__(self, journal: Journal, session: str) -> None:
+    def __init__(
+        self,
+        journal: Journal,
+        session: str,
+        *,
+        knowledge: KnowledgeProjector | None = None,
+    ) -> None:
         self.journal = journal
         self.session = session
+        self.knowledge = knowledge
         self.coverage = Coverage()
         self.tracker = PositionTracker()
         self.room: RoomObservation | None = None
@@ -72,6 +80,23 @@ class ObservationPipeline:
                 position.payload(),
                 trace_id=trace_id,
             )
+        if self.knowledge is not None:
+            first_change, last_change = self.knowledge.ingest(
+                observations,
+                position,
+                attempted_move=attempted_move,
+            )
+            if last_change >= first_change:
+                self.journal.append(
+                    self.session,
+                    "knowledge_change",
+                    {
+                        "player_id": self.knowledge.player_id,
+                        "first_change_seq": first_change,
+                        "last_change_seq": last_change,
+                    },
+                    trace_id=trace_id,
+                )
         self.journal.append(
             self.session,
             "parse_metric",
@@ -99,4 +124,3 @@ class ObservationPipeline:
             position=self.tracker.position,
             miss_rate=self.coverage.miss_rate,
         )
-

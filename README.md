@@ -39,7 +39,8 @@ before the agent faces a private game world.
    ```
 
    Every launch creates an isolated player session under
-   `.boukensha/profiles/<player>/sessions/<session>/`.
+   `.boukensha/profiles/<player>/sessions/<session>/` and projects cumulative
+   evidence into that player's `.boukensha/profiles/<player>/knowledge.db`.
 
    A benchmark or script can use the same launcher and verify a clean baseline
    before the first model call:

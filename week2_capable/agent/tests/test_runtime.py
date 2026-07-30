@@ -102,6 +102,43 @@ def test_runtime_manifest_is_immutable_and_protected() -> None:
             assert stat.S_IMODE(runtime.paths.control_token.stat().st_mode) == 0o600
             assert len(str(runtime.paths.control_socket)) < 104
             assert runtime.paths.control_socket.parent == Path(tempfile.gettempdir())
+            row = {
+                "state": "running",
+                "session_dir": str(runtime.paths.session_dir),
+            }
+            discovered = _with_control_state(row)
+            assert discovered["knowledge_available"] is False
+            assert discovered["knowledge_source"] == "player_knowledge_db"
+        finally:
+            runtime.close()
+
+
+def test_discovery_reads_per_player_knowledge_cursor_without_writing() -> None:
+    with tempfile.TemporaryDirectory() as temporary:
+        config = _config(Path(temporary))
+        runtime = RuntimeSession.create(
+            config,
+            player_id="alpha",
+            character="Alpha",
+        )
+        try:
+            knowledge = config / "profiles" / "alpha" / "knowledge.db"
+            connection = sqlite3.connect(knowledge)
+            connection.executescript(
+                "CREATE TABLE changes (change_seq INTEGER);"
+                "CREATE TABLE snapshots (generation INTEGER);"
+                "INSERT INTO changes VALUES (9);"
+                "INSERT INTO snapshots VALUES (2);"
+            )
+            connection.close()
+            discovered = _with_control_state({
+                "state": "running",
+                "session_dir": str(runtime.paths.session_dir),
+            })
+            assert discovered["knowledge_available"] is True
+            assert discovered["knowledge_change_seq"] == 9
+            assert discovered["knowledge_snapshot_generation"] == 2
+            assert discovered["knowledge_source"] == "player_knowledge_db"
         finally:
             runtime.close()
 
@@ -182,6 +219,25 @@ def test_two_agent_processes_isolate_evidence_cost_tokens_and_stop() -> None:
                 ).fetchone()
                 database.close()
                 assert owner == (info["player_id"], info["session_id"])
+                knowledge = sqlite3.connect(info["knowledge_path"])
+                assertion = knowledge.execute(
+                    "SELECT f.subject, a.value_json, a.session_id "
+                    "FROM facts AS f JOIN assertions AS a "
+                    "ON a.assertion_id = f.current_assertion_id"
+                ).fetchone()
+                change_seq = knowledge.execute(
+                    "SELECT MAX(change_seq) FROM changes"
+                ).fetchone()[0]
+                knowledge.close()
+                assert assertion == (
+                    f"player:{info['player_id']}",
+                    json.dumps(
+                        f"{info['player_id']}-knowledge-canary",
+                        separators=(",", ":"),
+                    ),
+                    info["gateway_session_id"],
+                )
+                assert change_seq == 1
 
             _stop(alpha)
             assert beta.poll() is None

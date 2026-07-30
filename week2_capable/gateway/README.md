@@ -13,6 +13,8 @@ flowchart LR
     O --> T["conservative position tracker"]
     O --> J
     T --> J
+    O --> K[("per-player knowledge")]
+    T --> K
     J --> V["ASGI live SSE + replay"]
     J --> X["JSONL projection"]
     A["Boukensha"] -- MCP stdio --> P["session profile"]
@@ -41,6 +43,10 @@ gateway/
 │   ├── wire.py
 │   ├── session.py
 │   ├── journal.py
+│   ├── knowledge.py
+│   ├── knowledge_models.py
+│   ├── knowledge_projection.py
+│   ├── knowledge_schema.py
 │   ├── contracts.py
 │   ├── commands.py
 │   ├── observe.py
@@ -187,6 +193,7 @@ would break identity and evidence joins:
 | registry | `.boukensha/registry.db` |
 | character locks | `.boukensha/locks/<character-digest>.lock` |
 | session evidence | `.boukensha/profiles/<player>/sessions/<session>/` |
+| player knowledge | `.boukensha/profiles/<player>/knowledge.db` |
 | control token | `control.token` inside the protected session |
 | control socket | short system-temporary path derived from the session id |
 | gateway journal | `gateway.db` inside the selected session |
@@ -230,8 +237,12 @@ boukensha-gateway-api
 - Reset pauses the selected authenticated mortal session at a command boundary.
 - A one-shot admin child receives one typed stdin request and only the admin
   secret.
-- Mortal `save`, reconnect, `score`, and `look` verify the reset on that same
-  session.
+- A marked `score` probe captures player state after login. No background
+  command or polling changes the game while an agent is idle.
+- Mortal `save`, reconnect, marked `score`, and `look` verify the reset on that
+  same session.
+- Reset verifies a knowledge snapshot before game mutation. Learned facts are
+  retracted and the starting room is observed only after mortal verification.
 - Failure before mutation resumes with a receipt. Partial mutation quarantines
   the session until a linked retry succeeds or the session stops.
 - Gateway control state is projected beside the session evidence. Discovery
@@ -255,6 +266,62 @@ boukensha-gateway-api
 - The agent-facing `observe` and `navigate` capabilities remain disabled.
 - Agent and gateway records preserve launcher-created player, agent, session,
   and gateway session identity without filename or time inference.
+
+## Per-player knowledge
+
+Each player has one append-only knowledge store. The gateway is its only writer
+while the launcher holds that character lock. Agent discovery and future
+observatory projections open it read-only.
+
+```mermaid
+flowchart LR
+    W["wire frame"] --> P["rules-2 parser"]
+    P --> O["typed observations"]
+    O --> K[("profiles/player/knowledge.db")]
+    K --> C["global CDC cursor"]
+    K --> R["read-only consumers"]
+    S["verified snapshot"] --> X["append retractions"]
+    X --> K
+    E["retained evidence"] --> B["ordered parser rebuild"]
+    B --> K
+```
+
+The store keeps four layers separate:
+
+| Layer | Meaning |
+| --- | --- |
+| `belief` | an agent claim, never promoted to game truth automatically |
+| `parsed` | current player state and position derived from wire evidence |
+| `learned` | cumulative rooms, sightings, and verified traversals |
+| `observer_truth` | an independent observer result, never inferred from belief |
+
+Every assertion keeps its confidence, method, parser version, gateway session,
+source sequence, wire digest, and observation time. Repeated values add
+evidence. Contradictory values coexist until an explicit resolution selects
+one. Duplicate room titles remain separate sightings, and an exit becomes
+learned only after a traversal.
+
+CDC uses one monotonically increasing cursor per player. Source sequences remain
+provenance and are not treated as a cross-session clock. Parser rebuilds order
+sessions by registry creation time, then gateway sequence, and append results
+under the new parser version.
+
+Reset behavior is recoverable:
+
+1. Verify and record the current assertion set.
+2. Mutate and verify the selected authenticated game session.
+3. Append learned-fact retractions.
+4. Observe the verified starting room as new evidence.
+
+Snapshot restore appends new assertions rather than deleting history. A
+knowledge failure after game mutation quarantines the session, preserving the
+snapshot id and digest in the reset receipt.
+
+Freshness is evidence-based. Prompt vitals update when received. Full hit,
+mana, move, experience, gold, quest points, level, alignment, posture, hunger,
+thirst, drunkenness, poison, and encumbrance come from marked login or reset
+probes and later game output. An absent or old field stays visibly unobserved
+or stale. The gateway does not poll invisibly.
 
 ## Verification
 

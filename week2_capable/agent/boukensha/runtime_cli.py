@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sqlite3
 from pathlib import Path
 from typing import Sequence
 
@@ -78,6 +79,34 @@ def _with_control_state(row: dict) -> dict:
     enriched["control_state_source"] = (
         "gateway_projection" if control_state is not None else "not_captured"
     )
+    player_dir = Path(str(row["session_dir"])).parents[1]
+    knowledge_path = player_dir / "knowledge.db"
+    enriched["knowledge_path"] = str(knowledge_path)
+    enriched["knowledge_source"] = "player_knowledge_db"
+    enriched["knowledge_available"] = knowledge_path.is_file()
+    enriched["knowledge_change_seq"] = None
+    enriched["knowledge_snapshot_generation"] = None
+    if knowledge_path.is_file():
+        try:
+            connection = sqlite3.connect(
+                f"file:{knowledge_path}?mode=ro",
+                uri=True,
+            )
+            try:
+                enriched["knowledge_change_seq"] = int(
+                    connection.execute(
+                        "SELECT COALESCE(MAX(change_seq), 0) FROM changes"
+                    ).fetchone()[0]
+                )
+                enriched["knowledge_snapshot_generation"] = int(
+                    connection.execute(
+                        "SELECT COALESCE(MAX(generation), 0) FROM snapshots"
+                    ).fetchone()[0]
+                )
+            finally:
+                connection.close()
+        except sqlite3.Error:
+            enriched["knowledge_source"] = "capture_gap"
     return enriched
 
 

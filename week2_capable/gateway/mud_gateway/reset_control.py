@@ -15,6 +15,7 @@ from dotenv import dotenv_values
 from pydantic import BaseModel, ConfigDict, Field
 
 from .baseline import baseline
+from .knowledge import KnowledgeStore, Snapshot
 from .reset_client import ObservedState, parse_score, verify
 from .session import Session
 from .settings import GatewaySettings
@@ -59,6 +60,7 @@ class ResetCoordinator:
         settings: GatewaySettings,
         *,
         session: Callable[[], Session | None],
+        knowledge: KnowledgeStore | None = None,
         admin_runner: AdminRunner | None = None,
         pause_timeout: float | None = None,
         child_timeout: float | None = None,
@@ -67,6 +69,7 @@ class ResetCoordinator:
             raise ResetControlError("runtime session directory is required")
         self.settings = settings
         self._session = session
+        self.knowledge = knowledge
         self._admin_runner = admin_runner or self._run_admin_child
         self.pause_timeout = (
             settings.reset_pause_timeout
@@ -108,6 +111,7 @@ class ResetCoordinator:
             )
 
         reset_id = secrets.token_hex(16)
+        knowledge_snapshot: Snapshot | None = None
         child_request = {
             "protocol_version": 1,
             "action": "reset",
@@ -125,9 +129,20 @@ class ResetCoordinator:
             "retry_of": request.retry_of,
         }
         self._project("pausing", reset_id=reset_id)
+        applied: tuple[str, ...] = ()
         try:
             async with player.pause(timeout=self.pause_timeout):
                 self._project("paused", reset_id=reset_id)
+                if self.knowledge is not None:
+                    knowledge_snapshot = self.knowledge.snapshot(
+                        f"before reset {reset_id}"
+                    )
+                    if not self.knowledge.verify_snapshot(
+                        knowledge_snapshot.snapshot_id
+                    ):
+                        raise ResetControlError(
+                            "knowledge snapshot verification failed"
+                        )
                 child = await self._admin_runner(
                     child_request,
                     self.admin_journal,
@@ -142,6 +157,7 @@ class ResetCoordinator:
                         reset_id,
                         child,
                         applied,
+                        knowledge_snapshot=knowledge_snapshot,
                     )
                 state = await self._verify_mortal(player)
                 located = _located(child.get("located"))
@@ -151,6 +167,22 @@ class ResetCoordinator:
                     room=selected.room,
                     fields=selected.fields,
                 )
+                knowledge_retractions = 0
+                if not drift and not state.unread and self.knowledge is not None:
+                    knowledge_retractions = self.knowledge.reset_learned(
+                        reason=f"{selected.id}@{selected.version}",
+                        snapshot_id=knowledge_snapshot.snapshot_id,
+                    )
+                    player.journal.append(
+                        player.id,
+                        "observer_probe",
+                        {
+                            "command": "look",
+                            "reason": "post_reset_knowledge_seed",
+                            "reset_id": reset_id,
+                        },
+                    )
+                    await player.reset_command("look")
                 receipt = self._receipt(
                     request=request,
                     reset_id=reset_id,
@@ -159,6 +191,8 @@ class ResetCoordinator:
                     drift=drift,
                     applied=applied,
                     child=child,
+                    knowledge_snapshot=knowledge_snapshot,
+                    knowledge_retractions=knowledge_retractions,
                 )
                 if not receipt["ok"]:
                     player.quarantine("reset verification failed")
@@ -172,7 +206,7 @@ class ResetCoordinator:
                 player.journal.append(player.id, "reset_receipt", receipt)
                 return receipt
         except asyncio.TimeoutError:
-            applied = _progress(self.progress_path, reset_id)
+            applied = applied or _progress(self.progress_path, reset_id)
             child = {
                 "ok": False,
                 "error": "admin child timed out",
@@ -185,9 +219,10 @@ class ResetCoordinator:
                 reset_id,
                 child,
                 applied,
+                knowledge_snapshot=knowledge_snapshot,
             )
         except Exception as error:
-            applied = _progress(self.progress_path, reset_id)
+            applied = applied or _progress(self.progress_path, reset_id)
             child = {
                 "ok": False,
                 "error": str(error),
@@ -200,11 +235,17 @@ class ResetCoordinator:
                 reset_id,
                 child,
                 applied,
+                knowledge_snapshot=knowledge_snapshot,
             )
 
     async def _verify_mortal(self, player: Session) -> ObservedState:
         await player.reset_command("save")
         await player.reconnect_for_reset()
+        player.journal.append(
+            player.id,
+            "observer_probe",
+            {"command": "score", "reason": "post_reset_player_state"},
+        )
         score = await player.reset_command("score")
         await player.reset_command("look")
         facts = parse_score(score.text)
@@ -221,6 +262,8 @@ class ResetCoordinator:
         reset_id: str,
         child: Mapping[str, Any],
         applied: Sequence[str],
+        *,
+        knowledge_snapshot: Snapshot | None,
     ) -> dict[str, Any]:
         mutated = bool(applied)
         if mutated:
@@ -244,6 +287,8 @@ class ResetCoordinator:
             drift={},
             applied=tuple(applied),
             child=child,
+            knowledge_snapshot=knowledge_snapshot,
+            knowledge_retractions=0,
         )
         player.journal.append(player.id, "reset_receipt", receipt)
         return receipt
@@ -258,6 +303,8 @@ class ResetCoordinator:
         drift: Mapping[str, Any],
         applied: Sequence[str],
         child: Mapping[str, Any],
+        knowledge_snapshot: Snapshot | None,
+        knowledge_retractions: int,
     ) -> dict[str, Any]:
         return {
             "ok": ok,
@@ -276,6 +323,13 @@ class ResetCoordinator:
             "unread": () if state is None else state.unread,
             "applied": tuple(applied),
             "child_exit_status": child.get("exit_status"),
+            "knowledge_snapshot_id": (
+                None if knowledge_snapshot is None else knowledge_snapshot.snapshot_id
+            ),
+            "knowledge_snapshot_digest": (
+                None if knowledge_snapshot is None else knowledge_snapshot.digest
+            ),
+            "knowledge_retractions": knowledge_retractions,
             "error": child.get("error"),
             "error_type": child.get("error_type"),
         }

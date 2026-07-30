@@ -13,6 +13,7 @@ import pytest
 
 from mud_gateway.baseline import LEVEL1_TEMPLE
 from mud_gateway.journal import Journal
+from mud_gateway.knowledge import EvidenceRef, KnowledgeStore
 from mud_gateway.reset_control import (
     ControlRequest,
     ResetControlServer,
@@ -166,6 +167,95 @@ async def test_reset_uses_selected_session_for_verification(tmp_path: Path) -> N
         assert child_requests[0]["character"] == "Tester"
         assert journal.since("gateway-1", kind="reset_receipt")
     finally:
+        journal.close()
+
+
+async def test_reset_snapshots_then_retracts_learned_knowledge(
+    tmp_path: Path,
+) -> None:
+    settings = make_settings(tmp_path)
+    journal = Journal(settings.journal)
+    player = FakeSession(journal)
+    knowledge = KnowledgeStore(tmp_path / "knowledge.db", player_id="tester")
+    knowledge.assert_fact(
+        "place:old",
+        "title",
+        "Old Room",
+        layer="learned",
+        confidence="high",
+        evidence=EvidenceRef(
+            "gateway-1",
+            1,
+            "wire-old",
+            "rules-1",
+            "room-frame",
+            1.0,
+        ),
+    )
+
+    async def admin(*_args) -> dict[str, object]:
+        return {
+            "ok": True,
+            "applied": ("restore", "level", "transfer"),
+            "located": (3001, "The Temple Of Midgaard"),
+            "exit_status": 0,
+        }
+
+    try:
+        receipt = await ResetCoordinator(
+            settings,
+            session=lambda: player,
+            knowledge=knowledge,
+            admin_runner=admin,
+        ).reset(request(settings))
+
+        assert receipt["ok"] is True
+        assert receipt["knowledge_snapshot_id"]
+        assert receipt["knowledge_snapshot_digest"]
+        assert receipt["knowledge_retractions"] == 1
+        assert knowledge.current_facts(layer="learned") == []
+        assert knowledge.get_snapshot(receipt["knowledge_snapshot_id"]) is not None
+        assert player.commands == ["save", "score", "look", "look"]
+    finally:
+        knowledge.close()
+        journal.close()
+
+
+async def test_knowledge_failure_after_game_mutation_quarantines(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = make_settings(tmp_path)
+    journal = Journal(settings.journal)
+    player = FakeSession(journal)
+    knowledge = KnowledgeStore(tmp_path / "knowledge.db", player_id="tester")
+
+    async def admin(*_args) -> dict[str, object]:
+        return {
+            "ok": True,
+            "applied": ("restore", "level", "transfer"),
+            "located": (3001, "The Temple Of Midgaard"),
+            "exit_status": 0,
+        }
+
+    def fail_reset(**_kwargs) -> int:
+        raise RuntimeError("knowledge write failed")
+
+    monkeypatch.setattr(knowledge, "reset_learned", fail_reset)
+    try:
+        receipt = await ResetCoordinator(
+            settings,
+            session=lambda: player,
+            knowledge=knowledge,
+            admin_runner=admin,
+        ).reset(request(settings))
+
+        assert receipt["ok"] is False
+        assert receipt["error_type"] == "RuntimeError"
+        assert receipt["knowledge_snapshot_id"]
+        assert player.control_state == "quarantined"
+    finally:
+        knowledge.close()
         journal.close()
 
 

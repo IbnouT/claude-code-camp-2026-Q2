@@ -4,6 +4,12 @@
 # Environment / secrets
 .env
 .env.local
+.boukensha/profiles/
+.boukensha/registry.db*
+.boukensha/locks/
+.boukensha/gateway/
+.boukensha/sessions/
+.boukensha/benchmarks/
 
 # macOS
 .DS_Store

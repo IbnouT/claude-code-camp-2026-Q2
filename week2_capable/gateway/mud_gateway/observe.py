@@ -8,7 +8,7 @@ from dataclasses import asdict, dataclass, field
 from enum import Enum
 from typing import Any
 
-PARSER_VERSION = "rules-1"
+PARSER_VERSION = "rules-2"
 SGR = re.compile(r"\x1b\[([0-9;]*)m")
 TITLE_COLOUR = "0;33"
 EXITS_COLOUR = "0;36"
@@ -19,6 +19,17 @@ EXITS_LINE = re.compile(r"^\[?\s*(Obvious exits|Exits):", re.I)
 EXITS_NONE = re.compile(r"^\s*None!?\s*$", re.I)
 VITALS_LINE = re.compile(r"(\d+)H\s+(\d+)M\s+(\d+)V")
 PROMPT_LINE = re.compile(r"^[\d\s]*H[\d\s]*M[\d\s]*V.*>\s*$")
+SCORE_VITALS_LINE = re.compile(
+    r"You have (\d+)\((\d+)\) hit, (\d+)\((\d+)\) mana "
+    r"and (\d+)\((\d+)\) movement points\.",
+    re.I,
+)
+SCORE_ECONOMY_LINE = re.compile(
+    r"You have (\d+) exp, (\d+) gold coins, and (\d+) questpoints\.",
+    re.I,
+)
+SCORE_RANK_LINE = re.compile(r"This ranks you as .+ \(level (\d+)\)", re.I)
+SCORE_ALIGNMENT_LINE = re.compile(r"your alignment is (-?\d+)", re.I)
 OBJECT_HERE = re.compile(r"(lies here|is lying here|has been left here)\.?$", re.I)
 MOB_HERE = re.compile(
     r"(is here|stands here|is standing here|is sitting here|is resting here|"
@@ -50,12 +61,16 @@ COMBAT_LINE = re.compile(
 SPEECH_LINE = re.compile(
     r"^(\w+) (says|shouts|gossips|tells you|yells|whispers),?\s*'(.*)'", re.I
 )
-POSTURE_LINE = re.compile(
-    r"^You (sit down|stop resting|stand up|go to sleep|awaken|rest|wake)|"
-    r"^You are (standing|sitting|resting|sleeping)\.",
+CONDITION_LINE = re.compile(
+    r"^You are (hungry|thirsty|drunk|poisoned|encumbered|too exhausted)\.?",
     re.I,
 )
-CONDITION_LINE = re.compile(r"^You are (hungry|thirsty|drunk|too exhausted)\.?", re.I)
+POISON_LINE = re.compile(r"\b(you are poisoned|poison courses through)\b", re.I)
+ENCUMBERED_LINE = re.compile(
+    r"\b(you are encumbered|carrying too much|too heavy for you|"
+    r"cannot carry that much|can't carry that much)\b",
+    re.I,
+)
 ITEM_LINE = re.compile(r"^You (get|drop|put|wear|wield|remove|eat|drink) ", re.I)
 FURNITURE_LINE = re.compile(
     r"^[-=~_]{3,}\s*$|^\s*##\s+Available\s+Item\s+Cost|"
@@ -142,6 +157,13 @@ class StateObservation(Observation):
 
 
 @dataclass(frozen=True)
+class PlayerStateObservation(Observation):
+    """A typed subset of player state observed in one source line."""
+
+    values: dict[str, int | bool | str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
 class SpeechObservation(Observation):
     who: str = ""
     channel: str = ""
@@ -191,6 +213,15 @@ def parse(raw: bytes | str, wire_ref: WireReference) -> list[Observation]:
 
     found: list[Observation] = []
     room: dict[str, Any] | None = None
+    frame_segments = segments(raw)
+    frame_text = "\n".join(segment.text for segment in frame_segments)
+    score_conditions = {
+        "hungry": bool(re.search(r"\bYou are hungry\.", frame_text, re.I)),
+        "thirsty": bool(re.search(r"\bYou are thirsty\.", frame_text, re.I)),
+        "drunk": bool(re.search(r"\bYou are drunk\.", frame_text, re.I)),
+        "poisoned": bool(POISON_LINE.search(frame_text)),
+        "encumbered": bool(ENCUMBERED_LINE.search(frame_text)),
+    }
 
     def add(
         kind: str,
@@ -243,7 +274,7 @@ def parse(raw: bytes | str, wire_ref: WireReference) -> list[Observation]:
             )
         room = None
 
-    for segment in segments(raw):
+    for segment in frame_segments:
         line, sgr = segment.text, segment.sgr
 
         if PROMPT_LINE.match(line):
@@ -260,6 +291,66 @@ def parse(raw: bytes | str, wire_ref: WireReference) -> list[Observation]:
                     mana=int(vitals.group(2)),
                     move=int(vitals.group(3)),
                 )
+            continue
+
+        score_vitals = SCORE_VITALS_LINE.search(line)
+        if score_vitals:
+            add(
+                "player_state",
+                line,
+                Confidence.HIGH,
+                "score-vitals",
+                PlayerStateObservation,
+                values={
+                    "hit": int(score_vitals.group(1)),
+                    "max_hit": int(score_vitals.group(2)),
+                    "mana": int(score_vitals.group(3)),
+                    "max_mana": int(score_vitals.group(4)),
+                    "move": int(score_vitals.group(5)),
+                    "max_move": int(score_vitals.group(6)),
+                    **score_conditions,
+                },
+            )
+            continue
+
+        score_economy = SCORE_ECONOMY_LINE.search(line)
+        if score_economy:
+            add(
+                "player_state",
+                line,
+                Confidence.HIGH,
+                "score-economy",
+                PlayerStateObservation,
+                values={
+                    "exp": int(score_economy.group(1)),
+                    "gold": int(score_economy.group(2)),
+                    "questpoints": int(score_economy.group(3)),
+                },
+            )
+            continue
+
+        score_rank = SCORE_RANK_LINE.search(line)
+        if score_rank:
+            add(
+                "player_state",
+                line,
+                Confidence.HIGH,
+                "score-rank",
+                PlayerStateObservation,
+                values={"level": int(score_rank.group(1))},
+            )
+            continue
+
+        score_alignment = SCORE_ALIGNMENT_LINE.search(line)
+        if score_alignment:
+            add(
+                "player_state",
+                line,
+                Confidence.HIGH,
+                "score-alignment",
+                PlayerStateObservation,
+                values={"alignment": int(score_alignment.group(1))},
+            )
             continue
 
         if EXITS_LINE.match(line):
@@ -309,14 +400,45 @@ def parse(raw: bytes | str, wire_ref: WireReference) -> list[Observation]:
             room["source_lines"] += 1
             continue
 
+        posture = _posture(line)
+        if posture is not None:
+            add(
+                "player_state",
+                line,
+                Confidence.HIGH,
+                "posture-phrase",
+                PlayerStateObservation,
+                values={"posture": posture},
+            )
+            continue
+
+        condition = CONDITION_LINE.search(line)
+        if condition or POISON_LINE.search(line) or ENCUMBERED_LINE.search(line):
+            values: dict[str, int | bool | str] = {}
+            if condition:
+                name = condition.group(1).casefold()
+                if name in score_conditions:
+                    values[name] = True
+            if POISON_LINE.search(line):
+                values["poisoned"] = True
+            if ENCUMBERED_LINE.search(line):
+                values["encumbered"] = True
+            add(
+                "player_state",
+                line,
+                Confidence.HIGH,
+                "condition-phrase",
+                PlayerStateObservation,
+                values=values,
+            )
+            continue
+
         classified = (
             ("death", DEATH_LINE, "death-phrase"),
             ("dark", DARK_LINE, "darkness-phrase"),
             ("door", DOOR_LINE, "door-phrase"),
             ("refused", REFUSED_LINE, "refusal-phrase"),
             ("advisory", ADVISORY_LINE, "advisory-phrase"),
-            ("posture", POSTURE_LINE, "posture-phrase"),
-            ("condition", CONDITION_LINE, "condition-phrase"),
             ("item", ITEM_LINE, "item-verb"),
         )
         matched = False
@@ -362,6 +484,26 @@ def parse(raw: bytes | str, wire_ref: WireReference) -> list[Observation]:
     return found
 
 
+def _posture(line: str) -> str | None:
+    direct = re.search(
+        r"^You are (standing|sitting|resting|sleeping|fighting|incapacitated)\.",
+        line,
+        re.I,
+    )
+    if direct:
+        return direct.group(1).casefold()
+    transitions = (
+        (r"^You sit down", "sitting"),
+        (r"^You (stand up|stop resting|awaken|wake)", "standing"),
+        (r"^You rest", "resting"),
+        (r"^You go to sleep", "sleeping"),
+    )
+    for pattern, posture in transitions:
+        if re.search(pattern, line, re.I):
+            return posture
+    return None
+
+
 @dataclass
 class Coverage:
     lines: int = 0
@@ -382,4 +524,3 @@ class Coverage:
                     self.unparsed_samples.append(observation.text[:120])
             else:
                 self.typed += observation.source_lines
-

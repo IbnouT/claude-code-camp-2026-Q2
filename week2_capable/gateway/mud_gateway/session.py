@@ -26,6 +26,7 @@ from dataclasses import dataclass
 from typing import AsyncIterator
 
 from .journal import Journal
+from .knowledge_projection import KnowledgeProjector
 from .observe import Observation, WireReference
 from .observation_pipeline import ObservationPipeline
 from .position import PositionObservation
@@ -91,7 +92,8 @@ class Session:
 
     def __init__(self, journal: Journal, *, name: str, password: str,
                  host: str = "127.0.0.1", port: int = 4000, timeout: float = 25.0,
-                 session_id: str | None = None) -> None:
+                 session_id: str | None = None,
+                 knowledge: KnowledgeProjector | None = None) -> None:
         self.id = session_id or f"{name}-{uuid.uuid4().hex[:8]}"
         self.name = name
         self._password = password
@@ -102,7 +104,11 @@ class Session:
         self._command_lock = asyncio.Lock()
         self._control_state = "running"
         self.trace_id: str | None = None
-        self.observations = ObservationPipeline(journal, self.id)
+        self.observations = ObservationPipeline(
+            journal,
+            self.id,
+            knowledge=knowledge,
+        )
 
     # -- lifecycle ----------------------------------------------------------
 

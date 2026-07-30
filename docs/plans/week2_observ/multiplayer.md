@@ -278,8 +278,9 @@ snapshot, then appends retractions. Restore appends new assertions linked to the
 snapshot. Parser migration replays retained evidence and does not overwrite the
 original observations.
 
-Concurrent consumers use read-only WAL connections. Knowledge events are
-ordered by `(session_id, sequence)`.
+Concurrent consumers use read-only WAL connections. CDC has one global cursor
+per player. Source sessions and sequences remain provenance. Parser migration
+orders retained sessions by registry creation time, then gateway sequence.
 
 ## Cost and token attribution
 

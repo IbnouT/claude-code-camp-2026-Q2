@@ -3,6 +3,7 @@ from __future__ import annotations
 from mud_gateway.observe import (
     Coverage,
     ExitsObservation,
+    PlayerStateObservation,
     RoomObservation,
     UnparsedObservation,
     VitalsObservation,
@@ -80,3 +81,63 @@ def test_wire_reference_digest_covers_exact_bytes():
     second = WireReference.from_bytes("session", 11, 12, b"hello!")
     assert first.digest != second.digest
 
+
+def test_score_publishes_full_typed_player_state() -> None:
+    found = parse(
+        "You have 12(20) hit, 90(100) mana and 41(82) movement points.\r\n"
+        "Your armor class is 9/10, and your alignment is -5.\r\n"
+        "You have 14 exp, 23 gold coins, and 2 questpoints.\r\n"
+        "This ranks you as a Newbie (level 2).\r\n"
+        "You are standing.\r\n"
+        "You are hungry.\r\n"
+        "You are poisoned.\r\n"
+        "You are encumbered.\r\n"
+        "12H 90M 41V > ",
+        WIRE,
+    )
+    states = [
+        item for item in found if isinstance(item, PlayerStateObservation)
+    ]
+    merged = {
+        name: value
+        for state in states
+        for name, value in state.values.items()
+    }
+
+    assert merged == {
+        "hit": 12,
+        "max_hit": 20,
+        "mana": 90,
+        "max_mana": 100,
+        "move": 41,
+        "max_move": 82,
+        "hungry": True,
+        "thirsty": False,
+        "drunk": False,
+        "poisoned": True,
+        "encumbered": True,
+        "alignment": -5,
+        "exp": 14,
+        "gold": 23,
+        "questpoints": 2,
+        "level": 2,
+        "posture": "standing",
+    }
+    assert all(state.kind == "player_state" for state in states)
+    assert all(state.wire_ref == WIRE for state in states)
+
+
+def test_player_state_deltas_capture_posture_and_conditions() -> None:
+    found = parse(
+        "You sit down and rest your tired bones.\r\n"
+        "You are thirsty.\r\n"
+        "20H 100M 82V > ",
+        WIRE,
+    )
+    states = [
+        item.values
+        for item in found
+        if isinstance(item, PlayerStateObservation)
+    ]
+    assert {"posture": "sitting"} in states
+    assert {"thirsty": True} in states
