@@ -1,6 +1,6 @@
 # boukensha configuration. Every option is shown here: active values are set,
-# optional ones are commented with their default. Secrets (provider API keys,
-# the MUD password) belong in .boukensha/.env, never in this file.
+# optional ones are commented with their default. Secrets belong only in
+# .boukensha/.env. All durable non-secret configuration belongs here.
 
 # === tasks: one entry per task. The agent plays the `player` task. ==========
 tasks:
@@ -35,12 +35,13 @@ tasks:
     max_turn_cost: 0.50          # per-turn spend ceiling in USD
     compaction_threshold: 0.85   # window fraction that triggers auto-compaction
 
-# === agent: agent-wide defaults for the four limits above. ==================
+# === agent: agent-wide defaults for the five limits above. ==================
 # A per-task value overrides these; these override the code defaults.
 #agent:
 #  max_iterations: 25
 #  max_output_tokens: 1024
 #  max_turn_tokens: 60000
+#  max_turn_cost: 0
 #  compaction_threshold: 0.85
 
 # === mcp_servers: every tool the agent has comes from an entry here. ========
@@ -49,28 +50,81 @@ tasks:
 mcp_servers:
   mud:
     command: boukensha-gateway
-    args: ["--profile", "direct-full"]
+    # Gateway behavior is configured once in the gateway block below. Args are
+    # reserved for one-off command-line diagnostics.
+    args: []
+
     prefix: tbamud               # agent-side tool-name prefix (tbamud__look)
     required: true               # true: a failed spawn stops boot. false: warn and continue tool-less
     #timeout: 30                 # per-call ceiling in seconds (default 30)
-    #allow: [look, move, attack] # if set, only these tool names register
-    #deny: [shutdown]            # tool names to drop
-    result_mode: full            # raw, minimal or full model-facing results
-    env:                          # environment for the spawned server
-      MUD_HOST: localhost
-      MUD_PORT: 4000
-      MUD_NAME: poucet
 
-# === mud: optional, feeds only the /mud info command's readout. =============
-# The real connection is mcp_servers.mud.env above. Omit this unless you want
-# the /mud command to report a target.
-#mud:
-#  host: localhost
-#  port: 4000
-#  username: poucet
+    # These are agent-side visibility filters applied after MCP discovery.
+    # They do not grant gateway permission. Names are the server's unprefixed
+    # tool names. With neither key set, every tool advertised by the gateway
+    # profile is registered with the agent.
+    #allow: [look, move, attack]
+    #deny: [tell, channel_say]
+
+    result_mode: full            # raw, minimal or full model-facing results
+
+# === gateway: game connection, evidence, tools and local API. ===============
+gateway:
+  connection:
+    host: localhost
+    port: 4000
+    # Default player identity for normal gateway and benchmark launches.
+    # Override a configured identity with --player-profile. The benchmark also
+    # accepts a one-off --player with its password read from standard input.
+    player_profile: poucet
+
+  # Public player identities. Password values stay out of this file. Each
+  # profile names the environment variable holding its password.
+  players:
+    poucet:
+      character: poucet
+      password_env: MUD_PASSWORD
+    # tester:
+    #   character: tester
+    #   password_env: MUD_PASSWORD_TESTER
+
+  journal: .boukensha/gateway/gateway.db
+
+  surface:
+    # One stable projection for the whole MCP session. Named presets:
+    # direct-full, direct-core, hybrid-full and hybrid-core.
+    profile: direct-full
+
+    # Fine-grained changes to the selected preset. Capability names are the
+    # unprefixed names advertised by the gateway. Disable wins over enable.
+    # Valid typed capabilities: attack, cast_spell, channel_say, check,
+    # consider, consume_item, drop_item, equip_item, examine, flee, get_item,
+    # look, move, mud_status, poll, practice, put_item, save_character, say,
+    # set_position, shop, skill_strike, tell, track and use_magic_item.
+    enable: []
+    disable: []
+    #enable: [cast_spell, practice]
+    #disable: [tell, channel_say]
+
+    # Raw MUD text bypasses the typed command contract. It is registered but
+    # denied by default and requires a reason when explicitly enabled.
+    allow_raw: false
+
+  api:
+    host: 127.0.0.1
+    port: 8765
+
+  admin:
+    # Immortal identity only. Reset targets are per operation and are never
+    # configured here.
+    character: admin
+    password_env: MUD_ADMIN_PASSWORD
 
 # === Secrets live in .boukensha/.env (not here) =============================
-# One per provider you use, plus the MUD password:
+# One per provider you use, plus administrator and player-profile passwords:
 #   ANTHROPIC_API_KEY=...   GEMINI_API_KEY=...   OPENAI_API_KEY=...
 #   OLLAMA_API_KEY=...      (ollama local needs no key)
-#   MUD_PASSWORD=...
+#   MUD_ADMIN_PASSWORD=...
+#   MUD_PASSWORD=...        (poucet profile above)
+#   MUD_PASSWORD_TESTER=... (example tester profile above)
+# A player secret may instead live in .boukensha/profiles/<profile>/.env
+# under the profile's configured password_env name.

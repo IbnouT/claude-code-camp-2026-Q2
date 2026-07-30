@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 from copy import deepcopy
 from dataclasses import dataclass
 from hashlib import sha256
@@ -220,7 +219,7 @@ def load_profile(
         profile_id: str | None = None,
         allow: Iterable[str] | None = None,
 ) -> Profile:
-    requested = profile_id or os.environ.get("GATEWAY_PROFILE", "direct-full")
+    requested = profile_id or "direct-full"
     try:
         base = PROFILES[requested]
     except KeyError as error:
@@ -228,17 +227,10 @@ def load_profile(
             f"unknown gateway profile {requested!r}, expected one of "
             f"{sorted(PROFILES)}") from error
 
-    configured = allow
-    if configured is None and "GATEWAY_ALLOW" in os.environ:
-        configured = (
-            name.strip()
-            for name in os.environ["GATEWAY_ALLOW"].split(",")
-            if name.strip()
-        )
-    if configured is None:
+    if allow is None:
         return base
 
-    names = frozenset(configured)
+    names = frozenset(allow)
     identity = sha256(
         ",".join(sorted(names)).encode()
     ).hexdigest()[:8]

@@ -18,18 +18,30 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import os
 import pathlib
 import sys
 
 from mud_gateway.journal import Journal
 from mud_gateway.session import Session
+from mud_gateway.settings import GatewaySettings
 from mud_gateway.wire import PROMPT
 
 
-async def gate(player: str, password: str, db: pathlib.Path) -> int:
+async def gate(
+    player: str,
+    password: str,
+    db: pathlib.Path,
+    host: str = "127.0.0.1",
+    port: int = 4000,
+) -> int:
     journal = Journal(db)
-    session = Session(journal, name=player, password=password)
+    session = Session(
+        journal,
+        name=player,
+        password=password,
+        host=host,
+        port=port,
+    )
     failures: list[str] = []
     try:
         await session.open()
@@ -94,14 +106,39 @@ async def gate(player: str, password: str, db: pathlib.Path) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    settings = GatewaySettings.load()
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--player", default="poucet")
-    parser.add_argument("--password", default=os.environ.get("MUD_PASSWORD"))
-    parser.add_argument("--db", default="../../.boukensha/gateway/live-smoke.db")
+    parser.add_argument(
+        "--player-profile",
+        default=settings.player_profile,
+        choices=sorted(settings.players),
+    )
+    parser.add_argument(
+        "--password-stdin",
+        action="store_true",
+        help="read the selected player's password from standard input",
+    )
+    parser.add_argument("--db", default=settings.journal.with_name("live-smoke.db"))
     args = parser.parse_args(argv)
-    if not args.password:
-        parser.error("--password or MUD_PASSWORD is required")
-    return asyncio.run(gate(args.player, args.password, pathlib.Path(args.db).resolve()))
+    profile = settings.player(args.player_profile)
+    password = (
+        sys.stdin.readline().rstrip("\r\n")
+        if args.password_stdin
+        else settings.player_password(profile.id)
+    )
+    if not password:
+        parser.error(
+            f"{profile.password_env}, profile .env, or --password-stdin is required"
+        )
+    return asyncio.run(
+        gate(
+            profile.character,
+            password,
+            pathlib.Path(args.db).resolve(),
+            settings.host,
+            settings.port,
+        )
+    )
 
 
 if __name__ == "__main__":

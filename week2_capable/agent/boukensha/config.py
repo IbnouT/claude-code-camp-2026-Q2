@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from dotenv import load_dotenv
+from dotenv import dotenv_values, load_dotenv
 
 from .errors import ConfigError
 from .mcp.transport import DEFAULT_TIMEOUT
@@ -39,6 +39,7 @@ class Config:
     """
 
     def __init__(self) -> None:
+        self._process_environment = dict(os.environ)
         self.dir: Path = self.resolve_dir()
         self._load_env()
         self.settings: dict[str, Any] = self._load_settings()
@@ -99,13 +100,15 @@ class Config:
         for name, raw in raw_block.items():
             entry = raw if isinstance(raw, dict) else {}
             env = entry.get("env") or {}
+            resolved_env = {str(k): str(v) for k, v in env.items()}
+            resolved_env.setdefault("BOUKENSHA_DIR", str(self.dir))
             required = entry.get("required")
             timeout = entry.get("timeout")
             allow = entry.get("allow")
             out[str(name)] = {
                 "command": str(entry.get("command") or ""),
                 "args": [str(a) for a in (entry.get("args") or [])],
-                "env": {str(k): str(v) for k, v in env.items()},
+                "env": resolved_env,
                 "prefix": None if entry.get("prefix") is None else str(entry.get("prefix")),
                 "required": True if required is None else bool(required),
                 "timeout": DEFAULT_TIMEOUT if timeout is None else float(timeout),
@@ -135,20 +138,58 @@ class Config:
 
     @property
     def mud_host(self) -> str:
-        return self.dig("mud", "host") or "localhost"
+        return (
+            self.dig("gateway", "connection", "host")
+            or self.dig("mud", "host")
+            or "localhost"
+        )
 
     @property
     def mud_port(self) -> int:
-        return int(self.dig("mud", "port") or 4000)
+        return int(
+            self.dig("gateway", "connection", "port")
+            or self.dig("mud", "port")
+            or 4000
+        )
 
     @property
     def mud_username(self) -> str | None:
-        return self.dig("mud", "username")
+        profile = self._mud_profile()
+        return (
+            profile.get("character")
+            or self.dig("mud", "username")
+        )
 
     @property
     def mud_password(self) -> str | None:
-        """The MUD password, a secret read from the environment (.env)."""
-        return os.environ.get("MUD_PASSWORD")
+        """Resolve the selected profile secret without changing the process."""
+        profile = self._mud_profile()
+        name = str(profile.get("password_env") or "MUD_PASSWORD")
+        value = self._process_environment.get(name)
+        if value:
+            return value
+        for path in (
+            self.dir / "profiles" / self.mud_player_profile / ".env",
+            self.dir / ".env",
+        ):
+            if not path.is_file():
+                continue
+            candidate = dotenv_values(path).get(name)
+            if candidate:
+                return candidate
+        return None
+
+    @property
+    def mud_player_profile(self) -> str:
+        return str(
+            self.dig("gateway", "connection", "player_profile")
+            or "default"
+        )
+
+    def _mud_profile(self) -> dict[str, Any]:
+        profiles = self.dig("gateway", "players") or {}
+        selected = profiles.get(self.mud_player_profile) or {}
+        return selected if isinstance(selected, dict) else {}
 
     # -- representation ----------------------------------------------------
 

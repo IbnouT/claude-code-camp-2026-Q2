@@ -35,8 +35,8 @@ the agent at a different configuration directory.
 
 First run, in order:
 
-1. Create `.boukensha/.env` next to `settings.yaml` with the secrets for the
-   provider you use and the MUD character:
+1. Create `.boukensha/.env` next to `settings.yaml` with provider secrets and
+   any shared player-profile secrets:
 
    | Variable | For |
    |---|---|
@@ -44,7 +44,11 @@ First run, in order:
    | `GEMINI_API_KEY` | the gemini provider |
    | `OPENAI_API_KEY` | the openai provider |
    | `OLLAMA_API_KEY` | the ollama_cloud provider (local ollama needs none) |
-   | `MUD_PASSWORD` | the MUD character password |
+   | `MUD_PASSWORD` | example player-profile password source |
+
+   A player secret may instead live in
+   `.boukensha/profiles/<profile>/.env`. The public character and its
+   `password_env` name are configured under `gateway.players`.
 
 2. Pick the model in `settings.yaml` under `tasks.player`: set `provider` and
    `model`. The alternatives are present as commented lines, switching is
@@ -57,8 +61,8 @@ First run, in order:
    ```
 
    The isolated tool exposes `boukensha-gateway` on `PATH`. The default MCP
-   entry starts it with the `direct-full` profile. Its `env` block carries the
-   connection settings (host, port, character name).
+   entry starts it without repeated arguments. The `gateway:` block owns its
+   connection, evidence, surface, API, and administrator settings.
 
 4. Have the MUD server running.
 
@@ -94,7 +98,7 @@ entry here, so the game connection is configuration, not code):
 |---|---|---|
 | `command` | (required) | an executable on PATH |
 | `args` | `[]` | arguments passed to it |
-| `env` | `{}` | environment for the spawned server |
+| `env` | `{}` | exceptional per-process environment, secrets do not go here |
 | `prefix` | none | agent-side tool-name prefix (`tbamud__look`) |
 | `required` | `true` | `true` stops boot on a failed spawn, `false` warns and continues |
 | `timeout` | `30` | per-call ceiling in seconds |
@@ -102,6 +106,9 @@ entry here, so the game connection is configuration, not code):
 | `result_mode` | `full` | model-facing results: `raw`, `minimal`, or `full` |
 
 The context window is not a setting: it is a model fact read from the catalog.
+The gateway configuration reference is in
+`week2_capable/gateway/README.md`. The Observatory configuration reference is
+in `week2_capable/observatory/README.md`.
 
 ## Tests
 

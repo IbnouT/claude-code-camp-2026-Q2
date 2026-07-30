@@ -22,11 +22,21 @@ sys.modules.setdefault("boukensha.mcp", mcp_package)
 from boukensha.mcp.client import Client  # noqa: E402
 
 
+def gateway_env(tmp_path, surface: str) -> dict[str, str]:
+    directory = tmp_path / ".boukensha"
+    directory.mkdir()
+    (directory / "settings.yaml").write_text(
+        "gateway:\n"
+        f"  journal: {tmp_path / 'gateway.db'}\n"
+        "  surface:\n"
+        f"{surface}",
+        encoding="utf-8",
+    )
+    return {"BOUKENSHA_DIR": str(directory)}
+
+
 def test_week_one_client_completes_handshake_and_discovery(tmp_path):
-    env = {
-        "GATEWAY_JOURNAL": str(tmp_path / "gateway.db"),
-        "GATEWAY_PROFILE": "direct-core",
-    }
+    env = gateway_env(tmp_path, "    profile: direct-core\n")
     client = Client.spawn(
         sys.executable,
         args=["-m", "mud_gateway.mcp_server"],
@@ -47,11 +57,15 @@ def test_week_one_client_completes_handshake_and_discovery(tmp_path):
 
 
 def test_configured_raw_profile_is_visible_to_the_same_client(tmp_path):
-    env = {
-        "GATEWAY_JOURNAL": str(tmp_path / "gateway.db"),
-        "GATEWAY_PROFILE": "direct-full",
-        "GATEWAY_ALLOW": "look,send_raw",
-    }
+    env = gateway_env(
+        tmp_path,
+        "    profile: direct-full\n"
+        "    disable: [attack, cast_spell, channel_say, check, consider, "
+        "consume_item, drop_item, equip_item, examine, flee, get_item, move, "
+        "mud_status, poll, practice, put_item, save_character, say, "
+        "set_position, shop, skill_strike, tell, track, use_magic_item]\n"
+        "    allow_raw: true\n",
+    )
     client = Client.spawn(
         sys.executable,
         args=["-m", "mud_gateway.mcp_server"],

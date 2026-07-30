@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 import uuid
 from typing import Any
@@ -26,6 +25,7 @@ from .profiles import (
 from .raw import Role, send_raw
 from .results import CommandFailure, CommandObservation
 from .session import Session
+from .settings import GatewaySettings
 
 
 async def execute(
@@ -207,15 +207,19 @@ def measure() -> int:
     return 0
 
 
-async def serve(surface: Surface) -> None:
+async def serve(
+    surface: Surface,
+    settings: GatewaySettings,
+    *,
+    player_profile: str | None = None,
+) -> None:
     """Run one session-static profile over MCP stdio."""
     import mcp.types as types
     from mcp.server.lowlevel import Server
     from mcp.server.stdio import stdio_server
 
     server = Server("torii")
-    journal = Journal(os.environ.get(
-        "GATEWAY_JOURNAL", "../../.boukensha/gateway/gateway.db"))
+    journal = Journal(settings.journal)
     run_id = f"mcp-{uuid.uuid4().hex[:12]}"
     record_profile(journal, run_id, surface)
     session: Session | None = None
@@ -223,15 +227,19 @@ async def serve(surface: Surface) -> None:
     async def game_session() -> Session:
         nonlocal session
         if session is None:
-            password = os.environ.get("MUD_PASSWORD")
+            profile = settings.player(player_profile)
+            password = settings.player_password(profile.id)
             if not password:
-                raise RuntimeError("MUD_PASSWORD is required to call game tools")
+                raise RuntimeError(
+                    f"{profile.password_env} is required for player profile "
+                    f"{profile.id!r}"
+                )
             session = Session(
                 journal,
-                name=os.environ.get("MUD_NAME", "poucet"),
+                name=profile.character,
                 password=password,
-                host=os.environ.get("MUD_HOST", "127.0.0.1"),
-                port=int(os.environ.get("MUD_PORT", "4000")),
+                host=settings.host,
+                port=settings.port,
             )
             record_profile(journal, session.id, surface)
             await session.open()
@@ -285,7 +293,13 @@ async def serve(surface: Surface) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    settings = GatewaySettings.load()
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--player-profile",
+        choices=sorted(settings.players),
+        help="configured player identity for this MCP session",
+    )
     parser.add_argument(
         "--profile",
         choices=sorted(PROFILES),
@@ -308,15 +322,18 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.measure:
         return measure()
-    allow = None if args.allow is None else (
-        name.strip() for name in args.allow.split(",") if name.strip()
-    )
-    profile = load_profile(args.profile, allow)
+    if args.profile is None and args.allow is None:
+        profile = settings.effective_profile()
+    else:
+        allow = None if args.allow is None else (
+            name.strip() for name in args.allow.split(",") if name.strip()
+        )
+        profile = load_profile(args.profile or settings.profile, allow)
     surface = Surface(profile)
     if args.prove:
         return prove(surface)
     import asyncio
-    asyncio.run(serve(surface))
+    asyncio.run(serve(surface, settings, player_profile=args.player_profile))
     return 0
 
 

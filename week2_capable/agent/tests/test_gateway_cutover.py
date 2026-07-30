@@ -16,7 +16,14 @@ class TestGatewayCutover(unittest.TestCase):
         )
         entry = settings["mcp_servers"]["mud"]
         self.assertEqual("boukensha-gateway", entry["command"])
-        self.assertEqual(["--profile", "direct-full"], entry["args"])
+        self.assertEqual([], entry["args"])
+        self.assertEqual(
+            "direct-full",
+            settings["gateway"]["surface"]["profile"],
+        )
+        selected = settings["gateway"]["connection"]["player_profile"]
+        self.assertIn(selected, settings["gateway"]["players"])
+        self.assertNotIn("player", settings["gateway"]["admin"])
 
     def test_gateway_package_declares_the_configured_command(self):
         project = tomllib.loads(
@@ -33,7 +40,5 @@ class TestGatewayCutover(unittest.TestCase):
             "admin_process.server:main",
             scripts["boukensha-gateway-admin"],
         )
-
-
 if __name__ == "__main__":
     unittest.main()

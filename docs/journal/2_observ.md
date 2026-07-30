@@ -46,6 +46,8 @@
 - Browser hardening caught both a dense-frontier overflow and an accessible
   name collision that unit tests missed. Visual and semantic gates found
   different failures.
+- Naming secret variables in public player profiles made identity selection
+  explicit without copying credentials into commands or benchmark overlays.
 
 ## Technical Conclusions
 

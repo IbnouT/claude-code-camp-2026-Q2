@@ -5,8 +5,12 @@ Stateless module-level functions: the client and registry are passed in, so
 this namespace owns nothing.
 
     from boukensha.tools import mcp
-    client = mcp.register(registry, "mud-manager", args=["--mcp"],
-                          env={"MUD_HOST": "localhost"}, prefix="tbamud")
+    client = mcp.register(
+        registry,
+        "boukensha-gateway",
+        env={"BOUKENSHA_DIR": "/path/to/.boukensha"},
+        prefix="tbamud",
+    )
 
 ``prefix`` scopes the discovered names agent-side (``tbamud`` -> ``tbamud__look``).
 It is config policy applied here and never put on the wire: the server always

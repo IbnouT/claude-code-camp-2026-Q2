@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import argparse
-import os
 from pathlib import Path
 
 from mud_gateway.journal import Journal
 from mud_gateway.stream import EventHub, canonical_wire
+from mud_gateway.settings import GatewaySettings
 
 
 def gate(path: Path, secret: bytes | None) -> int:
@@ -53,7 +53,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--journal", type=Path, required=True)
     arguments = parser.parse_args()
-    password = os.environ.get("MUD_PASSWORD")
+    password = GatewaySettings.load().password
     raise SystemExit(
         gate(
             arguments.journal,

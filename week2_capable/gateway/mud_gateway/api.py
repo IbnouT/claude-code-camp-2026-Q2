@@ -15,6 +15,7 @@ from starlette.routing import Route
 from .contracts import capabilities as gateway_capabilities
 from .contracts import contract_schemas
 from .journal import Journal
+from .settings import GatewaySettings
 from .stream import EventHub, canonical_wire
 
 
@@ -124,15 +125,20 @@ def create_app(journal: Journal) -> Starlette:
 def main() -> None:
     import uvicorn
 
+    settings = GatewaySettings.load()
     parser = argparse.ArgumentParser()
-    parser.add_argument("--journal", type=Path, required=True)
-    parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--journal", type=Path)
+    parser.add_argument("--host")
+    parser.add_argument("--port", type=int)
     arguments = parser.parse_args()
-    journal = Journal(arguments.journal)
+    journal = Journal(arguments.journal or settings.journal)
     app = create_app(journal)
     try:
-        uvicorn.run(app, host=arguments.host, port=arguments.port)
+        uvicorn.run(
+            app,
+            host=arguments.host or settings.api_host,
+            port=arguments.port or settings.api_port,
+        )
     finally:
         app.state.hub.close()
         journal.close()

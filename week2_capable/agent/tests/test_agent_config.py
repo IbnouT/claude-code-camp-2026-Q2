@@ -54,6 +54,43 @@ class TestConfigAgentBlock(unittest.TestCase):
                     os.environ["BOUKENSHA_DIR"] = old
 
 
+class TestPlayerProfileConfig(unittest.TestCase):
+    def test_selected_profile_resolves_character_and_profile_secret(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg_dir = Path(tmp) / ".boukensha"
+            profile_dir = cfg_dir / "profiles" / "scout"
+            profile_dir.mkdir(parents=True)
+            (cfg_dir / "settings.yaml").write_text(
+                "gateway:\n"
+                "  connection:\n"
+                "    player_profile: scout\n"
+                "  players:\n"
+                "    scout:\n"
+                "      character: ScoutName\n"
+                "      password_env: SCOUT_PASSWORD\n"
+            )
+            (profile_dir / ".env").write_text(
+                "SCOUT_PASSWORD=scout-secret\n"
+            )
+            old_dir = os.environ.get("BOUKENSHA_DIR")
+            old_secret = os.environ.pop("SCOUT_PASSWORD", None)
+            os.environ["BOUKENSHA_DIR"] = str(cfg_dir)
+            try:
+                cfg = Config()
+                self.assertEqual("scout", cfg.mud_player_profile)
+                self.assertEqual("ScoutName", cfg.mud_username)
+                self.assertEqual("scout-secret", cfg.mud_password)
+            finally:
+                if old_dir is None:
+                    os.environ.pop("BOUKENSHA_DIR", None)
+                else:
+                    os.environ["BOUKENSHA_DIR"] = old_dir
+                if old_secret is None:
+                    os.environ.pop("SCOUT_PASSWORD", None)
+                else:
+                    os.environ["SCOUT_PASSWORD"] = old_secret
+
+
 
 class TestEveryCeilingCanBeSetAgentWide(unittest.TestCase):
     """The `agent:` block is a promise the settings table makes to a reader.
