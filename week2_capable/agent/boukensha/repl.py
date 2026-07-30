@@ -31,6 +31,7 @@ from .backends import backend_for
 from .compaction import prefix_tokens
 from .errors import ApiError, ConfigError, LoopError, TurnCancelled
 from .message import Message
+from .operator_control import OperatorMailbox, OperatorStopped
 from .prompt_builder import PromptBuilder
 from .runtime import identity_environment
 from .tasks import Player
@@ -83,6 +84,7 @@ class Repl:
                  mud_host: str | None = None,
                  mud_port: int | None = None,
                  mud_username: str | None = None,
+                 operator: OperatorMailbox | None = None,
                  input: TextIO | None = None,
                  output: TextIO | None = None) -> None:
         self._context = context
@@ -117,6 +119,8 @@ class Repl:
         self._mud_host = mud_host
         self._mud_port = mud_port
         self._mud_username = mud_username
+        self._operator = operator
+        self._operator_stopped = False
         self._input: TextIO = input if input is not None else sys.stdin
         #: Public so the wrapper can print an interrupt notice to the same stream.
         self.output: TextIO = output if output is not None else sys.stdout
@@ -202,6 +206,8 @@ class Repl:
                     return
                 continue
             self.run_turn(payload)
+            if self._operator_stopped:
+                return
 
     @staticmethod
     def classify_input(line: str) -> tuple[str, str]:
@@ -371,6 +377,7 @@ class Repl:
             thinking=self._thinking,
             cancel_event=self._cancel_event,
             logger=self._logger,
+            operator=self._operator,
         )
         # Forwarded only when set, so a step whose Agent has no such parameter
         # (everything before the context step) is unaffected.
@@ -387,6 +394,13 @@ class Repl:
             # would break the next request. Record the abort as the reply.
             self._context.add(Message.assistant("[turn aborted by user]"))
             self._writeln("\n[aborted] turn interrupted, still in the REPL")
+            return
+        except OperatorStopped:
+            self._context.add(
+                Message.assistant("[agent stopped by authenticated operator]")
+            )
+            self._operator_stopped = True
+            self._writeln("\n[stopped] authenticated operator ended the session")
             return
         except TurnCancelled:
             self._context.add(Message.assistant("[turn cancelled by user]"))

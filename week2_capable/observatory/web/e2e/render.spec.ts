@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { mockRuntime } from "./runtimeFixture";
 
 async function renderFixture(page: Page) {
   await page.route("**/api/capabilities", async (route) => {
@@ -46,19 +47,31 @@ async function renderFixture(page: Page) {
   });
 }
 
-test("captures the B1 shell for rendered review", async ({ page }, testInfo) => {
+test("captures the B2 Live cockpit for rendered review", async ({ page }, testInfo) => {
   await renderFixture(page);
+  await mockRuntime(page);
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Living world" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Living world · combat" }))
+    .toBeVisible();
   await page.screenshot({
-    path: testInfo.outputPath("b1-shell-dark.png"),
+    path: testInfo.outputPath("b2-live-dark.png"),
     fullPage: true,
   });
+
+  await page.getByRole("button", { name: /Direct the agent/ }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Direct the selected agent" }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("b2-control-dark.png"),
+    fullPage: false,
+  });
+  await page.getByRole("button", { name: "Close agent control" }).click();
 
   await page.getByRole("button", { name: "Use light theme" }).click();
   await page.waitForTimeout(250);
   await page.screenshot({
-    path: testInfo.outputPath("b1-shell-light.png"),
+    path: testInfo.outputPath("b2-live-light.png"),
     fullPage: true,
   });
 });

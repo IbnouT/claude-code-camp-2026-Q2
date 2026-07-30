@@ -216,8 +216,20 @@
     grid-template-columns: max-content 52px minmax(0, 1fr) max-content;
   }
 
+  .timeline-item > button {
+    grid-template-columns: max-content 52px minmax(0, 1fr) max-content;
+  }
+
   .timeline-item code {
     display: none;
+  }
+
+  .time-scrubber {
+    grid-template-columns: minmax(0, 1fr) max-content;
+  }
+
+  .time-scrubber > :last-child:not(:nth-child(2)) {
+    grid-column: 1 / -1;
   }
 
   .control-scope,

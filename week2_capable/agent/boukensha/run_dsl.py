@@ -29,6 +29,7 @@ from .context import Context
 from .errors import ConfigError, McpServerError, McpToolCollisionError
 from .logger import Logger
 from .message import Message
+from .operator_control import OperatorStopped, start_operator_control
 from .prompt_builder import PromptBuilder
 from .registry import Registry
 from .repl import Repl
@@ -298,6 +299,7 @@ def run(task: str, *,
                          time.sleep. The offline assertion path injects a stub.
     """
     logger: Logger | None = None
+    operator_server: Any = None
     try:
         assembled = _assemble(
             system=system, model=model, backend=backend, api_key=api_key,
@@ -307,6 +309,10 @@ def run(task: str, *,
             setup=setup, transport=transport, sleep=sleep,
         )
         logger = assembled.logger
+        operator_pair = start_operator_control()
+        operator = None
+        if operator_pair is not None:
+            operator, operator_server = operator_pair
         agent = Agent(
             assembled.context, assembled.registry, assembled.builder,
             assembled.client,
@@ -314,13 +320,22 @@ def run(task: str, *,
             task_settings=assembled.task_settings,
             max_iterations=assembled.max_iterations,
             max_turn_tokens=assembled.max_turn_tokens,
+            max_turn_cost=assembled.max_turn_cost,
             max_output_tokens=assembled.max_output_tokens,
             thinking=thinking,
             logger=logger,
+            operator=operator,
         )
         assembled.context.add(Message.user(task))
-        return agent.run()
+        try:
+            return agent.run()
+        except OperatorStopped:
+            message = "[agent stopped by authenticated operator]"
+            assembled.context.add(Message.assistant(message))
+            return message
     finally:
+        if operator_server is not None:
+            operator_server.close()
         if logger is not None:
             logger.close()
 
@@ -355,6 +370,7 @@ def repl(*,
     ``input``/``output`` streams. The loader sets ``tui=False`` for ``--no-tui``.
     """
     logger: Logger | None = None
+    operator_server: Any = None
     try:
         assembled = _assemble(
             system=system, model=model, backend=backend, api_key=api_key,
@@ -364,6 +380,10 @@ def repl(*,
             setup=setup, transport=transport, sleep=sleep,
         )
         logger = assembled.logger
+        operator_pair = start_operator_control()
+        operator = None
+        if operator_pair is not None:
+            operator, operator_server = operator_pair
         session = Repl(
             context=assembled.context,
             registry=assembled.registry,
@@ -381,6 +401,7 @@ def repl(*,
             version=__version__,
             api_key=assembled.backend.api_key,
             servers=assembled.servers,
+            operator=operator,
             input=input,
             output=output,
         )
@@ -397,5 +418,7 @@ def repl(*,
         except KeyboardInterrupt:
             print("\nInterrupted.", file=session.output)
     finally:
+        if operator_server is not None:
+            operator_server.close()
         if logger is not None:
             logger.close()

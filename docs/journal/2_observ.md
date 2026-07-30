@@ -85,6 +85,13 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
 - Source health became useful when it moved beside the evidence it could
   weaken. Keeping it in the global header made instrumentation look like a
   destination instead of an explanation.
+- Steering a live agent from the Observatory needed a labelling rule more than
+  a transport: an operator message is recorded as operator guidance, so it can
+  never masquerade as the agent's own reasoning, observed game state, or
+  benchmark evidence when the session is replayed later.
+- Live intervention became safe when it moved to the boundary between agent
+  iterations. Guidance can enter as a labelled operator message, while an
+  in-flight model request remains an honest non-interruptible fact.
 
 ## Technical Conclusions
 

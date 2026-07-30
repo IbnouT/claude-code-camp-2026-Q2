@@ -29,6 +29,81 @@ class ObservatoryCapabilities(BaseModel):
     features: tuple[str, ...]
 
 
+class LiveTimelineItem(BaseModel):
+    """One causal item placed on the selected gateway clock."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    sequence: int
+    at: float
+    source: Literal["agent", "gateway"]
+    kind: str
+    label: str
+    cost_usd: float = 0
+    tokens: int = 0
+    trace_id: str | None = None
+
+
+class LiveRoom(BaseModel):
+    """One observed spatial identity in the selected evidence prefix."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    place: int
+    title: str
+    exits: tuple[str, ...]
+    first_sequence: int
+    last_sequence: int
+    visits: int
+    state: Literal["observed", "current"]
+    confidence: str
+
+
+class LiveJourneySnapshot(BaseModel):
+    """One deterministic Live projection at an exact gateway sequence."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    session_id: str
+    gateway_session_id: str
+    player_id: str
+    character: str
+    lifecycle: str
+    control_state: str | None
+    following_live: bool
+    through_sequence: int
+    latest_sequence: int
+    selected_at: float | None
+    objective: str | None
+    model: str | None
+    tools: tuple[str, ...]
+    iteration: int
+    current_room: str | None
+    position_confidence: str
+    position_method: str | None
+    combat: bool
+    vitals: dict[str, int]
+    cost_usd: float
+    usage: dict[str, int]
+    parse_miss_rate: float | None
+    rooms: tuple[LiveRoom, ...]
+    timeline: tuple[LiveTimelineItem, ...]
+    capture_gaps: tuple[str, ...]
+
+
+class LiveControlRequest(BaseModel):
+    """One optimistic authenticated control request for a live session."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    request_id: str = Field(min_length=8, max_length=128)
+    action: Literal["guide", "revise", "pause", "resume", "stop"]
+    instruction: str | None = Field(default=None, max_length=4_000)
+    expected_sequence: int = Field(ge=0)
+
+
 class RunSummary(BaseModel):
     """One recorded benchmark attempt available for investigation."""
 

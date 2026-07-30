@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { mockRuntime } from "./runtimeFixture";
 
 async function mockCapabilities(page: Page) {
   await page.route("**/api/capabilities", async (route) => {
@@ -49,6 +50,7 @@ async function mockCapabilities(page: Page) {
 
 test.beforeEach(async ({ page }) => {
   await mockCapabilities(page);
+  await mockRuntime(page);
   await page.goto("/");
 });
 
@@ -67,7 +69,7 @@ test("persists light theme without losing the workspace", async ({ page }) => {
   expect(results.violations).toEqual([]);
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-  await expect(page.getByRole("heading", { name: "Living world" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Living world/ })).toBeVisible();
 });
 
 test("provides complete narrow navigation without horizontal root clipping", async ({
@@ -86,13 +88,50 @@ test("provides complete narrow navigation without horizontal root clipping", asy
   await expect(page.getByRole("dialog", { name: "Ask or search evidence" })).toBeVisible();
 });
 
-test("keeps agent control scoped and non-mutating in B1", async ({ page }) => {
+test("keeps agent control scoped to the selected live session", async ({ page }) => {
   await page.getByRole("button", { name: /Direct the agent/ }).click();
   const dialog = page.getByRole("dialog", { name: "Direct the selected agent" });
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByText("poucet", { exact: true })).toBeVisible();
-  await expect(dialog.getByText("live-poucet", { exact: true })).toBeVisible();
-  await expect(dialog.getByRole("button", { name: /Preview only/ })).toBeDisabled();
+  await expect(dialog.getByText("alpha", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("session-alpha", { exact: true })).toBeVisible();
+  await dialog.getByRole("textbox", { name: "Operator guidance" })
+    .fill("Inspect the west exit before choosing another route.");
+  await dialog.getByRole("button", { name: "Confirm guide" }).click();
+  await expect(dialog.getByText("guide accepted")).toBeVisible();
+  await expect(dialog.getByText(/next iteration boundary/)).toBeVisible();
+});
+
+test("reconstructs a selected prefix and returns to the live combat state", async ({
+  page,
+}) => {
+  await expect(page.getByRole("heading", { name: "Living world · combat" }))
+    .toBeVisible();
+  await page.getByRole("slider", { name: "Selected sequence" }).fill("2");
+  await expect(page.getByRole("heading", { name: "Living world" })).toBeVisible();
+  await expect(page.getByText("The Temple Of Midgaard", { exact: true }).first())
+    .toBeVisible();
+  await expect(page.getByText("Viewing history", { exact: true }).first())
+    .toBeVisible();
+
+  await page.getByRole("button", { name: "Return to live" }).click();
+
+  await expect(page.getByRole("heading", { name: "Living world · combat" }))
+    .toBeVisible();
+  await expect(page.getByText("Hidden Courtyard", { exact: true }).first())
+    .toBeVisible();
+});
+
+test("switches players without retaining the prior session evidence", async ({
+  page,
+}) => {
+  await page.getByRole("combobox", { name: "Player" }).selectOption("beta");
+  await expect(page.getByRole("combobox", { name: "Session" }))
+    .toHaveValue("session-beta");
+  await expect(page.getByText("Beta Field", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("The Temple Of Midgaard", { exact: true }))
+    .toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Control unavailable" }))
+    .toBeDisabled();
 });
 
 test("remains operable with forced colors and reduced motion", async ({ page }) => {

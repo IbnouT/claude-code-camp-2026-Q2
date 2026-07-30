@@ -46,6 +46,7 @@ class Logger:
         "session_start", "turn", "iteration", "limit_reached", "prompt",
         "response", "tool_call", "tool_result", "reasoning", "plan",
         "compaction", "retry", "turn_end", "raw", "log_error",
+        "operator_control",
     )
 
     def __init__(self, session_id: str | None = None, dir: str | Path | None = None,
@@ -168,6 +169,27 @@ class Logger:
             "phase": "retry", "attempt": attempt, "wait": wait,
             "status": status, "error": error,
         })
+
+    def operator_control(
+        self,
+        *,
+        request_id: str,
+        action: str,
+        state: str,
+        iteration: int,
+        instruction: str | None,
+    ) -> None:
+        """Record an authenticated operator directive when it takes effect."""
+        self._write_log(
+            {
+                "phase": "operator_control",
+                "request_id": request_id,
+                "action": action,
+                "state": state,
+                "iteration": iteration,
+                "instruction": instruction,
+            }
+        )
 
     def turn(self, n: int) -> None:
         """Mark the start of an interactive turn, one per user input in a REPL session.
@@ -331,7 +353,11 @@ class Logger:
             line.update({
                 key: value
                 for key, value in self._identity.items()
-                if key not in {"session_dir", "control_socket"}
+                if key not in {
+                    "session_dir",
+                    "control_socket",
+                    "operator_socket",
+                }
             })
             line["session_id"] = self._session_id
             line["at"] = datetime.now().astimezone().isoformat()
@@ -356,7 +382,11 @@ class Logger:
                 **{
                     key: value
                     for key, value in self._identity.items()
-                    if key not in {"session_dir", "control_socket"}
+                    if key not in {
+                        "session_dir",
+                        "control_socket",
+                        "operator_socket",
+                    }
                 },
                 "session_id": self._session_id,
                 "at": datetime.now().astimezone().isoformat(),

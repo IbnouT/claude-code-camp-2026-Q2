@@ -45,7 +45,11 @@ async def test_health_is_read_only(tmp_path):
         base_url="http://observatory",
     ) as client:
         response = await client.get("/api/health")
-    assert response.json() == {"status": "ok", "read_only": True}
+    assert response.json() == {
+        "status": "ok",
+        "evidence_plane": "read_only",
+        "control_plane": "authenticated_local",
+    }
 
 
 async def test_capabilities_are_honest_when_sources_are_absent(tmp_path):
@@ -153,7 +157,10 @@ async def test_gateway_sessions_are_proxied_without_rewriting(tmp_path):
         base_url="http://observatory",
     ) as client:
         response = await client.get("/api/sessions")
-    assert response.json() == {"sessions": ["s1", "s2"]}
+    payload = response.json()
+    assert payload["version"] == 1
+    assert payload["players"] == [{"id": "legacy", "label": "Legacy gateway"}]
+    assert [session["id"] for session in payload["sessions"]] == ["s1", "s2"]
 
 
 async def test_gateway_contracts_are_proxied_without_rewriting(tmp_path):

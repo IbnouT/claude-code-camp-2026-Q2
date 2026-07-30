@@ -10,6 +10,7 @@ from pathlib import Path
 @dataclass(frozen=True)
 class Settings:
     gateway_url: str = "http://127.0.0.1:8765"
+    runtime_root: Path | None = None
     agent_events: Path | None = None
     benchmark_root: Path | None = None
     knowledge_db: Path | None = None
@@ -30,6 +31,7 @@ class Settings:
                 "OBSERVATORY_GATEWAY_URL",
                 "http://127.0.0.1:8765",
             ).rstrip("/"),
+            runtime_root=_runtime_root(),
             agent_events=_optional_path("OBSERVATORY_AGENT_EVENTS"),
             benchmark_root=_optional_path("OBSERVATORY_BENCHMARK_ROOT"),
             knowledge_db=_optional_path("OBSERVATORY_KNOWLEDGE_DB"),
@@ -75,3 +77,14 @@ def _optional_path(name: str) -> Path | None:
     if not path.is_absolute() and project_root:
         return Path(project_root) / path
     return path
+
+
+def _runtime_root() -> Path | None:
+    explicit = os.environ.get("BOUKENSHA_DIR")
+    if explicit:
+        return Path(explicit).expanduser().resolve()
+    for parent in (Path.cwd(), *Path.cwd().parents):
+        candidate = parent / ".boukensha"
+        if candidate.is_dir():
+            return candidate.resolve()
+    return None

@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any
 
 from .compaction import prefix_tokens
 from .errors import ApiError, TurnCancelled
+from .operator_control import OperatorMailbox, OperatorStopped
 from .logger import Logger
 from .message import Message, ReasoningBlock, TextBlock, ToolUseBlock
 from .prompt_builder import PromptBuilder
@@ -57,6 +58,7 @@ class Agent:
                  max_output_tokens: int | None = None,
                  thinking: str | None = None,
                  cancel_event: Any = None,
+                 operator: OperatorMailbox | None = None,
                  logger: Logger | None = None) -> None:
         self._context = context
         self._registry = registry
@@ -67,6 +69,7 @@ class Agent:
         #: iteration: once set, the turn raises TurnCancelled before the next
         #: model call, so Esc in the TUI ends a turn promptly and cheaply.
         self._cancel_event = cancel_event
+        self._operator = operator
         # Build a default Logger when none is passed, rather than a def-time
         # default, so agents never share one session file and Python's
         # mutable-default pitfall is avoided. A default Logger opens a session
@@ -105,6 +108,20 @@ class Agent:
         self._compact_if_needed()
 
         while True:
+            if self._operator is not None:
+                try:
+                    self._operator.checkpoint(
+                        self._context,
+                        self._logger,
+                        iteration=self._iteration,
+                    )
+                except OperatorStopped as error:
+                    self._logger.turn_end(
+                        reason="operator_stop",
+                        iterations=self._iteration,
+                        **self._turn_totals(),
+                    )
+                    raise error
             # Esc in the TUI sets the cancel event; end the turn promptly at the
             # iteration boundary rather than starting another model call.
             if self._cancel_event is not None and self._cancel_event.is_set():

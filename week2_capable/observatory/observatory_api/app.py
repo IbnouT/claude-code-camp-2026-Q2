@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 from pathlib import Path
 
 import httpx
+from mud_gateway.contracts import contract_schemas
+from mud_gateway.stream import serialize_event
 from pydantic import ValidationError
 from starlette.applications import Starlette
 from starlette.requests import Request
@@ -18,16 +21,22 @@ from starlette.responses import (
 from starlette.routing import Route
 
 from .capabilities import discover
-from .contracts import AskRequest, IncidentExportRequest
+from .contracts import (
+    AskRequest,
+    IncidentExportRequest,
+    LiveControlRequest,
+)
 from .incidents import build_capsule
 from .projections.history import diagnostic_history
 from .projections.knowledge import project_knowledge
+from .projections.live import project_live
 from .queries import answer, answer_operation
 from .queries.model import ModelTranslator
 from .settings import Settings
 from .sources.benchmark import BenchmarkSource
 from .sources.comparison import rendering_comparison
 from .sources.gateway import GatewaySource
+from .sources.runtime import RuntimeSource, RuntimeSourceError
 
 
 def create_app(
@@ -40,6 +49,11 @@ def create_app(
     gateway = GatewaySource(
         active.gateway_url,
         transport=gateway_transport,
+    )
+    runtime = (
+        None
+        if active.runtime_root is None
+        else RuntimeSource(active.runtime_root)
     )
     benchmark = (
         BenchmarkSource(active.benchmark_root)
@@ -67,7 +81,13 @@ def create_app(
     )
 
     async def health(_request: Request) -> JSONResponse:
-        return JSONResponse({"status": "ok", "read_only": True})
+        return JSONResponse(
+            {
+                "status": "ok",
+                "evidence_plane": "read_only",
+                "control_plane": "authenticated_local",
+            }
+        )
 
     async def capabilities(_request: Request) -> JSONResponse:
         result = await discover(
@@ -77,12 +97,62 @@ def create_app(
         return JSONResponse(result.model_dump(mode="json"))
 
     async def sessions(_request: Request) -> JSONResponse:
+        if runtime is not None and runtime.available:
+            try:
+                available = runtime.sessions()
+            except RuntimeSourceError as error:
+                return _runtime_error(error)
+            players: dict[str, dict[str, str]] = {}
+            for session in available:
+                players.setdefault(
+                    session.player_id,
+                    {
+                        "id": session.player_id,
+                        "label": session.character,
+                    },
+                )
+            return JSONResponse(
+                {
+                    "version": 1,
+                    "players": list(players.values()),
+                    "sessions": [session.public() for session in available],
+                }
+            )
         try:
-            return JSONResponse(await gateway.sessions())
+            payload = await gateway.sessions()
         except (httpx.HTTPError, ValueError) as error:
             return _upstream_error(error)
+        fallback = [
+            {
+                "id": session,
+                "player_id": "legacy",
+                "character": "Legacy gateway",
+                "gateway_session_id": session,
+                "state": "unknown",
+                "control_state": None,
+                "control_available": False,
+                "capture_status": "unknown",
+                "created_at": "",
+                "updated_at": "",
+                "ended_at": None,
+                "event_count": 0,
+                "latest_seq": 0,
+                "legacy": True,
+                "live": True,
+            }
+            for session in payload["sessions"]
+        ]
+        return JSONResponse(
+            {
+                "version": 1,
+                "players": [{"id": "legacy", "label": "Legacy gateway"}],
+                "sessions": fallback,
+            }
+        )
 
     async def contracts(_request: Request) -> JSONResponse:
+        if runtime is not None and runtime.available:
+            return JSONResponse(contract_schemas())
         try:
             return JSONResponse(await gateway.json("/contracts"))
         except (httpx.HTTPError, ValueError) as error:
@@ -93,6 +163,14 @@ def create_app(
         endpoint = request.path_params["endpoint"]
         if endpoint not in {"events", "replay"}:
             return JSONResponse({"error": "not_found"}, status_code=404)
+        if runtime is not None and runtime.available:
+            try:
+                selected = runtime.session(session)
+            except RuntimeSourceError as error:
+                return _runtime_error(error)
+            if selected is None:
+                return JSONResponse({"error": "not_found"}, status_code=404)
+            return _runtime_events(request, runtime, selected.id, endpoint)
         query = list(request.query_params.multi_items())
         context = gateway.stream(
             f"/sessions/{session}/{endpoint}",
@@ -118,6 +196,62 @@ def create_app(
                 "X-Accel-Buffering": "no",
             },
         )
+
+    async def live_snapshot(request: Request) -> JSONResponse:
+        if runtime is None or not runtime.available:
+            return JSONResponse(
+                {
+                    "error": "runtime_unavailable",
+                    "detail": "No launcher runtime registry is available",
+                },
+                status_code=503,
+            )
+        session_id = request.path_params["session"]
+        try:
+            selected = runtime.session(session_id)
+            if selected is None:
+                return JSONResponse({"error": "not_found"}, status_code=404)
+            through_value = request.query_params.get("through")
+            through = int(through_value) if through_value else None
+            result = project_live(
+                selected,
+                runtime.events(session_id),
+                runtime.agent_events(session_id),
+                through=through,
+            )
+        except (RuntimeSourceError, ValueError) as error:
+            return _runtime_error(error)
+        return JSONResponse(result.model_dump(mode="json"))
+
+    async def live_control(request: Request) -> JSONResponse:
+        if runtime is None or not runtime.available:
+            return JSONResponse(
+                {
+                    "error": "runtime_unavailable",
+                    "detail": "No launcher runtime registry is available",
+                },
+                status_code=503,
+            )
+        try:
+            payload = LiveControlRequest.model_validate(await request.json())
+            receipt = runtime.control(
+                request.path_params["session"],
+                request_id=payload.request_id,
+                action=payload.action,
+                instruction=payload.instruction,
+                expected_sequence=payload.expected_sequence,
+            )
+        except (ValidationError, ValueError) as error:
+            return JSONResponse(
+                {"error": "invalid_control", "detail": str(error)},
+                status_code=422,
+            )
+        except RuntimeSourceError as error:
+            return JSONResponse(
+                {"error": "control_rejected", "detail": str(error)},
+                status_code=409,
+            )
+        return JSONResponse(receipt)
 
     async def runs(_request: Request) -> JSONResponse:
         available = () if benchmark is None else benchmark.runs()
@@ -314,6 +448,12 @@ def create_app(
             Route("/api/capabilities", capabilities),
             Route("/api/contracts", contracts),
             Route("/api/sessions", sessions),
+            Route("/api/sessions/{session:str}/snapshot", live_snapshot),
+            Route(
+                "/api/sessions/{session:str}/control",
+                live_control,
+                methods=["POST"],
+            ),
             Route(
                 "/api/sessions/{session:str}/{endpoint:str}",
                 gateway_events,
@@ -343,6 +483,75 @@ def _upstream_error(error: Exception) -> JSONResponse:
             "detail": str(error),
         },
         status_code=503,
+    )
+
+
+def _runtime_error(error: Exception) -> JSONResponse:
+    return JSONResponse(
+        {
+            "error": "runtime_unavailable",
+            "detail": str(error),
+        },
+        status_code=503,
+    )
+
+
+def _runtime_events(
+    request: Request,
+    runtime: RuntimeSource,
+    session_id: str,
+    endpoint: str,
+) -> StreamingResponse:
+    after_value = request.query_params.get("after")
+    header_value = request.headers.get("last-event-id")
+    cursor = int(after_value or header_value or "0")
+    limit_value = request.query_params.get("limit")
+    limit = int(limit_value) if limit_value else None
+    tail = request.query_params.get("tail", "1") != "0"
+
+    async def body():
+        nonlocal cursor
+        delivered = 0
+        while True:
+            try:
+                events = runtime.events(
+                    session_id,
+                    after=cursor,
+                    limit=(
+                        None
+                        if limit is None
+                        else max(0, limit - delivered)
+                    ),
+                )
+            except RuntimeSourceError:
+                return
+            for event in events:
+                cursor = event.seq
+                delivered += 1
+                yield serialize_event(event)
+                if limit is not None and delivered >= limit:
+                    return
+            if endpoint == "replay" or not tail:
+                return
+            try:
+                selected = runtime.session(session_id)
+            except RuntimeSourceError:
+                return
+            if selected is None or (
+                not selected.live and cursor >= selected.latest_seq
+            ):
+                return
+            if await request.is_disconnected():
+                return
+            await asyncio.sleep(0.1)
+
+    return StreamingResponse(
+        body(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
     )
 
 

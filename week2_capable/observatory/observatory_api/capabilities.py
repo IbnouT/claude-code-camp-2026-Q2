@@ -5,10 +5,12 @@ from __future__ import annotations
 from pathlib import Path
 
 import httpx
+from mud_gateway.contracts import contract_digest
 
 from .contracts import ObservatoryCapabilities, SourceStatus
 from .settings import Settings
 from .sources.gateway import gateway_status
+from .sources.runtime import RuntimeSource
 
 FEATURES = (
     "live",
@@ -34,15 +36,40 @@ async def discover(
     *,
     gateway_transport: httpx.AsyncBaseTransport | None = None,
 ) -> ObservatoryCapabilities:
-    sources = [
-        await gateway_status(
+    runtime = (
+        None
+        if settings.runtime_root is None
+        else RuntimeSource(settings.runtime_root)
+    )
+    gateway = (
+        SourceStatus(
+            id="gateway",
+            label="Gateway journals",
+            state="ready",
+            detail="Registered player sessions are discoverable",
+            contract_digest=contract_digest(),
+        )
+        if runtime is not None and runtime.available
+        else await gateway_status(
             settings.gateway_url,
             transport=gateway_transport,
-        ),
-        _path_source(
-            "agent",
-            "Agent events",
-            settings.agent_events,
+        )
+    )
+    sources = [
+        gateway,
+        (
+            SourceStatus(
+                id="agent",
+                label="Agent events",
+                state="ready",
+                detail="Registered session agent logs are discoverable",
+            )
+            if runtime is not None and runtime.available
+            else _path_source(
+                "agent",
+                "Agent events",
+                settings.agent_events,
+            )
         ),
         _path_source(
             "benchmark",

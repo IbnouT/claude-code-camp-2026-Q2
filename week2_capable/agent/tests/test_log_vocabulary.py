@@ -43,6 +43,13 @@ REQUIRED = {
     "compaction": ("before", "dropped", "compressed", "summarized",
                    "over_budget", "context_window"),
     "retry": ("attempt", "wait", "status"),
+    "operator_control": (
+        "request_id",
+        "action",
+        "state",
+        "iteration",
+        "instruction",
+    ),
     "limit_reached": ("kind", "n", "max"),
     "turn_end": ("reason", "iterations", "tokens", "input_tokens",
                  "output_tokens", "cost_usd", "duration_ms", "usage",
@@ -90,6 +97,13 @@ def _write_everything(path: Path) -> Logger:
     logger.compaction(before=180_000, dropped=4, context_window=200_000,
                       compressed=2, summarized=True, over_budget=False)
     logger.retry(attempt=1, wait=0.5, status=529)
+    logger.operator_control(
+        request_id="operator-1",
+        action="guide",
+        state="running",
+        iteration=2,
+        instruction="Look east",
+    )
     logger.limit_reached(kind="max_iterations", n=25, max=25)
     logger.raw(data={"anything": True})
     logger.turn_end(reason="max_iterations", iterations=25, tokens=2260,

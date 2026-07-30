@@ -1,40 +1,46 @@
 # Boukensha observatory
 
-The observatory is a local, read-only flight recorder and experiment studio for
-the agent. It follows committed gateway evidence live and reconstructs any
-selected historical prefix through the same deterministic reducer.
+The observatory is a local flight recorder and experiment studio for the
+agent. Its evidence plane is read-only. A narrow authenticated control plane
+can direct one selected live agent. Every historical prefix is reconstructed
+through the same deterministic projector.
 
 ```mermaid
 flowchart LR
-    G["Gateway replay and SSE"] --> A["Read-only Starlette proxy"]
-    E["Optional agent, benchmark, knowledge sources"] --> A
-    A --> R["Runtime contract decoder"]
-    R --> D["One deterministic reducer"]
+    R["Launcher registry"] --> A["Starlette evidence API"]
+    G["Gateway replay and SSE"] --> A
+    E["Agent events"] --> A
+    A --> D["One deterministic projector"]
     D --> W["Selected evidence prefix"]
     W --> L["Live"]
-    W --> I["Investigate"]
-    W --> C["Compare"]
+    L --> C["Authenticated agent boundary"]
 ```
 
 ## Current interface
 
-The current product shell establishes the visual and interaction system:
+Live is connected to registered runtime evidence:
 
 - Four destinations: Live, Sessions, Experiments, and Knowledge.
 - One context-aware header with player, applicable session, Load, and theme.
 - Persistent dark and light themes.
 - Comfortable and dense design tokens.
-- Representative Live workspace with world, objective, attention, economics,
-  activity, and evidence forms.
+- Registered players and sessions discovered without scanning by file time.
+- Live SSE and recorded replay pass through one deterministic event reducer.
+- World, objective, cost, tokens, iterations, activity, and source completeness.
+- One causal clock reconstructs every panel at a selected sequence.
+- Pause, scrub, bookmark, and return-to-live controls.
+- Grow, Focus, and Lantern world modes.
 - Scoped Ask entry inside the active workspace.
-- Agent-control preview only in Live.
+- Authenticated guidance, goal revision, pause, resume, and stop in Live.
 - Wire, Parsed, Rendered, Believed, and Truth remain distinct evidence forms.
 - Truth and unavailable sources remain visibly missing or incomplete.
+- Player switching replaces every session-bound evidence projection.
 - Desktop and narrow layouts retain the same information and actions.
 - Keyboard focus returns to the invoking control after dialogs close.
 - Forced colors, reduced motion, and 200 percent layout remain operable.
 
-The shell uses representative evidence. Live delivery, deterministic replay,
+The browser tests use deterministic representative evidence. The launched
+product reads the local runtime registry and selected session journals.
 Sessions investigation, Experiments execution, and Knowledge workflows land in
 their owning increments.
 
@@ -117,6 +123,7 @@ The API uses explicit environment variables:
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
+| `BOUKENSHA_DIR` | nearest `.boukensha` ancestor | Registered player sessions and runtime evidence |
 | `OBSERVATORY_GATEWAY_URL` | `http://127.0.0.1:8765` | Gateway HTTP and SSE source |
 | `OBSERVATORY_AGENT_EVENTS` | disabled | Agent event source |
 | `OBSERVATORY_BENCHMARK_ROOT` | disabled | Benchmark evidence root |
@@ -146,8 +153,33 @@ OBSERVATORY_BENCHMARK_ROOT=.boukensha/benchmarks \
 ```
 
 The active destination is encoded as `?space=<name>`. Player and session remain
-explicit shell context. The live and replay increments add stable evidence
-selection to the URL.
+explicit shell context.
+
+### Live control boundary
+
+Live control does not send game commands from the browser. The launcher gives
+each agent process an authenticated local operator endpoint:
+
+```mermaid
+sequenceDiagram
+    participant U as Operator
+    participant O as Observatory
+    participant A as Selected agent
+    U->>O: Confirm guide, revise, pause, resume, or stop
+    O->>O: Verify live session and expected sequence
+    O->>A: Authenticated session-scoped request
+    A-->>O: Idempotent receipt
+    A->>A: Apply at next safe iteration boundary
+    A-->>O: Project state and append evidence
+```
+
+- The browser sends no credential.
+- The API reads the selected session token server-side.
+- Player, session, endpoint, and expected sequence must all match.
+- Guidance and revisions enter context as labelled operator messages.
+- Pause and stop cannot interrupt a provider request already in flight.
+- A stale, ended, mismatched, or unavailable target is rejected.
+- Operator state and applied directives become observable evidence.
 
 The read API already includes sanitized incident-capsule contracts. The
 Knowledge and incident increment adds their product workflow and offline reopen.
@@ -164,9 +196,10 @@ npm run test:budget
 npm run test:e2e
 ```
 
-UI changes require rendered checks at desktop and narrow widths. The product
-shell verifies keyboard focus, source failure, theme persistence, 200 percent
-layout, forced colors, reduced motion, and root overflow behavior.
+UI changes require rendered checks at desktop and narrow widths. Live verifies
+time travel, return to combat state, player isolation, authenticated control,
+keyboard focus, source failure, theme persistence, 200 percent layout, forced
+colors, reduced motion, and root overflow behavior.
 
 ## Product hardening
 

@@ -102,6 +102,13 @@ The launcher gives the agent only the selected player secret and the selected
 provider secret. The gateway child receives only the selected player secret.
 Administrator and other-player secrets are not inherited by either process.
 
+Each launcher-owned agent also exposes a local authenticated operator endpoint.
+The Observatory can guide, revise, pause, resume, or stop only the selected
+live session. Accepted actions wait for the next agent iteration boundary, so
+an in-flight provider request is never presented as interrupted. Guidance and
+goal revisions enter context as labelled operator messages. The control token
+stays inside the session directory and never reaches the browser.
+
 The gateway's typed result envelopes stay intact in model context and session
 logs. The TUI unwraps their human text into rooms, messages and readable errors.
 
@@ -172,6 +179,7 @@ Runtime evidence is isolated by player and session:
         ├── session.json
         ├── control.token
         ├── control-state.json
+        ├── operator-state.json
         ├── agent.jsonl
         ├── gateway.db
         ├── admin.db
@@ -182,8 +190,9 @@ The registry and immutable manifest provide identity. File modification time is
 never used to decide which session is active. Imported legacy recordings use
 the same hierarchy and retain explicit capture gaps. Session discovery reports
 launcher process state and gateway control state as separate, labelled facts.
-The gateway projection wins for `running`, `paused`, or `quarantined` control
-state. The registry remains authoritative for process lifecycle.
+Gateway quarantine and capture gaps remain dominant. Agent pause or stop is
+shown when the gateway remains healthy. The registry remains authoritative for
+process lifecycle.
 
 Session discovery also reports the selected player's latest knowledge CDC
 cursor and snapshot generation. It opens `knowledge.db` read-only. A missing or
@@ -196,3 +205,8 @@ conventions documented in the gateway README. They are not hidden environment
 settings. Legacy import always names its source path explicitly. Launcher
 shutdown allows a child process group 10 seconds to stop, then kills it so a
 stale child cannot retain the character lock.
+
+Gateway control and agent operator sockets use separate deterministic paths in
+the operating system temporary directory. The manifest records both paths.
+Only the launcher-owned process can create the operator endpoint. Its
+non-secret state projection is written to `operator-state.json`.

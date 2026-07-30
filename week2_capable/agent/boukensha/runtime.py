@@ -25,6 +25,7 @@ RUNTIME_ENV = {
     "run_id": "BOUKENSHA_RUN_ID",
     "session_dir": "BOUKENSHA_SESSION_DIR",
     "control_socket": "BOUKENSHA_CONTROL_SOCKET",
+    "operator_socket": "BOUKENSHA_OPERATOR_SOCKET",
 }
 
 SAFE_ENV_NAMES = frozenset({
@@ -130,7 +131,11 @@ class RuntimeIdentity:
         present = {
             field: values.get(name)
             for field, name in RUNTIME_ENV.items()
-            if field not in {"session_dir", "control_socket"}
+            if field not in {
+                "session_dir",
+                "control_socket",
+                "operator_socket",
+            }
         }
         required = ("player_id", "agent_id", "session_id", "gateway_session_id")
         if not any(present.get(field) for field in required):
@@ -176,6 +181,7 @@ class RuntimePaths:
     gateway_journal: Path
     control_token: Path
     control_socket: Path
+    operator_socket: Path
 
     @classmethod
     def for_identity(
@@ -187,6 +193,9 @@ class RuntimePaths:
         session = profile / "sessions" / identity.session_id
         digest = hashlib.sha256(identity.session_id.encode()).hexdigest()[:20]
         socket = Path(tempfile.gettempdir()) / f"boukensha-{digest}.sock"
+        operator = (
+            Path(tempfile.gettempdir()) / f"boukensha-{digest}-operator.sock"
+        )
         return cls(
             config_dir=config_dir,
             profile_dir=profile,
@@ -196,6 +205,7 @@ class RuntimePaths:
             gateway_journal=session / "gateway.db",
             control_token=session / "control.token",
             control_socket=socket,
+            operator_socket=operator,
         )
 
 
@@ -437,6 +447,9 @@ class RuntimeSession:
         environment["BOUKENSHA_DIR"] = str(self.paths.config_dir)
         environment["BOUKENSHA_SESSION_DIR"] = str(self.paths.session_dir)
         environment["BOUKENSHA_CONTROL_SOCKET"] = str(self.paths.control_socket)
+        environment["BOUKENSHA_OPERATOR_SOCKET"] = str(
+            self.paths.operator_socket
+        )
         for field, value in self.identity.envelope().items():
             environment[RUNTIME_ENV[field]] = value
         return environment
@@ -568,6 +581,7 @@ def _write_manifest(
         "created_at": _now(),
         "configuration_digest": digest,
         "control_socket": str(paths.control_socket),
+        "operator_socket": str(paths.operator_socket),
     }
     manifest.update(dict(extra or {}))
     temporary = paths.manifest.with_suffix(".tmp")

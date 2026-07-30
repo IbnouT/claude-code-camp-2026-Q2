@@ -10,106 +10,161 @@ import {
   ingestEvidence,
   resumeLive,
   selectSequence,
-  selectedProjection,
   type EvidenceState,
 } from "./reducer";
-import { EvidenceStreamDecoder, decodeEvidenceText } from "./sse";
 import { assertCanonicalEventContract } from "./contracts";
+import { EvidenceStreamDecoder, decodeEvidenceText } from "./sse";
+import {
+  decodeLiveSnapshot,
+  type LiveSessionState,
+  type LiveSnapshot,
+  type RuntimeSession,
+} from "./liveContracts";
 
-type SessionsResponse = {
-  sessions: string[];
-};
-
-export type SessionEvidence = {
-  available: boolean;
-  state: EvidenceState;
-  projection: ReturnType<typeof selectedProjection>;
+export type SessionEvidence = LiveSessionState & {
   select: (sequence: number) => void;
   resume: () => void;
 };
 
-export function useSessionStream(): SessionEvidence {
-  const [state, setState] = useState(() => createEvidenceState(""));
+export function useSessionStream(
+  runtimeSession: RuntimeSession | null,
+): SessionEvidence {
+  const gatewaySession = runtimeSession?.gateway_session_id ?? "";
+  const [evidence, setEvidence] = useState<EvidenceState>(
+    () => createEvidenceState(gatewaySession),
+  );
+  const [connection, setConnection] = useState<LiveSessionState["connection"]>(
+    "discovering",
+  );
+  const [error, setError] = useState<string | null>(null);
+  const [snapshot, setSnapshot] = useState<LiveSnapshot | null>(null);
 
   useEffect(() => {
+    setEvidence(createEvidenceState(gatewaySession));
+    setSnapshot(null);
+    setError(null);
+    if (runtimeSession === null) {
+      setConnection("waiting");
+      return;
+    }
     const abort = new AbortController();
-    void connect(abort.signal, setState);
+    void connect(runtimeSession, abort.signal, setEvidence, setConnection, setError);
     return () => abort.abort();
-  }, []);
+  }, [gatewaySession, runtimeSession?.id, runtimeSession?.live]);
 
   useEffect(() => {
-    if (!state.session || state.selectedSeq === 0) {
+    if (runtimeSession === null) {
+      return;
+    }
+    const abort = new AbortController();
+    const through = evidence.followingLive ? "" : `?through=${evidence.selectedSeq}`;
+    void fetch(
+      `/api/sessions/${encodeURIComponent(runtimeSession.id)}/snapshot${through}`,
+      { signal: abort.signal, cache: "no-store" },
+    )
+      .then(async (response) => {
+        if (!response.ok) {
+          const detail = await response.json() as { detail?: string };
+          throw new Error(detail.detail ?? `snapshot returned ${response.status}`);
+        }
+        return decodeLiveSnapshot(await response.json() as unknown);
+      })
+      .then((value) => {
+        setSnapshot(value);
+      })
+      .catch((caught: unknown) => {
+        if (!(caught instanceof DOMException && caught.name === "AbortError")) {
+          setError(caught instanceof Error ? caught.message : "snapshot failed");
+          setConnection("unavailable");
+        }
+      });
+    return () => abort.abort();
+  }, [
+    evidence.followingLive,
+    evidence.latestSeq,
+    evidence.selectedSeq,
+    runtimeSession?.id,
+  ]);
+
+  useEffect(() => {
+    if (runtimeSession === null || evidence.selectedSeq === 0) {
       return;
     }
     const url = new URL(window.location.href);
-    url.searchParams.set("session", state.session);
-    url.searchParams.set("seq", String(state.selectedSeq));
+    url.searchParams.set("player", runtimeSession.player_id);
+    url.searchParams.set("session", runtimeSession.id);
+    url.searchParams.set("seq", String(evidence.selectedSeq));
     window.history.replaceState(null, "", url);
-  }, [state.selectedSeq, state.session]);
+  }, [evidence.selectedSeq, runtimeSession?.id]);
 
-  const projection = useMemo(() => selectedProjection(state), [state]);
-  return {
-    available: state.events.length > 0,
-    state,
-    projection,
-    select: (sequence) => {
-      setState((current) => selectSequence(current, sequence));
-    },
-    resume: () => {
-      setState((current) => resumeLive(current));
-    },
-  };
+  return useMemo(
+    () => ({
+      connection: evidence.followingLive
+        ? connection
+        : connection === "unavailable"
+          ? connection
+          : "paused",
+      error,
+      events: evidence.events,
+      latestSequence: evidence.latestSeq,
+      selectedSequence: evidence.selectedSeq,
+      followingLive: evidence.followingLive,
+      gaps: evidence.gaps,
+      unknownKinds: evidence.unknownKinds,
+      snapshot,
+      select: (sequence: number) => {
+        setEvidence((current) => selectSequence(current, sequence));
+      },
+      resume: () => {
+        setEvidence((current) => resumeLive(current));
+      },
+    }),
+    [connection, error, evidence, snapshot],
+  );
 }
 
 async function connect(
+  session: RuntimeSession,
   signal: AbortSignal,
   update: Dispatch<SetStateAction<EvidenceState>>,
+  setConnection: Dispatch<SetStateAction<LiveSessionState["connection"]>>,
+  setError: Dispatch<SetStateAction<string | null>>,
 ): Promise<void> {
   try {
+    setConnection("replaying");
     const contractResponse = await fetch("/api/contracts", { signal });
     if (!contractResponse.ok) {
-      return;
+      throw new Error(`contract discovery returned ${contractResponse.status}`);
     }
     assertCanonicalEventContract(await contractResponse.json() as unknown);
-    const sessionsResponse = await fetch("/api/sessions", { signal });
-    if (!sessionsResponse.ok) {
-      return;
-    }
-    const payload = await sessionsResponse.json() as SessionsResponse;
-    const requested = new URL(window.location.href).searchParams.get("session");
-    const session = requested && payload.sessions.includes(requested)
-      ? requested
-      : payload.sessions.at(-1);
-    if (!session) {
-      return;
-    }
-    const initial = createEvidenceState(session);
     const replayResponse = await fetch(
-      `/api/sessions/${encodeURIComponent(session)}/replay?after=0`,
-      { signal },
+      `/api/sessions/${encodeURIComponent(session.id)}/replay?after=0`,
+      { signal, cache: "no-store" },
     );
     if (!replayResponse.ok) {
-      return;
+      throw new Error(`session replay returned ${replayResponse.status}`);
     }
     const replay = decodeEvidenceText(await replayResponse.text());
     let cursor = replay.at(-1)?.seq ?? 0;
-    const requestedSequence = Number(
-      new URL(window.location.href).searchParams.get("seq"),
-    );
-    const replayed = ingestEvidence(initial, replay);
+    const requested = Number(new URL(window.location.href).searchParams.get("seq"));
+    const replayed = ingestEvidence(createEvidenceState(session.gateway_session_id), replay);
     update(
-      Number.isInteger(requestedSequence) && requestedSequence > 0
-        ? selectSequence(replayed, requestedSequence)
+      Number.isInteger(requested) && requested > 0
+        ? selectSequence(replayed, requested)
         : replayed,
     );
-
+    if (!session.live) {
+      setConnection("ended");
+      return;
+    }
+    setConnection(replay.length > 0 ? "streaming" : "waiting");
     while (!signal.aborted) {
       const response = await fetch(
-        `/api/sessions/${encodeURIComponent(session)}/events?after=${cursor}`,
-        { signal },
+        `/api/sessions/${encodeURIComponent(session.id)}/events?after=${cursor}`,
+        { signal, cache: "no-store" },
       );
       if (!response.ok || response.body === null) {
-        return;
+        throw new Error(`live stream returned ${response.status}`);
       }
       const decoder = new EvidenceStreamDecoder();
       const reader = response.body.getReader();
@@ -122,18 +177,20 @@ async function connect(
         if (events.length > 0) {
           cursor = Math.max(cursor, ...events.map((event) => event.seq));
           update((current) => ingestEvidence(current, events));
+          setConnection("streaming");
         }
       }
-      const finalEvents = decoder.finish();
-      if (finalEvents.length > 0) {
-        cursor = Math.max(cursor, ...finalEvents.map((event) => event.seq));
-        update((current) => ingestEvidence(current, finalEvents));
+      const final = decoder.finish();
+      if (final.length > 0) {
+        cursor = Math.max(cursor, ...final.map((event) => event.seq));
+        update((current) => ingestEvidence(current, final));
       }
-      await delay(500, signal);
+      await delay(300, signal);
     }
-  } catch (error) {
-    if (!(error instanceof DOMException && error.name === "AbortError")) {
-      return;
+  } catch (caught) {
+    if (!(caught instanceof DOMException && caught.name === "AbortError")) {
+      setError(caught instanceof Error ? caught.message : "live stream failed");
+      setConnection("unavailable");
     }
   }
 }

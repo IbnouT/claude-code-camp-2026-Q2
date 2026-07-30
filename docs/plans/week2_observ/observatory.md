@@ -941,9 +941,12 @@ reports available capabilities.
 - Focus radius, Grow, and Lantern map modes
 - follow, manual, and fit-selection camera modes
 - room popover, condition glyphs, and evidence-gated objective beacon
+- authenticated guidance, goal revision, pause, resume, and stop at the agent
+  iteration boundary
 - URL-addressable selection
 
-Exit gate: every panel reconstructs the same state at every selected sequence.
+Exit gate: every panel reconstructs the same state at every selected sequence,
+and control can target only the selected live agent session.
 
 ### Increment 3: Sessions investigation and diagnostics
 
