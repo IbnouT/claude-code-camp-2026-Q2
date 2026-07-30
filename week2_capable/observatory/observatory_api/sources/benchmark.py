@@ -85,9 +85,7 @@ class BenchmarkSource:
 
 def _summary(ledger_name: str, record: dict[str, Any]) -> RunSummary:
     attempt = str(record.get("attempt_id", "unknown"))
-    stable = hashlib.sha256(
-        f"{ledger_name}:{attempt}".encode()
-    ).hexdigest()[:16]
+    stable = stable_run_id(ledger_name, attempt)
     journey = str(record.get("journey_id", "unknown"))
     mode = str(record.get("result_mode", "unknown"))
     return RunSummary(
@@ -101,6 +99,14 @@ def _summary(ledger_name: str, record: dict[str, Any]) -> RunSummary:
         cost_usd=float(record.get("cost_usd", 0) or 0),
         result_mode=mode,
     )
+
+
+def stable_run_id(ledger_name: str, attempt: str) -> str:
+    """Return the public identifier shared by all recorded-run projections."""
+
+    return hashlib.sha256(
+        f"{ledger_name}:{attempt}".encode()
+    ).hexdigest()[:16]
 
 
 def _read_agent(path: Path) -> list[dict[str, Any]]:

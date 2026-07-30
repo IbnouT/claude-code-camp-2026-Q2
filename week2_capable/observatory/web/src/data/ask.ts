@@ -7,9 +7,10 @@ export type AskResponse = {
     | "model_disabled"
     | "unsupported";
   question: string;
+  scope_record_id: string | null;
   plan: Array<{
     operation: string;
-    source: "benchmark" | "gateway";
+    source: "agent" | "benchmark" | "gateway";
     detail: string;
   }>;
   answer: string;

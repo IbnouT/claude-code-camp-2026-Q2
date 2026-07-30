@@ -11,7 +11,10 @@ from typing import Any
 from ..contracts import WorldEdge, WorldNode, WorldProjection
 
 
-def project_world(database: Path) -> WorldProjection:
+def project_world(
+    database: Path,
+    through_sequence: int | None = None,
+) -> WorldProjection:
     """Project distinct places and observed transitions from a read-only DB."""
 
     if not database.is_file():
@@ -21,10 +24,17 @@ def project_world(database: Path) -> WorldProjection:
         uri=True,
     )
     try:
-        rows = connection.execute(
-            "SELECT seq, kind, trace_id, payload "
-            "FROM events ORDER BY seq"
-        ).fetchall()
+        if through_sequence is None:
+            rows = connection.execute(
+                "SELECT seq, kind, trace_id, payload "
+                "FROM events ORDER BY seq"
+            ).fetchall()
+        else:
+            rows = connection.execute(
+                "SELECT seq, kind, trace_id, payload "
+                "FROM events WHERE seq <= ? ORDER BY seq",
+                (through_sequence,),
+            ).fetchall()
     finally:
         connection.close()
 
@@ -32,6 +42,7 @@ def project_world(database: Path) -> WorldProjection:
     rooms: dict[str, dict[str, Any]] = {}
     places: dict[int, dict[str, Any]] = {}
     visits: Counter[int] = Counter()
+    visit_evidence: dict[int, list[int]] = defaultdict(list)
     transitions: dict[tuple[int, int, str], list[int]] = defaultdict(list)
     last_place: int | None = None
     current_title: str | None = None
@@ -84,6 +95,7 @@ def project_world(database: Path) -> WorldProjection:
             if exits:
                 place["exits"] = exits
             visits[place_value] += 1
+            visit_evidence[place_value].append(int(seq))
             if last_place is not None and last_place != place_value:
                 direction = commands.get(str(trace_id), "unknown")
                 transitions[(last_place, place_value, direction)].append(int(seq))
@@ -108,6 +120,7 @@ def project_world(database: Path) -> WorldProjection:
             title=str(data["title"]),
             exits=tuple(data["exits"]),
             visits=visits[place],
+            evidence=tuple(visit_evidence[place]),
             first_seq=int(data["first_seq"]),
             last_seq=int(data["last_seq"]),
             state=(

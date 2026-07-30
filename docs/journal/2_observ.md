@@ -89,6 +89,9 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
   a transport: an operator message is recorded as operator guidance, so it can
   never masquerade as the agent's own reasoning, observed game state, or
   benchmark evidence when the session is replayed later.
+- A cumulative cost curve can reconcile a run while the retained per-response
+  fields remain materially lower. Keeping both values visible turns a silent
+  mismatch into an instrumentation finding.
 - Live intervention became safe when it moved to the boundary between agent
   iterations. Guidance can enter as a labelled operator message, while an
   in-flight model request remains an honest non-interruptible fact.

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { mockRecorded } from "./recordedFixture";
 import { mockRuntime } from "./runtimeFixture";
 
 async function renderFixture(page: Page) {
@@ -72,6 +73,38 @@ test("captures the B2 Live cockpit for rendered review", async ({ page }, testIn
   await page.waitForTimeout(250);
   await page.screenshot({
     path: testInfo.outputPath("b2-live-light.png"),
+    fullPage: true,
+  });
+});
+
+test("captures the B3 Sessions investigation for rendered review", async ({
+  page,
+}, testInfo) => {
+  await renderFixture(page);
+  await mockRuntime(page);
+  await mockRecorded(page);
+  await page.goto("/?space=sessions");
+  await expect(
+    page.getByRole("heading", {
+      name: "J2 Travel north and find the Massive Minotaur.",
+    }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("b3-sessions-story-dark.png"),
+    fullPage: true,
+  });
+
+  await page.getByRole("tab", { name: "Cost", exact: true }).click();
+  await page.screenshot({
+    path: testInfo.outputPath("b3-sessions-cost-dark.png"),
+    fullPage: true,
+  });
+
+  await page.getByRole("tab", { name: /Diagnostics/ }).click();
+  await page.getByRole("button", { name: "Use light theme" }).click();
+  await page.waitForTimeout(150);
+  await page.screenshot({
+    path: testInfo.outputPath("b3-sessions-diagnostics-light.png"),
     fullPage: true,
   });
 });

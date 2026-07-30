@@ -313,12 +313,18 @@ async def test_j2_false_completion_links_claim_to_verified_outcome(tmp_path):
     assert all("/" not in item["label"] for item in payload["citations"])
     answer = asked.json()
     assert answer["tier"] == "deterministic"
-    assert answer["plan"][0]["operation"] == "diagnose_stop"
+    assert [step["operation"] for step in answer["plan"]] == [
+        "locate_final_claim",
+        "verify_objective",
+    ]
     assert answer["claims"]
     assert answer["citations"]
     model_answer = translated.json()
     assert model_answer["tier"] == "model_translated"
-    assert model_answer["plan"][0]["operation"] == "diagnose_stop"
+    assert [step["operation"] for step in model_answer["plan"]] == [
+        "locate_final_claim",
+        "verify_objective",
+    ]
     assert model_answer["model_cost_usd"] > 0
 
 

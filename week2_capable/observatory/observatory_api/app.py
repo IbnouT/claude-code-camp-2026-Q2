@@ -30,6 +30,7 @@ from .incidents import build_capsule
 from .projections.history import diagnostic_history
 from .projections.knowledge import project_knowledge
 from .projections.live import project_live
+from .projections.session import project_recorded_session
 from .queries import answer, answer_operation
 from .queries.model import ModelTranslator
 from .settings import Settings
@@ -37,6 +38,7 @@ from .sources.benchmark import BenchmarkSource
 from .sources.comparison import rendering_comparison
 from .sources.gateway import GatewaySource
 from .sources.runtime import RuntimeSource, RuntimeSourceError
+from .sources.recorded_session import RecordedSessionSource
 
 
 def create_app(
@@ -57,6 +59,11 @@ def create_app(
     )
     benchmark = (
         BenchmarkSource(active.benchmark_root)
+        if active.benchmark_root is not None
+        else None
+    )
+    recorded_sessions = (
+        RecordedSessionSource(active.benchmark_root)
         if active.benchmark_root is not None
         else None
     )
@@ -259,6 +266,35 @@ def create_app(
             {"runs": [run.model_dump(mode="json") for run in available]}
         )
 
+    async def recorded_session_catalog(_request: Request) -> JSONResponse:
+        available = (
+            ()
+            if recorded_sessions is None
+            else recorded_sessions.catalog()
+        )
+        return JSONResponse(
+            {
+                "sessions": [
+                    item.model_dump(mode="json") for item in available
+                ]
+            }
+        )
+
+    async def recorded_session(request: Request) -> JSONResponse:
+        if recorded_sessions is None:
+            return JSONResponse(
+                {
+                    "error": "source_disabled",
+                    "detail": "OBSERVATORY_BENCHMARK_ROOT is not configured",
+                },
+                status_code=503,
+            )
+        bundle = recorded_sessions.load(request.path_params["run_id"])
+        if bundle is None:
+            return JSONResponse({"error": "not_found"}, status_code=404)
+        result = project_recorded_session(bundle)
+        return JSONResponse(result.model_dump(mode="json"))
+
     async def investigation(request: Request) -> JSONResponse:
         if benchmark is None:
             return JSONResponse(
@@ -393,7 +429,7 @@ def create_app(
                 {"error": "invalid_query", "detail": str(error)},
                 status_code=422,
             )
-        result = answer(payload, benchmark)
+        result = answer(payload, benchmark, recorded_sessions)
         if (
             result.tier == "model_disabled"
             and payload.allow_model
@@ -410,6 +446,7 @@ def create_app(
                         translation.operation,
                         payload,
                         benchmark,
+                        recorded_sessions,
                     )
                     model_spend += translation.cost_usd
                     result = translated.model_copy(
@@ -459,6 +496,11 @@ def create_app(
                 gateway_events,
             ),
             Route("/api/runs", runs),
+            Route("/api/recorded-sessions", recorded_session_catalog),
+            Route(
+                "/api/recorded-sessions/{run_id:str}",
+                recorded_session,
+            ),
             Route("/api/runs/{run_id:str}/investigation", investigation),
             Route("/api/runs/{run_id:str}/knowledge", knowledge),
             Route("/api/diagnostic-history", history),

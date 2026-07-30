@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Space } from "./shellTypes";
 import { shellFixture } from "./shellFixture";
 import { useCapabilities } from "./useCapabilities";
 import { usePreferences } from "./usePreferences";
 import { useRuntimeCatalog } from "../data/useRuntimeCatalog";
+import { useRecordedSessions } from "../data/useRecordedSessions";
 import { useSessionStream } from "../data/useSessionStream";
 import { CanonicalHeader } from "../components/shell/CanonicalHeader";
 import { AgentControlDialog } from "../components/shell/AgentControlDialog";
@@ -14,6 +15,7 @@ import type {
 import { InvestigationShell } from "../components/shell/InvestigationShell";
 import { SearchDialog } from "../components/shell/SearchDialog";
 import { LiveCockpit } from "../components/live/LiveCockpit";
+import { SessionsWorkspace } from "../components/sessions/SessionsWorkspace";
 
 function spaceFromUrl(): Space {
   const requested = new URL(window.location.href).searchParams.get("space");
@@ -32,31 +34,61 @@ export function App() {
   const [player, setPlayer] = useState(
     () => new URL(window.location.href).searchParams.get("player") ?? "",
   );
-  const [session, setSession] = useState(
-    () => new URL(window.location.href).searchParams.get("session") ?? "",
+  const [liveSession, setLiveSession] = useState(
+    () => (
+      new URL(window.location.href).searchParams.get("liveSession")
+      ?? new URL(window.location.href).searchParams.get("session")
+      ?? ""
+    ),
   );
+  const [recordedRun, setRecordedRun] = useState(
+    () => new URL(window.location.href).searchParams.get("run") ?? "",
+  );
+  const recorded = useRecordedSessions(recordedRun);
   const [searchOpen, setSearchOpen] = useState(false);
   const [controlOpen, setControlOpen] = useState(false);
-  const sessionsForPlayer = runtime.catalog.sessions.filter(
+  const liveSessionsForPlayer = runtime.catalog.sessions.filter(
     (candidate) => candidate.player_id === player,
   );
   const selectedSession = runtime.catalog.sessions.find(
-    (candidate) => candidate.id === session,
+    (candidate) => candidate.id === liveSession,
   ) ?? null;
   const live = useSessionStream(selectedSession);
-  const playerOptions = runtime.catalog.players.length > 0
-    ? runtime.catalog.players.map((candidate) => ({
-      id: candidate.id,
-      label: candidate.label,
-      detail: "Registered player",
-    }))
+  const playerOptions = useMemo(() => {
+    const options = new Map(
+      runtime.catalog.players.map((candidate) => [
+        candidate.id,
+        {
+          id: candidate.id,
+          label: candidate.label,
+          detail: "Registered player",
+        },
+      ]),
+    );
+    for (const candidate of recorded.catalog) {
+      if (!options.has(candidate.player_id)) {
+        options.set(candidate.player_id, {
+          id: candidate.player_id,
+          label: `${candidate.player_id} · recorded`,
+          detail: "Recorded evidence",
+        });
+      }
+    }
+    return [...options.values()];
+  }, [recorded.catalog, runtime.catalog.players]);
+  const availablePlayerOptions = playerOptions.length > 0
+    ? playerOptions
     : [{
       id: "",
-      label: runtime.loading ? "Discovering…" : "No registered players",
-      detail: runtime.error ?? "Start an agent to create a session",
+      label: (
+        runtime.loading || recorded.loadingCatalog
+          ? "Discovering…"
+          : "No players"
+      ),
+      detail: runtime.error ?? recorded.error ?? "Start an agent or load evidence",
     }];
-  const sessionOptions = sessionsForPlayer.length > 0
-    ? sessionsForPlayer.map((candidate) => ({
+  const liveSessionOptions = liveSessionsForPlayer.length > 0
+    ? liveSessionsForPlayer.map((candidate) => ({
       id: candidate.id,
       label: `${candidate.live ? "●" : "○"} ${candidate.state} · ${candidate.event_count} events`,
       detail: candidate.id,
@@ -66,19 +98,38 @@ export function App() {
       label: "No sessions",
       detail: "Start an agent for this player",
     }];
+  const recordedSessionOptions = recorded.catalog
+    .filter((candidate) => candidate.player_id === player)
+    .map((candidate) => ({
+      id: candidate.id,
+      label: `${candidate.success ? "✓" : "!"} ${candidate.journey} · ${candidate.result_mode} · ${candidate.iterations} turns`,
+      detail: "Recorded experiment sample",
+    }));
+  const sessionOptions = space === "sessions"
+    ? (
+      recordedSessionOptions.length > 0
+        ? recordedSessionOptions
+        : [{
+          id: "",
+          label: "No recorded sessions",
+          detail: "Configure or load recorded evidence",
+        }]
+    )
+    : liveSessionOptions;
+  const headerSession = space === "sessions" ? recordedRun : liveSession;
 
   useEffect(() => {
-    if (runtime.catalog.players.length === 0) {
+    if (playerOptions.length === 0) {
       return;
     }
-    const selectedPlayerExists = runtime.catalog.players.some(
+    const selectedPlayerExists = playerOptions.some(
       (candidate) => candidate.id === player,
     );
     const nextPlayer = selectedPlayerExists
       ? player
       : (
         runtime.catalog.sessions.find((candidate) => candidate.live)?.player_id
-        ?? runtime.catalog.players[0]?.id
+        ?? playerOptions[0]?.id
         ?? ""
       );
     if (nextPlayer !== player) {
@@ -88,20 +139,57 @@ export function App() {
     const available = runtime.catalog.sessions.filter(
       (candidate) => candidate.player_id === nextPlayer,
     );
-    if (!available.some((candidate) => candidate.id === session)) {
-      setSession(
+    if (!available.some((candidate) => candidate.id === liveSession)) {
+      setLiveSession(
         available.find((candidate) => candidate.live)?.id
         ?? available[0]?.id
         ?? "",
       );
     }
-  }, [player, runtime.catalog, session]);
+  }, [liveSession, player, playerOptions, runtime.catalog]);
+
+  useEffect(() => {
+    if (
+      space === "sessions"
+      && recorded.catalog.length > 0
+      && !recorded.catalog.some(
+        (candidate) => candidate.player_id === player,
+      )
+    ) {
+      setPlayer(
+        recorded.catalog.find((candidate) => candidate.journey === "J2")
+          ?.player_id
+        ?? recorded.catalog[0]?.player_id
+        ?? player,
+      );
+    }
+  }, [player, recorded.catalog, space]);
+
+  useEffect(() => {
+    const available = recorded.catalog.filter(
+      (candidate) => candidate.player_id === player,
+    );
+    if (!available.some((candidate) => candidate.id === recordedRun)) {
+      setRecordedRun(
+        available.find((candidate) => candidate.journey === "J2")?.id
+        ?? available[0]?.id
+        ?? "",
+      );
+    }
+  }, [player, recorded.catalog, recordedRun]);
 
   useEffect(() => {
     const url = new URL(window.location.href);
     url.searchParams.set("space", space);
+    if (player) url.searchParams.set("player", player);
+    else url.searchParams.delete("player");
+    if (liveSession) url.searchParams.set("liveSession", liveSession);
+    else url.searchParams.delete("liveSession");
+    if (recordedRun) url.searchParams.set("run", recordedRun);
+    else url.searchParams.delete("run");
+    url.searchParams.delete("session");
     window.history.replaceState(null, "", url);
-  }, [space]);
+  }, [liveSession, player, recordedRun, space]);
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
@@ -124,9 +212,9 @@ export function App() {
     <div className="app-shell">
       <CanonicalHeader
         activeSpace={space}
-        players={playerOptions}
+        players={availablePlayerOptions}
         selectedPlayer={player}
-        selectedSession={session}
+        selectedSession={headerSession}
         sessions={sessionOptions}
         theme={preferences.theme}
         onPlayerChange={(nextPlayer) => {
@@ -136,9 +224,20 @@ export function App() {
           ) ?? runtime.catalog.sessions.find(
             (candidate) => candidate.player_id === nextPlayer,
           );
-          setSession(nextSession?.id ?? "");
+          setLiveSession(nextSession?.id ?? "");
+          const nextRecorded = recorded.catalog.find(
+            (candidate) => (
+              candidate.player_id === nextPlayer
+              && candidate.journey === "J2"
+            ),
+          ) ?? recorded.catalog.find(
+            (candidate) => candidate.player_id === nextPlayer,
+          );
+          setRecordedRun(nextRecorded?.id ?? "");
         }}
-        onSessionChange={setSession}
+        onSessionChange={
+          space === "sessions" ? setRecordedRun : setLiveSession
+        }
         onSpaceChange={setSpace}
         onThemeChange={preferences.setTheme}
       />
@@ -151,6 +250,15 @@ export function App() {
             onOpenControl={() => setControlOpen(true)}
             onOpenSearch={() => setSearchOpen(true)}
           />
+        ) : space === "sessions" ? (
+          <SessionsWorkspace
+            investigation={recorded.investigation}
+            loading={
+              recorded.loadingCatalog || recorded.loadingInvestigation
+            }
+            error={recorded.error}
+            onOpenSearch={() => setSearchOpen(true)}
+          />
         ) : (
           <InvestigationShell
             activeSpace={space}
@@ -161,17 +269,44 @@ export function App() {
           />
         )}
       </main>
-      <SearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <SearchDialog
+        open={searchOpen}
+        scopeLabel={
+          space === "sessions" && recorded.investigation
+            ? `${recorded.investigation.run.journey} · ${recorded.investigation.run.attempt}`
+            : `${space} space`
+        }
+        runId={space === "sessions" ? recordedRun : undefined}
+        onClose={() => setSearchOpen(false)}
+        onOpenCitation={(citationId) => {
+          const url = new URL(window.location.href);
+          url.searchParams.set("space", "sessions");
+          if (citationId.startsWith("gateway:place:")) {
+            url.searchParams.set(
+              "room",
+              citationId.replace("gateway:place:", "place:"),
+            );
+            url.searchParams.set("lens", "story");
+          } else {
+            url.searchParams.set("record", citationId);
+            url.searchParams.set("lens", "evidence");
+          }
+          window.history.pushState(null, "", url);
+          window.dispatchEvent(new PopStateEvent("popstate"));
+          setSpace("sessions");
+          setSearchOpen(false);
+        }}
+      />
       <AgentControlDialog
         open={controlOpen}
         selectedPlayer={player}
-        selectedSession={session}
+        selectedSession={liveSession}
         sequence={live.latestSequence}
         objective={live.snapshot?.objective ?? null}
         model={live.snapshot?.model ?? null}
         tools={live.snapshot?.tools ?? []}
         onClose={() => setControlOpen(false)}
-        onSubmit={(draft) => submitControl(session, draft)}
+        onSubmit={(draft) => submitControl(liveSession, draft)}
       />
     </div>
   );

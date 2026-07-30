@@ -203,6 +203,7 @@ class WorldNode(BaseModel):
     title: str
     exits: tuple[str, ...]
     visits: int
+    evidence: tuple[int, ...] = ()
     first_seq: int
     last_seq: int
     state: Literal["observed", "candidate", "current"]
@@ -248,6 +249,156 @@ class Investigation(BaseModel):
     citations: tuple[EvidenceCitation, ...]
     lens: EvidenceLens
     world: WorldProjection
+
+
+class SessionEvidenceRecord(BaseModel):
+    """One sanitized record in a navigable session evidence hierarchy."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    parent_id: str | None = None
+    source: Literal["agent", "gateway", "benchmark"]
+    form: Literal["wire", "parsed", "rendered", "believed", "truth"]
+    kind: str
+    label: str
+    sequence: int
+    at: str
+    trace_id: str | None = None
+    iteration: int | None = None
+    turn: int | None = None
+    room_id: str | None = None
+    duration_ms: float = 0
+    cost_usd: float = 0
+    tokens: int = 0
+    status: Literal["complete", "partial", "failed", "unknown"] = "unknown"
+    preview: str
+    fields: dict[str, Any] = Field(default_factory=dict)
+    source_ref: str
+    capture_gaps: tuple[str, ...] = ()
+
+
+class SessionDiagnostic(BaseModel):
+    """One versioned diagnostic that explains its own evidence boundary."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    kind: Literal[
+        "false_completion",
+        "belief_divergence",
+        "position_ambiguity",
+        "confusion_loop",
+        "progress_stall",
+        "parse_degradation",
+        "corrective_call_cluster",
+        "stale_action",
+        "context_churn",
+        "instrumentation_gap",
+    ]
+    severity: Literal["critical", "warning", "notice"]
+    state: Literal["open", "acknowledged", "resolved"]
+    title: str
+    consequence: str
+    rule_version: str
+    threshold: str
+    at_record: str
+    evidence: tuple[str, ...]
+    alternatives: tuple[str, ...]
+    affected_conclusions: tuple[str, ...]
+    resolution: str | None = None
+    related_occurrences: tuple[str, ...] = ()
+
+
+class SessionCostPoint(BaseModel):
+    """One billed response linked to its exact session record."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    record_id: str
+    iteration: int | None = None
+    cost_usd: float
+    raw_response_cost_usd: float
+    pricing_source: Literal["attempt_cost_curve", "agent_response"]
+    fresh_input_tokens: int
+    cache_read_tokens: int
+    cache_write_tokens: int
+    output_tokens: int
+    context_tokens: int
+    progress: str
+
+
+class SessionCostLedger(BaseModel):
+    """Reconciled run economics with explicit completeness."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    total_usd: float
+    response_total_usd: float
+    raw_response_total_usd: float
+    reconciliation_delta_usd: float
+    complete: bool
+    completeness_detail: str
+    fresh_input_tokens: int
+    cache_read_tokens: int
+    cache_write_tokens: int
+    output_tokens: int
+    points: tuple[SessionCostPoint, ...]
+
+
+class RecordedSessionInvestigation(BaseModel):
+    """One explicitly correlated recorded session and all retained evidence."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    version: int = 1
+    source_kind: Literal["experiment_sample"]
+    correlation: str
+    run: RunSummary
+    player_id: str
+    agent_session_id: str | None
+    gateway_session_id: str | None
+    objective: str | None
+    model: str | None
+    records: tuple[SessionEvidenceRecord, ...]
+    diagnostics: tuple[SessionDiagnostic, ...]
+    diagnostic_coverage: tuple[
+        Literal[
+            "false_completion",
+            "belief_divergence",
+            "position_ambiguity",
+            "confusion_loop",
+            "progress_stall",
+            "parse_degradation",
+            "corrective_call_cluster",
+            "stale_action",
+            "context_churn",
+            "instrumentation_gap",
+        ],
+        ...,
+    ]
+    lens: EvidenceLens
+    world: WorldProjection
+    cost: SessionCostLedger
+    capture_gaps: tuple[str, ...]
+
+
+class RecordedSessionCatalogItem(BaseModel):
+    """One recorded session with its evidence relationship made explicit."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    source_kind: Literal["experiment_sample"]
+    player_id: str
+    label: str
+    journey: str
+    attempt: str
+    success: bool
+    stop_reason: str
+    iterations: int
+    cost_usd: float
+    result_mode: str
 
 
 class KnowledgeMetric(BaseModel):
@@ -503,6 +654,7 @@ class AskRequest(BaseModel):
 
     question: str = Field(min_length=3, max_length=500)
     run_id: str | None = None
+    selected_record_id: str | None = None
     comparison_id: str | None = None
     allow_model: bool = False
 
@@ -514,10 +666,12 @@ class QueryStep(BaseModel):
 
     operation: Literal[
         "diagnose_stop",
+        "locate_final_claim",
+        "verify_objective",
         "list_position_candidates",
         "compare_rendering",
     ]
-    source: Literal["benchmark", "gateway"]
+    source: Literal["agent", "benchmark", "gateway"]
     detail: str
 
 
@@ -543,6 +697,7 @@ class AskResponse(BaseModel):
         "unsupported",
     ]
     question: str
+    scope_record_id: str | None = None
     plan: tuple[QueryStep, ...]
     answer: str
     claims: tuple[AnswerClaim, ...]

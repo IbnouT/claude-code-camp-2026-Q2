@@ -33,14 +33,19 @@
   }
 }
 
-.search-dialog > header {
+.search-query {
   display: grid;
-  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  grid-template-columns: max-content minmax(0, 1fr) max-content max-content;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-4);
   border-bottom: 1px solid var(--color-line);
   color: var(--color-cyan);
+}
+
+.search-dialog {
+  max-height: calc(100vh - min(12vh, 110px) - 28px);
+  overflow-y: auto;
 }
 
 .search-dialog input {
@@ -96,6 +101,191 @@
 .suggestion-grid button:hover {
   border-color: var(--color-cyan);
   color: var(--color-text);
+}
+
+.search-scope {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 3px 9px;
+  padding: 10px var(--space-6);
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-raised);
+}
+
+.search-scope span {
+  color: var(--color-quiet);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.search-scope b {
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+
+.search-scope small {
+  grid-column: 2;
+  color: var(--color-muted);
+  font-size: 9px;
+}
+
+.search-error {
+  margin: var(--space-5);
+  padding: 10px;
+  border: 1px solid var(--color-coral);
+  border-radius: var(--radius-md);
+  background: var(--color-coral-soft);
+  color: var(--color-coral);
+  font-size: 10px;
+}
+
+.search-answer {
+  display: grid;
+  gap: 13px;
+  padding: var(--space-5) var(--space-6) var(--space-6);
+}
+
+.answer-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  color: var(--color-muted);
+  font-size: 8px;
+  text-transform: uppercase;
+}
+
+.answer-heading span {
+  padding: 4px 7px;
+  border-radius: 99px;
+  background: var(--color-green-soft);
+  color: var(--color-green);
+  font-weight: 750;
+}
+
+.answer-heading b {
+  font-family: var(--font-mono);
+}
+
+.search-answer > h2 {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.45;
+}
+
+.search-answer > section {
+  display: grid;
+  gap: 6px;
+}
+
+.search-answer > section article {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr) max-content;
+  gap: 9px;
+  padding: 9px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-raised);
+  font-size: 9px;
+}
+
+.search-answer > section article b {
+  color: var(--color-cyan);
+}
+
+.search-answer > section article span {
+  color: var(--color-muted);
+}
+
+.search-answer > section article small {
+  color: var(--color-quiet);
+  font-family: var(--font-mono);
+}
+
+.answer-claim {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 8px;
+  padding-block-start: 10px;
+  border-block-start: 1px solid var(--color-line);
+}
+
+.answer-claim > span {
+  width: fit-content;
+  height: fit-content;
+  padding: 3px 6px;
+  border-radius: 99px;
+  background: var(--color-cyan-soft);
+  color: var(--color-cyan);
+  font-size: 7px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.answer-claim p {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.answer-claim div {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.answer-claim button {
+  padding: 4px 6px;
+  border: 1px solid var(--color-line);
+  border-radius: 99px;
+  background: var(--color-soft);
+  color: var(--color-cyan);
+  font-family: var(--font-mono);
+  font-size: 7px;
+}
+
+.answer-missing {
+  padding: 8px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-amber-soft);
+  color: var(--color-amber);
+  font-size: 9px;
+}
+
+@media (max-width: 560px) {
+  .search-query {
+    grid-template-columns: max-content minmax(0, 1fr) max-content;
+  }
+
+  .search-query .primary-button {
+    grid-column: 2;
+  }
+
+  .search-query .icon-button {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .suggestion-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .search-answer > section article {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .answer-claim {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .answer-claim div {
+    grid-column: 1;
+  }
 }
 
 .control-dialog {

@@ -149,18 +149,27 @@
     width: calc(100vw - 24px);
     min-width: 0;
     max-width: calc(100vw - 24px);
+    display: flex;
     flex: none;
+    flex-wrap: wrap;
     justify-content: flex-start;
-    overflow-x: auto;
-    scrollbar-width: thin;
+    overflow: visible;
   }
 
   .context-select {
-    min-width: 112px;
+    min-width: 90px;
+    flex: 1 1 90px;
   }
 
   .session-select {
-    min-width: 138px;
+    min-width: 120px;
+    max-width: none;
+    flex-basis: 120px;
+  }
+
+  .header-context .header-action,
+  .header-context .icon-button {
+    flex: none;
   }
 
   .workspace-intro h1 {

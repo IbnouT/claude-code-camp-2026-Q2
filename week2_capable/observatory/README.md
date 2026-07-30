@@ -10,9 +10,10 @@ flowchart LR
     R["Launcher registry"] --> A["Starlette evidence API"]
     G["Gateway replay and SSE"] --> A
     E["Agent events"] --> A
+    B["Recorded experiment samples"] --> A
     A --> D["One deterministic projector"]
     D --> W["Selected evidence prefix"]
-    W --> L["Live"]
+    W --> L["Live and Sessions"]
     L --> C["Authenticated agent boundary"]
 ```
 
@@ -39,10 +40,25 @@ Live is connected to registered runtime evidence:
 - Keyboard focus returns to the invoking control after dialogs close.
 - Forced colors, reduced motion, and 200 percent layout remain operable.
 
+Sessions turns an explicitly selected experiment sample into an investigation:
+
+- Agent, gateway, Telnet wire, parsed state, and verified outcome stay distinct.
+- Story, sequence, evidence, cost, and diagnostic lenses share one selection.
+- Event, turn, and milestone replay expose only the selected evidence prefix.
+- Every retained record opens exact sanitized fields, ancestry, and correlations.
+- Structured filters and saved views narrow evidence without hiding its source.
+- Wire, Parsed, Rendered, Believed, and Truth expose missing forms as gaps.
+- Ten deterministic diagnostics show rules, thresholds, alternatives, and evidence.
+- Cache-aware per-response costs reconcile to the retained attempt cost curve.
+- Raw response cost fields remain visible beside the reconciled ledger.
+- Ask uses local typed operations, the selected run, and the replay moment.
+- Benchmark outcome enters only through the selected experiment-sample link.
+- Stable URLs restore the player, run, lens, room, and selected record.
+
 The browser tests use deterministic representative evidence. The launched
 product reads the local runtime registry and selected session journals.
-Sessions investigation, Experiments execution, and Knowledge workflows land in
-their owning increments.
+Sessions reads explicitly correlated benchmark evidence. Experiments execution
+and Knowledge workflows land in their owning increments.
 
 ### Reset boundary
 
@@ -196,10 +212,11 @@ npm run test:budget
 npm run test:e2e
 ```
 
-UI changes require rendered checks at desktop and narrow widths. Live verifies
-time travel, return to combat state, player isolation, authenticated control,
-keyboard focus, source failure, theme persistence, 200 percent layout, forced
-colors, reduced motion, and root overflow behavior.
+UI changes require rendered checks at desktop and narrow widths.
+
+- Live gates time travel, return to combat, player isolation, and control.
+- Sessions gates replay, exact source reachability, Ask scope, and cost.
+- Shared gates cover focus, source failure, themes, accessibility, and overflow.
 
 ## Product hardening
 
