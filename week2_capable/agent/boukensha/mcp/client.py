@@ -88,6 +88,7 @@ class Client:
     def spawn(cls, command: str, args: tuple[str, ...] | list[str] = (),
               env: dict[str, str] | None = None, *,
               timeout: float = DEFAULT_TIMEOUT,
+              inherit_env: bool = True,
               sleep: Callable[[float], None] | None = None) -> "Client":
         """Spawn a server over stdio and return a connected client.
 
@@ -97,7 +98,12 @@ class Client:
         backoff so the behavior is testable offline.
         """
         def factory() -> Transport:
-            return StdioTransport(command, args=args, env=env)
+            return StdioTransport(
+                command,
+                args=args,
+                env=env,
+                inherit_env=inherit_env,
+            )
         return cls(factory(), timeout=timeout, respawn_factory=factory, sleep=sleep)
 
     # -- public calls ------------------------------------------------------

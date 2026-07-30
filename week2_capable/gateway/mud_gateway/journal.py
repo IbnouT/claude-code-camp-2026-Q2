@@ -23,7 +23,9 @@ the row.
 
 from __future__ import annotations
 
+import fcntl
 import json
+import os
 import pathlib
 import sqlite3
 import time
@@ -76,10 +78,50 @@ class JournalError(Exception):
 class Journal:
     """The single writer. Subscribers are notified only after a commit."""
 
-    def __init__(self, path: str | pathlib.Path) -> None:
+    def __init__(
+        self,
+        path: str | pathlib.Path,
+        *,
+        exclusive: bool = False,
+    ) -> None:
         self.path = pathlib.Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self._db = sqlite3.connect(self.path, isolation_level=None)
+        self._writer_lock = None
+        if exclusive:
+            lock_path = self.path.with_name(f"{self.path.name}.writer.lock")
+            writer_lock = lock_path.open("a+")
+            os.chmod(lock_path, 0o600)
+            try:
+                fcntl.flock(
+                    writer_lock.fileno(),
+                    fcntl.LOCK_EX | fcntl.LOCK_NB,
+                )
+            except BlockingIOError as error:
+                writer_lock.close()
+                raise JournalError(
+                    f"live session journal already has a writer: {self.path}"
+                ) from error
+            self._writer_lock = writer_lock
+        try:
+            self._db = sqlite3.connect(self.path, isolation_level=None)
+            integrity = self._db.execute("PRAGMA integrity_check").fetchone()[0]
+            if integrity != "ok":
+                raise sqlite3.DatabaseError(str(integrity))
+        except sqlite3.DatabaseError as error:
+            try:
+                self._db.close()
+            except AttributeError:
+                pass
+            stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+            corrupt = self.path.with_name(f"{self.path.name}.corrupt-{stamp}")
+            self.path.replace(corrupt)
+            if self._writer_lock is not None:
+                fcntl.flock(self._writer_lock.fileno(), fcntl.LOCK_UN)
+                self._writer_lock.close()
+                self._writer_lock = None
+            raise JournalError(
+                f"journal integrity failure, preserved at {corrupt}"
+            ) from error
         self._db.row_factory = sqlite3.Row
         self._db.execute("PRAGMA journal_mode=WAL")
         self._db.execute("PRAGMA synchronous=NORMAL")
@@ -157,8 +199,13 @@ class Journal:
         return 0 if row["seq"] is None else int(row["seq"])
 
     def sessions(self) -> list[str]:
-        return [row["session"] for row in
-                self._db.execute("SELECT DISTINCT session FROM events ORDER BY session")]
+        return [
+            row["session"]
+            for row in self._db.execute(
+                "SELECT session FROM events "
+                "GROUP BY session ORDER BY MAX(seq), session"
+            )
+        ]
 
     def count(self, session: str | None = None) -> int:
         if session is None:
@@ -201,6 +248,10 @@ class Journal:
 
     def close(self) -> None:
         self._db.close()
+        if self._writer_lock is not None:
+            fcntl.flock(self._writer_lock.fileno(), fcntl.LOCK_UN)
+            self._writer_lock.close()
+            self._writer_lock = None
 
     def __str__(self) -> str:
         return (f"<Journal {self.path.name} events={self.count()} "

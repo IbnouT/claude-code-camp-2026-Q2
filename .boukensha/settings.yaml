@@ -36,7 +36,7 @@ tasks:
     compaction_threshold: 0.85   # window fraction that triggers auto-compaction
 
 # === agent: agent-wide defaults for the five limits above. ==================
-# A per-task value overrides these; these override the code defaults.
+# A per-task value overrides these, then these override the code defaults.
 #agent:
 #  max_iterations: 25
 #  max_output_tokens: 1024
@@ -87,6 +87,8 @@ gateway:
     #   character: tester
     #   password_env: MUD_PASSWORD_TESTER
 
+  # Fallback for a directly launched gateway. Agent launches always use their
+  # isolated profiles/<player>/sessions/<session>/gateway.db.
   journal: .boukensha/gateway/gateway.db
 
   surface:

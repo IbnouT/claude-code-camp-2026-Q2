@@ -47,6 +47,11 @@ class GatewaySettings:
     api_port: int = 8765
     admin_character: str = "admin"
     admin_password_env: str = "MUD_ADMIN_PASSWORD"
+    agent_id: str | None = None
+    session_id: str | None = None
+    gateway_session_id: str | None = None
+    experiment_id: str | None = None
+    run_id: str | None = None
 
     @classmethod
     def load(cls) -> "GatewaySettings":
@@ -59,7 +64,8 @@ class GatewaySettings:
         admin = _mapping(configured, "admin")
         root = config_dir.parent
         selected = _profile_id(
-            connection.get("player_profile"),
+            os.environ.get("BOUKENSHA_PLAYER_ID")
+            or connection.get("player_profile"),
             default="default",
             label="gateway.connection.player_profile",
         )
@@ -85,10 +91,7 @@ class GatewaySettings:
             port=_port(connection.get("port"), 4000, "gateway.connection.port"),
             player_profile=selected,
             players=players,
-            journal=_path(
-                configured.get("journal", ".boukensha/gateway/gateway.db"),
-                root,
-            ),
+            journal=_runtime_journal(configured, root),
             profile=_profile(surface.get("profile", "direct-full")),
             enable=_names(surface.get("enable", ()), "gateway.surface.enable"),
             disable=_names(surface.get("disable", ()), "gateway.surface.disable"),
@@ -100,6 +103,11 @@ class GatewaySettings:
             api_port=_port(api.get("port"), 8765, "gateway.api.port"),
             admin_character=_string(admin.get("character"), "admin"),
             admin_password_env=admin_password_env,
+            agent_id=os.environ.get("BOUKENSHA_AGENT_ID"),
+            session_id=os.environ.get("BOUKENSHA_SESSION_ID"),
+            gateway_session_id=os.environ.get("BOUKENSHA_GATEWAY_SESSION_ID"),
+            experiment_id=os.environ.get("BOUKENSHA_EXPERIMENT_ID"),
+            run_id=os.environ.get("BOUKENSHA_RUN_ID"),
         )
 
     @property
@@ -112,6 +120,8 @@ class GatewaySettings:
 
     @property
     def admin_password(self) -> str | None:
+        if self.session_id:
+            return _secret(self.admin_password_env, os.environ)
         return _secret(
             self.admin_password_env,
             os.environ,
@@ -266,6 +276,16 @@ def _port(value: Any, default: int, label: str) -> int:
 def _path(value: Any, root: Path) -> Path:
     path = Path(str(value)).expanduser()
     return path if path.is_absolute() else root / path
+
+
+def _runtime_journal(configured: dict[str, Any], root: Path) -> Path:
+    session_dir = os.environ.get("BOUKENSHA_SESSION_DIR")
+    if session_dir:
+        return Path(session_dir) / "gateway.db"
+    return _path(
+        configured.get("journal", ".boukensha/gateway/gateway.db"),
+        root,
+    )
 
 
 def _profile(value: Any) -> str:

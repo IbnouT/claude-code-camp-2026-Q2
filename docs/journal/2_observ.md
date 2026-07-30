@@ -48,6 +48,8 @@
   different failures.
 - Naming secret variables in public player profiles made identity selection
   explicit without copying credentials into commands or benchmark overlays.
+- A registry can describe a session but cannot prove it is alive. A stable
+  kernel-held character lock made crash recovery and PID reuse safe by design.
 
 ## Technical Conclusions
 

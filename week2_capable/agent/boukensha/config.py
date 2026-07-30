@@ -102,11 +102,27 @@ class Config:
             env = entry.get("env") or {}
             resolved_env = {str(k): str(v) for k, v in env.items()}
             resolved_env.setdefault("BOUKENSHA_DIR", str(self.dir))
+            command = str(entry.get("command") or "")
+            is_gateway = Path(command).name == "boukensha-gateway"
+            if is_gateway:
+                for key, value in os.environ.items():
+                    if key.startswith("BOUKENSHA_"):
+                        resolved_env.setdefault(key, value)
+                profile = self.mud_profile()
+                password_name = str(
+                    profile.get("password_env") or "MUD_PASSWORD"
+                )
+                password = self.secret(
+                    password_name,
+                    profile_id=self.mud_player_profile,
+                )
+                if password:
+                    resolved_env.setdefault(password_name, password)
             required = entry.get("required")
             timeout = entry.get("timeout")
             allow = entry.get("allow")
             out[str(name)] = {
-                "command": str(entry.get("command") or ""),
+                "command": command,
                 "args": [str(a) for a in (entry.get("args") or [])],
                 "env": resolved_env,
                 "prefix": None if entry.get("prefix") is None else str(entry.get("prefix")),
@@ -115,6 +131,7 @@ class Config:
                 "allow": None if allow is None else [str(a) for a in allow],
                 "deny": [str(d) for d in (entry.get("deny") or [])],
                 "result_mode": result_mode(str(entry.get("result_mode") or "full")),
+                "inherit_env": not is_gateway,
             }
         return out
 
@@ -154,7 +171,7 @@ class Config:
 
     @property
     def mud_username(self) -> str | None:
-        profile = self._mud_profile()
+        profile = self.mud_profile()
         return (
             profile.get("character")
             or self.dig("mud", "username")
@@ -163,33 +180,42 @@ class Config:
     @property
     def mud_password(self) -> str | None:
         """Resolve the selected profile secret without changing the process."""
-        profile = self._mud_profile()
+        profile = self.mud_profile()
         name = str(profile.get("password_env") or "MUD_PASSWORD")
-        value = self._process_environment.get(name)
+        return self.secret(name, profile_id=self.mud_player_profile)
+
+    @property
+    def mud_player_profile(self) -> str:
+        return str(
+            os.environ.get("BOUKENSHA_PLAYER_ID")
+            or os.environ.get("BOUKENSHA_PLAYER_PROFILE")
+            or self.dig("gateway", "connection", "player_profile")
+            or "default"
+        )
+
+    def mud_profile(self, profile_id: str | None = None) -> dict[str, Any]:
+        """Return one configured public player profile."""
+        profiles = self.dig("gateway", "players") or {}
+        selected_id = profile_id or self.mud_player_profile
+        selected = profiles.get(selected_id) or {}
+        return selected if isinstance(selected, dict) else {}
+
+    def secret(self, name: str, *, profile_id: str | None = None) -> str | None:
+        """Resolve one named secret without exposing unrelated values."""
+        value = self._process_environment.get(name) or os.environ.get(name)
         if value:
             return value
-        for path in (
-            self.dir / "profiles" / self.mud_player_profile / ".env",
-            self.dir / ".env",
-        ):
+        paths = []
+        if profile_id:
+            paths.append(self.dir / "profiles" / profile_id / ".env")
+        paths.append(self.dir / ".env")
+        for path in paths:
             if not path.is_file():
                 continue
             candidate = dotenv_values(path).get(name)
             if candidate:
                 return candidate
         return None
-
-    @property
-    def mud_player_profile(self) -> str:
-        return str(
-            self.dig("gateway", "connection", "player_profile")
-            or "default"
-        )
-
-    def _mud_profile(self) -> dict[str, Any]:
-        profiles = self.dig("gateway", "players") or {}
-        selected = profiles.get(self.mud_player_profile) or {}
-        return selected if isinstance(selected, dict) else {}
 
     # -- representation ----------------------------------------------------
 
@@ -220,6 +246,8 @@ class Config:
         return DEFAULT_DIR
 
     def _load_env(self) -> None:
+        if os.environ.get("BOUKENSHA_SESSION_ID"):
+            return
         env_file = self.dir / ".env"
         if env_file.exists():
             load_dotenv(env_file)

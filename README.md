@@ -35,7 +35,11 @@ before the agent faces a private game world.
 
    ```bash
    week2_capable/bin/agent
+   week2_capable/bin/agent --player-profile tester
    ```
+
+   Every launch creates an isolated player session under
+   `.boukensha/profiles/<player>/sessions/<session>/`.
 
 ## Repository structure
 

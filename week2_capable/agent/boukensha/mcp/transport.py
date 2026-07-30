@@ -69,16 +69,28 @@ class StdioTransport:
     """An MCP transport over a spawned subprocess's stdin/stdout.
 
     One reader thread drains stdout and routes responses by id into per-call
-    queues. ``env`` is merged over the inherited environment (never replacing it,
-    so the server still finds ``PATH``) with values stringified for the OS
+    queues. ``env`` is merged over either the inherited environment or a small
+    operating-system allowlist. Restricted children still receive ``PATH`` but
+    never inherit unrelated credentials. Values are stringified for the OS
     environment. A nonexistent command raises ``FileNotFoundError`` here, at
     construction, the same spawn-time signal as before.
     """
 
     def __init__(self, command: str, args: tuple[str, ...] | list[str] = (),
-                 env: dict[str, str] | None = None) -> None:
+                 env: dict[str, str] | None = None,
+                 *, inherit_env: bool = True) -> None:
         cmd = [str(command), *[str(a) for a in args]]
-        child_env = dict(os.environ)
+        if inherit_env:
+            child_env = dict(os.environ)
+        else:
+            child_env = {
+                key: value
+                for key, value in os.environ.items()
+                if key in {
+                    "HOME", "LANG", "LC_ALL", "LC_CTYPE", "PATH", "SHELL",
+                    "TERM", "TMPDIR", "TZ",
+                } or key.startswith("LC_")
+            }
         for key, value in (env or {}).items():
             child_env[str(key)] = str(value)
 

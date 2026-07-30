@@ -21,20 +21,20 @@ JSONL file format, so a log written by any version stays readable.
 
 ```mermaid
 flowchart LR
-    A[the agent] -->|writes| F[".boukensha/sessions/*.jsonl"]
+    A[the agent] -->|writes| F["profiles/player/sessions/session/agent.jsonl"]
     F -->|reads| V[log viewer]
     A -.->|imports nothing from| V
     V -.->|imports nothing from| A
 ```
 
-It resolves the sessions directory by the same documented rules the writer uses,
-reimplemented rather than imported, so a reader meant to outlive its writer does not
-depend on it to find its input.
+It discovers isolated player sessions and legacy flat sessions by the same
+documented root rules the writer uses, reimplemented rather than imported. A
+reader meant to outlive its writer does not depend on it to find input.
 
 ## Run
 
 ```
-bin/log_viewer                    # start it and open the session list
+bin/log_viewer                    # all player sessions and legacy recordings
 bin/log_viewer latest             # the most recent session
 bin/log_viewer 20260726T08        # any unambiguous prefix
 bin/log_viewer --list             # print the sessions and exit

@@ -32,6 +32,7 @@ from .compaction import prefix_tokens
 from .errors import ApiError, ConfigError, LoopError, TurnCancelled
 from .message import Message
 from .prompt_builder import PromptBuilder
+from .runtime import identity_environment
 from .tasks import Player
 
 
@@ -125,6 +126,7 @@ class Repl:
         self._tokens_in = 0
         self._tokens_out = 0
         self._cost = 0.0
+        self._runtime_identity = identity_environment()
 
         # The live feed: one subscription for the whole session, since the same
         # Logger flows through every turn's Agent. The Logger guards each
@@ -746,12 +748,21 @@ class Repl:
 
         version = self._version or "?.?.?"
         tool_count = len(self._registry.tools) if self._registry is not None else 0
+        player_id = self._runtime_identity.get("player_id")
+        session_id = self._runtime_identity.get("session_id")
+        identity_line = ""
+        if player_id and session_id:
+            identity_line = (
+                f"  player:    {player_id}\n"
+                f"  session:   {session_id}\n"
+            )
 
         return (
             "\n"
             "==================================================\n"
             f"  BOUKENSHA MUD Assistant  (v{version})\n"
             "==================================================\n"
+            f"{identity_line}"
             f"  config:    {config_line}\n"
             f"  provider:  {provider} ({model})  {key_status}\n"
             f"  tools:     {tool_count} registered\n"

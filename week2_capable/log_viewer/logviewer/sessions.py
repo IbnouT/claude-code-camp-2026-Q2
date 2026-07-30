@@ -37,6 +37,7 @@ class SessionSummary:
 
     id: str
     path: Path
+    player_id: str | None
     started_at: datetime | None
     provider: str | None
     model: str | None
@@ -113,7 +114,14 @@ def default_dir(start: str | Path | None = None) -> Path:
 
 
 def _started_at(path: Path, records: list[Record]) -> datetime | None:
-    """When the session began: from the filename, else the file's own mtime."""
+    """When the session began: event time, legacy filename, then file mtime."""
+    if records:
+        value = records[0].get("at")
+        if isinstance(value, str):
+            try:
+                return datetime.fromisoformat(value.replace("Z", "+00:00"))
+            except ValueError:
+                pass
     stem = path.stem.split("-")[0]
     for fmt in ("%Y%m%dT%H%M%SZ", "%Y%m%dT%H%M%S"):
         try:
@@ -140,8 +148,13 @@ def summarize(path: str | Path) -> SessionSummary:
     figures: dict[str, Any] = totals(records)
 
     return SessionSummary(
-        id=path.stem,
+        id=(
+            str(start.get("session_id"))
+            if path.name == "agent.jsonl" and start and start.get("session_id")
+            else (path.parent.name if path.name == "agent.jsonl" else path.stem)
+        ),
         path=path,
+        player_id=(start.get("player_id") if start else None),
         started_at=_started_at(path, records),
         provider=(start.get("provider") if start else None),
         model=(start.get("model") if start else None),
@@ -174,9 +187,18 @@ def list_sessions(directory: str | Path | None = None) -> list[SessionSummary]:
     target = Path(directory) if directory is not None else default_dir()
     if not target.is_dir():
         return []
-    files = sorted(target.glob(f"*{SUFFIX}"),
-                   key=lambda p: p.stat().st_mtime, reverse=True)
-    return [summarize(path) for path in files]
+    files = list(target.glob(f"*{SUFFIX}"))
+    config_root = target.parent if target.name == "sessions" else target
+    profiles = config_root / "profiles"
+    if profiles.is_dir():
+        files.extend(profiles.glob("*/sessions/*/agent.jsonl"))
+    summaries = [summarize(path) for path in set(files)]
+    floor = datetime.min.replace(tzinfo=timezone.utc)
+    return sorted(
+        summaries,
+        key=lambda summary: (summary.started_at or floor, summary.id),
+        reverse=True,
+    )
 
 
 def resolve(name: str, directory: str | Path | None = None

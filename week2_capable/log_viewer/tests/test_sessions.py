@@ -62,6 +62,30 @@ class TestDiscovery(unittest.TestCase):
         write_session(directory, "real", COMPLETE)
         self.assertEqual(["real"], [s.id for s in list_sessions(directory)])
 
+    def test_player_session_layout_is_discovered_beside_legacy_sessions(self):
+        root = make_dir()
+        legacy = root / "sessions"
+        legacy.mkdir()
+        write_session(legacy, "legacy", COMPLETE, mtime=1)
+        modern = root / "profiles" / "alpha" / "sessions" / "runtime-id"
+        modern.mkdir(parents=True)
+        (modern / "agent.jsonl").write_text(
+            "".join(json.dumps(line) + "\n" for line in [
+                {
+                    **COMPLETE[0],
+                    "session_id": "runtime-id",
+                    "player_id": "alpha",
+                    "at": "2026-07-30T00:00:00+00:00",
+                },
+                *COMPLETE[1:],
+            ])
+        )
+
+        summaries = list_sessions(legacy)
+
+        self.assertEqual(["runtime-id", "legacy"], [item.id for item in summaries])
+        self.assertEqual("alpha", summaries[0].player_id)
+
 
 class TestSummaries(unittest.TestCase):
     def test_a_complete_session_reports_its_facts(self):

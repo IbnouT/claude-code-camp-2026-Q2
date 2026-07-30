@@ -19,12 +19,26 @@ flowchart LR
 ## Running
 
 ```bash
-../bin/agent          # from anywhere: environment sync, then the REPL
-uv run boukensha      # the same, from this folder
+../bin/agent                              # configured default player
+../bin/agent --player-profile tester      # one configured player
+uv run boukensha --player-profile tester  # the same, from this folder
 ```
 
-Arguments pass through to the app. The TUI, CLI and programmatic `run()`
-entry points are described in the module docstrings under `boukensha/`.
+The command is a supervisor. It creates the player and session identity,
+acquires the character lock, writes the manifest, starts the agent and its
+gateway, then records the final lifecycle state. The REPL and TUI show the
+selected player and session.
+
+Inspect registered sessions or import an old flat recording:
+
+```bash
+uv run boukensha-sessions list
+uv run boukensha-sessions list --player-profile tester
+uv run boukensha-sessions import-legacy old.jsonl \
+  --player-profile tester --character tester
+```
+
+Legacy import copies the recording. It does not move or rewrite the original.
 
 ## Configuration
 
@@ -70,6 +84,10 @@ First run, in order:
 
 The REPL and TUI use the same assembly path and therefore the same gateway
 profile and tool set.
+
+The launcher gives the agent only the selected player secret and the selected
+provider secret. The gateway child receives only the selected player secret.
+Administrator and other-player secrets are not inherited by either process.
 
 The gateway's typed result envelopes stay intact in model context and session
 logs. The TUI unwraps their human text into rooms, messages and readable errors.
@@ -129,5 +147,19 @@ agent/
 └── README.md        this file
 ```
 
-Session logs land in `.boukensha/sessions/`, readable with the
-[log viewer](../log_viewer/).
+Runtime evidence is isolated by player and session:
+
+```text
+.boukensha/
+├── registry.db
+└── profiles/<player_id>/
+    ├── .env
+    └── sessions/<session_id>/
+        ├── session.json
+        ├── agent.jsonl
+        └── gateway.db
+```
+
+The registry and immutable manifest provide identity. File modification time is
+never used to decide which session is active. Imported legacy recordings use
+the same hierarchy and retain explicit capture gaps.

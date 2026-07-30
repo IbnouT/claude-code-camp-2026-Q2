@@ -40,7 +40,8 @@ def register(registry: Registry, command: str,
              timeout: float = DEFAULT_TIMEOUT,
              allow: list[str] | None = None,
              deny: tuple[str, ...] | list[str] = (),
-             result_mode: ResultMode = "full") -> Client:
+             result_mode: ResultMode = "full",
+             inherit_env: bool = True) -> Client:
     """Spawn a server, register its tools, and return the client.
 
     ``timeout`` is the per-call ceiling handed to the client, so one hung tool
@@ -49,7 +50,13 @@ def register(registry: Registry, command: str,
     ``atexit`` hook closes the client on process exit so the subprocess is reaped
     cleanly.
     """
-    client = Client.spawn(command, args=args, env=env, timeout=timeout)
+    client = Client.spawn(
+        command,
+        args=args,
+        env=env,
+        timeout=timeout,
+        inherit_env=inherit_env,
+    )
     atexit.register(_safe_close, client)
     register_client(
         registry,

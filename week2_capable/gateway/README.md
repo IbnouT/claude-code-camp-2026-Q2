@@ -99,7 +99,7 @@ The `gateway:` block owns these durable settings:
 | `connection.player_profile` | `default` | Default configured mortal identity |
 | `players.<id>.character` | profile id | MUD character for one player profile |
 | `players.<id>.password_env` | `MUD_PASSWORD` | Secret name for that profile |
-| `journal` | `.boukensha/gateway/gateway.db` | Durable event journal |
+| `journal` | `.boukensha/gateway/gateway.db` | Fallback journal for a direct standalone launch |
 | `surface.profile` | `direct-full` | Session-static projection preset |
 | `surface.enable` | `[]` | Capabilities added to the preset |
 | `surface.disable` | `[]` | Capabilities removed from the preset |
@@ -128,6 +128,12 @@ Player identity is selected at runtime. A normal launch uses
 ```bash
 boukensha-gateway --player-profile tester
 ```
+
+An agent launch supplies an immutable runtime envelope. That envelope overrides
+the default player profile and places the journal at
+`.boukensha/profiles/<player>/sessions/<session>/gateway.db`. The gateway
+validates the launcher-created gateway session id and gives reconnecting Telnet
+connections separate transport ids.
 
 Public identities stay in `settings.yaml`:
 
@@ -178,6 +184,10 @@ boukensha-gateway-api
 - The password is replaced with a length-preserving redacted event before
   anything is persisted.
 - SQLite runs in WAL mode with one journal writer.
+- A runtime journal has one live writer lock. A second writer is refused, while
+  a replacement gateway can reopen it after the prior process exits.
+- A corrupt journal is preserved with a timestamped suffix and reported as a
+  capture gap. It is never silently replaced.
 - Live readers see only committed events.
 - Unknown journal schema versions are refused.
 - JSONL export provides a supported projection for file-based consumers.
@@ -207,6 +217,8 @@ boukensha-gateway-api
 - Position uses arrival paths, exits, and neighbourhoods. A duplicate title is
   never sufficient evidence to merge two places.
 - The agent-facing `observe` and `navigate` capabilities remain disabled.
+- Agent and gateway records preserve launcher-created player, agent, session,
+  and gateway session identity without filename or time inference.
 
 ## Verification
 

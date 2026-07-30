@@ -219,8 +219,8 @@ async def serve(
     from mcp.server.stdio import stdio_server
 
     server = Server("torii")
-    journal = Journal(settings.journal)
-    run_id = f"mcp-{uuid.uuid4().hex[:12]}"
+    journal = Journal(settings.journal, exclusive=bool(settings.session_id))
+    run_id = settings.gateway_session_id or f"mcp-{uuid.uuid4().hex[:12]}"
     record_profile(journal, run_id, surface)
     session: Session | None = None
 
@@ -240,6 +240,7 @@ async def serve(
                 password=password,
                 host=settings.host,
                 port=settings.port,
+                session_id=settings.gateway_session_id,
             )
             record_profile(journal, session.id, surface)
             await session.open()

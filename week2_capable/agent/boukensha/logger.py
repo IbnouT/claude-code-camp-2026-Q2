@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any
 
 from .config import Config
 from .message import Message, ReasoningBlock, TextBlock, ToolResultBlock, ToolUseBlock
+from .runtime import identity_environment
 
 if TYPE_CHECKING:
     from .backends.base import Backend
@@ -51,12 +52,22 @@ class Logger:
                  log: str | Path | None = None,
                  snapshot: dict[str, Any] | None = None,
                  debug: bool = False) -> None:
-        self._session_id = session_id or self._generate_session_id()
+        self._identity = identity_environment()
+        runtime_session_id = self._identity.get("session_id")
+        if session_id and runtime_session_id and session_id != runtime_session_id:
+            raise ValueError(
+                "logger session_id conflicts with the launcher runtime identity"
+            )
+        self._session_id = session_id or runtime_session_id or self._generate_session_id()
         if log is not None:
             self._path = Path(log)
         else:
-            base = Path(dir) if dir is not None else self._default_dir()
-            self._path = base / f"{self._session_id}.jsonl"
+            runtime_dir = self._identity.get("session_dir")
+            if runtime_dir and dir is None:
+                self._path = Path(runtime_dir) / "agent.jsonl"
+            else:
+                base = Path(dir) if dir is not None else self._default_dir()
+                self._path = base / f"{self._session_id}.jsonl"
         self._debug = debug
         #: Count of events dropped because even the log_error fallback failed.
         self._dropped = 0
@@ -317,6 +328,11 @@ class Logger:
         # that fallback fails, the event is counted and dropped.
         try:
             line = dict(event)
+            line.update({
+                key: value
+                for key, value in self._identity.items()
+                if key not in {"session_dir", "control_socket"}
+            })
             line["session_id"] = self._session_id
             line["at"] = datetime.now().astimezone().isoformat()
             self._log_io.write(
@@ -337,6 +353,11 @@ class Logger:
         try:
             line = {
                 "phase": "log_error",
+                **{
+                    key: value
+                    for key, value in self._identity.items()
+                    if key not in {"session_dir", "control_socket"}
+                },
                 "session_id": self._session_id,
                 "at": datetime.now().astimezone().isoformat(),
                 "original_phase": original_phase,

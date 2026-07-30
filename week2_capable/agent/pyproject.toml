@@ -10,7 +10,8 @@ dependencies = [
 ]
 
 [project.scripts]
-boukensha = "boukensha.loader:main"
+boukensha = "boukensha.launcher:main"
+boukensha-sessions = "boukensha.runtime_cli:main"
 
 [build-system]
 requires = ["hatchling"]
