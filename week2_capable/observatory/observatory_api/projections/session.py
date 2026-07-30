@@ -58,7 +58,7 @@ def project_recorded_session(
     )
     outcome = _outcome_record(bundle, summary)
     records = tuple((*agent_records, *gateway_records, outcome))
-    world = project_world(bundle.gateway_database)
+    world = project_world(bundle.gateway_database, objective=objective)
     cost = _cost_ledger(bundle, agent_records)
     capture_gaps = _capture_gaps(bundle, records, cost)
     diagnostics = _diagnostics(

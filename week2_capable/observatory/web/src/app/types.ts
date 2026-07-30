@@ -34,7 +34,7 @@ export type ChronicleEvent = {
 };
 
 export type SourceState = {
-  id: "gateway" | "agent" | "benchmark" | "knowledge";
+  id: "gateway" | "agent" | "benchmark" | "knowledge" | "world";
   label: string;
   state: "ready" | "unavailable" | "disabled";
   detail: string;

@@ -31,6 +31,10 @@ Live is connected to registered runtime evidence:
 - One causal clock reconstructs every panel at a selected sequence.
 - Pause, scrub, bookmark, and return-to-live controls.
 - Grow, Focus, and Lantern world modes.
+- One evidence-backed world surface shared by Live and Sessions.
+- Duplicate room identities, candidate explanations, sightings, and objective beacons.
+- An isolated observer atlas with overview and zone level-of-detail.
+- A structured list equivalent for both the journey graph and atlas canvas.
 - Scoped Ask entry inside the active workspace.
 - Authenticated guidance, goal revision, pause, resume, and stop in Live.
 - Wire, Parsed, Rendered, Believed, and Truth remain distinct evidence forms.
@@ -135,11 +139,13 @@ Open <http://127.0.0.1:5174>. Vite proxies `/api` to the local read API.
 
 ## Configure
 
-The API uses explicit environment variables:
+Durable non-secret policy lives in `.boukensha/settings.yaml`. Environment
+variables provide process-local source paths and overrides:
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `BOUKENSHA_DIR` | nearest `.boukensha` ancestor | Registered player sessions and runtime evidence |
+| `BOUKENSHA_WORLD` | `observatory.world.path` | One-run override for the observer atlas source |
 | `OBSERVATORY_GATEWAY_URL` | `http://127.0.0.1:8765` | Gateway HTTP and SSE source |
 | `OBSERVATORY_AGENT_EVENTS` | disabled | Agent event source |
 | `OBSERVATORY_BENCHMARK_ROOT` | disabled | Benchmark evidence root |
@@ -155,6 +161,18 @@ The API uses explicit environment variables:
 
 Unavailable or disabled sources remain visible with an explanation. The
 observatory never invents data to fill an absent source.
+
+The atlas parser retains room numbers, titles, zones, and exits. Atlas truth is
+quarantined from agent belief. A live or recorded room is not correlated to an
+atlas room unless its evidence includes the stable world room number.
+
+The durable atlas path belongs in `.boukensha/settings.yaml`:
+
+```yaml
+observatory:
+  world:
+    path: week0_explore/circlemud-world-parser/assets/wld
+```
 
 Model translation also requires `ANTHROPIC_API_KEY`. The key remains
 server-side. A user must enable model translation for the individual question,

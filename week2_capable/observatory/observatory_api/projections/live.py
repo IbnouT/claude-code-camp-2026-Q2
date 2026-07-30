@@ -14,6 +14,7 @@ from ..contracts import (
     LiveTimelineItem,
 )
 from ..sources.runtime import RuntimeSession
+from .world import project_world_events
 
 
 def project_live(
@@ -97,6 +98,7 @@ def project_live(
         ),
         None,
     )
+    world = project_world_events(gateway_prefix, objective=objective)
     capture_gaps: list[str] = []
     if not agent_events:
         capture_gaps.append("agent_events_missing")
@@ -163,6 +165,7 @@ def project_live(
             else None
         ),
         rooms=_rooms(positions, room_observations),
+        world=world,
         timeline=_timeline(gateway_prefix, agent_prefix),
         capture_gaps=tuple(capture_gaps),
     )

@@ -1,0 +1,728 @@
+.world-explorer {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.world-explorer-heading {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 13px var(--card-padding);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.world-explorer-heading > span {
+  min-width: 0;
+}
+
+.world-explorer-heading h2 {
+  margin: 2px 0 0;
+  font-size: 14px;
+}
+
+.world-mode-control,
+.world-camera-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-raised);
+}
+
+.world-mode-control button,
+.world-camera-control button {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 9px;
+  border: 1px solid transparent;
+  border-radius: calc(var(--radius-md) - 3px);
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.world-mode-control button[aria-pressed="true"],
+.world-camera-control button[aria-pressed="true"] {
+  border-color: var(--color-line-strong);
+  background: var(--color-cyan-soft);
+  color: var(--color-cyan);
+}
+
+.world-explorer-stage {
+  position: relative;
+  min-height: 340px;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      circle at 50% 45%,
+      color-mix(in srgb, var(--color-cyan-soft) 58%, transparent),
+      transparent 48%
+    ),
+    linear-gradient(var(--color-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-grid) 1px, transparent 1px),
+    var(--color-stage);
+  background-size: auto, 28px 28px, 28px 28px, auto;
+}
+
+.world-explorer-stage.is-lantern {
+  background:
+    radial-gradient(
+      circle at 50% 45%,
+      color-mix(in srgb, var(--color-cyan-soft) 34%, var(--color-raised)),
+      transparent 58%
+    ),
+    linear-gradient(var(--color-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-grid) 1px, transparent 1px),
+    color-mix(in srgb, var(--color-stage) 78%, var(--color-raised));
+  background-size: auto, 28px 28px, 28px 28px, auto;
+}
+
+.world-camera-control {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+}
+
+.world-svg-scroll {
+  min-height: 340px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.world-svg {
+  min-width: 100%;
+  min-height: 340px;
+  display: block;
+}
+
+.world-edge line {
+  stroke: var(--color-line-strong);
+  stroke-width: 2;
+}
+
+.world-edge text {
+  fill: var(--color-quiet);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  text-anchor: middle;
+}
+
+.world-node {
+  cursor: pointer;
+  outline: none;
+}
+
+.world-node circle,
+.world-node rect {
+  fill: var(--color-cyan-soft);
+  stroke: var(--color-cyan);
+  stroke-width: 2;
+}
+
+.world-node.is-candidate rect {
+  fill: var(--color-amber-soft);
+  stroke: var(--color-amber);
+  stroke-dasharray: 5 4;
+}
+
+.world-node.is-current circle:first-child {
+  fill: var(--color-cyan);
+  stroke: var(--color-text);
+}
+
+.world-node.is-inferred circle:first-child {
+  stroke: var(--color-violet);
+  stroke-dasharray: 3 3;
+}
+
+.world-node.is-selected circle:first-child,
+.world-node.is-selected rect:first-child {
+  stroke: var(--color-text);
+  stroke-width: 3;
+}
+
+.world-node .world-node-ring {
+  fill: none;
+  stroke: var(--color-cyan);
+  stroke-dasharray: 3 5;
+  opacity: 0.72;
+}
+
+.world-node:focus-visible circle:first-child,
+.world-node:focus-visible rect:first-child {
+  stroke: var(--color-focus);
+  stroke-width: 4;
+}
+
+.world-node-title,
+.world-node-meta {
+  fill: var(--color-text);
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.world-node-meta {
+  fill: var(--color-quiet);
+  font-family: var(--font-mono);
+  font-size: 7px;
+  font-weight: 600;
+}
+
+.world-combat-glyph {
+  fill: var(--color-amber);
+  font-size: 17px;
+  text-anchor: middle;
+}
+
+.world-duplicate-glyph {
+  fill: var(--color-coral);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.world-entity-glyph,
+.world-visit-glyph,
+.world-objective-label {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  font-weight: 800;
+  text-anchor: middle;
+}
+
+.world-entity-glyph.is-mob {
+  fill: var(--color-coral);
+}
+
+.world-entity-glyph.is-object {
+  fill: var(--color-violet);
+}
+
+.world-visit-glyph {
+  fill: var(--color-muted);
+}
+
+.world-objective-beacon {
+  fill: var(--color-amber);
+  stroke: var(--color-text);
+  stroke-width: 0.8;
+}
+
+.world-objective-label {
+  fill: var(--color-amber);
+}
+
+.world-layer-legend {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  padding: 7px 9px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  color: var(--color-muted);
+  font-size: 8px;
+}
+
+.world-layer-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.world-layer-legend button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-violet);
+  font: inherit;
+}
+
+.world-layer-legend i {
+  width: 8px;
+  height: 8px;
+  display: inline-block;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+}
+
+.world-layer-legend i.is-observed {
+  color: var(--color-cyan);
+  background: var(--color-cyan-soft);
+}
+
+.world-layer-legend i.is-current {
+  color: var(--color-text);
+  background: var(--color-cyan);
+}
+
+.world-layer-legend i.is-inferred {
+  border-style: dotted;
+  color: var(--color-violet);
+  background: var(--color-violet-soft);
+}
+
+.world-layer-legend i.is-candidate {
+  border-style: dashed;
+  border-radius: 2px;
+  color: var(--color-amber);
+  background: var(--color-amber-soft);
+}
+
+.world-layer-legend i.is-unknown {
+  color: var(--color-quiet);
+  background: transparent;
+}
+
+.world-layer-legend .has-evidence {
+  color: var(--color-amber);
+}
+
+.world-room-evidence {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: max-content minmax(150px, 1.1fr) minmax(220px, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  padding: 12px var(--card-padding);
+  border-top: 1px solid var(--color-line);
+}
+
+.world-room-symbol {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-cyan-soft);
+  color: var(--color-cyan);
+}
+
+.world-room-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.world-room-copy small,
+.world-room-evidence dt {
+  color: var(--color-quiet);
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.world-room-copy strong {
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.world-room-copy > span {
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 8px;
+}
+
+.world-room-evidence dl {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.world-room-evidence dl > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.world-room-evidence dd {
+  overflow: hidden;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.world-candidate-reason {
+  grid-column: 2 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content max-content;
+  gap: 5px 12px;
+  padding: 9px 11px;
+  border: 1px solid var(--color-amber);
+  border-radius: var(--radius-sm);
+  background: var(--color-amber-soft);
+}
+
+.world-objective-evidence {
+  grid-column: 2 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-amber);
+  border-radius: var(--radius-sm);
+  background: var(--color-amber-soft);
+  color: var(--color-amber);
+}
+
+.world-objective-evidence span {
+  display: grid;
+  gap: 2px;
+}
+
+.world-objective-evidence strong {
+  color: var(--color-text);
+  font-size: 9px;
+}
+
+.world-objective-evidence small {
+  color: var(--color-text);
+  font-size: 8px;
+}
+
+.world-atlas {
+  position: relative;
+  background: var(--color-stage);
+}
+
+.world-atlas-summary {
+  display: grid;
+  grid-template-columns: minmax(170px, 0.8fr) minmax(400px, 2fr) max-content;
+  align-items: center;
+  gap: 12px;
+  padding: 11px var(--card-padding);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.world-atlas-summary > span {
+  display: grid;
+  gap: 2px;
+}
+
+.world-atlas-summary small,
+.world-atlas-summary dt {
+  color: var(--color-quiet);
+  font-size: 7px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.world-atlas-summary strong {
+  font-size: 12px;
+}
+
+.world-atlas-summary dl {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 7px;
+  margin: 0;
+}
+
+.world-atlas-summary dl > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.world-atlas-summary dd {
+  margin: 0;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 8px;
+}
+
+.world-atlas-summary button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-raised);
+  color: var(--color-text);
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.world-atlas-canvas {
+  height: 360px;
+  min-height: 280px;
+  background:
+    linear-gradient(var(--color-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.world-atlas-canvas canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.world-atlas-boundary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  padding: 9px var(--card-padding);
+  border-top: 1px solid var(--color-line);
+  color: var(--color-muted);
+  font-size: 8px;
+}
+
+.world-atlas-boundary svg {
+  color: var(--color-violet);
+}
+
+.atlas-table [role="list"] {
+  max-height: 240px;
+  overflow: auto;
+}
+
+.atlas-room-row {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  padding: 8px 9px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-raised);
+}
+
+.atlas-room-row span {
+  overflow: hidden;
+  font-size: 9px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atlas-room-row small,
+.world-atlas-lod {
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 7px;
+}
+
+.world-atlas-lod {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px var(--card-padding);
+  border-top: 1px solid var(--color-line);
+}
+
+.atlas-loading {
+  min-height: 360px;
+  display: grid;
+  place-items: center;
+  color: var(--color-muted);
+  font-size: 9px;
+}
+
+.world-candidate-reason strong {
+  grid-column: 1 / -1;
+  font-size: 10px;
+}
+
+.world-candidate-reason p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 9px;
+}
+
+.world-candidate-reason span {
+  color: var(--color-quiet);
+  font-family: var(--font-mono);
+  font-size: 8px;
+}
+
+.world-warning {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 var(--card-padding) 12px;
+  padding: 9px 11px;
+  border: 1px solid var(--color-amber);
+  border-radius: var(--radius-sm);
+  background: var(--color-amber-soft);
+  color: var(--color-amber);
+}
+
+.world-warning > span {
+  display: grid;
+  gap: 2px;
+}
+
+.world-warning strong {
+  color: var(--color-text);
+  font-size: 10px;
+}
+
+.world-warning small {
+  color: var(--color-muted);
+  font-size: 8px;
+}
+
+.world-table {
+  border-top: 1px solid var(--color-line);
+}
+
+.world-table summary {
+  padding: 10px var(--card-padding);
+  color: var(--color-muted);
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.world-table [role="list"] {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 0 var(--card-padding) var(--card-padding);
+}
+
+.world-table button {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  padding: 8px 9px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-raised);
+  color: var(--color-text);
+  text-align: left;
+}
+
+.world-table button[aria-current="true"] {
+  border-color: var(--color-cyan);
+  background: var(--color-cyan-soft);
+}
+
+.world-table button span {
+  overflow: hidden;
+  font-size: 10px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.world-table button small {
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 7px;
+}
+
+.world-explorer-empty {
+  min-height: 310px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 7px;
+  color: var(--color-muted);
+  text-align: center;
+}
+
+.world-explorer-empty svg {
+  color: var(--color-cyan);
+}
+
+.world-explorer-empty strong {
+  color: var(--color-text);
+  font-size: 11px;
+}
+
+.world-explorer-empty span {
+  font-size: 9px;
+}
+
+@media (max-width: 700px) {
+  .world-explorer-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .world-mode-control {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .world-room-evidence {
+    grid-template-columns: max-content minmax(0, 1fr);
+  }
+
+  .world-room-evidence dl,
+  .world-candidate-reason,
+  .world-objective-evidence {
+    grid-column: 1 / -1;
+  }
+
+  .world-candidate-reason {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .world-table [role="list"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .world-atlas-summary {
+    grid-template-columns: minmax(0, 1fr) max-content;
+  }
+
+  .world-atlas-summary dl {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .world-atlas-canvas {
+    height: 310px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .world-node .world-node-ring {
+    stroke-dasharray: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .world-node circle,
+  .world-node rect,
+  .world-edge line {
+    forced-color-adjust: auto;
+  }
+}

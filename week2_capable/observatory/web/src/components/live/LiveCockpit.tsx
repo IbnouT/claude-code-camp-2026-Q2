@@ -4,10 +4,8 @@ import {
   Bookmark,
   CircleDollarSign,
   Clock3,
-  Crosshair,
   Database,
   Gauge,
-  Map,
   Pause,
   Play,
   Radio,
@@ -15,17 +13,15 @@ import {
   Search,
   ShieldCheck,
   Sparkles,
-  Swords,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { ShellCapabilities, WorkspaceFixture } from "../../app/shellTypes";
-import type {
-  LiveRoom,
-  RuntimeSession,
-} from "../../data/liveContracts";
+import type { RuntimeSession } from "../../data/liveContracts";
 import type { SessionEvidence } from "../../data/useSessionStream";
+import { emptyWorld } from "../../data/worldContracts";
 import { EvidenceForms } from "../system/EvidenceForms";
 import { StateBadge } from "../system/StateBadge";
+import { WorldExplorer } from "../world/WorldExplorer";
 
 type Props = {
   capabilities: ShellCapabilities;
@@ -43,7 +39,11 @@ export function LiveCockpit({
   onOpenSearch,
 }: Props) {
   const [bookmarks, setBookmarks] = useState<number[]>([]);
-  useEffect(() => setBookmarks([]), [session?.id]);
+  const [selectedWorldNodeId, setSelectedWorldNodeId] = useState<string | null>(null);
+  useEffect(() => {
+    setBookmarks([]);
+    setSelectedWorldNodeId(null);
+  }, [session?.id]);
   const snapshot = live.snapshot;
   const selectedEvent = live.events.find(
     (event) => event.seq === live.selectedSequence,
@@ -124,59 +124,15 @@ export function LiveCockpit({
       ) : null}
 
       <section className="workspace-grid">
-        <section className="world-card" aria-labelledby="world-heading">
-          <div className="panel-heading">
-            <span>
-              <p className="eyebrow">Selected journey</p>
-              <h2 id="world-heading">
-                {snapshot?.combat ? "Living world · combat" : "Living world"}
-              </h2>
-            </span>
-            <div className="segmented-control" aria-label="Map mode">
-              <button aria-pressed="true" type="button">Grow</button>
-              <button aria-pressed="false" type="button">Focus</button>
-              <button aria-pressed="false" type="button">Lantern</button>
-            </div>
-          </div>
-
-          <div className="world-stage">
-            <div className="stage-toolbar">
-              <button className="icon-button" type="button" aria-label="Fit journey">
-                <Crosshair size={15} aria-hidden="true" />
-              </button>
-            </div>
-            {snapshot !== null && snapshot.rooms.length > 0 ? (
-              <JourneyMap rooms={snapshot.rooms} combat={snapshot.combat} />
-            ) : (
-              <div className="world-empty">
-                <Radio size={22} aria-hidden="true" />
-                <strong>Waiting for the first position observation</strong>
-                <span>The map grows only from captured rooms and transitions.</span>
-              </div>
-            )}
-            <div className="map-legend" aria-label="Map legend">
-              <span><i className="legend-actual" />Observed</span>
-              <span><i className="legend-current" />Current</span>
-              {snapshot?.combat ? <span><Swords size={11} />Combat</span> : null}
-            </div>
-          </div>
-
-          <div className="room-summary">
-            <span className="room-icon" aria-hidden="true"><Map size={17} /></span>
-            <span>
-              <small>Current room</small>
-              <strong>{snapshot?.current_room ?? "Not observed"}</strong>
-            </span>
-            <StateBadge state={
-              snapshot?.position_confidence === "unknown" ? "incomplete" : "inferred"
-            }>
-              {snapshot?.position_confidence ?? "unknown"}
-            </StateBadge>
-            <button className="text-button" type="button">
-              Open evidence <ArrowRight size={13} aria-hidden="true" />
-            </button>
-          </div>
-        </section>
+        <WorldExplorer
+          className="world-card"
+          combat={snapshot?.combat}
+          eyebrow="Selected journey"
+          onSelectNode={setSelectedWorldNodeId}
+          selectedNodeId={selectedWorldNodeId}
+          title="Living world"
+          world={snapshot?.world ?? emptyWorld}
+        />
 
         <aside className="attention-rail" aria-label="Run context and attention">
           <section className="attention-card">
@@ -394,53 +350,6 @@ export function LiveCockpit({
   );
 }
 
-function JourneyMap({ rooms, combat }: { rooms: LiveRoom[]; combat: boolean }) {
-  const points = rooms.map((room, index) => ({
-    room,
-    x: rooms.length === 1 ? 380 : 80 + index * (600 / (rooms.length - 1)),
-    y: 175 + ((index % 3) - 1) * 62,
-  }));
-  return (
-    <svg
-      aria-label={`Observed journey with ${rooms.length} room${rooms.length === 1 ? "" : "s"}`}
-      className="journey-map"
-      role="img"
-      viewBox="0 0 760 330"
-    >
-      <defs>
-        <pattern id="live-grid" width="30" height="30" patternUnits="userSpaceOnUse">
-          <path className="map-grid-line" d="M 30 0 L 0 0 0 30" />
-        </pattern>
-      </defs>
-      <rect className="map-grid live-map-grid" width="760" height="330" />
-      {points.slice(1).map((point, index) => {
-        const previous = points[index];
-        return previous === undefined ? null : (
-          <path
-            className="journey-edge is-observed"
-            d={`M${previous.x} ${previous.y} L${point.x} ${point.y}`}
-            key={`${previous.room.id}-${point.room.id}`}
-          />
-        );
-      })}
-      {points.map(({ room, x, y }) => (
-        <g
-          className={`room-node ${room.state === "current" ? "is-current" : "is-observed"}`}
-          key={room.id}
-          transform={`translate(${x} ${y})`}
-        >
-          <circle r={room.state === "current" ? 24 : 18} />
-          {room.state === "current" ? <circle className="node-pulse" r="31" /> : null}
-          {room.state === "current" && combat ? (
-            <text className="combat-glyph" y="-34">⚔</text>
-          ) : null}
-          <text y="42">{truncate(room.title, 24)}</text>
-        </g>
-      ))}
-    </svg>
-  );
-}
-
 function evidenceFor(
   snapshot: SessionEvidence["snapshot"],
   selectedKind: string | undefined,
@@ -551,8 +460,4 @@ function formatCount(value: number): string {
 
 function shortId(value: string): string {
   return value.length > 12 ? `${value.slice(0, 8)}…` : value;
-}
-
-function truncate(value: string, length: number): string {
-  return value.length > length ? `${value.slice(0, length - 1)}…` : value;
 }

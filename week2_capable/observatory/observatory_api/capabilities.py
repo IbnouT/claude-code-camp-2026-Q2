@@ -81,6 +81,11 @@ async def discover(
             "Knowledge store",
             settings.knowledge_db,
         ),
+        _path_source(
+            "world",
+            "Observer world atlas",
+            settings.world_root,
+        ),
     ]
     return ObservatoryCapabilities(
         sources=tuple(sources),

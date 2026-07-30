@@ -121,6 +121,37 @@ test("reconstructs a selected prefix and returns to the live combat state", asyn
     .toBeVisible();
 });
 
+test("keeps spatial framing explainable and atlas truth quarantined", async ({
+  page,
+}) => {
+  await page.getByRole("button", { name: "Lantern" }).click();
+  await expect(page.getByRole("button", { name: "Lantern" }))
+    .toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByText("Massive Minotaur", { exact: false }).first())
+    .toBeVisible();
+  await expect(page.getByText("Objective entity sighted", { exact: false }))
+    .toBeVisible();
+
+  await page.getByRole("button", { name: "Atlas" }).click();
+  await expect(
+    page.getByRole("img", { name: /Observer atlas overview, 33 zone clusters/ }),
+  ).toBeVisible();
+  await expect(page.getByText("1,878 rooms")).toBeVisible();
+  await expect(page.getByText(/Observer truth is isolated/)).toBeVisible();
+  await expect(page.locator(".world-atlas-canvas [data-room-id]")).toHaveCount(0);
+  await expect.poll(async () => Number.parseFloat(
+    await page.getByTestId("atlas-frame").innerText(),
+  )).toBeLessThan(50);
+
+  await page.getByText("Explore the atlas as a structured list").click();
+  await page.getByRole("button", { name: /Zone 30/ }).click();
+  await expect(
+    page.getByRole("img", { name: /Observer atlas zone 30, 61 rooms/ }),
+  ).toBeVisible();
+  await expect(page.getByText(/not correlated to the selected journey/))
+    .toBeVisible();
+});
+
 test("switches players without retaining the prior session evidence", async ({
   page,
 }) => {

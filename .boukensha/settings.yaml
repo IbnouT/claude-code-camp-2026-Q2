@@ -129,6 +129,13 @@ gateway:
     # Bound a launcher or CLI request waiting on the local control endpoint.
     client_timeout_seconds: 45
 
+# === observatory: evidence sources and local product policy. ================
+observatory:
+  world:
+    # Observer-only CircleMUD atlas. Relative paths resolve from the repository
+    # root. BOUKENSHA_WORLD remains a one-run override.
+    path: week0_explore/circlemud-world-parser/assets/wld
+
 # === Secrets live in .boukensha/.env (not here) =============================
 # One per provider you use, plus administrator and player-profile passwords:
 #   ANTHROPIC_API_KEY=...   GEMINI_API_KEY=...   OPENAI_API_KEY=...

@@ -7,6 +7,7 @@ dependencies = [
   "boukensha-gateway",  # reuses the canonical parser for offline counterfactual replay
   "httpx==0.28.1",     # async, typed access to gateway evidence sources
   "pydantic==2.13.4",  # validates source capability and API boundaries
+  "PyYAML==6.0.3",     # reads non-secret Observatory policy from shared settings
   "starlette==0.52.1", # focused local read API and static application host
   "uvicorn==0.51.0",   # serves the installed local observatory
 ]

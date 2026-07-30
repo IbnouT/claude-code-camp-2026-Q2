@@ -329,7 +329,6 @@
   gap: var(--content-gap);
 }
 
-.session-map-card,
 .session-sequence-card,
 .session-inspector,
 .evidence-comparison,
@@ -342,7 +341,6 @@
   box-shadow: var(--shadow-raised);
 }
 
-.session-map-card,
 .session-sequence-card,
 .evidence-comparison,
 .cost-analysis,
@@ -371,98 +369,6 @@
   font-size: 9px;
   line-height: 1.4;
   text-align: right;
-}
-
-.session-map-scroll {
-  min-height: 520px;
-  overflow: auto;
-  background:
-    linear-gradient(var(--color-map-grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--color-map-grid) 1px, transparent 1px),
-    radial-gradient(circle at 55% 38%, var(--color-map-glow), transparent 22rem),
-    var(--color-bg);
-  background-size: 28px 28px, 28px 28px, auto, auto;
-}
-
-.session-map {
-  width: 100%;
-  min-width: 560px;
-  min-height: 520px;
-}
-
-.session-map-edge {
-  stroke: var(--color-cyan);
-  stroke-width: 2;
-  opacity: 0.5;
-}
-
-.session-room {
-  cursor: pointer;
-  outline: none;
-}
-
-.session-room circle {
-  fill: var(--color-cyan-soft);
-  stroke: var(--color-cyan);
-  stroke-width: 2;
-  transition: r var(--motion-fast), fill var(--motion-fast);
-}
-
-.session-room.is-candidate circle {
-  fill: var(--color-amber-soft);
-  stroke: var(--color-amber);
-  stroke-dasharray: 4 3;
-}
-
-.session-room.is-selected circle,
-.session-room:focus-visible circle {
-  fill: var(--color-cyan);
-  stroke: var(--color-text);
-  stroke-width: 3;
-}
-
-.session-room text {
-  fill: var(--color-text);
-  font-family: var(--font-ui);
-  font-size: 10px;
-  font-weight: 700;
-  text-anchor: middle;
-}
-
-.session-room .room-meta {
-  fill: var(--color-muted);
-  font-family: var(--font-mono);
-  font-size: 7px;
-  font-weight: 500;
-}
-
-.session-map-footer {
-  min-height: 39px;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-4);
-  padding: 8px 12px;
-  border-block-start: 1px solid var(--color-line);
-  color: var(--color-muted);
-  font-size: 9px;
-}
-
-.session-map-footer span {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.legend-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--color-cyan);
-}
-
-.legend-dot.is-candidate {
-  background: var(--color-amber);
 }
 
 .sequence-tree {
@@ -1104,7 +1010,6 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .sessions-story .session-map-card,
   .sessions-story .session-sequence-card,
   .sessions-story .session-inspector {
     grid-column: 1;
@@ -1131,7 +1036,6 @@
   .sessions-evidence-lens,
   .sessions-cost-layout,
   .sessions-diagnostic-layout,
-  .session-map-card,
   .session-sequence-card,
   .session-inspector,
   .evidence-comparison,
@@ -1179,14 +1083,6 @@
     text-align: left;
   }
 
-  .session-map-scroll {
-    min-height: 390px;
-  }
-
-  .session-map {
-    min-height: 390px;
-  }
-
   .evidence-metadata {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1212,15 +1108,7 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .session-room circle {
-    transition: none;
-  }
-}
-
 @media (forced-colors: active) {
-  .session-room circle,
-  .session-map-edge,
   .session-diagnostic-card,
   .sessions-lensbar {
     forced-color-adjust: auto;

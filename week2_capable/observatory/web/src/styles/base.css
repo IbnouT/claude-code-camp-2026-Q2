@@ -215,10 +215,8 @@ p {
   }
 
   .state-badge,
-  .source-symbol,
   .timeline-symbol,
-  .connection-dot,
-  .control-dot {
+  .connection-dot {
     border: 2px solid currentColor;
   }
 }

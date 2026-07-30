@@ -81,19 +81,7 @@ export type SessionEvidenceLens = Record<
   }
 >;
 
-export type SessionWorldNode = {
-  id: string;
-  place: number;
-  title: string;
-  exits: string[];
-  visits: number;
-  evidence: number[];
-  first_seq: number;
-  last_seq: number;
-  state: "observed" | "candidate" | "current";
-  confidence: string;
-  method: string;
-};
+export type SessionWorldNode = WorldNodeData;
 
 export type SessionCostPoint = {
   record_id: string;
@@ -123,22 +111,7 @@ export type RecordedSessionInvestigation = {
   diagnostics: SessionDiagnostic[];
   diagnostic_coverage: SessionDiagnosticKind[];
   lens: SessionEvidenceLens;
-  world: {
-    nodes: SessionWorldNode[];
-    edges: {
-      id: string;
-      source: string;
-      target: string;
-      direction: string;
-      traversals: number;
-      evidence: number[];
-    }[];
-    current_title: string | null;
-    current_confidence: string;
-    candidates: string[];
-    parse_miss_rate: number;
-    unknown_positions: number;
-  };
+  world: WorldProjectionData;
   cost: {
     total_usd: number;
     response_total_usd: number;
@@ -210,3 +183,7 @@ export function recordAncestry(
   }
   return ancestry;
 }
+import type {
+  WorldNodeData,
+  WorldProjectionData,
+} from "./worldContracts";

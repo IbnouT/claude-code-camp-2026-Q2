@@ -6,12 +6,13 @@ import sqlite3
 from pathlib import Path
 
 import httpx
+from mud_gateway.journal import Event
 
 from observatory_api.app import create_app
 from observatory_api.incidents import canonical_payload
 from observatory_api.contracts import IncidentCapsule
 from observatory_api.projections.parser_replay import replay_parser
-from observatory_api.projections.world import project_world
+from observatory_api.projections.world import project_world, project_world_events
 from observatory_api.queries import plan_operation
 from observatory_api.redaction import redact_question
 from observatory_api.settings import Settings
@@ -68,6 +69,7 @@ async def test_capabilities_are_honest_when_sources_are_absent(tmp_path):
     sources = {item["id"]: item for item in response.json()["sources"]}
     assert sources["gateway"]["state"] == "unavailable"
     assert sources["knowledge"]["state"] == "disabled"
+    assert sources["world"]["state"] == "disabled"
 
 
 async def test_capability_flags_disable_only_named_features(tmp_path):
@@ -140,6 +142,45 @@ async def test_built_frontend_assets_are_served(tmp_path):
     assert asset.status_code == 200
     assert "ready = true" in asset.text
     assert missing.status_code == 404
+
+
+async def test_world_atlas_reports_an_honest_capability_gap(tmp_path):
+    app = create_app(Settings(world_root=None, web_dist=tmp_path))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        response = await client.get("/api/world/atlas")
+    assert response.status_code == 200
+    assert response.json()["source_state"] == "unavailable"
+    assert response.json()["nodes"] == []
+
+
+async def test_world_atlas_uses_zone_lod_without_collapsing_titles(tmp_path):
+    world = tmp_path / "wld"
+    world.mkdir()
+    (world / "test.wld").write_text(
+        "#100\nDuplicate Hall~\nDescription\n~\n7 0 0\n"
+        "D0\nNorth~\n~\n0 0 101\nS\n"
+        "#101\nDuplicate Hall~\nDescription\n~\n7 0 0\n"
+        "D2\nSouth~\n~\n0 0 100\nS\n$\n"
+    )
+    app = create_app(Settings(world_root=world, web_dist=tmp_path))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        overview = (await client.get("/api/world/atlas")).json()
+        zone = (
+            await client.get("/api/world/atlas?level=zone&zone=7")
+        ).json()
+    assert overview["room_count"] == 2
+    assert overview["duplicate_title_count"] == 1
+    assert str(tmp_path) not in overview["source_label"]
+    assert overview["zones"][0]["room_count"] == 2
+    assert [node["vnum"] for node in zone["nodes"]] == [100, 101]
 
 
 async def test_gateway_sessions_are_proxied_without_rewriting(tmp_path):
@@ -416,6 +457,21 @@ def test_relative_source_paths_resolve_from_launcher_project_root(
     assert settings.benchmark_root == tmp_path / ".boukensha" / "benchmarks"
 
 
+def test_world_source_uses_shared_non_secret_settings(tmp_path, monkeypatch):
+    config = tmp_path / ".boukensha"
+    world = tmp_path / "world"
+    config.mkdir()
+    world.mkdir()
+    (config / "settings.yaml").write_text(
+        "observatory:\n  world:\n    path: world\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("BOUKENSHA_WORLD", raising=False)
+    monkeypatch.delenv("BOUKENSHA_DIR", raising=False)
+    assert Settings.from_environment().world_root == world
+
+
 def test_world_projection_keeps_duplicate_titles_as_distinct_candidates(
     tmp_path,
 ):
@@ -455,6 +511,8 @@ def test_world_projection_keeps_duplicate_titles_as_distinct_candidates(
             "kind": "room",
             "title": "White Square",
             "exits": ["south", "west"],
+            "mobs": ["Massive Minotaur"],
+            "objects": ["silver key"],
         }),
         (9, "position", "t3", {
             "place": 303,
@@ -463,11 +521,19 @@ def test_world_projection_keeps_duplicate_titles_as_distinct_candidates(
             "method": "exits-and-neighbourhood",
         }),
         (10, "parse_metric", "t3", {"cumulative_miss_rate": 0.125}),
-        (11, "position", "t4", {
+        (11, "observation", "t4", {
+            "kind": "room",
+            "title": "White Square",
+            "exits": ["south", "west"],
+        }),
+        (12, "position", "t4", {
             "place": None,
             "title": "White Square",
             "confidence": "ambiguous",
             "method": "duplicate-title",
+        }),
+        (13, "unparsed", "t4", {
+            "reason": "A malformed exit line was retained",
         }),
     ]
     connection.executemany(
@@ -480,18 +546,53 @@ def test_world_projection_keeps_duplicate_titles_as_distinct_candidates(
     connection.commit()
     connection.close()
 
-    world = project_world(database)
+    world = project_world(
+        database,
+        objective="Find and fight the Massive Minotaur",
+    )
 
     white_squares = [node for node in world.nodes if node.title == "White Square"]
     assert {node.place for node in white_squares} == {101, 303}
     assert {node.state for node in white_squares} == {"candidate"}
     assert world.candidates == ("place:101", "place:303")
+    details = {item.node_id: item for item in world.candidate_details}
+    assert details["place:101"].supporting_exits == ("south",)
+    assert details["place:101"].conflicting_exits == ("east", "west")
+    assert details["place:303"].supporting_exits == ("south", "west")
+    assert details["place:303"].conflicting_exits == ()
+    assert world.duplicate_titles[0].node_ids == (
+        "place:101",
+        "place:303",
+    )
     assert [(edge.source, edge.target, edge.direction) for edge in world.edges] == [
         ("place:101", "place:202", "east"),
         ("place:202", "place:303", "north"),
     ]
     assert world.parse_miss_rate == 0.125
+    assert world.parse_misses[0].sequence == 13
+    assert world.parse_misses[0].reason == "A malformed exit line was retained"
     assert world.unknown_positions == 1
+    place_303 = next(node for node in world.nodes if node.place == 303)
+    assert place_303.mobs == ("Massive Minotaur",)
+    assert place_303.objects == ("silver key",)
+    assert world.objective_beacons[0].node_id == "place:303"
+    assert world.objective_beacons[0].evidence == (9,)
+    replayed = project_world_events(
+        (
+            Event(
+                seq=seq,
+                session="session",
+                at=float(seq),
+                monotonic=float(seq),
+                kind=kind,
+                trace_id=trace,
+                payload=payload,
+            )
+            for seq, kind, trace, payload in rows
+        ),
+        objective="Find and fight the Massive Minotaur",
+    )
+    assert replayed == world
 
 
 def test_missing_world_database_is_an_honest_empty_projection(tmp_path):

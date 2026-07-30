@@ -23,10 +23,6 @@
     grid-template-columns: minmax(0, 1fr) 286px;
   }
 
-  .health-popover {
-    right: auto;
-    left: 0;
-  }
 }
 
 @media (max-width: 860px) {

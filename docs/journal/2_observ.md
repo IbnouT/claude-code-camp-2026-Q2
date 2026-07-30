@@ -95,6 +95,9 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
 - Live intervention became safe when it moved to the boundary between agent
   iterations. Guidance can enter as a labelled operator message, while an
   in-flight model request remains an honest non-interruptible fact.
+- Rendering the 1,878-room atlas was cheap, but it still could not locate the
+  live agent without a retained stable room number. Scale and epistemic
+  correlation are independent observability problems.
 
 ## Technical Conclusions
 

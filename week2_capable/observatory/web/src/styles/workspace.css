@@ -153,10 +153,6 @@
   fill: url("#grid");
 }
 
-.live-map-grid {
-  fill: url("#live-grid");
-}
-
 .map-grid-line {
   fill: none;
   stroke: var(--color-map-grid);
@@ -175,32 +171,6 @@
 .journey-edge.is-candidate {
   stroke: var(--color-amber);
   stroke-dasharray: 6 6;
-}
-
-.world-empty {
-  min-height: 315px;
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: var(--space-2);
-  padding: var(--space-6);
-  color: var(--color-muted);
-  text-align: center;
-}
-
-.world-empty svg {
-  color: var(--color-cyan);
-}
-
-.world-empty strong {
-  color: var(--color-text);
-  font-size: 12px;
-}
-
-.world-empty span {
-  max-width: 350px;
-  font-size: 10px;
-  line-height: 1.5;
 }
 
 .room-node circle,

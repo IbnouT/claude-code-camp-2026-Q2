@@ -75,6 +75,20 @@ test("captures the B2 Live cockpit for rendered review", async ({ page }, testIn
     path: testInfo.outputPath("b2-live-light.png"),
     fullPage: true,
   });
+
+  await page.getByRole("button", { name: "Lantern" }).click();
+  await page.screenshot({
+    path: testInfo.outputPath("b4-lantern-light.png"),
+    fullPage: true,
+  });
+
+  await page.getByRole("button", { name: "Atlas" }).click();
+  await expect(page.getByRole("img", { name: /Observer atlas overview/ }))
+    .toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("b4-atlas-light.png"),
+    fullPage: true,
+  });
 });
 
 test("captures the B3 Sessions investigation for rendered review", async ({
@@ -91,6 +105,12 @@ test("captures the B3 Sessions investigation for rendered review", async ({
   ).toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath("b3-sessions-story-dark.png"),
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: /White Square, place 12/ }).click();
+  await expect(page.getByText("Why this remains a candidate")).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("b4-session-candidates-dark.png"),
     fullPage: true,
   });
 

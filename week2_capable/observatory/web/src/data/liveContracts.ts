@@ -1,4 +1,5 @@
 import type { EventEnvelope } from "./contracts";
+import type { WorldProjectionData } from "./worldContracts";
 
 export type RuntimePlayer = {
   id: string;
@@ -77,6 +78,7 @@ export type LiveSnapshot = {
   usage: Record<string, number>;
   parse_miss_rate: number | null;
   rooms: LiveRoom[];
+  world: WorldProjectionData;
   timeline: LiveTimelineItem[];
   capture_gaps: string[];
 };

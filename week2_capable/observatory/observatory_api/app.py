@@ -35,6 +35,7 @@ from .queries import answer, answer_operation
 from .queries.model import ModelTranslator
 from .settings import Settings
 from .sources.benchmark import BenchmarkSource
+from .sources.atlas import AtlasSource
 from .sources.comparison import rendering_comparison
 from .sources.gateway import GatewaySource
 from .sources.runtime import RuntimeSource, RuntimeSourceError
@@ -67,6 +68,7 @@ def create_app(
         if active.benchmark_root is not None
         else None
     )
+    atlas = AtlasSource(active.world_root)
     model_spend = 0.0
     translator = (
         ModelTranslator(
@@ -412,6 +414,29 @@ def create_app(
             return JSONResponse({"error": "not_found"}, status_code=404)
         return JSONResponse(result.model_dump(mode="json"))
 
+    async def world_atlas(request: Request) -> JSONResponse:
+        level = request.query_params.get("level", "overview")
+        if level not in {"overview", "zone"}:
+            return JSONResponse(
+                {"error": "invalid_level", "detail": "Use overview or zone"},
+                status_code=422,
+            )
+        zone_value = request.query_params.get("zone")
+        if level == "zone" and zone_value is None:
+            return JSONResponse(
+                {"error": "zone_required", "detail": "Zone detail needs zone"},
+                status_code=422,
+            )
+        try:
+            zone = int(zone_value) if zone_value is not None else None
+        except ValueError:
+            return JSONResponse(
+                {"error": "invalid_zone", "detail": "Zone must be an integer"},
+                status_code=422,
+            )
+        result = atlas.projection(level=level, zone=zone)
+        return JSONResponse(result.model_dump(mode="json"))
+
     async def ask(request: Request) -> JSONResponse:
         nonlocal model_spend
         if benchmark is None:
@@ -506,6 +531,7 @@ def create_app(
             Route("/api/diagnostic-history", history),
             Route("/api/incidents/export", export_incident, methods=["POST"]),
             Route("/api/comparisons", comparisons),
+            Route("/api/world/atlas", world_atlas),
             Route(
                 "/api/comparisons/{comparison_id:str}",
                 comparison,

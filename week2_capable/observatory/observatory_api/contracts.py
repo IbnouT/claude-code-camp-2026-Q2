@@ -12,7 +12,7 @@ class SourceStatus(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    id: Literal["gateway", "agent", "benchmark", "knowledge"]
+    id: Literal["gateway", "agent", "benchmark", "knowledge", "world"]
     label: str
     state: Literal["ready", "unavailable", "disabled"]
     detail: str
@@ -89,6 +89,7 @@ class LiveJourneySnapshot(BaseModel):
     usage: dict[str, int]
     parse_miss_rate: float | None
     rooms: tuple[LiveRoom, ...]
+    world: WorldProjection
     timeline: tuple[LiveTimelineItem, ...]
     capture_gaps: tuple[str, ...]
 
@@ -202,6 +203,8 @@ class WorldNode(BaseModel):
     place: int
     title: str
     exits: tuple[str, ...]
+    mobs: tuple[str, ...] = ()
+    objects: tuple[str, ...] = ()
     visits: int
     evidence: tuple[int, ...] = ()
     first_seq: int
@@ -224,6 +227,49 @@ class WorldEdge(BaseModel):
     evidence: tuple[int, ...]
 
 
+class WorldCandidate(BaseModel):
+    """One unresolved place candidate with its spatial evidence."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    node_id: str
+    title: str
+    supporting_exits: tuple[str, ...]
+    conflicting_exits: tuple[str, ...]
+    reason: str
+    evidence: tuple[int, ...]
+
+
+class WorldDuplicateTitle(BaseModel):
+    """Distinct spatial identities that share one rendered title."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    title: str
+    node_ids: tuple[str, ...]
+
+
+class WorldParseMiss(BaseModel):
+    """One retained parser miss that weakens spatial certainty."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    sequence: int
+    trace_id: str | None
+    reason: str
+
+
+class WorldObjectiveBeacon(BaseModel):
+    """One objective location supported by a retained entity sighting."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    node_id: str
+    label: str
+    reason: str
+    evidence: tuple[int, ...]
+
+
 class WorldProjection(BaseModel):
     """The evidence-backed journey graph and its unresolved current state."""
 
@@ -234,8 +280,57 @@ class WorldProjection(BaseModel):
     current_title: str | None
     current_confidence: str
     candidates: tuple[str, ...]
+    candidate_details: tuple[WorldCandidate, ...] = ()
+    duplicate_titles: tuple[WorldDuplicateTitle, ...] = ()
+    objective_beacons: tuple[WorldObjectiveBeacon, ...] = ()
     parse_miss_rate: float
+    parse_misses: tuple[WorldParseMiss, ...] = ()
     unknown_positions: int
+
+
+class AtlasNode(BaseModel):
+    """One observer-owned world room for a selected atlas zone."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    vnum: int
+    title: str
+    zone: int
+    exits: dict[str, int]
+
+
+class AtlasZone(BaseModel):
+    """One level-of-detail cluster in the observer world atlas."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    zone: int
+    room_count: int
+    edge_count: int
+    duplicate_title_count: int
+
+
+class AtlasProjection(BaseModel):
+    """A measured, observer-only world atlas response."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    available: bool
+    source_state: Literal["available", "unavailable"]
+    source_label: str
+    level: Literal["overview", "zone"]
+    selected_zone: int | None
+    room_count: int
+    edge_count: int
+    zone_count: int
+    duplicate_title_count: int
+    load_ms: float
+    zones: tuple[AtlasZone, ...] = ()
+    nodes: tuple[AtlasNode, ...] = ()
+    memory_bytes: int
+    detail: str
 
 
 class Investigation(BaseModel):

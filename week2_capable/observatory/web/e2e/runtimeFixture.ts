@@ -38,6 +38,50 @@ const sessions = [
 ];
 
 export async function mockRuntime(page: Page) {
+  await page.route("**/api/world/atlas*", async (route) => {
+    const url = new URL(route.request().url());
+    const selectedZone = url.searchParams.get("zone");
+    const nodes = selectedZone === null ? [] : Array.from(
+      { length: 61 },
+      (_, index) => ({
+        id: `room:${3000 + index}`,
+        vnum: 3000 + index,
+        title: index % 10 === 0 ? "Duplicate Hall" : `Atlas room ${index + 1}`,
+        zone: 30,
+        exits: index < 60 ? { north: 3001 + index } : {},
+      }),
+    );
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        available: true,
+        source_state: "available",
+        source_label: "fixture world",
+        level: selectedZone === null ? "overview" : "zone",
+        selected_zone: selectedZone === null ? null : Number(selectedZone),
+        room_count: 1878,
+        edge_count: 4293,
+        zone_count: 33,
+        duplicate_title_count: 241,
+        load_ms: 6.7,
+        memory_bytes: 985531,
+        detail: selectedZone === null
+          ? "Observer truth is isolated from the selected journey."
+          : "Zone 30 is not correlated to the selected journey without vnum evidence.",
+        zones: selectedZone === null
+          ? Array.from({ length: 33 }, (_, index) => ({
+            id: `zone:${index + 1}`,
+            zone: index + 1,
+            room_count: 30 + index,
+            edge_count: 60 + index * 2,
+            duplicate_title_count: index % 8,
+          }))
+          : [],
+        nodes,
+      }),
+    });
+  });
   await page.route("**/api/sessions", async (route) => {
     await route.fulfill({
       status: 200,
@@ -272,6 +316,47 @@ function snapshot(player: string, requested?: number) {
     },
     parse_miss_rate: 0.04,
     rooms: allRooms,
+    world: {
+      nodes: allRooms.map((candidate) => ({
+        id: candidate.id,
+        place: candidate.place,
+        title: candidate.title,
+        exits: candidate.exits,
+        mobs: candidate.state === "current" && !beta
+          ? ["Massive Minotaur"]
+          : [],
+        objects: candidate.state === "current" ? ["stone fountain"] : [],
+        visits: candidate.visits,
+        evidence: [candidate.last_sequence],
+        first_seq: candidate.first_sequence,
+        last_seq: candidate.last_sequence,
+        state: candidate.state,
+        confidence: candidate.confidence,
+        method: candidate.confidence === "high" ? "room-id" : "topology",
+      })),
+      edges: allRooms.length > 1 ? [{
+        id: `${allRooms[0].id}:${allRooms[1].id}:north`,
+        source: allRooms[0].id,
+        target: allRooms[1].id,
+        direction: "north",
+        traversals: 1,
+        evidence: [allRooms[1].last_sequence],
+      }] : [],
+      current_title: room,
+      current_confidence: beta || firstPrefix ? "high" : "medium",
+      candidates: [],
+      candidate_details: [],
+      duplicate_titles: [],
+      objective_beacons: beta || firstPrefix ? [] : [{
+        node_id: allRooms.at(-1)?.id ?? "",
+        label: "Massive Minotaur",
+        reason: "A retained room observation places this objective entity here.",
+        evidence: [through],
+      }],
+      parse_miss_rate: 0.04,
+      parse_misses: [],
+      unknown_positions: 0,
+    },
     timeline,
     capture_gaps: [],
   };

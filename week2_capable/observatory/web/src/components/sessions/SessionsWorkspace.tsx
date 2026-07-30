@@ -38,6 +38,7 @@ import {
   recordAncestry,
 } from "../../data/recordedSession";
 import { StateBadge } from "../system/StateBadge";
+import { WorldExplorer } from "../world/WorldExplorer";
 
 type Props = {
   investigation: RecordedSessionInvestigation | null;
@@ -554,109 +555,15 @@ function SessionMap({
   throughGatewaySequence: number;
   onSelectRoom: (roomId: string) => void;
 }) {
-  const visibleNodes = investigation.world.nodes.filter(
-    (node) => node.first_seq <= throughGatewaySequence,
-  );
-  const visibleNodeIds = new Set(visibleNodes.map((node) => node.id));
-  const visibleEdges = investigation.world.edges.filter(
-    (edge) => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target),
-  );
-  const points = new Map(
-    visibleNodes.map((node, index) => [
-      node.id,
-      {
-        x: 78 + (index % 4) * 135,
-        y: 70 + Math.floor(index / 4) * 105,
-      },
-    ]),
-  );
-  const height = Math.max(
-    310,
-    150 + Math.ceil(visibleNodes.length / 4) * 105,
-  );
   return (
-    <section className="session-map-card">
-      <PanelTitle
-        eyebrow="Spatial lens"
-        title="Where the evidence places the agent"
-        detail={`${visibleNodes.length} places observed by this moment`}
-      />
-      {visibleNodes.length === 0 ? (
-        <div className="sessions-empty">
-          <MapIcon size={22} aria-hidden="true" />
-          <b>No spatial evidence retained</b>
-          <span>This is a capture gap, not an empty world.</span>
-        </div>
-      ) : (
-        <div className="session-map-scroll">
-          <svg
-            aria-label="Recorded journey map"
-            className="session-map"
-            role="img"
-            viewBox={`0 0 560 ${height}`}
-          >
-            {visibleEdges.map((edge) => {
-              const start = points.get(edge.source);
-              const end = points.get(edge.target);
-              if (!start || !end) return null;
-              return (
-                <line
-                  key={edge.id}
-                  className="session-map-edge"
-                  x1={start.x}
-                  x2={end.x}
-                  y1={start.y}
-                  y2={end.y}
-                />
-              );
-            })}
-            {visibleNodes.map((node) => {
-              const point = points.get(node.id);
-              if (!point) return null;
-              const active = selectedRoomId === node.id;
-              const visits = node.evidence.filter(
-                (sequence) => sequence <= throughGatewaySequence,
-              ).length;
-              return (
-                <g
-                  className={`session-room is-${node.state}${active ? " is-selected" : ""}`}
-                  key={node.id}
-                  role="button"
-                  tabIndex={0}
-                  transform={`translate(${point.x} ${point.y})`}
-                  onClick={() => onSelectRoom(node.id)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      onSelectRoom(node.id);
-                    }
-                  }}
-                >
-                  <circle r={active ? 18 : 14} />
-                  <text y="32">{shortRoomTitle(node.title)}</text>
-                  <text className="room-meta" y="45">
-                    {visits} visits · {node.confidence}
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
-        </div>
-      )}
-      <div className="session-map-footer">
-        <span>
-          <span className="legend-dot is-observed" />
-          Observed
-        </span>
-        <span>
-          <span className="legend-dot is-candidate" />
-          Candidate
-        </span>
-        <span>
-          parser miss {(investigation.world.parse_miss_rate * 100).toFixed(1)}%
-        </span>
-      </div>
-    </section>
+    <WorldExplorer
+      eyebrow="Spatial lens"
+      onSelectNode={onSelectRoom}
+      selectedNodeId={selectedRoomId}
+      throughSequence={throughGatewaySequence}
+      title="Where the evidence places the agent"
+      world={investigation.world}
+    />
   );
 }
 
@@ -1199,10 +1106,6 @@ function PanelTitle({
       <small>{detail}</small>
     </header>
   );
-}
-
-function shortRoomTitle(title: string): string {
-  return title.length > 22 ? `${title.slice(0, 20)}…` : title;
 }
 
 function uniqueRecords(
