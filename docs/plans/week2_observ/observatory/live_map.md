@@ -41,6 +41,9 @@ this folder is the binding visual reference.
   breadth-first shells around the agent while every room's full drawn
   footprint fits the pane and clears visible overlays. Its 18-room value is an
   upper bound. Lantern shows the complete graph in distance-based light tiers.
+- Focus shows as much of the neighborhood as fits at the viewer's chosen
+  scale. Zooming out widens the lens, zooming in narrows it, and continuation
+  chevrons name the learned context outside it.
 - Focus never changes zoom. Entry recenters on the agent and resumes Follow.
   Only Fit map and the zoom buttons change scale.
 - Focus panning remains bounded with the agent in frame. Agent movement
@@ -56,11 +59,11 @@ this folder is the binding visual reference.
 - Fixed thought dock, bottom-left: the agent's current
   thinking/planning/acting excerpt. It is translucent and collapsible.
 - Fixed room inspector panel, right edge of the stage: opens on room
-  click or Enter. It shows the name with a sector chip when the atlas correlation is
-  verified, description, exits with unconfirmed directions, mob and
-  object sighting counts, passed count, per-room spend when attributed,
-  evidence link. Closes with X, Escape, click outside or re-click. Never
-  covers the selected room.
+  click or Enter. It shows the name with a sector chip when the atlas
+  correlation is verified, description, exits with unconfirmed directions,
+  mob and object sighting counts, passed count, per-room spend when
+  attributed, and the evidence link. Closes with X, Escape, click outside or
+  re-click. Never covers the selected room.
 - Legend: generated from the marker kinds actually drawn in the current
   mode and is collapsible.
 - Every value traces to a typed field. An unavailable value is absent,

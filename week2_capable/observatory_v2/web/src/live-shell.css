@@ -575,7 +575,7 @@
 .live-map-pan-hint {
   position: absolute;
   left: 50%;
-  bottom: 14px;
+  bottom: 68px;
   transform: translateX(-50%);
   margin: 0;
   padding: 7px 10px;
@@ -1943,6 +1943,10 @@
 
   .live-map-stage.has-inspector .live-map-dock {
     bottom: calc(min(55%, 420px) + 28px);
+  }
+
+  .live-map-stage.has-inspector .live-map-pan-hint {
+    bottom: calc(min(55%, 420px) + 78px);
   }
 
   .live-map-stage.has-inspector .live-map-legend {
