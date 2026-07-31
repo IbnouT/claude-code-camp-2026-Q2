@@ -157,6 +157,13 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
   evidence the room appears to carry. A geometrically valid fill can still
   lie about topology when it skips a bridge, so the projected set must also be
   the agent's connected component.
+- Coordination needs one small authoritative turn record. Searching an
+  append-only discussion log missed approvals and replies, while a four-line
+  owner, ask, reference, and timestamp handoff made the next action explicit.
+- A plausible measurement is not evidence when its capture is missing, its
+  viewport differs from the product, or its replay exercises another client
+  pipeline. Stating the gap is more useful than publishing a number that proves
+  the wrong claim.
 
 ## Technical Conclusions
 
