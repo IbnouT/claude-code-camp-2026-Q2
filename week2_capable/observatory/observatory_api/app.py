@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import os
 from pathlib import Path
 
 import httpx
@@ -47,6 +48,7 @@ from .queries.model import ModelTranslator
 from .settings import Settings
 from .sources.benchmark import BenchmarkSource
 from .sources.atlas import AtlasSource
+from .sources.sector_overrides import DEFAULT_OVERRIDE_PATH
 from .sources.comparison import rendering_comparison
 from .sources.gateway import GatewaySource
 from .sources.knowledge import KnowledgeSource, KnowledgeSourceError
@@ -91,7 +93,14 @@ def create_app(
         if active.benchmark_root is not None
         else None
     )
-    atlas = AtlasSource(active.world_root)
+    atlas = AtlasSource(
+        active.world_root,
+        override_path=(
+            DEFAULT_OVERRIDE_PATH
+            if os.environ.get("OBSERVATORY_ENABLE_SECTOR_OVERRIDES") == "1"
+            else None
+        ),
+    )
     experiment_executor = (
         ExperimentExecutor(
             active.experiment_state_root,

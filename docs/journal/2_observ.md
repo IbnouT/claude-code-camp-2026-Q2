@@ -126,6 +126,9 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
   the whole drawing around new extrema moves every old room even when the
   layout itself is deterministic. Fixed world coordinates let the camera
   follow the agent without rewriting learned geography.
+- Game sector flags describe engine terrain, not always the room a person sees.
+  A reviewed observer-owned override lets the map call a sewer underground and
+  a post office civic while preserving the original world files as evidence.
 
 ## Technical Conclusions
 

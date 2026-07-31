@@ -21,6 +21,10 @@ import {
   type MapViewport,
 } from "./mapModel";
 import { LiveMapRoom } from "./LiveMapRoom";
+import {
+  selectedRoomFromLocation,
+  syncSelectedRoomToLocation,
+} from "./selectionUrl";
 
 type Props = {
   identity: LiveRouteIdentity;
@@ -42,7 +46,9 @@ export function LiveMap({ identity }: Props) {
   );
   const [frame, setFrame] = useState(defaultFrame);
   const [panCenter, setPanCenter] = useState<MapPoint | null>(null);
-  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(
+    selectedRoomFromLocation,
+  );
   const [dragging, setDragging] = useState(false);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -105,7 +111,11 @@ export function LiveMap({ identity }: Props) {
     );
   }, [snapshot]);
   const handleSelectRoom = useCallback((nodeId: string) => {
-    setSelectedRoomId((current) => current === nodeId ? null : nodeId);
+    setSelectedRoomId((current) => {
+      const next = current === nodeId ? null : nodeId;
+      syncSelectedRoomToLocation(next);
+      return next;
+    });
   }, []);
 
   useEffect(() => {
@@ -132,8 +142,8 @@ export function LiveMap({ identity }: Props) {
 
   useEffect(() => {
     setPanCenter(null);
-    setSelectedRoomId(null);
-  }, [identity.sessionId, graph.rooms.length]);
+    setSelectedRoomId(selectedRoomFromLocation());
+  }, [identity.sessionId]);
 
   if (snapshot === null) {
     return (

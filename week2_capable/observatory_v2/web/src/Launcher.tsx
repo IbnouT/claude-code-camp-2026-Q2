@@ -6,6 +6,7 @@ import type {
   Session,
   Snapshot,
 } from "./contracts";
+import { lifecycleApiUrl } from "./lifecycleApi";
 import { liveHref } from "./routes";
 
 type PlayerRow = Player & { sessions: Session[]; latest: Session | null };
@@ -259,7 +260,7 @@ export function Launcher() {
     setStartMessage("");
     const reset = baseline ? "baseline" : temple ? "temple" : "none";
     try {
-      const response = await fetch("/api/sessions/start", {
+      const response = await fetch(lifecycleApiUrl("/api/sessions/start"), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

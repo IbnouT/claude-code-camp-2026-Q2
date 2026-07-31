@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from ..contracts import AtlasNode, AtlasProjection, AtlasZone
+from .sector_overrides import DEFAULT_OVERRIDE_PATH, load_sector_overrides
 
 DIRECTIONS = ("north", "east", "south", "west", "up", "down")
 _DIRECTION_ALIASES = {
@@ -62,8 +63,14 @@ class AtlasLocation:
 class AtlasSource:
     """Cache one measured parse and expose overview or one-zone LOD."""
 
-    def __init__(self, root: Path | None) -> None:
+    def __init__(
+        self,
+        root: Path | None,
+        *,
+        override_path: Path | None = DEFAULT_OVERRIDE_PATH,
+    ) -> None:
         self._root = root
+        self._override_path = override_path
         self._rooms: dict[int, AtlasRoom] | None = None
         self._zone_labels: dict[int, str] | None = None
         self._source_digest: str | None = None
@@ -225,6 +232,25 @@ class AtlasSource:
             digest.update(path.name.encode())
             digest.update(text.encode())
             rooms.update(_parse(text))
+        overrides = load_sector_overrides(self._override_path)
+        if self._override_path is not None and self._override_path.is_file():
+            digest.update(self._override_path.read_bytes())
+        for vnum, override in overrides.items():
+            room = rooms.get(vnum)
+            if room is None:
+                continue
+            if room.sector != override.original_sector:
+                raise ValueError(
+                    f"Atlas sector override {vnum} expected "
+                    f"{override.original_sector!r}, found {room.sector!r}."
+                )
+            rooms[vnum] = AtlasRoom(
+                vnum=room.vnum,
+                title=room.title,
+                zone=room.zone,
+                sector=override.corrected_category,
+                exits=room.exits,
+            )
         self._load_ms = round((time.perf_counter() - started) * 1_000, 3)
         self._rooms = rooms
         self._source_digest = digest.hexdigest()[:20]

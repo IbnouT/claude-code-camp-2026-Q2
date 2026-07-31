@@ -213,6 +213,10 @@ observatory never invents data to fill an absent source.
 The atlas parser retains room numbers, titles, zones, and exits. Atlas truth is
 quarantined from agent belief. A live or recorded room is not correlated to an
 atlas room unless its evidence includes the stable world room number.
+The atlas transport accepts a reviewed semantic-sector correction file. Loading
+verifies each correction against the original sector before exposing the
+corrected category. Without the verified file and explicit enablement, the API
+returns raw atlas sectors. The configured `.wld` files remain unchanged.
 
 The durable atlas path belongs in `.boukensha/settings.yaml`:
 

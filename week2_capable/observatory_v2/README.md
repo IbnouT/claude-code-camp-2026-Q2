@@ -14,9 +14,15 @@ next step only on Ibnou's approval.
 
 ## Current surface
 
+- `http://127.0.0.1:8787/` is the single served Observatory URL.
 - `/` serves the approved launcher.
 - `/live?player=…&session=…` serves the Live header and learned-world map.
 - The map reads the retained typed snapshot projection every two seconds.
+- Atlas-correlated rooms retain the approved raw-sector palette until a
+  reviewed semantic override is explicitly enabled. The original `.wld` files
+  remain unchanged.
+- Room selection uses the mock's dashed aqua ring and aqua label. The stable
+  `room` URL parameter restores that selection after reload.
 - Room coordinates replay from first-evidence order on an integer lattice.
 - An occupied target shifts the anchor component's whole far-side rows along
   the incoming axis. Diagonal insertions resolve vertically, unrelated

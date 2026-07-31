@@ -57,6 +57,7 @@ export const LiveMapRoom = memo(function LiveMapRoom({
         sectorClass(node.atlas?.sector),
         node.state === "candidate" ? "is-candidate" : "",
         stateClass,
+        selected ? "is-selected" : "",
       ].filter(Boolean).join(" ")}
       data-room-id={node.id}
       data-render-count={import.meta.env.MODE === "test"
@@ -79,12 +80,12 @@ export const LiveMapRoom = memo(function LiveMapRoom({
           r="48"
         />
       ) : null}
-      {stateClass === "is-selected" ? (
+      {selected ? (
         <circle
           className="live-selected-room-ring"
           cx={mapRoomWidth / 2}
           cy={mapRoomHeight / 2}
-          r="32"
+          r={Math.hypot(mapRoomWidth, mapRoomHeight) / 2 + 2}
         />
       ) : null}
       <rect width={mapRoomWidth} height={mapRoomHeight} rx="10" />
@@ -133,6 +134,7 @@ export function sectorClass(sector: string | undefined): string {
   if (normalized === "forest") return "is-sector-forest";
   if (normalized === "hills") return "is-sector-hills";
   if (normalized === "mountain") return "is-sector-mountain";
+  if (normalized === "water") return "is-sector-semantic-water";
   if (
     normalized.startsWith("water")
     || normalized === "flying"
@@ -141,6 +143,19 @@ export function sectorClass(sector: string | undefined): string {
     return "is-sector-water";
   }
   if (normalized === "city") return "is-sector-city";
+  if (normalized === "interior") return "is-sector-interior";
+  if (normalized === "open land" || normalized === "open-land") {
+    return "is-sector-open-land";
+  }
+  if (normalized === "woodland") return "is-sector-woodland";
+  if (normalized === "highland") return "is-sector-highland";
+  if (normalized === "urban") return "is-sector-urban";
+  if (normalized === "special") return "is-sector-special";
+  if (normalized === "route") return "is-sector-route";
+  if (normalized === "underground") return "is-sector-underground";
+  if (normalized === "commerce") return "is-sector-commerce";
+  if (normalized === "civic") return "is-sector-civic";
+  if (normalized === "sacred") return "is-sector-sacred";
   return "is-sector-neutral";
 }
 

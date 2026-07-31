@@ -57,6 +57,24 @@ this folder is the binding visual reference.
 - Every value traces to a typed field; an unavailable value is absent,
   never substituted.
 
+## Semantic room color
+
+Original CircleMUD sector flags are source evidence, not a sufficient visual
+taxonomy. The observer atlas can apply a reviewed disagreement-only override
+without changing the `.wld` files. Without that verified artifact, the served
+map keeps the raw atlas-sector palette.
+
+- Twelve categories cover route, interior, underground, urban, open land,
+  water, highland, woodland, commerce, civic, sacred, and special rooms.
+- Each override retains vnum, original sector, corrected category, and a
+  content-grounded rationale.
+- Loading rejects an override when its recorded original sector does not match
+  the configured atlas.
+- The semantic palette activates only when the verified override artifact is
+  explicitly enabled.
+- Current, combat, selected, beacon, and candidate states remain visually
+  stronger than the underlying semantic fill.
+
 ## Delivery
 
 The map lands in small verified checkpoints. M1, the structural map:
@@ -77,4 +95,7 @@ evidence order owns production coordinates.
   Rendered comparisons at 1440x900 cover one room, five rooms and the complete
   recorded world.
 - M2: rendered comparison covering stubs, glyphs and badges.
+- Semantic color: all 1,878 rooms receive one category, the frozen file
+  contains only reviewed disagreements, representative corrected rooms pass
+  API tests, and dark and light rendered captures preserve state precedence.
 - Later checkpoints carry their own acceptance when planned.

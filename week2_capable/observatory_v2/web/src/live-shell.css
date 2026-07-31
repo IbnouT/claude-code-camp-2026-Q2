@@ -94,9 +94,69 @@
   stroke: var(--color-map-dark-line);
 }
 
+.live-map-room.is-sector-route rect {
+  fill: var(--color-map-route);
+  stroke: var(--color-map-route-line);
+}
+
+.live-map-room.is-sector-interior rect {
+  fill: var(--color-map-interior);
+  stroke: var(--color-map-interior-line);
+}
+
+.live-map-room.is-sector-underground rect {
+  fill: var(--color-map-underground);
+  stroke: var(--color-map-underground-line);
+}
+
+.live-map-room.is-sector-urban rect {
+  fill: var(--color-map-urban);
+  stroke: var(--color-map-urban-line);
+}
+
+.live-map-room.is-sector-open-land rect {
+  fill: var(--color-map-open-land);
+  stroke: var(--color-map-open-land-line);
+}
+
 .live-map-room.is-sector-water rect {
   fill: var(--color-map-current);
   stroke: var(--color-map-current-line);
+}
+
+.live-map-room.is-sector-semantic-water rect {
+  fill: var(--color-map-water);
+  stroke: var(--color-map-water-line);
+}
+
+.live-map-room.is-sector-highland rect {
+  fill: var(--color-map-highland);
+  stroke: var(--color-map-highland-line);
+}
+
+.live-map-room.is-sector-woodland rect {
+  fill: var(--color-map-woodland);
+  stroke: var(--color-map-woodland-line);
+}
+
+.live-map-room.is-sector-commerce rect {
+  fill: var(--color-map-commerce);
+  stroke: var(--color-map-commerce-line);
+}
+
+.live-map-room.is-sector-civic rect {
+  fill: var(--color-map-civic);
+  stroke: var(--color-map-civic-line);
+}
+
+.live-map-room.is-sector-sacred rect {
+  fill: var(--color-map-sacred);
+  stroke: var(--color-map-sacred-line);
+}
+
+.live-map-room.is-sector-special rect {
+  fill: var(--color-map-special);
+  stroke: var(--color-map-special-line);
 }
 
 .live-map-room.is-candidate rect {

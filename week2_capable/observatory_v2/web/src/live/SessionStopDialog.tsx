@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { lifecycleApiUrl } from "../lifecycleApi";
 import type { LiveRouteIdentity } from "../routes";
 
 export type StopReceipt = {
@@ -62,7 +63,9 @@ export function SessionStopDialog({
     onStopping();
     try {
       const response = await fetch(
-        `/api/sessions/${encodeURIComponent(identity.sessionId)}/stop`,
+        lifecycleApiUrl(
+          `/api/sessions/${encodeURIComponent(identity.sessionId)}/stop`,
+        ),
         { method: "POST" },
       );
       const payload = await response.json() as StopReceipt | StopFailure;
