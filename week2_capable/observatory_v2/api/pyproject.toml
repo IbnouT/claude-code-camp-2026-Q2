@@ -1,0 +1,13 @@
+[project]
+name = "boukensha-observatory-v2-api"
+version = "0.1.0"
+description = "Local supervised launcher boundary for Observatory v2."
+requires-python = ">=3.12"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["observatory_v2_api"]

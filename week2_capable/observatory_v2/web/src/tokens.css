@@ -1,0 +1,79 @@
+:root {
+  color-scheme: dark;
+  --color-bg: #080b0f;
+  --color-surface: #0d1218;
+  --color-raised: #111820;
+  --color-soft: #151d26;
+  --color-overlay: rgb(4 8 12 / 82%);
+  --color-line: #1d2833;
+  --color-line-strong: #2b3947;
+  --color-text: #edf4f8;
+  --color-muted: #8493a1;
+  --color-quiet: #596775;
+  --color-cyan: #68e1dc;
+  --color-cyan-soft: #163738;
+  --color-amber: #eac06a;
+  --color-amber-soft: #3b301d;
+  --color-green: #8bdfa9;
+  --color-green-soft: #123227;
+  --color-coral: #ff8178;
+  --color-coral-soft: #3e2425;
+  --color-map-link: #243449;
+  --color-map-room: #1c3350;
+  --color-map-room-line: #2f5680;
+  --color-map-current: #12333a;
+  --color-map-current-line: #2f6b6f;
+  --color-map-temple: #183a2e;
+  --color-map-temple-line: #2b5c48;
+  --color-map-shop: #3a2f18;
+  --color-map-shop-line: #5c4a2b;
+  --color-map-dark: #241a2e;
+  --color-map-dark-line: #463357;
+  --shadow-popover: 0 20px 50px rgb(0 0 0 / 42%);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-bg: #eef2f6;
+  --color-surface: #ffffff;
+  --color-raised: #f4f7fa;
+  --color-soft: #e9eef4;
+  --color-overlay: rgb(230 237 243 / 82%);
+  --color-line: #dde4ec;
+  --color-line-strong: #c6d0db;
+  --color-text: #12202b;
+  --color-muted: #4e5d6b;
+  --color-quiet: #8394a2;
+  --color-cyan: #0c8f88;
+  --color-cyan-soft: #d3efed;
+  --color-amber: #9a6f00;
+  --color-amber-soft: #f6eccf;
+  --color-green: #1f9256;
+  --color-green-soft: #dcefe3;
+  --color-coral: #d3454f;
+  --color-coral-soft: #f7dcdd;
+  --color-map-link: #aab8c8;
+  --color-map-room: #dce8f5;
+  --color-map-room-line: #7696b8;
+  --color-map-current: #d3efed;
+  --color-map-current-line: #0c8f88;
+  --color-map-temple: #dcefe3;
+  --color-map-temple-line: #5d9b78;
+  --color-map-shop: #f4ead2;
+  --color-map-shop-line: #a78642;
+  --color-map-dark: #e9e0f0;
+  --color-map-dark-line: #8d70a4;
+  --shadow-popover: 0 20px 50px rgb(20 40 60 / 18%);
+}
+
+* { box-sizing: border-box; }
+html, body, #root { min-height: 100%; margin: 0; }
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+button, input { font: inherit; }
