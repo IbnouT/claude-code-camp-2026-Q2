@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 import sys
 import time
@@ -12,10 +13,30 @@ from pathlib import Path
 from ..contracts import AtlasNode, AtlasProjection, AtlasZone
 
 DIRECTIONS = ("north", "east", "south", "west", "up", "down")
+_DIRECTION_ALIASES = {
+    "n": "north",
+    "e": "east",
+    "s": "south",
+    "w": "west",
+    "u": "up",
+    "d": "down",
+}
 WORLD_HINT = Path("week0_explore/circlemud-world-parser/assets/wld")
 _ROOM = re.compile(r"^#(\d+)\s*$")
 _EXIT = re.compile(r"^D([0-5])\s*$")
 _TARGET = re.compile(r"^(-?\d+)\s+(-?\d+)\s+(-?\d+)\s*$")
+SECTORS = {
+    0: "inside",
+    1: "city",
+    2: "field",
+    3: "forest",
+    4: "hills",
+    5: "mountain",
+    6: "water (swimmable)",
+    7: "water (not swimmable)",
+    8: "flying",
+    9: "underwater",
+}
 
 
 @dataclass(frozen=True)
@@ -25,7 +46,17 @@ class AtlasRoom:
     vnum: int
     title: str
     zone: int
+    sector: str
     exits: dict[str, int] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class AtlasLocation:
+    """One vnum-correlated observer-truth atlas location."""
+
+    room: AtlasRoom
+    zone_label: str
+    source_digest: str
 
 
 class AtlasSource:
@@ -34,6 +65,8 @@ class AtlasSource:
     def __init__(self, root: Path | None) -> None:
         self._root = root
         self._rooms: dict[int, AtlasRoom] | None = None
+        self._zone_labels: dict[int, str] | None = None
+        self._source_digest: str | None = None
         self._load_ms = 0.0
 
     @property
@@ -82,6 +115,7 @@ class AtlasSource:
                     vnum=room.vnum,
                     title=room.title,
                     zone=room.zone,
+                    sector=room.sector,
                     exits=room.exits,
                 )
                 for room in sorted(selected, key=lambda item: item.vnum)
@@ -139,23 +173,90 @@ class AtlasSource:
             ),
         )
 
+    def locate(self, vnum: int) -> AtlasLocation | None:
+        """Correlate one verified room number without title guessing."""
+        rooms = self._load() if self.available else {}
+        room = rooms.get(vnum)
+        if room is None:
+            return None
+        labels = self._load_zone_labels()
+        label = labels.get(room.zone)
+        if label is None:
+            return None
+        return AtlasLocation(
+            room=room,
+            zone_label=label,
+            source_digest=self._source_digest or "",
+        )
+
+    def resolve_unique(
+        self,
+        title: str,
+        exits: tuple[str, ...],
+    ) -> AtlasLocation | None:
+        """Resolve one unambiguous title and exit signature as an anchor."""
+
+        observed_exits = {
+            _DIRECTION_ALIASES.get(direction.casefold(), direction.casefold())
+            for direction in exits
+        }
+        matches = [
+            room
+            for room in self._load().values()
+            if room.title.casefold() == title.casefold()
+            and set(room.exits) == observed_exits
+        ] if self.available else []
+        if len(matches) != 1:
+            return None
+        return self.locate(matches[0].vnum)
+
     def _load(self) -> dict[int, AtlasRoom]:
         if self._rooms is not None:
             return self._rooms
         started = time.perf_counter()
         rooms: dict[int, AtlasRoom] = {}
+        digest = hashlib.sha256()
         assert self._root is not None
         for path in sorted(self._root.glob("*.wld")):
             try:
-                rooms.update(_parse(path.read_text(
-                    encoding="utf-8",
-                    errors="replace",
-                )))
+                text = path.read_text(encoding="utf-8", errors="replace")
             except OSError:
                 continue
+            digest.update(path.name.encode())
+            digest.update(text.encode())
+            rooms.update(_parse(text))
         self._load_ms = round((time.perf_counter() - started) * 1_000, 3)
         self._rooms = rooms
+        self._source_digest = digest.hexdigest()[:20]
         return rooms
+
+    def _load_zone_labels(self) -> dict[int, str]:
+        if self._zone_labels is not None:
+            return self._zone_labels
+        labels: dict[int, str] = {}
+        if self._root is None:
+            return labels
+        candidates = (
+            self._root.parent / "zon"
+            if self._root.name == "wld"
+            else self._root / "zon"
+        )
+        zone_root = candidates if candidates.is_dir() else self._root
+        digest = hashlib.sha256()
+        digest.update((self._source_digest or "").encode())
+        for path in sorted(zone_root.glob("*.zon")):
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            digest.update(path.name.encode())
+            digest.update(text.encode())
+            parsed = _parse_zone_label(text)
+            if parsed is not None:
+                labels[parsed[0]] = parsed[1]
+        self._zone_labels = labels
+        self._source_digest = digest.hexdigest()[:20]
+        return labels
 
 
 def find_world(start: Path | None = None) -> Path | None:
@@ -191,10 +292,14 @@ def _parse(text: str) -> dict[int, AtlasRoom]:
             index += 1
         index += 1
         zone = 0
+        sector = "unknown"
         if index < len(lines):
             fields = lines[index].split()
             if fields and fields[0].lstrip("-").isdigit():
                 zone = int(fields[0])
+            if len(fields) >= 3 and fields[2].lstrip("-").isdigit():
+                sector_id = int(fields[2])
+                sector = SECTORS.get(sector_id, f"unknown ({sector_id})")
             index += 1
         exits: dict[str, int] = {}
         while index < len(lines):
@@ -222,8 +327,19 @@ def _parse(text: str) -> dict[int, AtlasRoom]:
                 if destination >= 0:
                     exits[DIRECTIONS[slot]] = destination
                 break
-        rooms[vnum] = AtlasRoom(vnum, title, zone, exits)
+        rooms[vnum] = AtlasRoom(vnum, title, zone, sector, exits)
     return rooms
+
+
+def _parse_zone_label(text: str) -> tuple[int, str] | None:
+    lines = text.splitlines()
+    for index, line in enumerate(lines):
+        match = _ROOM.match(line)
+        if match is None or index + 1 >= len(lines):
+            continue
+        label = lines[index + 1].rstrip("~").strip()
+        return (int(match.group(1)), label) if label else None
+    return None
 
 
 def _memory_size(rooms: dict[int, AtlasRoom]) -> int:

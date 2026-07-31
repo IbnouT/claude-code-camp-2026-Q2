@@ -21,6 +21,17 @@ class SourceStatus(BaseModel):
     contract_digest: str | None = None
 
 
+class LiveVoiceCapability(BaseModel):
+    """Availability of cost-bearing speech for the selected Live thought."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    enabled: bool
+    detail: str
+    endpoint_template: str | None = None
+    max_characters: int = 400
+
+
 class ObservatoryCapabilities(BaseModel):
     """The exact sources and features available to this installation."""
 
@@ -29,6 +40,7 @@ class ObservatoryCapabilities(BaseModel):
     version: int = 1
     sources: tuple[SourceStatus, ...]
     features: tuple[str, ...]
+    voice: LiveVoiceCapability
 
 
 class LiveTimelineItem(BaseModel):
@@ -45,6 +57,7 @@ class LiveTimelineItem(BaseModel):
     cost_usd: float = 0
     tokens: int = 0
     trace_id: str | None = None
+    quiet_cohort: str | None = None
 
 
 class LiveRoom(BaseModel):
@@ -63,6 +76,172 @@ class LiveRoom(BaseModel):
     confidence: str
 
 
+class LiveObservedValue(BaseModel):
+    """One player-state value and the observation that supports it."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    value: int | bool | str
+    sequence: int
+    observed_at: float
+    confidence: str
+    method: str
+
+
+class LivePlayerStatus(BaseModel):
+    """Observed player state at the selected prefix, without defaults."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    fields: dict[str, LiveObservedValue]
+    capture_gaps: tuple[str, ...]
+
+
+class LiveEconomicsPoint(BaseModel):
+    """One retained model response in the selected Live prefix."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    response: int
+    at: str
+    cost_usd: float
+    cumulative_cost_usd: float
+    context_tokens: int
+
+
+class LiveRoomEconomics(BaseModel):
+    """Model-response cost attributed to one observed room."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    node_id: str
+    response_count: int
+    cost_usd: float
+    first_response: int
+    last_response: int
+    evidence: tuple[str, ...]
+
+
+class LiveUnattributedEconomics(BaseModel):
+    """Model-response cost without a safe room correlation."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    response_count: int
+    cost_usd: float
+    evidence: tuple[str, ...]
+
+
+class LiveMilestone(BaseModel):
+    """One evidence-backed player progression transition."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    kind: Literal["level_up"]
+    sequence: int
+    at: float
+    previous: int
+    current: int
+    evidence: str
+
+
+class LiveAgentExcerpt(BaseModel):
+    """One retained agent statement with its exact log provenance."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    text: str
+    phase: Literal["reasoning", "plan", "tool_call"]
+    observed_at: str
+    line: int
+    evidence: str
+
+
+class LiveObjectiveContext(BaseModel):
+    """Structured authored objective metadata retained by the agent."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    title: str
+    clue: str | None
+    source_kind: Literal["benchmark", "operator"]
+    revision: int
+    evidence: str
+
+
+class LiveZoneContext(BaseModel):
+    """Observer-truth zone correlation for the selected current room."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    zone_id: int
+    label: str
+    room_vnum: int
+    sector: str
+    form: Literal["truth"]
+    confidence: Literal["high", "medium"]
+    reset_sequence: int
+    movement_sequences: tuple[int, ...]
+    atlas_digest: str
+    evidence: tuple[str, ...]
+
+
+class LiveSuggestedAction(BaseModel):
+    """One previewable control grounded in retained route or intent evidence."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    kind: Literal["route", "continue_plan"]
+    label: str
+    instruction: str
+    reason: str
+    evidence: tuple[str, ...]
+    expected_sequence: int
+
+
+class LiveRecentPath(BaseModel):
+    """Latest contiguous retained transition chain ending at current room."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    edge_ids: tuple[str, ...]
+    gateway_sequences: tuple[int, ...]
+
+
+class LiveCombatLine(BaseModel):
+    """One parsed combat line linked to retained gateway evidence."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    text: str
+    sequence: int
+    observed_at: float
+    confidence: str
+    method: str
+    evidence: str
+
+
+class LiveCombatEpisode(BaseModel):
+    """One command-and-response combat episode in the selected prefix."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    active: bool
+    opponent: str | None
+    first_observed_turn: int | None
+    observed_exchanges: int
+    outcome: Literal[
+        "victory",
+        "defeated",
+        "fled",
+        "ended",
+        "unresolved",
+    ] | None
+    command_trace: str | None
+    lines: tuple[LiveCombatLine, ...]
+    evidence: tuple[int, ...]
+
+
 class LiveJourneySnapshot(BaseModel):
     """One deterministic Live projection at an exact gateway sequence."""
 
@@ -79,16 +258,34 @@ class LiveJourneySnapshot(BaseModel):
     latest_sequence: int
     selected_at: float | None
     objective: str | None
+    objective_initial: LiveObjectiveContext | None
+    objective_context: LiveObjectiveContext | None
+    suggested_action: LiveSuggestedAction | None
+    recent_path: LiveRecentPath | None
+    agent_thought: LiveAgentExcerpt | None
+    agent_belief: LiveAgentExcerpt | None
     model: str | None
     tools: tuple[str, ...]
+    turn: int | None
     iteration: int
+    context_limit: int | None
     current_room: str | None
+    zone: LiveZoneContext | None
     position_confidence: str
     position_method: str | None
     combat: bool
+    combat_episode: LiveCombatEpisode | None
     vitals: dict[str, int]
+    player_status: LivePlayerStatus
     cost_usd: float
+    current_turn_cost_usd: float
+    spend_cap_usd: float | None
+    spend_cap_scope: Literal["session", "turn"] | None
+    economics: tuple[LiveEconomicsPoint, ...]
+    room_economics: tuple[LiveRoomEconomics, ...]
+    unattributed_room_economics: LiveUnattributedEconomics | None
     usage: dict[str, int]
+    milestones: tuple[LiveMilestone, ...]
     parse_miss_rate: float | None
     rooms: tuple[LiveRoom, ...]
     world: WorldProjection
@@ -104,6 +301,14 @@ class LiveControlRequest(BaseModel):
     request_id: str = Field(min_length=8, max_length=128)
     action: Literal["guide", "revise", "pause", "resume", "stop"]
     instruction: str | None = Field(default=None, max_length=4_000)
+    expected_sequence: int = Field(ge=0)
+
+
+class LiveVoiceRequest(BaseModel):
+    """One explicit request to voice the thought at an exact Live prefix."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
     expected_sequence: int = Field(ge=0)
 
 
@@ -203,6 +408,41 @@ class EvidenceLens(BaseModel):
     truth: EvidenceForm
 
 
+class WorldRoomDescription(BaseModel):
+    """Latest retained room description with its observation evidence."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    text: str
+    evidence: tuple[int, ...]
+
+
+class WorldSighting(BaseModel):
+    """Repeated sightings of one named entity in one inferred place."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    name: str
+    count: int
+    first_seq: int
+    last_seq: int
+    evidence: tuple[int, ...]
+
+
+class WorldAtlasRoomContext(BaseModel):
+    """Verified observer-truth correlation for one learned-world node."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    vnum: int
+    zone_id: int
+    zone_label: str
+    sector: str
+    atlas_digest: str
+    confidence: Literal["high", "medium"]
+    evidence: tuple[str, ...]
+
+
 class WorldNode(BaseModel):
     """One distinct inferred place, never just a room title."""
 
@@ -211,9 +451,13 @@ class WorldNode(BaseModel):
     id: str
     place: int
     title: str
+    description: WorldRoomDescription | None = None
+    atlas: WorldAtlasRoomContext | None = None
     exits: tuple[str, ...]
     mobs: tuple[str, ...] = ()
     objects: tuple[str, ...] = ()
+    mob_sightings: tuple[WorldSighting, ...] = ()
+    object_sightings: tuple[WorldSighting, ...] = ()
     visits: int
     evidence: tuple[int, ...] = ()
     first_seq: int
@@ -279,6 +523,17 @@ class WorldObjectiveBeacon(BaseModel):
     evidence: tuple[int, ...]
 
 
+class WorldFrontier(BaseModel):
+    """One observed exit without a retained traversal."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    source: str
+    direction: str
+    evidence: tuple[int, ...]
+
+
 class WorldProjection(BaseModel):
     """The evidence-backed journey graph and its unresolved current state."""
 
@@ -292,6 +547,7 @@ class WorldProjection(BaseModel):
     candidate_details: tuple[WorldCandidate, ...] = ()
     duplicate_titles: tuple[WorldDuplicateTitle, ...] = ()
     objective_beacons: tuple[WorldObjectiveBeacon, ...] = ()
+    frontier: tuple[WorldFrontier, ...] = ()
     parse_miss_rate: float
     parse_misses: tuple[WorldParseMiss, ...] = ()
     unknown_positions: int
@@ -306,6 +562,7 @@ class AtlasNode(BaseModel):
     vnum: int
     title: str
     zone: int
+    sector: str
     exits: dict[str, int]
 
 

@@ -38,6 +38,7 @@ class RuntimeSession:
     created_at: str
     updated_at: str
     ended_at: str | None
+    stop_mode: str | None
     event_count: int
     latest_seq: int
     legacy: bool
@@ -64,6 +65,7 @@ class RuntimeSession:
             "created_at": self.created_at,
             "updated_at": self.updated_at,
             "ended_at": self.ended_at,
+            "stop_mode": self.stop_mode,
             "event_count": self.event_count,
             "latest_seq": self.latest_seq,
             "legacy": self.legacy,
@@ -87,11 +89,21 @@ class RuntimeSource:
             return ()
         try:
             with self._database(self.registry) as database:
+                columns = {
+                    str(row["name"])
+                    for row in database.execute("PRAGMA table_info(sessions)")
+                }
+                stop_mode = (
+                    "stop_mode"
+                    if "stop_mode" in columns
+                    else "NULL AS stop_mode"
+                )
                 rows = database.execute(
-                    """
+                    f"""
                     SELECT session_id, player_id, character,
                            gateway_session_id, state, capture_status,
-                           created_at, updated_at, ended_at, legacy, session_dir
+                           created_at, updated_at, ended_at, {stop_mode},
+                           legacy, session_dir
                     FROM sessions
                     ORDER BY
                       CASE state
@@ -371,6 +383,9 @@ class RuntimeSource:
             updated_at=str(row["updated_at"]),
             ended_at=(
                 None if row["ended_at"] is None else str(row["ended_at"])
+            ),
+            stop_mode=(
+                None if row["stop_mode"] is None else str(row["stop_mode"])
             ),
             event_count=count,
             latest_seq=latest,

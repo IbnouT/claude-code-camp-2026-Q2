@@ -15,10 +15,13 @@ from ..contracts import (
     WorldCandidate,
     WorldDuplicateTitle,
     WorldEdge,
+    WorldFrontier,
     WorldNode,
     WorldObjectiveBeacon,
     WorldParseMiss,
     WorldProjection,
+    WorldRoomDescription,
+    WorldSighting,
 )
 
 WorldRow = tuple[int, str, str | None, str | dict[str, Any]]
@@ -142,15 +145,22 @@ def _project(
                 continue
             room = rooms.get(str(trace_id), {})
             exits = tuple(str(item) for item in room.get("exits", ()))
+            description = _description(room)
             place = places.setdefault(
                 place_value,
                 {
                     "title": current_title or "Unknown place",
+                    "description": description,
+                    "description_evidence": (
+                        (int(seq),) if description is not None else ()
+                    ),
                     "exits": exits,
                     "mobs": tuple(str(item) for item in room.get("mobs", ())),
                     "objects": tuple(
                         str(item) for item in room.get("objects", ())
                     ),
+                    "mob_sightings": {},
+                    "object_sightings": {},
                     "first_seq": int(seq),
                     "last_seq": int(seq),
                     "confidence": current_confidence,
@@ -160,6 +170,9 @@ def _project(
             place["last_seq"] = int(seq)
             place["confidence"] = current_confidence
             place["method"] = str(payload.get("method", "unknown"))
+            if description is not None:
+                place["description"] = description
+                place["description_evidence"] = (int(seq),)
             if exits:
                 place["exits"] = exits
             if room.get("mobs"):
@@ -170,6 +183,16 @@ def _project(
                 place["objects"] = tuple(
                     str(item) for item in room.get("objects", ())
                 )
+            _record_sightings(
+                place["mob_sightings"],
+                room.get("mobs", ()),
+                int(seq),
+            )
+            _record_sightings(
+                place["object_sightings"],
+                room.get("objects", ()),
+                int(seq),
+            )
             visits[place_value] += 1
             visit_evidence[place_value].append(int(seq))
             if last_place is not None and last_place != place_value:
@@ -193,9 +216,13 @@ def _project(
                     place,
                     {
                         "title": current_title,
+                        "description": None,
+                        "description_evidence": (),
                         "exits": (),
                         "mobs": (),
                         "objects": (),
+                        "mob_sightings": {},
+                        "object_sightings": {},
                         "first_seq": ambiguous_sequence or 0,
                         "last_seq": ambiguous_sequence or 0,
                         "confidence": "ambiguous",
@@ -214,9 +241,21 @@ def _project(
             id=f"place:{place}",
             place=place,
             title=str(data["title"]),
+            description=(
+                WorldRoomDescription(
+                    text=str(data["description"]),
+                    evidence=tuple(data["description_evidence"]),
+                )
+                if data.get("description") is not None
+                else None
+            ),
             exits=tuple(data["exits"]),
             mobs=tuple(data.get("mobs", ())),
             objects=tuple(data.get("objects", ())),
+            mob_sightings=_sightings(data.get("mob_sightings", {})),
+            object_sightings=_sightings(
+                data.get("object_sightings", {}),
+            ),
             visits=visits[place],
             evidence=tuple(visit_evidence[place]),
             first_seq=int(data["first_seq"]),
@@ -250,6 +289,18 @@ def _project(
             key=lambda item: item[1][0],
         )
     )
+    traversed = {(edge.source, edge.direction) for edge in edges}
+    frontier = tuple(
+        WorldFrontier(
+            id=f"frontier:{node.id}:{direction}",
+            source=node.id,
+            direction=direction,
+            evidence=node.evidence[-1:] or (node.last_seq,),
+        )
+        for node in nodes
+        for direction in node.exits
+        if (node.id, direction) not in traversed
+    )
     candidate_details = tuple(
         _candidate(
             place,
@@ -277,9 +328,67 @@ def _project(
         candidate_details=candidate_details,
         duplicate_titles=duplicate_titles,
         objective_beacons=objective_beacons,
+        frontier=frontier,
         parse_miss_rate=miss_rate,
         parse_misses=tuple(parse_misses),
         unknown_positions=unknown_positions,
+    )
+
+
+def _description(room: dict[str, Any]) -> str | None:
+    raw = room.get("description")
+    if isinstance(raw, str):
+        text = raw.strip()
+        return text or None
+    if isinstance(raw, (list, tuple)):
+        text = "\n".join(
+            str(line).strip()
+            for line in raw
+            if str(line).strip()
+        )
+        return text or None
+    return None
+
+
+def _record_sightings(
+    history: dict[str, dict[str, Any]],
+    raw_names: object,
+    sequence: int,
+) -> None:
+    if not isinstance(raw_names, (list, tuple)):
+        return
+    names = {
+        str(raw).strip().casefold(): str(raw).strip()
+        for raw in raw_names
+        if str(raw).strip()
+    }
+    for identity, name in names.items():
+        sighting = history.setdefault(
+            identity,
+            {"name": name, "evidence": []},
+        )
+        sighting["name"] = name
+        sighting["evidence"].append(sequence)
+
+
+def _sightings(
+    history: dict[str, dict[str, Any]],
+) -> tuple[WorldSighting, ...]:
+    return tuple(
+        WorldSighting(
+            name=str(item["name"]),
+            count=len(item["evidence"]),
+            first_seq=int(item["evidence"][0]),
+            last_seq=int(item["evidence"][-1]),
+            evidence=tuple(int(seq) for seq in item["evidence"]),
+        )
+        for _, item in sorted(
+            history.items(),
+            key=lambda entry: (
+                int(entry[1]["evidence"][0]),
+                entry[0],
+            ),
+        )
     )
 
 
@@ -382,6 +491,7 @@ def _empty() -> WorldProjection:
         candidate_details=(),
         duplicate_titles=(),
         objective_beacons=(),
+        frontier=(),
         parse_miss_rate=0,
         parse_misses=(),
         unknown_positions=0,

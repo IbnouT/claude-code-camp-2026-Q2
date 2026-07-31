@@ -26,6 +26,11 @@ class Settings:
     copilot_spend_cap: float = 0
     copilot_input_rate: float = 0
     copilot_output_rate: float = 0
+    voice_api_key: str | None = None
+    voice_model: str = "tts-1"
+    voice_name: str = "nova"
+    voice_endpoint: str = "https://api.openai.com/v1/audio/speech"
+    voice_cache_root: Path | None = None
     revision: str = "unknown"
     disabled_features: tuple[str, ...] = ()
     web_dist: Path = Path(__file__).parents[1] / "web" / "dist"
@@ -72,6 +77,14 @@ class Settings:
                 "copilot",
                 "output_rate_per_million",
             ),
+            voice_api_key=os.environ.get("OPENAI_API_KEY"),
+            voice_model=os.environ.get("TTS_MODEL", "tts-1"),
+            voice_name=os.environ.get("TTS_VOICE", "nova"),
+            voice_endpoint=os.environ.get(
+                "OBSERVATORY_TTS_ENDPOINT",
+                "https://api.openai.com/v1/audio/speech",
+            ),
+            voice_cache_root=_voice_cache_root(),
             revision=os.environ.get("OBSERVATORY_REVISION", "unknown"),
             disabled_features=_disabled_features(),
             web_dist=Path(
@@ -143,6 +156,16 @@ def _world_root() -> Path | None:
                     candidate = config_dir.parent / candidate
                 return candidate.resolve() if candidate.is_dir() else None
     return find_world()
+
+
+def _voice_cache_root() -> Path | None:
+    override = os.environ.get("OBSERVATORY_TTS_CACHE")
+    if override:
+        return _resolved_path(override)
+    runtime_root = _runtime_root()
+    if runtime_root is None:
+        return None
+    return runtime_root / "cache" / "observatory" / "voice"
 
 
 def _benchmark_root() -> Path | None:

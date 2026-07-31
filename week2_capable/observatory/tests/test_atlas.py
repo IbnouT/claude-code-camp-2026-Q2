@@ -20,3 +20,22 @@ def test_repository_atlas_meets_actual_scale_budget():
     assert projection.load_ms < 250
     assert projection.memory_bytes < 8 * 1024 * 1024
     assert len(projection.zones) == 33
+
+
+def test_atlas_correlates_a_vnum_with_its_zone_label():
+    root = (
+        Path(__file__).resolve().parents[3]
+        / "week0_explore"
+        / "circlemud-world-parser"
+        / "assets"
+        / "wld"
+    )
+
+    location = AtlasSource(root).locate(3001)
+
+    assert location is not None
+    assert location.room.title == "The Temple Of Midgaard"
+    assert location.room.zone == 30
+    assert location.room.sector == "inside"
+    assert location.zone_label == "Northern Midgaard Main City"
+    assert len(location.source_digest) == 20

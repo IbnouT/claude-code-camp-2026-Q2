@@ -28,6 +28,7 @@ from .contracts import (
     ExperimentValidateRequest,
     IncidentExportRequest,
     LiveControlRequest,
+    LiveVoiceRequest,
     ObservatoryQuery,
 )
 from .incidents import build_capsule
@@ -51,6 +52,11 @@ from .sources.gateway import GatewaySource
 from .sources.knowledge import KnowledgeSource, KnowledgeSourceError
 from .sources.runtime import RuntimeSource, RuntimeSourceError
 from .sources.recorded_session import RecordedSessionSource
+from .voice import (
+    VoiceService,
+    VoiceSynthesisError,
+    VoiceUnavailableError,
+)
 
 
 def create_app(
@@ -58,6 +64,7 @@ def create_app(
     *,
     gateway_transport: httpx.AsyncBaseTransport | None = None,
     copilot_transport: httpx.AsyncBaseTransport | None = None,
+    voice_transport: httpx.AsyncBaseTransport | None = None,
 ) -> Starlette:
     active = settings or Settings.from_environment()
     gateway = GatewaySource(
@@ -114,6 +121,18 @@ def create_app(
             and active.copilot_output_rate > 0
         )
         else None
+    )
+    voice = VoiceService(
+        endpoint=active.voice_endpoint,
+        api_key=(
+            active.voice_api_key
+            if "live-voice" not in active.disabled_features
+            else None
+        ),
+        model=active.voice_model,
+        voice=active.voice_name,
+        cache_root=active.voice_cache_root,
+        transport=voice_transport,
     )
 
     async def health(_request: Request) -> JSONResponse:
@@ -254,6 +273,7 @@ def create_app(
                 runtime.events(session_id),
                 runtime.agent_events(session_id),
                 through=through,
+                atlas=atlas,
             )
         except (RuntimeSourceError, ValueError) as error:
             return _runtime_error(error)
@@ -288,6 +308,74 @@ def create_app(
                 status_code=409,
             )
         return JSONResponse(receipt)
+
+    async def live_voice(request: Request) -> Response:
+        if runtime is None or not runtime.available:
+            return JSONResponse(
+                {
+                    "error": "runtime_unavailable",
+                    "detail": "No launcher runtime registry is available",
+                },
+                status_code=503,
+            )
+        if not voice.available:
+            return JSONResponse(
+                {
+                    "error": "voice_unavailable",
+                    "detail": "Live voice is not configured",
+                },
+                status_code=503,
+            )
+        session_id = request.path_params["session"]
+        try:
+            payload = LiveVoiceRequest.model_validate(await request.json())
+            selected = runtime.session(session_id)
+            if selected is None:
+                return JSONResponse({"error": "not_found"}, status_code=404)
+            snapshot = project_live(
+                selected,
+                runtime.events(session_id),
+                runtime.agent_events(session_id),
+                through=payload.expected_sequence,
+                atlas=atlas,
+            )
+            if snapshot.agent_thought is None:
+                return JSONResponse(
+                    {
+                        "error": "voice_source_unavailable",
+                        "detail": (
+                            "No Agent thinking excerpt exists at the "
+                            "requested sequence"
+                        ),
+                    },
+                    status_code=409,
+                )
+            audio = await voice.synthesize(snapshot.agent_thought.text)
+        except (ValidationError, ValueError) as error:
+            return JSONResponse(
+                {"error": "invalid_voice_request", "detail": str(error)},
+                status_code=422,
+            )
+        except RuntimeSourceError as error:
+            return _runtime_error(error)
+        except VoiceUnavailableError as error:
+            return JSONResponse(
+                {"error": "voice_unavailable", "detail": str(error)},
+                status_code=503,
+            )
+        except VoiceSynthesisError as error:
+            return JSONResponse(
+                {"error": "voice_synthesis_failed", "detail": str(error)},
+                status_code=502,
+            )
+        return Response(
+            audio,
+            media_type="audio/mpeg",
+            headers={
+                "Cache-Control": "private, max-age=31536000, immutable",
+                "X-Voice-Sequence": str(payload.expected_sequence),
+            },
+        )
 
     async def runs(_request: Request) -> JSONResponse:
         available = () if benchmark is None else benchmark.runs()
@@ -935,6 +1023,11 @@ def create_app(
             Route(
                 "/api/sessions/{session:str}/control",
                 live_control,
+                methods=["POST"],
+            ),
+            Route(
+                "/api/sessions/{session:str}/voice",
+                live_voice,
                 methods=["POST"],
             ),
             Route(

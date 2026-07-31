@@ -13,6 +13,8 @@ import httpx
 from mud_gateway.journal import Journal
 
 from observatory_api.app import create_app
+from observatory_api.contracts import LiveMilestone, LiveTimelineItem
+from observatory_api.projections.live import _quiet_cohorts
 from observatory_api.settings import Settings
 from observatory_api.sources.runtime import RuntimeSource, RuntimeSourceError
 
@@ -39,6 +41,66 @@ CREATE TABLE sessions (
     legacy INTEGER NOT NULL DEFAULT 0
 );
 """
+
+
+def test_quiet_cohorts_follow_contiguous_activity_runs_between_landmarks():
+    def item(
+        sequence: int,
+        source: str,
+        kind: str,
+    ) -> LiveTimelineItem:
+        return LiveTimelineItem(
+            id=f"{source}-{sequence}-{kind}",
+            sequence=sequence,
+            at=float(sequence),
+            source=source,
+            kind=kind,
+            label=kind,
+        )
+
+    timeline = (
+        item(1, "gateway", "observation"),
+        item(2, "gateway", "observation"),
+        item(3, "agent", "iteration"),
+        item(4, "gateway", "position"),
+        item(5, "agent", "iteration"),
+        item(6, "gateway", "observation"),
+        item(6, "agent", "response"),
+        item(7, "agent", "iteration"),
+        item(8, "gateway", "combat"),
+        item(9, "gateway", "combat"),
+        item(10, "gateway", "combat"),
+        item(11, "agent", "operator_control"),
+        item(12, "agent", "iteration"),
+    )
+    milestones = (
+        LiveMilestone(
+            kind="level_up",
+            sequence=6,
+            at=6,
+            previous=3,
+            current=4,
+            evidence="gateway observation seq 6",
+        ),
+    )
+
+    tagged = _quiet_cohorts(timeline, milestones)
+
+    assert [entry.quiet_cohort for entry in tagged] == [
+        "quiet-1",
+        "quiet-1",
+        "quiet-2",
+        None,
+        "quiet-3",
+        None,
+        None,
+        "quiet-4",
+        None,
+        "quiet-5",
+        None,
+        None,
+        "quiet-6",
+    ]
 
 
 def add_session(
@@ -101,6 +163,13 @@ def add_session(
                 {
                     "phase": "session_start",
                     "model": "test-model",
+                    "context_window": 200_000,
+                    "objective": {
+                        "title": f"Explore as {character}",
+                        "clue": None,
+                        "source_kind": "operator",
+                        "revision": 1,
+                    },
                     "at": "1970-01-01T00:00:00.500+00:00",
                     **identity,
                 },
@@ -272,8 +341,29 @@ async def test_live_snapshot_joins_cost_to_the_selected_player_only(
 
     assert alpha["player_id"] == "alpha"
     assert alpha["objective"] == "Explore as Alpha"
+    assert alpha["objective_initial"] == {
+        "title": "Explore as Alpha",
+        "clue": None,
+        "source_kind": "operator",
+        "revision": 1,
+        "evidence": "agent log line 1",
+    }
+    assert alpha["objective_context"] == {
+        "title": "Explore as Alpha",
+        "clue": None,
+        "source_kind": "operator",
+        "revision": 1,
+        "evidence": "agent log line 1",
+    }
+    assert alpha["suggested_action"] is None
     assert alpha["cost_usd"] == 0.11
+    assert alpha["turn"] == 1
+    assert alpha["iteration"] == 0
+    assert alpha["context_limit"] == 200_000
     assert alpha["usage"]["fresh_input"] == 110
+    assert alpha["player_status"]["fields"] == {}
+    assert "hit" in alpha["player_status"]["capture_gaps"]
+    assert alpha["spend_cap_usd"] is None
     assert beta["player_id"] == "beta"
     assert beta["objective"] == "Explore as Beta"
     assert beta["cost_usd"] == 0.22
@@ -302,10 +392,403 @@ async def test_historical_snapshot_is_the_exact_selected_prefix(
     assert first["through_sequence"] == 1
     assert first["following_live"] is False
     assert first["objective"] == "Explore as Alpha"
+    assert first["objective_initial"]["title"] == "Explore as Alpha"
+    assert first["objective_context"]["title"] == "Explore as Alpha"
+    assert first["turn"] is None
+    assert "turn_not_observed" in first["capture_gaps"]
+    assert first["context_limit"] == 200_000
     assert first["cost_usd"] == 0
     assert latest["through_sequence"] == 2
     assert latest["following_live"] is True
+    assert latest["turn"] == 1
+    assert "turn_not_observed" not in latest["capture_gaps"]
+    assert "context_limit_not_observed" not in latest["capture_gaps"]
     assert latest["cost_usd"] == 0.11
+
+
+async def test_live_snapshot_separates_agent_thought_from_concise_belief(
+    tmp_path: Path,
+):
+    root = runtime_root(tmp_path)
+    agent_log = (
+        root
+        / "profiles"
+        / "alpha"
+        / "sessions"
+        / "session-alpha"
+        / "agent.jsonl"
+    )
+    identity = {
+        "player_id": "alpha",
+        "agent_id": "agent-alpha",
+        "session_id": "session-alpha",
+        "gateway_session_id": "gateway-alpha",
+    }
+    with agent_log.open("a", encoding="utf-8") as handle:
+        for event in (
+            {
+                "phase": "reasoning",
+                "text": (
+                    "A kobold blocks the alley east. I will fight through "
+                    "before continuing toward Back Street."
+                ),
+                "redacted": False,
+                "at": "1970-01-01T00:00:01.600+00:00",
+                **identity,
+            },
+            {
+                "phase": "tool_call",
+                "name": "tbamud__move",
+                "args": {"direction": "east"},
+                "at": "1970-01-01T00:00:01.700+00:00",
+                **identity,
+            },
+            {
+                "phase": "operator_control",
+                "request_id": "revise-objective",
+                "action": "revise",
+                "state": "running",
+                "iteration": 1,
+                "instruction": "Find the bakery",
+                "at": "1970-01-01T00:00:01.800+00:00",
+                **identity,
+            },
+        ):
+            handle.write(json.dumps(event) + "\n")
+
+    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        historical = (
+            await client.get(
+                "/api/sessions/session-alpha/snapshot?through=1"
+            )
+        ).json()
+        latest = (
+            await client.get("/api/sessions/session-alpha/snapshot")
+        ).json()
+
+    assert historical["agent_thought"] is None
+    assert historical["agent_belief"] is None
+    assert "agent_thought_not_observed" in historical["capture_gaps"]
+    assert "agent_belief_not_observed" in historical["capture_gaps"]
+    assert latest["agent_thought"] == {
+        "text": (
+            "A kobold blocks the alley east. I will fight through before "
+            "continuing toward Back Street."
+        ),
+        "phase": "reasoning",
+        "observed_at": "1970-01-01T00:00:01.600+00:00",
+        "line": 4,
+        "evidence": "agent log line 4",
+    }
+    assert latest["agent_belief"] == {
+        "text": "Moving east",
+        "phase": "tool_call",
+        "observed_at": "1970-01-01T00:00:01.700+00:00",
+        "line": 5,
+        "evidence": "agent log line 5",
+    }
+    assert latest["objective"] == "Explore as Alpha"
+    assert latest["objective_initial"] == {
+        "title": "Explore as Alpha",
+        "clue": None,
+        "source_kind": "operator",
+        "revision": 1,
+        "evidence": "agent log line 1",
+    }
+    assert latest["objective_context"] == {
+        "title": "Find the bakery",
+        "clue": None,
+        "source_kind": "operator",
+        "revision": 2,
+        "evidence": "agent log line 6",
+    }
+    assert "agent_thought_not_observed" not in latest["capture_gaps"]
+    assert "agent_belief_not_observed" not in latest["capture_gaps"]
+
+
+async def test_live_voice_uses_exact_thought_prefix_and_external_cache(
+    tmp_path: Path,
+):
+    root = runtime_root(tmp_path)
+    session_dir = (
+        root / "profiles" / "alpha" / "sessions" / "session-alpha"
+    )
+    thought = (
+        "A kobold blocks the alley east. I will fight through before "
+        "continuing toward Back Street."
+    )
+    with (session_dir / "agent.jsonl").open("a", encoding="utf-8") as handle:
+        handle.write(
+            json.dumps(
+                {
+                    "phase": "reasoning",
+                    "text": thought,
+                    "redacted": False,
+                    "at": "1970-01-01T00:00:01.600+00:00",
+                    "player_id": "alpha",
+                    "agent_id": "agent-alpha",
+                    "session_id": "session-alpha",
+                    "gateway_session_id": "gateway-alpha",
+                }
+            )
+            + "\n"
+        )
+
+    requests: list[httpx.Request] = []
+
+    def synthesize(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        assert request.headers["Authorization"] == "Bearer test-secret"
+        assert json.loads(request.content) == {
+            "model": "tts-1",
+            "voice": "nova",
+            "input": thought,
+            "response_format": "mp3",
+        }
+        return httpx.Response(
+            200,
+            content=b"mock-mp3-audio",
+            headers={"Content-Type": "audio/mpeg"},
+        )
+
+    app = create_app(
+        Settings(
+            runtime_root=root,
+            web_dist=tmp_path,
+            voice_api_key="test-secret",
+            voice_cache_root=root / "cache" / "observatory" / "voice",
+        ),
+        voice_transport=httpx.MockTransport(synthesize),
+    )
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        capabilities = (await client.get("/api/capabilities")).json()
+        historical = await client.post(
+            "/api/sessions/session-alpha/voice",
+            json={"expected_sequence": 1},
+        )
+        first = await client.post(
+            "/api/sessions/session-alpha/voice",
+            json={"expected_sequence": 2},
+        )
+        cached = await client.post(
+            "/api/sessions/session-alpha/voice",
+            json={"expected_sequence": 2},
+        )
+
+    assert capabilities["voice"] == {
+        "enabled": True,
+        "detail": (
+            "Voice is available for the selected Agent thinking excerpt"
+        ),
+        "endpoint_template": "/api/sessions/{session}/voice",
+        "max_characters": 400,
+    }
+    assert "live-voice" in capabilities["features"]
+    assert historical.status_code == 409
+    assert historical.json()["error"] == "voice_source_unavailable"
+    assert first.status_code == 200
+    assert first.headers["content-type"] == "audio/mpeg"
+    assert first.headers["x-voice-sequence"] == "2"
+    assert first.content == b"mock-mp3-audio"
+    assert cached.content == first.content
+    assert len(requests) == 1
+    cache_files = tuple((root / "cache" / "observatory" / "voice").glob("*.mp3"))
+    assert len(cache_files) == 1
+    assert cache_files[0].read_bytes() == b"mock-mp3-audio"
+
+
+async def test_live_snapshot_exposes_observed_status_economics_and_frontier(
+    tmp_path: Path,
+):
+    root = runtime_root(tmp_path)
+    session_dir = (
+        root / "profiles" / "alpha" / "sessions" / "session-alpha"
+    )
+    journal = Journal(session_dir / "gateway.db")
+    journal.append(
+        "gateway-alpha",
+        "observation",
+        {
+            "kind": "player_state",
+            "values": {
+                "hit": 86,
+                "mana": 61,
+                "move": 84,
+                "level": 3,
+                "gold": 127,
+                "posture": "standing",
+                "hungry": False,
+                "thirsty": False,
+                "drunk": False,
+                "poisoned": False,
+                "encumbered": False,
+            },
+            "confidence": "high",
+            "method": "score",
+        },
+        at=3,
+        monotonic=3,
+    )
+    journal.append(
+        "gateway-alpha",
+        "observation",
+        {
+            "kind": "player_state",
+            "values": {"hit": 72, "level": 4},
+            "confidence": "high",
+            "method": "score",
+        },
+        at=4,
+        monotonic=4,
+    )
+    journal.append(
+        "gateway-alpha",
+        "observation",
+        {
+            "kind": "room",
+            "title": "North Gate",
+            "exits": ["west", "east"],
+        },
+        trace_id="trace-north-gate",
+        at=5,
+        monotonic=5,
+    )
+    journal.append(
+        "gateway-alpha",
+        "position",
+        {
+            "place": 3042,
+            "title": "North Gate",
+            "confidence": "high",
+            "method": "room-id",
+        },
+        trace_id="trace-north-gate",
+        at=6,
+        monotonic=6,
+    )
+    journal.append(
+        "gateway-alpha",
+        "parse_metric",
+        {"cumulative_miss_rate": 0},
+        at=7,
+        monotonic=7,
+    )
+    journal.close()
+    identity = {
+        "player_id": "alpha",
+        "agent_id": "agent-alpha",
+        "session_id": "session-alpha",
+        "gateway_session_id": "gateway-alpha",
+    }
+    with (session_dir / "agent.jsonl").open("a", encoding="utf-8") as handle:
+        for record in (
+            {
+                "phase": "session_start",
+                "model": "test-model",
+                "max_total_cost_usd": 0.5,
+                "context_window": 200_000,
+                "at": "1970-01-01T00:00:02.500+00:00",
+                **identity,
+            },
+            {
+                "phase": "turn",
+                "at": "1970-01-01T00:00:03+00:00",
+                **identity,
+            },
+            {
+                "phase": "response",
+                "model": "test-model",
+                "cost_usd": 0.02,
+                "usage": {
+                    "input_tokens": 240,
+                    "cache_read_input_tokens": 80,
+                    "output_tokens": 12,
+                },
+                "at": "1970-01-01T00:00:03.500+00:00",
+                **identity,
+            },
+            {
+                "phase": "response",
+                "model": "test-model",
+                "cost_usd": 0.03,
+                "usage": {
+                    "input_tokens": 90,
+                    "cache_read_input_tokens": 10,
+                    "output_tokens": 8,
+                },
+                "at": "1970-01-01T00:00:06.500+00:00",
+                **identity,
+            },
+        ):
+            handle.write(json.dumps(record, separators=(",", ":")) + "\n")
+
+    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        historical = (
+            await client.get(
+                "/api/sessions/session-alpha/snapshot?through=3"
+            )
+        ).json()
+        snapshot = (
+            await client.get("/api/sessions/session-alpha/snapshot")
+        ).json()
+
+    assert historical["player_status"]["fields"]["hit"]["value"] == 86
+    assert historical["player_status"]["fields"]["level"]["value"] == 3
+    assert historical["milestones"] == []
+    assert historical["current_turn_cost_usd"] == 0
+    assert historical["economics"][-1]["cumulative_cost_usd"] == 0.11
+    status = snapshot["player_status"]
+    assert status["fields"]["hit"]["value"] == 72
+    assert status["fields"]["hit"]["sequence"] == 4
+    assert status["fields"]["gold"]["value"] == 127
+    assert status["capture_gaps"] == []
+    assert snapshot["spend_cap_usd"] == 0.5
+    assert snapshot["spend_cap_scope"] == "session"
+    assert snapshot["current_turn_cost_usd"] == 0.05
+    assert snapshot["turn"] == 3
+    assert snapshot["context_limit"] == 200_000
+    assert snapshot["economics"][-1]["context_tokens"] == 100
+    assert snapshot["room_economics"] == [{
+        "node_id": "place:3042",
+        "response_count": 1,
+        "cost_usd": 0.03,
+        "first_response": 3,
+        "last_response": 3,
+        "evidence": [
+            "agent log line 7; gateway position seq 6",
+        ],
+    }]
+    assert snapshot["unattributed_room_economics"]["response_count"] == 2
+    assert snapshot["unattributed_room_economics"]["cost_usd"] == 0.13
+    assert snapshot["milestones"] == [{
+        "kind": "level_up",
+        "sequence": 4,
+        "at": 4.0,
+        "previous": 3,
+        "current": 4,
+        "evidence": "gateway observation seq 4",
+    }]
+    assert {
+        (item["source"], item["direction"])
+        for item in snapshot["world"]["frontier"]
+    } == {
+        ("place:3042", "east"),
+        ("place:3042", "west"),
+    }
 
 
 async def test_live_ask_uses_only_selected_runtime_scope(tmp_path: Path):
@@ -823,3 +1306,685 @@ def test_gateway_quarantine_dominates_operator_pause(tmp_path: Path):
     )
 
     assert RuntimeSource._control_state(tmp_path) == "quarantined"
+
+
+async def test_combat_episode_uses_correlated_command_and_terminal_evidence(
+    tmp_path: Path,
+):
+    root = runtime_root(tmp_path)
+    session_dir = (
+        root / "profiles" / "alpha" / "sessions" / "session-alpha"
+    )
+    journal = Journal(session_dir / "gateway.db")
+    command = journal.append(
+        "gateway-alpha",
+        "command",
+        {"line": "kill a large kobold"},
+        trace_id="trace-combat",
+        at=3,
+        monotonic=3,
+    )
+    first = journal.append(
+        "gateway-alpha",
+        "observation",
+        {
+            "kind": "combat",
+            "text": "You hit a large kobold hard.",
+            "confidence": "medium",
+            "method": "combat-colour-or-verb",
+        },
+        trace_id="trace-combat",
+        at=3.1,
+        monotonic=3.1,
+    )
+    unrelated = journal.append(
+        "gateway-alpha",
+        "observation",
+        {
+            "kind": "unparsed",
+            "text": "A sewer rat is dead!",
+            "confidence": "low",
+            "method": "unmatched-colour:none",
+        },
+        trace_id="trace-combat",
+        at=3.2,
+        monotonic=3.2,
+    )
+    terminal = journal.append(
+        "gateway-alpha",
+        "observation",
+        {
+            "kind": "unparsed",
+            "text": "A large kobold is dead!",
+            "confidence": "low",
+            "method": "unmatched-colour:none",
+        },
+        trace_id="trace-combat",
+        at=3.3,
+        monotonic=3.3,
+    )
+    journal.close()
+
+    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        before_terminal = (
+            await client.get(
+                f"/api/sessions/session-alpha/snapshot"
+                f"?through={unrelated.seq}"
+            )
+        ).json()
+        completed = (
+            await client.get("/api/sessions/session-alpha/snapshot")
+        ).json()
+
+    assert before_terminal["combat"] is True
+    assert before_terminal["combat_episode"]["active"] is True
+    assert completed["combat"] is False
+    assert completed["combat_episode"] == {
+        "active": False,
+        "opponent": "a large kobold",
+        "first_observed_turn": 1,
+        "observed_exchanges": 1,
+        "outcome": "victory",
+        "command_trace": "trace-combat",
+        "lines": [
+            {
+                "text": "You hit a large kobold hard.",
+                "sequence": first.seq,
+                "observed_at": 3.1,
+                "confidence": "medium",
+                "method": "combat-colour-or-verb",
+                "evidence": f"gateway observation seq {first.seq}",
+            }
+        ],
+        "evidence": [command.seq, first.seq, terminal.seq],
+    }
+
+
+async def test_combat_episode_supports_mob_start_switch_and_flee(
+    tmp_path: Path,
+):
+    root = runtime_root(tmp_path)
+    session_dir = (
+        root / "profiles" / "alpha" / "sessions" / "session-alpha"
+    )
+    journal = Journal(session_dir / "gateway.db")
+    mob_start = journal.append(
+        "gateway-alpha",
+        "observation",
+        {
+            "kind": "combat",
+            "text": "A sewer rat bites you.",
+            "confidence": "medium",
+            "method": "combat-colour-or-verb",
+        },
+        trace_id="trace-mob",
+        at=3,
+        monotonic=3,
+    )
+    journal.append(
+        "gateway-alpha",
+        "command",
+        {"line": "kill a large kobold"},
+        trace_id="trace-switch",
+        at=4,
+        monotonic=4,
+    )
+    switched = journal.append(
+        "gateway-alpha",
+        "observation",
+        {
+            "kind": "combat",
+            "text": "A large kobold claws you.",
+            "confidence": "medium",
+            "method": "combat-colour-or-verb",
+        },
+        trace_id="trace-switch",
+        at=4.1,
+        monotonic=4.1,
+    )
+    fled = journal.append(
+        "gateway-alpha",
+        "observation",
+        {
+            "kind": "unparsed",
+            "text": "A large kobold panics, and attempts to flee!",
+            "confidence": "low",
+            "method": "unmatched-colour:none",
+        },
+        trace_id="trace-switch",
+        at=4.2,
+        monotonic=4.2,
+    )
+    journal.close()
+
+    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        mob = (
+            await client.get(
+                f"/api/sessions/session-alpha/snapshot?through={mob_start.seq}"
+            )
+        ).json()["combat_episode"]
+        completed = (
+            await client.get("/api/sessions/session-alpha/snapshot")
+        ).json()["combat_episode"]
+
+    assert mob["active"] is True
+    assert mob["opponent"] is None
+    assert mob["command_trace"] is None
+    assert completed["active"] is False
+    assert completed["opponent"] == "a large kobold"
+    assert completed["observed_exchanges"] == 2
+    assert completed["lines"][-1]["sequence"] == switched.seq
+    assert completed["outcome"] == "fled"
+    assert fled.seq in completed["evidence"]
+
+
+async def test_active_combat_at_capture_end_is_unresolved(tmp_path: Path):
+    root = runtime_root(tmp_path)
+    session_dir = root / "profiles" / "beta" / "sessions" / "session-beta"
+    journal = Journal(session_dir / "gateway.db")
+    combat = journal.append(
+        "gateway-beta",
+        "observation",
+        {
+            "kind": "combat",
+            "text": "A wolf bites you.",
+            "confidence": "medium",
+            "method": "combat-colour-or-verb",
+        },
+        trace_id="trace-capture-end",
+        at=3,
+        monotonic=3,
+    )
+    journal.close()
+
+    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        snapshot = (
+            await client.get("/api/sessions/session-beta/snapshot")
+        ).json()
+
+    assert snapshot["combat"] is False
+    assert snapshot["combat_episode"]["active"] is False
+    assert snapshot["combat_episode"]["outcome"] == "unresolved"
+    assert snapshot["combat_episode"]["evidence"] == [combat.seq]
+
+
+async def test_combat_episode_switches_only_on_correlated_combat(
+    tmp_path: Path,
+):
+    root = runtime_root(tmp_path)
+    session_dir = (
+        root / "profiles" / "alpha" / "sessions" / "session-alpha"
+    )
+    journal = Journal(session_dir / "gateway.db")
+    journal.append(
+        "gateway-alpha",
+        "command",
+        {"line": "kill sewer rat"},
+        trace_id="trace-rat",
+        at=3,
+        monotonic=3,
+    )
+    journal.append(
+        "gateway-alpha",
+        "observation",
+        {
+            "kind": "combat",
+            "text": "A sewer rat bites you.",
+            "confidence": "medium",
+            "method": "combat-colour-or-verb",
+        },
+        trace_id="trace-rat",
+        at=3.1,
+        monotonic=3.1,
+    )
+    journal.append(
+        "gateway-alpha",
+        "observation",
+        {
+            "kind": "unparsed",
+            "text": "A sewer pirate is dead!",
+            "confidence": "low",
+            "method": "unmatched-colour:none",
+        },
+        trace_id="trace-rat",
+        at=3.2,
+        monotonic=3.2,
+    )
+    switch_command = journal.append(
+        "gateway-alpha",
+        "command",
+        {"line": "kill a large kobold"},
+        trace_id="trace-kobold",
+        at=4,
+        monotonic=4,
+    )
+    switch_line = journal.append(
+        "gateway-alpha",
+        "observation",
+        {
+            "kind": "combat",
+            "text": "A large kobold claws you.",
+            "confidence": "medium",
+            "method": "combat-colour-or-verb",
+        },
+        trace_id="trace-kobold",
+        at=4.1,
+        monotonic=4.1,
+    )
+    journal.close()
+
+    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        snapshot = (
+            await client.get("/api/sessions/session-alpha/snapshot")
+        ).json()
+
+    episode = snapshot["combat_episode"]
+    assert episode["active"] is True
+    assert episode["opponent"] == "a large kobold"
+    assert episode["command_trace"] == "trace-kobold"
+    assert episode["observed_exchanges"] == 1
+    assert episode["lines"][0]["sequence"] == switch_line.seq
+    assert episode["evidence"] == [switch_command.seq, switch_line.seq]
+
+
+async def test_zone_follows_verified_reset_and_directional_atlas_chain(
+    tmp_path: Path,
+):
+    root = runtime_root(tmp_path)
+    world = tmp_path / "world" / "wld"
+    zones = tmp_path / "world" / "zon"
+    world.mkdir(parents=True)
+    zones.mkdir()
+    (world / "7.wld").write_text(
+        "#100\nReset Room~\nDescription\n~\n7 0 0\n"
+        "D1\nEast~\n~\n0 0 101\nS\n"
+        "#101\nTarget Room~\nDescription\n~\n7 0 0\n"
+        "D3\nWest~\n~\n0 0 100\nS\n$\n",
+        encoding="utf-8",
+    )
+    (zones / "7.zon").write_text(
+        "#7\nMidgaard~\n700 799 15 2\nS\n$\n",
+        encoding="utf-8",
+    )
+    session_dir = (
+        root / "profiles" / "alpha" / "sessions" / "session-alpha"
+    )
+    journal = Journal(session_dir / "gateway.db")
+    reset = journal.append(
+        "gateway-alpha",
+        "reset_receipt",
+        {
+            "ok": True,
+            "verified_room_vnum": 100,
+            "verified_room_title": "Reset Room",
+        },
+        at=3,
+        monotonic=3,
+    )
+    command = journal.append(
+        "gateway-alpha",
+        "command",
+        {"line": "east"},
+        trace_id="trace-east",
+        at=4,
+        monotonic=4,
+    )
+    position = journal.append(
+        "gateway-alpha",
+        "position",
+        {
+            "place": 2,
+            "title": "Target Room",
+            "confidence": "high",
+            "method": "room-frame",
+        },
+        trace_id="trace-east",
+        at=4.1,
+        monotonic=4.1,
+    )
+    journal.append(
+        "gateway-alpha",
+        "command",
+        {"line": "north"},
+        trace_id="trace-broken",
+        at=5,
+        monotonic=5,
+    )
+    journal.append(
+        "gateway-alpha",
+        "position",
+        {
+            "place": 3,
+            "title": "Uncorrelated Room",
+            "confidence": "medium",
+            "method": "topology",
+        },
+        trace_id="trace-broken",
+        at=5.1,
+        monotonic=5.1,
+    )
+    journal.close()
+
+    app = create_app(
+        Settings(runtime_root=root, world_root=world, web_dist=tmp_path)
+    )
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        correlated = (
+            await client.get(
+                f"/api/sessions/session-alpha/snapshot"
+                f"?through={position.seq}"
+            )
+        ).json()
+        broken = (
+            await client.get("/api/sessions/session-alpha/snapshot")
+        ).json()
+
+    assert correlated["zone"] == {
+        "zone_id": 7,
+        "label": "Midgaard",
+        "room_vnum": 101,
+        "sector": "inside",
+        "form": "truth",
+        "confidence": "medium",
+        "reset_sequence": reset.seq,
+        "movement_sequences": [command.seq, position.seq],
+        "atlas_digest": correlated["zone"]["atlas_digest"],
+        "evidence": [
+            f"gateway reset receipt seq {reset.seq}",
+            (
+                f"gateway movement command seq {command.seq} "
+                f"and position seq {position.seq}"
+            ),
+        ],
+    }
+    assert len(correlated["zone"]["atlas_digest"]) == 20
+    target_node = next(
+        node for node in correlated["world"]["nodes"]
+        if node["place"] == 2
+    )
+    assert target_node["atlas"] == {
+        "vnum": 101,
+        "zone_id": 7,
+        "zone_label": "Midgaard",
+        "sector": "inside",
+        "atlas_digest": correlated["zone"]["atlas_digest"],
+        "confidence": "medium",
+        "evidence": correlated["zone"]["evidence"],
+    }
+    assert "zone_not_observed" not in correlated["capture_gaps"]
+    assert broken["zone"] is None
+    assert "zone_not_observed" in broken["capture_gaps"]
+
+
+async def test_world_atlas_correlation_recovers_repeated_synthetic_places(
+    tmp_path: Path,
+):
+    root = runtime_root(tmp_path)
+    world = tmp_path / "world" / "wld"
+    zones = tmp_path / "world" / "zon"
+    world.mkdir(parents=True)
+    zones.mkdir()
+    (world / "7.wld").write_text(
+        "#100\nAnchor Room~\nDescription\n~\n7 0 0\n"
+        "D1\nEast~\n~\n0 0 101\nS\n"
+        "#101\nTarget Room~\nDescription\n~\n7 0 0\n"
+        "D3\nWest~\n~\n0 0 100\nS\n$\n",
+        encoding="utf-8",
+    )
+    (zones / "7.zon").write_text(
+        "#7\nMidgaard~\n700 799 15 2\nS\n$\n",
+        encoding="utf-8",
+    )
+    session_dir = (
+        root / "profiles" / "alpha" / "sessions" / "session-alpha"
+    )
+    journal = Journal(session_dir / "gateway.db")
+    rows = (
+        (
+            "observation",
+            {"kind": "room", "title": "Anchor Room", "exits": ["east"]},
+            "trace-anchor",
+        ),
+        (
+            "position",
+            {
+                "place": 1,
+                "title": "Anchor Room",
+                "confidence": "tracked",
+                "method": "new-title",
+            },
+            "trace-anchor",
+        ),
+        ("command", {"line": "east"}, "trace-east"),
+        (
+            "observation",
+            {"kind": "room", "title": "Target Room", "exits": ["west"]},
+            "trace-east",
+        ),
+        (
+            "position",
+            {
+                "place": 2,
+                "title": "Target Room",
+                "confidence": "tracked",
+                "method": "new-arrival-path",
+            },
+            "trace-east",
+        ),
+        ("command", {"line": "west"}, "trace-west"),
+        (
+            "observation",
+            {"kind": "room", "title": "Anchor Room", "exits": ["east"]},
+            "trace-west",
+        ),
+        (
+            "position",
+            {
+                "place": 3,
+                "title": "Anchor Room",
+                "confidence": "tracked",
+                "method": "new-arrival-path",
+            },
+            "trace-west",
+        ),
+    )
+    for index, (kind, payload, trace_id) in enumerate(rows, start=1):
+        journal.append(
+            "gateway-alpha",
+            kind,
+            payload,
+            trace_id=trace_id,
+            at=float(index),
+            monotonic=float(index),
+        )
+    journal.close()
+
+    app = create_app(
+        Settings(runtime_root=root, world_root=world, web_dist=tmp_path)
+    )
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        snapshot = (
+            await client.get("/api/sessions/session-alpha/snapshot")
+        ).json()
+
+    vnums = {
+        node["place"]: node["atlas"]["vnum"]
+        for node in snapshot["world"]["nodes"]
+    }
+    assert vnums == {1: 100, 2: 101, 3: 100}
+
+
+async def test_destination_action_requires_beacon_and_learned_route(
+    tmp_path: Path,
+):
+    root = runtime_root(tmp_path)
+    session_dir = (
+        root / "profiles" / "alpha" / "sessions" / "session-alpha"
+    )
+    journal = Journal(session_dir / "gateway.db")
+    rows = (
+        (
+            "observation",
+            {
+                "kind": "room",
+                "title": "Temple Square",
+                "exits": ["east"],
+                "mobs": [],
+                "objects": [],
+            },
+            "trace-temple",
+        ),
+        (
+            "position",
+            {
+                "place": 1,
+                "title": "Temple Square",
+                "confidence": "high",
+                "method": "room-frame",
+            },
+            "trace-temple",
+        ),
+        ("command", {"line": "east"}, "trace-east"),
+        (
+            "observation",
+            {
+                "kind": "room",
+                "title": "Minotaur Lair",
+                "exits": ["west"],
+                "mobs": ["Massive Minotaur"],
+                "objects": [],
+            },
+            "trace-east",
+        ),
+        (
+            "position",
+            {
+                "place": 2,
+                "title": "Minotaur Lair",
+                "confidence": "high",
+                "method": "room-frame",
+            },
+            "trace-east",
+        ),
+        ("command", {"line": "west"}, "trace-west"),
+        (
+            "observation",
+            {
+                "kind": "room",
+                "title": "Temple Square",
+                "exits": ["east"],
+                "mobs": [],
+                "objects": [],
+            },
+            "trace-west",
+        ),
+        (
+            "position",
+            {
+                "place": 1,
+                "title": "Temple Square",
+                "confidence": "high",
+                "method": "room-frame",
+            },
+            "trace-west",
+        ),
+    )
+    written = [
+        journal.append(
+            "gateway-alpha",
+            kind,
+            payload,
+            trace_id=trace,
+            at=3 + index / 10,
+            monotonic=3 + index / 10,
+        )
+        for index, (kind, payload, trace) in enumerate(rows)
+    ]
+    journal.close()
+    agent_log = session_dir / "agent.jsonl"
+    identity = {
+        "player_id": "alpha",
+        "agent_id": "agent-alpha",
+        "session_id": "session-alpha",
+        "gateway_session_id": "gateway-alpha",
+    }
+    with agent_log.open("a", encoding="utf-8") as handle:
+        handle.write(
+            json.dumps(
+                {
+                    "phase": "prompt",
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": "Find the Massive Minotaur",
+                                }
+                            ],
+                        }
+                    ],
+                    "at": "1970-01-01T00:00:02.500+00:00",
+                    **identity,
+                }
+            )
+            + "\n"
+        )
+
+    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        snapshot = (
+            await client.get("/api/sessions/session-alpha/snapshot")
+        ).json()
+
+    action = snapshot["suggested_action"]
+    assert action["kind"] == "route"
+    assert action["label"] == "Head to Massive Minotaur"
+    assert action["instruction"] == (
+        "Follow the learned route toward Massive Minotaur: east."
+    )
+    assert action["expected_sequence"] == written[-1].seq
+    assert f"objective beacon seq {written[4].seq}" in action["evidence"]
+    assert f"gateway transition seq {written[4].seq}" in action["evidence"]
+    assert snapshot["recent_path"] == {
+        "edge_ids": [
+            f"1:2:east",
+            f"2:1:west",
+        ],
+        "gateway_sequences": [
+            written[4].seq,
+            written[7].seq,
+        ],
+    }

@@ -7,7 +7,11 @@ from pathlib import Path
 import httpx
 from mud_gateway.contracts import contract_digest
 
-from .contracts import ObservatoryCapabilities, SourceStatus
+from .contracts import (
+    LiveVoiceCapability,
+    ObservatoryCapabilities,
+    SourceStatus,
+)
 from .settings import Settings
 from .sources.gateway import gateway_status
 from .sources.runtime import RuntimeSource
@@ -83,6 +87,7 @@ async def discover(
             settings.world_root,
         ),
     ]
+    voice = _voice_capability(settings, runtime)
     return ObservatoryCapabilities(
         sources=tuple(sources),
         features=tuple(
@@ -105,9 +110,11 @@ async def discover(
                     )
                     else ()
                 )
+                + (("live-voice",) if voice.enabled else ())
             )
             if feature not in settings.disabled_features
         ),
+        voice=voice,
     )
 
 
@@ -167,4 +174,35 @@ def _knowledge_source(runtime_root: Path | None) -> SourceStatus:
         label="Knowledge store",
         state="ready",
         detail=f"{len(stores)} per-player knowledge stores are readable",
+    )
+
+
+def _voice_capability(
+    settings: Settings,
+    runtime: RuntimeSource | None,
+) -> LiveVoiceCapability:
+    if "live-voice" in settings.disabled_features:
+        return LiveVoiceCapability(
+            enabled=False,
+            detail="Voice is disabled by local policy",
+        )
+    if runtime is None or not runtime.available:
+        return LiveVoiceCapability(
+            enabled=False,
+            detail="Voice requires a registered Live session",
+        )
+    if not settings.voice_api_key:
+        return LiveVoiceCapability(
+            enabled=False,
+            detail="OPENAI_API_KEY is not configured",
+        )
+    if settings.voice_cache_root is None:
+        return LiveVoiceCapability(
+            enabled=False,
+            detail="Voice cache is not configured",
+        )
+    return LiveVoiceCapability(
+        enabled=True,
+        detail="Voice is available for the selected Agent thinking excerpt",
+        endpoint_template="/api/sessions/{session}/voice",
     )

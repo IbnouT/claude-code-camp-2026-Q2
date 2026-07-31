@@ -758,6 +758,10 @@ def test_world_projection_keeps_duplicate_titles_as_distinct_candidates(
         (8, "observation", "t3", {
             "kind": "room",
             "title": "White Square",
+            "description": [
+                "A chalk-white courtyard opens beneath the sky.",
+                "A silver key glints beside the northern wall.",
+            ],
             "exits": ["south", "west"],
             "mobs": ["Massive Minotaur"],
             "objects": ["silver key"],
@@ -823,6 +827,12 @@ def test_world_projection_keeps_duplicate_titles_as_distinct_candidates(
     place_303 = next(node for node in world.nodes if node.place == 303)
     assert place_303.mobs == ("Massive Minotaur",)
     assert place_303.objects == ("silver key",)
+    assert place_303.description is not None
+    assert place_303.description.text == (
+        "A chalk-white courtyard opens beneath the sky.\n"
+        "A silver key glints beside the northern wall."
+    )
+    assert place_303.description.evidence == (9,)
     assert world.objective_beacons[0].node_id == "place:303"
     assert world.objective_beacons[0].evidence == (9,)
     replayed = project_world_events(
@@ -848,6 +858,80 @@ def test_missing_world_database_is_an_honest_empty_projection(tmp_path):
     assert world.nodes == ()
     assert world.edges == ()
     assert world.current_confidence == "unknown"
+
+
+def test_world_projection_counts_room_sightings_with_exact_evidence():
+    events = (
+        Event(
+            seq=1,
+            session="session",
+            at=1.0,
+            monotonic=1.0,
+            kind="observation",
+            trace_id="t1",
+            payload={
+                "kind": "room",
+                "title": "A Dark Alley",
+                "exits": ["north"],
+                "mobs": ["Cityguard", "cityguard"],
+                "objects": ["a brass lantern"],
+            },
+        ),
+        Event(
+            seq=2,
+            session="session",
+            at=2.0,
+            monotonic=2.0,
+            kind="position",
+            trace_id="t1",
+            payload={
+                "place": 3001,
+                "title": "A Dark Alley",
+                "confidence": "tracked",
+                "method": "atlas",
+            },
+        ),
+        Event(
+            seq=3,
+            session="session",
+            at=3.0,
+            monotonic=3.0,
+            kind="observation",
+            trace_id="t2",
+            payload={
+                "kind": "room",
+                "title": "A Dark Alley",
+                "exits": ["north"],
+                "mobs": ["Cityguard"],
+                "objects": [],
+            },
+        ),
+        Event(
+            seq=4,
+            session="session",
+            at=4.0,
+            monotonic=4.0,
+            kind="position",
+            trace_id="t2",
+            payload={
+                "place": 3001,
+                "title": "A Dark Alley",
+                "confidence": "tracked",
+                "method": "atlas",
+            },
+        ),
+    )
+
+    node = project_world_events(events).nodes[0]
+
+    assert node.mob_sightings[0].name == "Cityguard"
+    assert node.mob_sightings[0].count == 2
+    assert node.mob_sightings[0].first_seq == 2
+    assert node.mob_sightings[0].last_seq == 4
+    assert node.mob_sightings[0].evidence == (2, 4)
+    assert node.object_sightings[0].name == "a brass lantern"
+    assert node.object_sightings[0].count == 1
+    assert node.object_sightings[0].evidence == (2,)
 
 
 def test_rendering_comparison_aligns_semantics_and_replays_same_results(
