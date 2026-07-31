@@ -7,16 +7,112 @@ import type { WorldNode } from "../contracts";
 import type { MapGraph } from "./mapModel";
 import {
   centerMapViewportInExtent,
+  clampMapCamera,
+  fitMapCamera,
   fitMapViewport,
   keepSelectedRoomOutsidePanel,
+  interpolateMapCenter,
+  mapCameraViewport,
+  mapOverlaySafeBand,
   mapContentExtent,
+  panMapCamera,
   resolveMapViewport,
   roomCenter,
   viewportCenter,
+  zoomMapCamera,
   zoomMapViewport,
 } from "./mapCamera";
 
 describe("map camera geometry", () => {
+  it("stores one center and scale independently of presentation state", () => {
+    const view = {
+      center: { x: 320, y: 240 },
+      scale: 1,
+    };
+
+    expect(mapCameraViewport(view, {
+      width: 800,
+      height: 500,
+    })).toEqual({
+      x: -80,
+      y: -10,
+      width: 800,
+      height: 500,
+    });
+    expect(zoomMapCamera(view, "in")).toEqual({
+      center: view.center,
+      scale: 1.25,
+    });
+    expect(view).toEqual({
+      center: { x: 320, y: 240 },
+      scale: 1,
+    });
+  });
+
+  it("starts a drag from the exact camera without recentering or zooming", () => {
+    const view = {
+      center: { x: 120, y: -40 },
+      scale: 1.25,
+    };
+
+    expect(panMapCamera(
+      view,
+      { x: 4, y: -6 },
+      { x: 0.8, y: 0.8 },
+    )).toEqual({
+      center: { x: 116.8, y: -35.2 },
+      scale: 1.25,
+    });
+  });
+
+  it("uses the Week 0 cubic-out center glide without changing scale", () => {
+    expect(interpolateMapCenter(
+      { x: 0, y: 100 },
+      { x: 80, y: 20 },
+      0.5,
+    )).toEqual({ x: 70, y: 30 });
+    expect(interpolateMapCenter(
+      { x: 0, y: 100 },
+      { x: 80, y: 20 },
+      1,
+    )).toEqual({ x: 80, y: 20 });
+  });
+
+  it("fits once by writing both center and scale", () => {
+    const fitted = fitMapCamera(
+      { x: -100, y: -50, width: 1_000, height: 500 },
+      { width: 500, height: 300 },
+    );
+
+    expect(fitted).toEqual({
+      center: { x: 400, y: 200 },
+      scale: 0.5,
+    });
+    expect(mapCameraViewport(fitted, {
+      width: 500,
+      height: 300,
+    })).toEqual({
+      x: -100,
+      y: -100,
+      width: 1_000,
+      height: 600,
+    });
+  });
+
+  it("clamps a dragged center without changing scale", () => {
+    expect(clampMapCamera(
+      {
+        center: { x: 2_000, y: -500 },
+        scale: 1,
+      },
+      { x: 0, y: 0, width: 1_000, height: 800 },
+      { width: 400, height: 300 },
+    )).toEqual({
+      center: { x: 800, y: 150 },
+      scale: 1,
+    });
+  });
+
   it("includes only visible rooms and their frontier marker extents", () => {
     const graph = fixtureGraph();
     const extent = mapContentExtent(
@@ -265,6 +361,27 @@ describe("map camera geometry", () => {
       width: 390,
       height: 700,
     });
+  });
+
+  it("uses the taller visible dock for the camera safe band", () => {
+    expect(mapOverlaySafeBand({
+      thoughtVisible: true,
+      thoughtExpanded: true,
+      legendExpanded: false,
+      legendEntries: 7,
+    })).toBe(139);
+    expect(mapOverlaySafeBand({
+      thoughtVisible: false,
+      thoughtExpanded: false,
+      legendExpanded: true,
+      legendEntries: 7,
+    })).toBe(179);
+    expect(mapOverlaySafeBand({
+      thoughtVisible: false,
+      thoughtExpanded: false,
+      legendExpanded: false,
+      legendEntries: 0,
+    })).toBe(54);
   });
 });
 

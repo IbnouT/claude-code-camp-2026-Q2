@@ -93,12 +93,21 @@ export type RoomEconomics = {
   evidence: string[];
 };
 
+export type LiveAgentExcerpt = {
+  text: string;
+  phase: "reasoning" | "plan" | "tool_call";
+  observed_at: string;
+  line: number;
+  evidence: string;
+};
+
 export type Snapshot = {
   player_id: string;
   character: string;
   turn: number | null;
   latest_sequence: number;
   cost_usd: number;
+  agent_thought: LiveAgentExcerpt | null;
   room_economics: RoomEconomics[];
   combat?: boolean;
   player_status: { fields: Record<string, Observed> };

@@ -128,6 +128,18 @@ export function LiveShell({
       />
       <main className="live-workspace" aria-label="Live workspace">
         {identity !== null ? <LiveMap identity={identity} /> : null}
+        <aside
+          aria-label="Live evidence rail"
+          className="live-layout-reserve live-evidence-rail"
+        >
+          <span>Evidence rail</span>
+        </aside>
+        <section
+          aria-label="Causal timeline"
+          className="live-layout-reserve live-causal-timeline"
+        >
+          <span>Causal timeline</span>
+        </section>
       </main>
       {askOpen && identity !== null ? (
         <LiveAskDialog

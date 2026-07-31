@@ -22,6 +22,11 @@ export type MapCameraResolution = {
   panning: boolean;
 };
 
+export type MapCameraView = {
+  center: MapPoint;
+  scale: number;
+};
+
 export type MapCameraInput = {
   activeExtent: MapViewport;
   camera: MapCameraMode;
@@ -36,6 +41,8 @@ export type MapCameraInput = {
 
 const defaultExtentPadding = 60;
 const minimumReadableScale = 0.75;
+export const minimumCameraScale = 0.1;
+export const maximumCameraScale = 2;
 
 export function mapContentExtent(
   graph: MapGraph,
@@ -97,6 +104,107 @@ export function fitMapViewport(
     y: center.y - height / 2,
     width,
     height,
+  };
+}
+
+export function mapCameraViewport(
+  view: MapCameraView,
+  frame: MapFrame,
+): MapViewport {
+  const scale = clamp(
+    Number.isFinite(view.scale) && view.scale > 0 ? view.scale : 1,
+    minimumCameraScale,
+    maximumCameraScale,
+  );
+  const width = frame.width / scale;
+  const height = frame.height / scale;
+  return {
+    x: view.center.x - width / 2,
+    y: view.center.y - height / 2,
+    width,
+    height,
+  };
+}
+
+export function fitMapCamera(
+  extent: MapViewport,
+  frame: MapFrame,
+): MapCameraView {
+  const center = viewportCenter(extent);
+  if (
+    extent.width <= 0
+    || extent.height <= 0
+    || frame.width <= 0
+    || frame.height <= 0
+  ) {
+    return { center, scale: 1 };
+  }
+  return {
+    center,
+    scale: clamp(
+      Math.min(frame.width / extent.width, frame.height / extent.height),
+      minimumCameraScale,
+      maximumCameraScale,
+    ),
+  };
+}
+
+export function zoomMapCamera(
+  view: MapCameraView,
+  direction: "in" | "out",
+): MapCameraView {
+  const nextScale = direction === "in"
+    ? view.scale * 1.25
+    : view.scale / 1.25;
+  return {
+    center: view.center,
+    scale: clamp(nextScale, minimumCameraScale, maximumCameraScale),
+  };
+}
+
+export function panMapCamera(
+  view: MapCameraView,
+  delta: MapPoint,
+  worldUnitsPerPixel: MapPoint,
+): MapCameraView {
+  return {
+    center: {
+      x: view.center.x - delta.x * worldUnitsPerPixel.x,
+      y: view.center.y - delta.y * worldUnitsPerPixel.y,
+    },
+    scale: view.scale,
+  };
+}
+
+export function interpolateMapCenter(
+  start: MapPoint,
+  target: MapPoint,
+  progress: number,
+): MapPoint {
+  const bounded = clamp(progress, 0, 1);
+  const eased = 1 - Math.pow(1 - bounded, 3);
+  return {
+    x: start.x + (target.x - start.x) * eased,
+    y: start.y + (target.y - start.y) * eased,
+  };
+}
+
+export function clampMapCamera(
+  view: MapCameraView,
+  extent: MapViewport,
+  frame: MapFrame,
+): MapCameraView {
+  const viewport = centerMapViewportInExtent(
+    extent,
+    {
+      width: frame.width / view.scale,
+      height: frame.height / view.scale,
+    },
+    view.center,
+  );
+  return {
+    center: viewportCenter(viewport),
+    scale: view.scale,
   };
 }
 
@@ -244,6 +352,27 @@ export function keepSelectedRoomOutsidePanel(
     x: viewport.x + deltaX,
     y: viewport.y + deltaY,
   };
+}
+
+export function mapOverlaySafeBand({
+  thoughtVisible,
+  thoughtExpanded,
+  legendExpanded,
+  legendEntries,
+}: {
+  thoughtVisible: boolean;
+  thoughtExpanded: boolean;
+  legendExpanded: boolean;
+  legendEntries: number;
+}): number {
+  const collapsedHeight = 36;
+  const thoughtHeight = !thoughtVisible
+    ? 0
+    : thoughtExpanded ? 121 : collapsedHeight;
+  const legendHeight = legendExpanded
+    ? Math.ceil(26 + Math.max(legendEntries, 1) * 19.2)
+    : collapsedHeight;
+  return Math.max(thoughtHeight, legendHeight) + 18;
 }
 
 function clamp(value: number, minimum: number, maximum: number): number {

@@ -61,13 +61,20 @@ function catalogResponse(catalog = runtimeCatalog()): Response {
   } as Response;
 }
 
-function runtimeSnapshot(): Snapshot {
+function runtimeSnapshot(overrides: Partial<Snapshot> = {}): Snapshot {
   return {
     player_id: identity.playerId,
     character: identity.playerId,
     turn: 4,
     latest_sequence: 42,
     cost_usd: 0,
+    agent_thought: {
+      text: "Return to the Temple and try another route.",
+      phase: "plan",
+      observed_at: "2026-07-31T04:01:26Z",
+      line: 723,
+      evidence: "agent log line 723",
+    },
     room_economics: [{
       node_id: "place:2",
       response_count: 1,
@@ -154,6 +161,7 @@ function runtimeSnapshot(): Snapshot {
       ],
       frontier: [],
     },
+    ...overrides,
   };
 }
 
@@ -176,6 +184,7 @@ function useCatalog(catalog: Catalog): void {
 
 describe("Live shell", () => {
   beforeEach(() => {
+    vi.stubGlobal("innerWidth", 1_280);
     window.history.replaceState(
       {},
       "",
@@ -212,12 +221,27 @@ describe("Live shell", () => {
     expect(screen.getByRole("main", {
       name: "Live workspace",
     })).not.toBeEmptyDOMElement();
+    expect(screen.getByRole("complementary", {
+      name: "Live evidence rail",
+    })).toBeInTheDocument();
+    expect(screen.getByRole("region", {
+      name: "Causal timeline",
+    })).toBeInTheDocument();
     expect(await screen.findByRole("img", {
       name: "Learned world, 2 rooms",
     })).toBeInTheDocument();
     expect(screen.getByLabelText(
       /Agent in A Nexus, atlas-correlated vnum 3001/,
     )).toBeInTheDocument();
+    expect(screen.getByRole("complementary", {
+      name: "Agent thought",
+    })).toHaveTextContent("Return to the Temple and try another route.");
+    expect(screen.getByRole("complementary", {
+      name: "Map evidence legend",
+    })).toHaveTextContent("Learned room");
+    expect(screen.getByRole("complementary", {
+      name: "Map evidence legend",
+    })).toHaveTextContent("Current room");
   });
 
   it("opens, retargets, and closes the evidence-backed room inspector", async () => {
@@ -246,7 +270,9 @@ describe("Live shell", () => {
       name: "Room inspector, More Of The Hallway",
     })).toBeInTheDocument();
     await user.click(hallway);
-    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+    expect(screen.queryByRole("complementary", {
+      name: /Room inspector/,
+    })).not.toBeInTheDocument();
     expect(new URL(window.location.href).searchParams.has("room")).toBe(false);
 
     hallway.focus();
@@ -257,11 +283,50 @@ describe("Live shell", () => {
     await user.click(screen.getByRole("button", {
       name: "Close room inspector",
     }));
-    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+    expect(screen.queryByRole("complementary", {
+      name: /Room inspector/,
+    })).not.toBeInTheDocument();
 
     await user.click(nexus);
+    await user.click(screen.getByRole("button", {
+      name: "Collapse agent thought",
+    }));
+    expect(screen.getByRole("complementary", {
+      name: "Room inspector, A Nexus",
+    })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Lantern" }));
-    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+    expect(screen.getByRole("complementary", {
+      name: "Room inspector, A Nexus",
+    })).toBeInTheDocument();
+  });
+
+  it("selects and retargets rooms in every map presentation", async () => {
+    const user = userEvent.setup();
+    render(<LiveShell identity={identity} />);
+    const nexus = await screen.findByRole("button", {
+      name: /Agent in A Nexus/,
+    });
+    const hallway = screen.getByRole("button", {
+      name: /More Of The Hallway/,
+    });
+
+    await user.click(screen.getByRole("button", { name: "Focus" }));
+    await user.click(nexus);
+    expect(screen.getByRole("complementary", {
+      name: "Room inspector, A Nexus",
+    })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Lantern" }));
+    await user.click(hallway);
+    expect(screen.getByRole("complementary", {
+      name: "Room inspector, More Of The Hallway",
+    })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Grow" }));
+    await user.click(nexus);
+    expect(screen.getByRole("complementary", {
+      name: "Room inspector, A Nexus",
+    })).toBeInTheDocument();
   });
 
   it("closes the inspector before an open Ask dialog on Escape", async () => {
@@ -280,7 +345,9 @@ describe("Live shell", () => {
     })).toBeInTheDocument();
 
     await user.keyboard("{Escape}");
-    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+    expect(screen.queryByRole("complementary", {
+      name: /Room inspector/,
+    })).not.toBeInTheDocument();
     expect(screen.getByRole("dialog", {
       name: "Ask about this session",
     })).toBeInTheDocument();
@@ -289,6 +356,36 @@ describe("Live shell", () => {
     expect(screen.queryByRole("dialog", {
       name: "Ask about this session",
     })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", {
+      name: "Collapse map legend",
+    })).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("button", {
+      name: "Expand map legend",
+    })).toBeInTheDocument();
+  });
+
+  it("omits an unobserved thought and collapses overlays on narrow screens", async () => {
+    vi.stubGlobal("innerWidth", 390);
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      return Promise.resolve(
+        String(input).includes("/snapshot")
+          ? snapshotResponse(runtimeSnapshot({ agent_thought: null }))
+          : catalogResponse(),
+      );
+    });
+    render(<LiveShell identity={identity} />);
+
+    await screen.findByRole("img", {
+      name: "Learned world, 2 rooms",
+    });
+    expect(screen.queryByRole("complementary", {
+      name: "Agent thought",
+    })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", {
+      name: "Expand map legend",
+    })).toBeInTheDocument();
   });
 
   it("opens scoped Ask from the header and keyboard entry", async () => {

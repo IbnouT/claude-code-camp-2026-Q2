@@ -10,7 +10,7 @@ type Props = {
   zoom: number;
   minimumZoom: number;
   maximumZoom: number;
-  onCameraChange: (camera: "follow" | "fit") => void;
+  onCameraChange: (camera: MapCameraMode) => void;
   onModeChange: (mode: MapMode) => void;
   onZoom: (direction: "in" | "out") => void;
 };
@@ -51,9 +51,9 @@ export function LiveMapToolbar({
         </button>
         <button
           aria-pressed={camera === "manual"}
-          disabled
-          title="Drag the map to enter Manual camera"
+          title="Freeze the camera at its current center and scale"
           type="button"
+          onClick={() => onCameraChange("manual")}
         >
           Manual
         </button>

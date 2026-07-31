@@ -30,7 +30,7 @@ export type MapCameraEvent =
 
 export const focusRadius = 2;
 export const focusAutoThreshold = 12;
-export const minimumMapZoom = 0.75;
+export const minimumMapZoom = 0.1;
 export const maximumMapZoom = 2;
 
 export function automaticMapMode(

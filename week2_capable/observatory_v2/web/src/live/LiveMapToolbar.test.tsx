@@ -25,12 +25,12 @@ describe("live map toolbar", () => {
     })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", {
       name: "Manual",
-    })).toBeDisabled();
+    })).toBeEnabled();
     expect(screen.getByRole("button", {
       name: "Manual",
     })).toHaveAttribute(
       "title",
-      "Drag the map to enter Manual camera",
+      "Freeze the camera at its current center and scale",
     );
     expect(screen.getByRole("button", {
       name: "Focus",
@@ -73,7 +73,7 @@ describe("live map toolbar", () => {
       name: "Zoom in",
     })).toHaveAttribute("title", "Maximum zoom reached");
 
-    renderToolbar({ zoom: 0.75 });
+    renderToolbar({ zoom: 0.1, minimumZoom: 0.1 });
     const zoomOut = screen.getAllByRole("button", {
       name: "Zoom out",
     }).at(-1);

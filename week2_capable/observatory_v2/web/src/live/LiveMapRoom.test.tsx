@@ -237,6 +237,50 @@ describe("live map room rendering", () => {
     expect(down).toHaveClass("is-frontier");
     expect(down).toHaveTextContent("▼");
   });
+
+  it("draws only evidence-backed mob and object glyphs", () => {
+    const node = {
+      ...rooms[0],
+      mob_sightings: [{
+        name: "a large kobold",
+        count: 2,
+        first_seq: 2,
+        last_seq: 4,
+        evidence: [2, 4],
+      }],
+      object_sightings: [{
+        name: "a brass key",
+        count: 1,
+        first_seq: 3,
+        last_seq: 3,
+        evidence: [3],
+      }],
+    };
+    const view = render(
+      <svg>
+        <LiveMapRoom
+          node={node}
+          point={{ x: 0, y: 0 }}
+          current={false}
+          selected={false}
+          combat={false}
+          beacon={false}
+          verticalMarkers={[]}
+          onSelect={onSelect}
+        />
+      </svg>,
+    );
+
+    expect(view.container.querySelector(
+      ".live-map-content-marker.is-mob",
+    )).toHaveTextContent("☠");
+    expect(view.container.querySelector(
+      ".live-map-content-marker.is-object",
+    )).toHaveTextContent("◇");
+    expect(screen.getByRole("button", {
+      name: /1 mob sighting, 1 object sighting/,
+    })).toBeInTheDocument();
+  });
 });
 
 type RoomSetState = {

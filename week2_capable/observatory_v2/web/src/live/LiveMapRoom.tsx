@@ -40,6 +40,17 @@ export const LiveMapRoom = memo(function LiveMapRoom({
       `${node.title}, atlas-correlated vnum ${node.atlas.vnum}, `
       + `${node.atlas.confidence} confidence`
     );
+  const contentLabel = [
+    node.mob_sightings.length > 0
+      ? `${node.mob_sightings.length} mob sighting`
+      : "",
+    node.object_sightings.length > 0
+      ? `${node.object_sightings.length} object sighting`
+      : "",
+  ].filter(Boolean).join(", ");
+  const accessibleLabel = contentLabel.length === 0
+    ? identityLabel
+    : `${identityLabel}, ${contentLabel}`;
   const stateClass = roomStateClass({
     combat,
     current,
@@ -67,7 +78,7 @@ export const LiveMapRoom = memo(function LiveMapRoom({
         ? renderCount.current
         : undefined}
       transform={`translate(${point.x} ${point.y})`}
-      aria-label={current ? `Agent in ${identityLabel}` : identityLabel}
+      aria-label={current ? `Agent in ${accessibleLabel}` : accessibleLabel}
       aria-pressed={selected}
       role="button"
       tabIndex={0}
@@ -115,6 +126,30 @@ export const LiveMapRoom = memo(function LiveMapRoom({
             ×{node.visits}
           </text>
         </g>
+      ) : null}
+      {node.mob_sightings.length > 0 ? (
+        <text
+          aria-label={`${node.mob_sightings.length} mob sighting`}
+          className="live-map-content-marker is-mob"
+          data-count={node.mob_sightings.length}
+          role="img"
+          x="27"
+          y={mapRoomHeight - 7}
+        >
+          ☠
+        </text>
+      ) : null}
+      {node.object_sightings.length > 0 ? (
+        <text
+          aria-label={`${node.object_sightings.length} object sighting`}
+          className="live-map-content-marker is-object"
+          data-count={node.object_sightings.length}
+          role="img"
+          x="43"
+          y={mapRoomHeight - 7}
+        >
+          ◇
+        </text>
       ) : null}
       <text
         className="live-map-room-debug-id"
@@ -195,6 +230,14 @@ function sameRoomRender(previous: Props, next: Props): boolean {
     && previous.node.atlas?.confidence === next.node.atlas?.confidence
     && previous.node.atlas?.sector === next.node.atlas?.sector
     && previous.node.visits === next.node.visits
+    && sameSightings(
+      previous.node.mob_sightings,
+      next.node.mob_sightings,
+    )
+    && sameSightings(
+      previous.node.object_sightings,
+      next.node.object_sightings,
+    )
     && sameVerticalMarkers(
       previous.verticalMarkers,
       next.verticalMarkers,
@@ -206,6 +249,19 @@ function sameRoomRender(previous: Props, next: Props): boolean {
     && previous.combat === next.combat
     && previous.beacon === next.beacon
     && previous.onSelect === next.onSelect;
+}
+
+function sameSightings(
+  previous: WorldNode["mob_sightings"],
+  next: WorldNode["mob_sightings"],
+): boolean {
+  return previous.length === next.length
+    && previous.every((sighting, index) => {
+      const candidate = next[index];
+      return sighting.name === candidate?.name
+        && sighting.count === candidate.count
+        && sighting.last_seq === candidate.last_seq;
+    });
 }
 
 function sameVerticalMarkers(

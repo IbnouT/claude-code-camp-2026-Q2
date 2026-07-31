@@ -139,6 +139,11 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
 - A fixed inspector can preserve map context when its footprint becomes a
   camera inset rather than a layout mutation. The selected room stays visible,
   and the learned coordinates remain honest.
+- A legend is evidence too. Deriving its rows from the active projection keeps
+  hidden frontier and visit marks from being explained as if they were visible.
+- Entering Manual is a behavior change, not a camera transform. Preserving the
+  exact center and scale at the gesture boundary removes the jump that makes a
+  map feel untrustworthy even when every coordinate is correct.
 
 ## Technical Conclusions
 

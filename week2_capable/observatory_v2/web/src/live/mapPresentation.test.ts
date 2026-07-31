@@ -147,7 +147,7 @@ describe("map camera state", () => {
 
   it("clamps zoom to the documented readable range", () => {
     expect(changeMapZoom(2, "in")).toBe(2);
-    expect(changeMapZoom(0.75, "out")).toBe(0.75);
+    expect(changeMapZoom(0.1, "out")).toBe(0.1);
     expect(changeMapZoom(1, "in")).toBe(1.25);
     expect(changeMapZoom(1, "out")).toBe(0.8);
   });

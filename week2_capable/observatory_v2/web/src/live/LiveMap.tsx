@@ -5,33 +5,44 @@ import {
   useRef,
   useState,
 } from "react";
-import type { PointerEvent as ReactPointerEvent } from "react";
+import type {
+  CSSProperties,
+  PointerEvent as ReactPointerEvent,
+} from "react";
 import type { Snapshot } from "../contracts";
 import type { LiveRouteIdentity } from "../routes";
 import {
   buildMapGraph,
   canonicalNodeId,
-  mapDragScale,
   mapRoomHeight,
   mapRoomWidth,
   type MapConnection,
   type MapPoint,
 } from "./mapModel";
 import {
+  fitMapCamera,
+  interpolateMapCenter,
   keepSelectedRoomOutsidePanel,
+  mapCameraViewport,
+  mapOverlaySafeBand,
   mapContentExtent,
-  resolveMapViewport,
+  panMapCamera,
+  roomCenter,
   viewportCenter,
+  zoomMapCamera,
+  type MapCameraView,
 } from "./mapCamera";
 import { LiveMapBoundary } from "./LiveMapBoundary";
 import { LiveMapFrontier } from "./LiveMapFrontier";
+import { LiveMapLegend } from "./LiveMapLegend";
 import { LiveMapRoom } from "./LiveMapRoom";
 import { LiveMapToolbar } from "./LiveMapToolbar";
 import { LiveRoomInspector } from "./LiveRoomInspector";
+import { LiveThoughtDock } from "./LiveThoughtDock";
+import { projectMapLegend } from "./mapLegend";
 import { projectMapEvidence } from "./markerProjection";
 import {
   automaticMapMode,
-  changeMapZoom,
   lanternOpacity,
   maximumMapZoom,
   minimumMapZoom,
@@ -54,12 +65,16 @@ type Props = {
 };
 
 const defaultFrame = { width: 1_600, height: 900 };
+const overlayExpandedByDefault = () => {
+  return typeof window === "undefined" || window.innerWidth > 700;
+};
 
 type DragState = {
   pointerId: number;
   clientX: number;
   clientY: number;
   center: MapPoint;
+  moved: boolean;
 };
 
 export function LiveMap({ identity }: Props) {
@@ -68,19 +83,30 @@ export function LiveMap({ identity }: Props) {
     "loading",
   );
   const [frame, setFrame] = useState(defaultFrame);
-  const [panCenter, setPanCenter] = useState<MapPoint | null>(null);
+  const [cameraView, setCameraView] = useState<MapCameraView>({
+    center: { x: 0, y: 0 },
+    scale: 1,
+  });
   const [cameraMode, setCameraMode] = useState<MapCameraMode>("follow");
   const [chosenMode, setChosenMode] = useState<MapMode | null>(null);
-  const [zoom, setZoom] = useState(1);
   const [expandedRoomIds, setExpandedRoomIds] = useState<ReadonlySet<string>>(
     new Set(),
   );
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(
     selectedRoomFromLocation,
   );
+  const [thoughtExpanded, setThoughtExpanded] = useState(
+    overlayExpandedByDefault,
+  );
+  const [legendExpanded, setLegendExpanded] = useState(
+    overlayExpandedByDefault,
+  );
   const [dragging, setDragging] = useState(false);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const dragRef = useRef<DragState | null>(null);
+  const suppressClickRef = useRef(false);
+  const cameraViewRef = useRef(cameraView);
+  const followInitializedRef = useRef(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -194,6 +220,32 @@ export function LiveMap({ identity }: Props) {
       }),
     );
   }, [snapshot]);
+  const legendEntries = useMemo(() => {
+    return projectMapLegend({
+      rooms: graph.rooms.map(({ node }) => node),
+      visibleRoomIds: presentation.visibleRoomIds,
+      currentRoomId: graph.currentRoomId,
+      selectedRoomId,
+      combat: Boolean(snapshot?.combat),
+      beaconRoomIds,
+      evidence: evidenceMarkers,
+    });
+  }, [
+    beaconRoomIds,
+    evidenceMarkers,
+    graph.currentRoomId,
+    graph.rooms,
+    presentation.visibleRoomIds,
+    selectedRoomId,
+    snapshot?.combat,
+  ]);
+  const overlayBand = mapOverlaySafeBand({
+    thoughtVisible: snapshot?.agent_thought !== null
+      && snapshot?.agent_thought !== undefined,
+    thoughtExpanded,
+    legendExpanded,
+    legendEntries: legendEntries.length,
+  });
   const handleSelectRoom = useCallback((nodeId: string) => {
     setSelectedRoomId((current) => {
       const next = current === nodeId ? null : nodeId;
@@ -217,6 +269,61 @@ export function LiveMap({ identity }: Props) {
       snapshot.room_economics,
     );
   }, [selectedMapRoom, snapshot]);
+  const currentCenter = roomCenter(graph, graph.currentRoomId)
+    ?? viewportCenter(activeExtent);
+
+  useEffect(() => {
+    cameraViewRef.current = cameraView;
+  }, [cameraView]);
+
+  useEffect(() => {
+    if (cameraMode !== "follow" || graph.currentRoomId === null) return;
+    const target = currentCenter;
+    if (!followInitializedRef.current) {
+      followInitializedRef.current = true;
+      setCameraView((current) => ({
+        center: target,
+        scale: current.scale,
+      }));
+      return;
+    }
+    const start = cameraViewRef.current.center;
+    if (
+      Math.abs(start.x - target.x) < 0.01
+      && Math.abs(start.y - target.y) < 0.01
+    ) {
+      return;
+    }
+    const reducedMotion = window.matchMedia?.(
+      "(prefers-reduced-motion: reduce)",
+    ).matches ?? false;
+    if (reducedMotion || typeof requestAnimationFrame === "undefined") {
+      setCameraView((current) => ({
+        center: target,
+        scale: current.scale,
+      }));
+      return;
+    }
+    const startedAt = performance.now();
+    let animationFrame = 0;
+    const update = (now: number) => {
+      const progress = Math.min((now - startedAt) / 800, 1);
+      setCameraView((current) => ({
+        center: interpolateMapCenter(start, target, progress),
+        scale: current.scale,
+      }));
+      if (progress < 1) {
+        animationFrame = requestAnimationFrame(update);
+      }
+    };
+    animationFrame = requestAnimationFrame(update);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [
+    cameraMode,
+    currentCenter.x,
+    currentCenter.y,
+    graph.currentRoomId,
+  ]);
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -241,27 +348,39 @@ export function LiveMap({ identity }: Props) {
   }, [graph.rooms.length]);
 
   useEffect(() => {
-    setPanCenter(null);
+    setCameraView({ center: { x: 0, y: 0 }, scale: 1 });
+    followInitializedRef.current = false;
     setCameraMode("follow");
     setChosenMode(null);
-    setZoom(1);
     setExpandedRoomIds(new Set());
     setSelectedRoomId(selectedRoomFromLocation());
+    setThoughtExpanded(overlayExpandedByDefault());
+    setLegendExpanded(overlayExpandedByDefault());
   }, [identity.sessionId]);
 
   useEffect(() => {
-    if (selectedRoomId === null) return;
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
+      if (selectedRoomId !== null) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        closeSelectedRoom();
+        return;
+      }
+      if (document.querySelector('[role="dialog"]') !== null) return;
+      if (!legendExpanded) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      closeSelectedRoom();
+      setLegendExpanded(false);
     };
     const handleOutsidePointer = (event: PointerEvent) => {
+      if (selectedRoomId === null) return;
       if (!(event.target instanceof Element)) return;
       if (
         event.target.closest(".live-room-inspector") !== null
         || event.target.closest(".live-map-room") !== null
+        || event.target.closest(".live-map-dock") !== null
+        || event.target.closest(".live-map-toolbar") !== null
       ) {
         return;
       }
@@ -277,7 +396,7 @@ export function LiveMap({ identity }: Props) {
         capture: true,
       });
     };
-  }, [closeSelectedRoom, selectedRoomId]);
+  }, [closeSelectedRoom, legendExpanded, selectedRoomId]);
 
   if (snapshot === null) {
     return (
@@ -300,17 +419,12 @@ export function LiveMap({ identity }: Props) {
   const roomById = new Map(
     graph.rooms.map((room) => [room.node.id, room.point]),
   );
-  const camera = resolveMapViewport({
-    activeExtent,
-    camera: cameraMode,
-    completeExtent,
-    fitExtent,
-    fitOnFollow: mode === "grow",
-    frame,
-    graph,
-    manualCenter: panCenter,
-    zoom,
-  });
+  const effectiveCameraView = cameraView;
+  const cameraViewport = mapCameraViewport(effectiveCameraView, frame);
+  const camera = {
+    viewport: cameraViewport,
+    panning: true,
+  };
   const panelInset = frame.width <= 700
     ? { right: 0, bottom: Math.min(frame.height * 0.55, 420) + 14 }
     : { right: 318, bottom: 0 };
@@ -318,7 +432,12 @@ export function LiveMap({ identity }: Props) {
     camera.viewport,
     frame,
     selectedMapRoom?.point ?? null,
-    inspector === null ? { right: 0, bottom: 0 } : panelInset,
+    inspector === null
+      ? { right: 0, bottom: 0 }
+      : {
+        right: panelInset.right,
+        bottom: panelInset.bottom,
+      },
   );
   const currentPoint = graph.currentRoomId === null
     ? undefined
@@ -334,15 +453,14 @@ export function LiveMap({ identity }: Props) {
     return lanternOpacity(graph, roomId);
   };
   const handlePointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
-    if (!camera.panning) return;
-    event.currentTarget.setPointerCapture(event.pointerId);
+    suppressClickRef.current = false;
     dragRef.current = {
       pointerId: event.pointerId,
       clientX: event.clientX,
       clientY: event.clientY,
       center: viewportCenter(viewport),
+      moved: false,
     };
-    setDragging(true);
   };
   const handlePointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
     const drag = dragRef.current;
@@ -356,43 +474,66 @@ export function LiveMap({ identity }: Props) {
     }
     const bounds = svg.getBoundingClientRect();
     if (bounds.width <= 0 || bounds.height <= 0) return;
-    const horizontalScale = mapDragScale(
-      completeExtent.width,
-      viewport.width,
-    );
-    const verticalScale = mapDragScale(
-      completeExtent.height,
-      viewport.height,
-    );
+    const deltaX = event.clientX - drag.clientX;
+    const deltaY = event.clientY - drag.clientY;
+    if (!drag.moved && Math.hypot(deltaX, deltaY) < 4) return;
+    if (!drag.moved) {
+      drag.moved = true;
+      suppressClickRef.current = true;
+      event.currentTarget.setPointerCapture(event.pointerId);
+      setDragging(true);
+    }
+    event.preventDefault();
     setCameraMode((current) => transitionMapCamera(current, "drag"));
-    setPanCenter({
-      x: drag.center.x
-        - (event.clientX - drag.clientX)
-          * viewport.width
-          / bounds.width
-          * horizontalScale,
-      y: drag.center.y
-        - (event.clientY - drag.clientY)
-          * viewport.height
-          / bounds.height
-          * verticalScale,
-    });
+    setCameraView(panMapCamera({
+      center: drag.center,
+      scale: effectiveCameraView.scale,
+    }, {
+      x: deltaX,
+      y: deltaY,
+    }, {
+      x: viewport.width / bounds.width,
+      y: viewport.height / bounds.height,
+    }));
   };
   const stopDragging = (event: ReactPointerEvent<SVGSVGElement>) => {
-    if (dragRef.current?.pointerId !== event.pointerId) return;
+    const drag = dragRef.current;
+    if (drag?.pointerId !== event.pointerId) return;
     dragRef.current = null;
     setDragging(false);
-    event.currentTarget.releasePointerCapture(event.pointerId);
+    if (drag.moved && event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
   };
-  const handleCameraChange = (next: "follow" | "fit") => {
-    setCameraMode((current) => transitionMapCamera(current, next));
-    if (next === "follow") setPanCenter(null);
+  const handleMapClickCapture = (
+    event: ReactPointerEvent<SVGSVGElement>,
+  ) => {
+    if (!suppressClickRef.current) return;
+    suppressClickRef.current = false;
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  const handleCameraChange = (next: MapCameraMode) => {
+    if (next === "fit") {
+      setCameraView(fitMapCamera(fitExtent, frame));
+    } else {
+      setCameraView((current) => ({
+        center: viewportCenter(viewport),
+        scale: current.scale,
+      }));
+    }
+    setCameraMode(next);
   };
   const handleModeChange = (next: MapMode) => {
     setChosenMode(next);
   };
   const handleZoom = (direction: "in" | "out") => {
-    setZoom((current) => changeMapZoom(current, direction));
+    setCameraView((current) => {
+      return zoomMapCamera({
+        center: viewportCenter(viewport),
+        scale: current.scale,
+      }, direction);
+    });
   };
   const handleToggleBoundary = (roomId: string) => {
     setExpandedRoomIds((current) => {
@@ -407,14 +548,18 @@ export function LiveMap({ identity }: Props) {
       className={[
         "live-map-stage",
         mode === "lantern" ? "is-lantern" : "",
+        inspector === null ? "" : "has-inspector",
       ].filter(Boolean).join(" ")}
       aria-label="Learned world map"
+      style={{
+        "--live-map-overlay-safe-band": `${overlayBand}px`,
+      } as CSSProperties}
     >
       <LiveMapToolbar
         camera={cameraMode}
         mode={mode}
         selectedRoomId={selectedRoomId}
-        zoom={zoom}
+        zoom={effectiveCameraView.scale}
         minimumZoom={minimumMapZoom}
         maximumZoom={maximumMapZoom}
         onCameraChange={handleCameraChange}
@@ -429,16 +574,18 @@ export function LiveMap({ identity }: Props) {
         ].filter(Boolean).join(" ")}
         ref={svgRef}
         role="img"
-        aria-label={[
-          `Learned world, ${graph.rooms.length} rooms`,
-          camera.panning ? "Drag to pan" : "",
-        ].filter(Boolean).join(". ")}
+        aria-label={`Learned world, ${graph.rooms.length} rooms`}
+        style={{
+          height: "100%",
+        }}
         viewBox={`${viewport.x} ${viewport.y} ${viewport.width} ${viewport.height}`}
         preserveAspectRatio="xMidYMid meet"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={stopDragging}
         onPointerCancel={stopDragging}
+        onClickCapture={handleMapClickCapture}
+        onDragStart={(event) => event.preventDefault()}
       >
         <defs>
           <radialGradient id="live-current-room-glow" cx="50%" cy="50%" r="50%">
@@ -554,6 +701,18 @@ export function LiveMap({ identity }: Props) {
           onClose={closeSelectedRoom}
         />
       )}
+      {snapshot.agent_thought === null ? null : (
+        <LiveThoughtDock
+          expanded={thoughtExpanded}
+          thought={snapshot.agent_thought}
+          onToggle={() => setThoughtExpanded((current) => !current)}
+        />
+      )}
+      <LiveMapLegend
+        entries={legendEntries}
+        expanded={legendExpanded}
+        onToggle={() => setLegendExpanded((current) => !current)}
+      />
       {camera.panning ? (
         <p className="live-map-pan-hint">Drag to explore the learned world.</p>
       ) : null}
@@ -624,5 +783,14 @@ function isSnapshot(value: unknown): value is Snapshot {
     && Array.isArray(candidate.world.nodes)
     && Array.isArray(candidate.world.edges)
     && Array.isArray(candidate.world.frontier)
+    && (
+      candidate.agent_thought === null
+      || (
+        typeof candidate.agent_thought === "object"
+        && candidate.agent_thought !== null
+        && typeof candidate.agent_thought.text === "string"
+        && typeof candidate.agent_thought.evidence === "string"
+      )
+    )
     && Array.isArray(candidate.room_economics);
 }
