@@ -10,7 +10,10 @@ import type {
   CSSProperties,
   PointerEvent as ReactPointerEvent,
 } from "react";
-import type { Snapshot } from "../contracts";
+import {
+  decodeSnapshot,
+  type Snapshot,
+} from "../contracts";
 import type { LiveRouteIdentity } from "../routes";
 import {
   buildMapGraph,
@@ -141,12 +144,10 @@ export function LiveMap({ identity }: Props) {
           if (!response.ok) {
             throw new Error(`Snapshot unavailable (${response.status})`);
           }
-          return response.json() as Promise<Snapshot>;
+          return response.json() as Promise<unknown>;
         })
-        .then((nextSnapshot) => {
-          if (!isSnapshot(nextSnapshot)) {
-            throw new Error("Snapshot returned an invalid world projection");
-          }
+        .then((value) => {
+          const nextSnapshot = decodeSnapshot(value);
           setSnapshot(nextSnapshot);
           setState("ready");
         })
@@ -1051,25 +1052,4 @@ function overlayRectsEqual(
         && Math.abs(rect.width - candidate.width) < 1
         && Math.abs(rect.height - candidate.height) < 1;
     });
-}
-
-function isSnapshot(value: unknown): value is Snapshot {
-  if (typeof value !== "object" || value === null) return false;
-  const candidate = value as Partial<Snapshot>;
-  return typeof candidate.player_id === "string"
-    && typeof candidate.world === "object"
-    && candidate.world !== null
-    && Array.isArray(candidate.world.nodes)
-    && Array.isArray(candidate.world.edges)
-    && Array.isArray(candidate.world.frontier)
-    && (
-      candidate.agent_thought === null
-      || (
-        typeof candidate.agent_thought === "object"
-        && candidate.agent_thought !== null
-        && typeof candidate.agent_thought.text === "string"
-        && typeof candidate.agent_thought.evidence === "string"
-      )
-    )
-    && Array.isArray(candidate.room_economics);
 }

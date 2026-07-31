@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import type {
-  Catalog,
-  Observed,
-  Player,
-  Session,
-  Snapshot,
+import {
+  decodeSnapshot,
+  type Catalog,
+  type Observed,
+  type Player,
+  type Session,
+  type Snapshot,
 } from "./contracts";
 import { lifecycleApiUrl } from "./lifecycleApi";
 import { liveHref } from "./routes";
@@ -232,9 +233,9 @@ export function Launcher() {
     fetch(`/api/sessions/${encodeURIComponent(session.id)}/snapshot`)
       .then((response) => {
         if (!response.ok) throw new Error(`Snapshot unavailable (${response.status})`);
-        return response.json() as Promise<Snapshot>;
+        return response.json() as Promise<unknown>;
       })
-      .then(setSnapshot)
+      .then((value) => setSnapshot(decodeSnapshot(value)))
       .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : "Snapshot unavailable"));
   }, [selectedRow?.latest?.id]);
 
