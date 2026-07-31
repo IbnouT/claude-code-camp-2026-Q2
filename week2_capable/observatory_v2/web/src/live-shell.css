@@ -70,6 +70,23 @@
   stroke-dasharray: 4 5;
 }
 
+.live-map-frontier {
+  color: var(--color-map-frontier);
+  pointer-events: none;
+}
+
+.live-map-frontier path {
+  fill: none;
+  stroke: currentColor;
+  stroke-dasharray: 3 4;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.live-map-frontier circle {
+  fill: currentColor;
+}
+
 .live-map-room rect {
   fill: var(--color-map-room);
   stroke: var(--color-map-room-line);
@@ -195,6 +212,10 @@
 .live-map-room-title {
   fill: var(--color-muted);
   font-size: 10.5px;
+  paint-order: stroke fill;
+  stroke: var(--color-bg);
+  stroke-linejoin: round;
+  stroke-width: 3px;
   text-anchor: middle;
 }
 
@@ -203,6 +224,35 @@
   font-size: 10px;
   font-weight: 700;
   pointer-events: none;
+  text-anchor: middle;
+}
+
+.live-map-vertical-marker {
+  fill: var(--color-map-vertical);
+  font-size: 10px;
+  font-weight: 700;
+  pointer-events: none;
+  text-anchor: middle;
+}
+
+.live-map-vertical-marker.is-frontier {
+  opacity: .48;
+}
+
+.live-map-visit-badge {
+  pointer-events: none;
+}
+
+.live-map-visit-badge circle {
+  fill: var(--color-raised);
+  stroke: var(--color-map-room-line);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.live-map-visit-badge text {
+  fill: var(--color-muted);
+  font-size: 9px;
   text-anchor: middle;
 }
 

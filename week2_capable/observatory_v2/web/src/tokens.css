@@ -19,6 +19,8 @@
   --color-coral: #ff8178;
   --color-coral-soft: #3e2425;
   --color-map-link: #243449;
+  --color-map-frontier: #4a5c74;
+  --color-map-vertical: #8fb4e0;
   --color-map-room: #1c3350;
   --color-map-room-line: #2f5680;
   --color-map-current: #12333a;
@@ -78,6 +80,8 @@
   --color-coral: #d3454f;
   --color-coral-soft: #f7dcdd;
   --color-map-link: #aab8c8;
+  --color-map-frontier: #647993;
+  --color-map-vertical: #426e9f;
   --color-map-room: #dce8f5;
   --color-map-room-line: #7696b8;
   --color-map-current: #d3efed;

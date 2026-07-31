@@ -35,8 +35,12 @@ next step only on Ibnou's approval.
   magnifies a young world, and enables bounded drag panning for larger maps.
 - Vertical transitions remain attached through dashed, labeled connection
   lines.
-- Frontier, vertical room glyphs, additional camera controls, modes, visit
-  badges, and inspectors are intentionally reserved for later checkpoints.
+- Observed but untraversed planar exits render as short directional stubs.
+  Up and down stay on the room box, with quiet glyphs for frontier exits and
+  solid glyphs for retained traversals.
+- Repeat observations render the mock's `×N` badge only after the first visit.
+- Additional camera controls, modes, and inspectors are intentionally reserved
+  for later checkpoints.
 - Session identity comes only from the deep link.
 - One context chip combines player, lifecycle state, and session identity.
 - Its popover switches to live runs, opens recordings in Sessions, and exposes

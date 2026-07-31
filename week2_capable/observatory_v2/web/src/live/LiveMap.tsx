@@ -20,7 +20,9 @@ import {
   type MapPoint,
   type MapViewport,
 } from "./mapModel";
+import { LiveMapFrontier } from "./LiveMapFrontier";
 import { LiveMapRoom } from "./LiveMapRoom";
+import { projectMapEvidence } from "./markerProjection";
 import {
   selectedRoomFromLocation,
   syncSelectedRoomToLocation,
@@ -99,6 +101,14 @@ export function LiveMap({ identity }: Props) {
       snapshot?.world.edges ?? [],
     );
   }, [snapshot]);
+  const evidenceMarkers = useMemo(() => {
+    return projectMapEvidence(
+      snapshot?.world.nodes ?? [],
+      snapshot?.world.edges ?? [],
+      snapshot?.world.frontier ?? [],
+      graph.rooms,
+    );
+  }, [graph.rooms, snapshot]);
   const beaconRoomIds = useMemo(() => {
     const rawNodes = new Map(
       (snapshot?.world.nodes ?? []).map((node) => [node.id, node]),
@@ -251,6 +261,11 @@ export function LiveMap({ identity }: Props) {
             />
           ))}
         </g>
+        <g className="live-map-frontiers">
+          {evidenceMarkers.frontiers.map((marker) => (
+            <LiveMapFrontier key={marker.id} marker={marker} />
+          ))}
+        </g>
         <g className="live-map-rooms">
           {graph.rooms.map(({ node, point }) => (
             <LiveMapRoom
@@ -263,6 +278,9 @@ export function LiveMap({ identity }: Props) {
                 snapshot.combat && node.id === graph.currentRoomId,
               )}
               beacon={beaconRoomIds.has(node.id)}
+              verticalMarkers={
+                evidenceMarkers.verticalByRoom.get(node.id) ?? []
+              }
               onSelect={handleSelectRoom}
             />
           ))}
@@ -341,5 +359,6 @@ function isSnapshot(value: unknown): value is Snapshot {
     && typeof candidate.world === "object"
     && candidate.world !== null
     && Array.isArray(candidate.world.nodes)
-    && Array.isArray(candidate.world.edges);
+    && Array.isArray(candidate.world.edges)
+    && Array.isArray(candidate.world.frontier);
 }

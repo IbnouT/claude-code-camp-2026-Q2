@@ -9,6 +9,7 @@ import {
   mapRoomWidth,
   type MapPoint,
 } from "./mapModel";
+import type { VerticalMarker } from "./markerProjection";
 
 type Props = {
   node: WorldNode;
@@ -17,6 +18,7 @@ type Props = {
   selected: boolean;
   combat: boolean;
   beacon: boolean;
+  verticalMarkers: VerticalMarker[];
   onSelect: (nodeId: string) => void;
 };
 
@@ -27,6 +29,7 @@ export const LiveMapRoom = memo(function LiveMapRoom({
   selected,
   combat,
   beacon,
+  verticalMarkers,
   onSelect,
 }: Props) {
   const renderCount = useRef(0);
@@ -89,6 +92,30 @@ export const LiveMapRoom = memo(function LiveMapRoom({
         />
       ) : null}
       <rect width={mapRoomWidth} height={mapRoomHeight} rx="10" />
+      {verticalMarkers.map((marker) => (
+        <text
+          className={[
+            "live-map-vertical-marker",
+            `is-${marker.direction}`,
+            `is-${marker.state}`,
+          ].join(" ")}
+          data-direction={marker.direction}
+          data-state={marker.state}
+          key={marker.direction}
+          x="10"
+          y={marker.direction === "up" ? 15 : mapRoomHeight - 7}
+        >
+          {marker.direction === "up" ? "▲" : "▼"}
+        </text>
+      ))}
+      {node.visits > 1 ? (
+        <g className="live-map-visit-badge" data-visits={node.visits}>
+          <circle cx={mapRoomWidth} cy="0" r="10" />
+          <text x={mapRoomWidth} y="3.5">
+            ×{node.visits}
+          </text>
+        </g>
+      ) : null}
       <text
         className="live-map-room-debug-id"
         x={mapRoomWidth / 2}
@@ -167,6 +194,11 @@ function sameRoomRender(previous: Props, next: Props): boolean {
     && previous.node.atlas?.vnum === next.node.atlas?.vnum
     && previous.node.atlas?.confidence === next.node.atlas?.confidence
     && previous.node.atlas?.sector === next.node.atlas?.sector
+    && previous.node.visits === next.node.visits
+    && sameVerticalMarkers(
+      previous.verticalMarkers,
+      next.verticalMarkers,
+    )
     && previous.point.x === next.point.x
     && previous.point.y === next.point.y
     && previous.current === next.current
@@ -174,6 +206,18 @@ function sameRoomRender(previous: Props, next: Props): boolean {
     && previous.combat === next.combat
     && previous.beacon === next.beacon
     && previous.onSelect === next.onSelect;
+}
+
+function sameVerticalMarkers(
+  previous: VerticalMarker[],
+  next: VerticalMarker[],
+): boolean {
+  return previous.length === next.length
+    && previous.every((marker, index) => {
+      const candidate = next[index];
+      return marker.direction === candidate?.direction
+        && marker.state === candidate.state;
+    });
 }
 
 function truncate(value: string, maximum: number): string {

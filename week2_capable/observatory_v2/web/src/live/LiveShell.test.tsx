@@ -110,6 +110,7 @@ function runtimeSnapshot(): Snapshot {
           evidence: [20],
         },
       ],
+      frontier: [],
     },
   };
 }

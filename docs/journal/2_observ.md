@@ -129,6 +129,9 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
 - Game sector flags describe engine terrain, not always the room a person sees.
   A reviewed observer-owned override lets the map call a sewer underground and
   a post office civic while preserving the original world files as evidence.
+- Frontier marks become trustworthy when they are projected from retained
+  exits after room identity is canonicalized. Drawing first and deduplicating
+  later can make one learned doorway appear as several unknown paths.
 
 ## Technical Conclusions
 

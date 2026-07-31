@@ -84,6 +84,7 @@ describe("live map room rendering", () => {
           selected
           combat={false}
           beacon={false}
+          verticalMarkers={[]}
           onSelect={onSelect}
         />
       </svg>,
@@ -110,6 +111,7 @@ describe("live map room rendering", () => {
           selected
           combat={false}
           beacon={false}
+          verticalMarkers={[]}
           onSelect={onSelect}
         />
       </svg>,
@@ -168,6 +170,73 @@ describe("live map room rendering", () => {
 
     expect(renderCounts()).toEqual({ a: 2, b: 1, c: 1 });
   });
+
+  it("omits a visit badge at one visit and renders the exact retained count", () => {
+    const view = render(
+      <svg>
+        <LiveMapRoom
+          node={rooms[0]}
+          point={{ x: 0, y: 0 }}
+          current={false}
+          selected={false}
+          combat={false}
+          beacon={false}
+          verticalMarkers={[]}
+          onSelect={onSelect}
+        />
+      </svg>,
+    );
+    expect(view.container.querySelector(".live-map-visit-badge")).toBeNull();
+
+    view.rerender(
+      <svg>
+        <LiveMapRoom
+          node={{ ...rooms[0], visits: 5 }}
+          point={{ x: 0, y: 0 }}
+          current={false}
+          selected={false}
+          combat={false}
+          beacon={false}
+          verticalMarkers={[]}
+          onSelect={onSelect}
+        />
+      </svg>,
+    );
+    const badge = view.container.querySelector(".live-map-visit-badge");
+    expect(badge).toHaveAttribute("data-visits", "5");
+    expect(badge).toHaveTextContent("×5");
+  });
+
+  it("distinguishes traversed and frontier vertical glyphs", () => {
+    const view = render(
+      <svg>
+        <LiveMapRoom
+          node={rooms[0]}
+          point={{ x: 0, y: 0 }}
+          current={false}
+          selected={false}
+          combat={false}
+          beacon={false}
+          verticalMarkers={[
+            { direction: "up", state: "traversed" },
+            { direction: "down", state: "frontier" },
+          ]}
+          onSelect={onSelect}
+        />
+      </svg>,
+    );
+
+    const up = view.container.querySelector(
+      '.live-map-vertical-marker[data-direction="up"]',
+    );
+    const down = view.container.querySelector(
+      '.live-map-vertical-marker[data-direction="down"]',
+    );
+    expect(up).toHaveClass("is-traversed");
+    expect(up).toHaveTextContent("▲");
+    expect(down).toHaveClass("is-frontier");
+    expect(down).toHaveTextContent("▼");
+  });
 });
 
 type RoomSetState = {
@@ -192,6 +261,7 @@ function roomSet(state: RoomSetState) {
           selected={node.id === state.selectedId}
           combat={state.combat && node.id === state.currentId}
           beacon={false}
+          verticalMarkers={[]}
           onSelect={onSelect}
         />
       ))}

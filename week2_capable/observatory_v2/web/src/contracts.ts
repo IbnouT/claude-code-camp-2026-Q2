@@ -59,6 +59,13 @@ export type WorldEdge = {
   evidence: number[];
 };
 
+export type WorldFrontier = {
+  id: string;
+  source: string;
+  direction: string;
+  evidence: number[];
+};
+
 export type Snapshot = {
   player_id: string;
   character: string;
@@ -70,6 +77,7 @@ export type Snapshot = {
   world: {
     nodes: WorldNode[];
     edges: WorldEdge[];
+    frontier: WorldFrontier[];
     current_title: string | null;
     current_confidence: string;
     objective_beacons?: Array<{
