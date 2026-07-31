@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import {
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -200,6 +201,7 @@ describe("Live shell", () => {
   });
 
   it("renders one verified context chip and the learned-world map", async () => {
+    const user = userEvent.setup();
     render(<LiveShell identity={identity} />);
 
     expect(screen.getByRole("banner")).toBeInTheDocument();
@@ -236,6 +238,9 @@ describe("Live shell", () => {
     expect(screen.getByRole("complementary", {
       name: "Agent thought",
     })).toHaveTextContent("Return to the Temple and try another route.");
+    await user.click(screen.getByRole("button", {
+      name: "Expand map legend",
+    }));
     expect(screen.getByRole("complementary", {
       name: "Map evidence legend",
     })).toHaveTextContent("Learned room");
@@ -357,9 +362,12 @@ describe("Live shell", () => {
       name: "Ask about this session",
     })).not.toBeInTheDocument();
     expect(screen.getByRole("button", {
-      name: "Collapse map legend",
+      name: "Expand map legend",
     })).toBeInTheDocument();
 
+    await user.click(screen.getByRole("button", {
+      name: "Expand map legend",
+    }));
     await user.keyboard("{Escape}");
     expect(screen.getByRole("button", {
       name: "Expand map legend",
@@ -438,6 +446,219 @@ describe("Live shell", () => {
       name: "Learned world map",
     })).toHaveClass("is-lantern");
   });
+
+  it("fits and pans Focus while Lantern hands a drag to Grow", async () => {
+    const user = userEvent.setup();
+    render(<LiveShell identity={identity} />);
+
+    const map = await screen.findByRole("img", {
+      name: "Learned world, 2 rooms",
+    });
+    await user.click(screen.getByRole("button", { name: "Zoom in" }));
+    const zoomed = viewBox(map);
+
+    await user.click(screen.getByRole("button", { name: "Focus" }));
+    const focused = viewBox(map);
+    const currentRoom = screen.getByRole("button", {
+      name: /Agent in A Nexus/,
+    });
+    const currentPoint = translatedPoint(currentRoom);
+
+    expect(screen.getByRole("button", {
+      name: "Follow",
+    })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", {
+      name: "Focus",
+    })).toHaveAttribute("aria-pressed", "true");
+    expect(focused.width).toBeCloseTo(zoomed.width);
+    expect(focused.height).toBeCloseTo(zoomed.height);
+    expect(currentPoint.x + 32).toBeGreaterThan(focused.x);
+    expect(currentPoint.x + 32).toBeLessThan(focused.x + focused.width);
+    expect(currentPoint.y + 32).toBeGreaterThan(focused.y);
+    expect(currentPoint.y + 32).toBeLessThan(focused.y + focused.height);
+    expect(screen.getByText("Drag to explore the learned world.")).toBeVisible();
+
+    Object.defineProperties(map, {
+      getBoundingClientRect: {
+        value: () => ({
+          bottom: 570,
+          height: 570,
+          left: 0,
+          right: 960,
+          top: 0,
+          width: 960,
+          x: 0,
+          y: 0,
+          toJSON: () => ({}),
+        }),
+      },
+      hasPointerCapture: { value: () => true },
+      releasePointerCapture: { value: vi.fn() },
+      setPointerCapture: { value: vi.fn() },
+    });
+    fireEvent.pointerDown(map, {
+      pointerId: 7,
+      clientX: 400,
+      clientY: 280,
+    });
+    fireEvent.pointerMove(map, {
+      pointerId: 7,
+      clientX: 420,
+      clientY: 280,
+    });
+    const focusHandoff = viewBox(map);
+    expect(focusHandoff).toEqual(focused);
+    expect(screen.queryByText(
+      "Drag to explore the learned world.",
+    )).not.toBeInTheDocument();
+    fireEvent.pointerMove(map, {
+      pointerId: 7,
+      clientX: 440,
+      clientY: 280,
+    });
+
+    expect(screen.getByRole("button", {
+      name: "Focus",
+    })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", {
+      name: "Manual",
+    })).toHaveAttribute("aria-pressed", "true");
+    const pannedFocus = viewBox(map);
+    expect(pannedFocus.width).toBeCloseTo(focused.width);
+    expect(pannedFocus.height).toBeCloseTo(focused.height);
+    expect(pannedFocus.x).not.toBeCloseTo(focused.x);
+    expect(pannedFocus.y).toBeCloseTo(focused.y);
+    fireEvent.pointerUp(map, { pointerId: 7 });
+
+    await user.click(screen.getByRole("button", { name: "Lantern" }));
+    const lantern = viewBox(map);
+    expect(lantern.width).toBeCloseTo(pannedFocus.width);
+    expect(lantern.height).toBeCloseTo(pannedFocus.height);
+    expect(lantern.x + lantern.width / 2).toBeCloseTo(currentPoint.x + 32);
+    expect(lantern.y + lantern.height / 2).toBeCloseTo(currentPoint.y + 32);
+
+    fireEvent.pointerDown(map, {
+      pointerId: 8,
+      clientX: 400,
+      clientY: 280,
+    });
+    fireEvent.pointerMove(map, {
+      pointerId: 8,
+      clientX: 420,
+      clientY: 280,
+    });
+    const lanternHandoff = viewBox(map);
+    expect(lanternHandoff).toEqual(lantern);
+    fireEvent.pointerMove(map, {
+      pointerId: 8,
+      clientX: 440,
+      clientY: 280,
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", {
+        name: "Grow",
+      })).toHaveAttribute("aria-pressed", "true");
+    });
+    expect(screen.getByRole("button", {
+      name: "Manual",
+    })).toHaveAttribute("aria-pressed", "true");
+    const dragged = viewBox(map);
+    expect(dragged.width).toBeCloseTo(lantern.width);
+    expect(dragged.height).toBeCloseTo(lantern.height);
+    expect(dragged.x + dragged.width / 2).toBeCloseTo(
+      lantern.x + lantern.width / 2 - 20 * lantern.width / 960,
+    );
+  });
+
+  it("re-centers panned Focus on agent movement without changing size", async () => {
+    const initial = runtimeSnapshot();
+    const moved: Snapshot = {
+      ...initial,
+      latest_sequence: initial.latest_sequence + 1,
+      world: {
+        ...initial.world,
+        current_title: "More Of The Hallway",
+        nodes: initial.world.nodes.map((node) => ({
+          ...node,
+          state: node.id === "place:1" ? "current" : "observed",
+        })),
+      },
+    };
+    let snapshots = 0;
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      if (!String(input).includes("/snapshot")) {
+        return Promise.resolve(catalogResponse());
+      }
+      const response = snapshots === 0
+        ? snapshotResponse(initial)
+        : snapshotResponse(moved);
+      snapshots += 1;
+      return Promise.resolve(response);
+    });
+    const user = userEvent.setup();
+    render(<LiveShell identity={identity} />);
+
+    const map = await screen.findByRole("img", {
+      name: "Learned world, 2 rooms",
+    });
+    await user.click(screen.getByRole("button", { name: "Focus" }));
+    Object.defineProperties(map, {
+      getBoundingClientRect: {
+        value: () => ({
+          bottom: 570,
+          height: 570,
+          left: 0,
+          right: 960,
+          top: 0,
+          width: 960,
+          x: 0,
+          y: 0,
+          toJSON: () => ({}),
+        }),
+      },
+      hasPointerCapture: { value: () => true },
+      releasePointerCapture: { value: vi.fn() },
+      setPointerCapture: { value: vi.fn() },
+    });
+    fireEvent.pointerDown(map, {
+      pointerId: 9,
+      clientX: 400,
+      clientY: 280,
+    });
+    fireEvent.pointerMove(map, {
+      pointerId: 9,
+      clientX: 420,
+      clientY: 280,
+    });
+    fireEvent.pointerMove(map, {
+      pointerId: 9,
+      clientX: 460,
+      clientY: 280,
+    });
+    fireEvent.pointerUp(map, { pointerId: 9 });
+    const panned = viewBox(map);
+    expect(screen.getByRole("button", {
+      name: "Manual",
+    })).toHaveAttribute("aria-pressed", "true");
+
+    const movedRoom = await screen.findByRole("button", {
+      name: /Agent in More Of The Hallway/,
+    }, { timeout: 4_000 });
+    await waitFor(() => {
+      expect(screen.getByRole("button", {
+        name: "Follow",
+      })).toHaveAttribute("aria-pressed", "true");
+    }, { timeout: 4_000 });
+    const movedPoint = translatedPoint(movedRoom);
+    await waitFor(() => {
+      const followed = viewBox(map);
+      expect(followed.width).toBe(panned.width);
+      expect(followed.height).toBe(panned.height);
+      expect(followed.x + followed.width / 2).toBeCloseTo(movedPoint.x + 32);
+      expect(followed.y + followed.height / 2).toBeCloseTo(movedPoint.y + 32);
+    }, { timeout: 4_000 });
+  }, 5_000);
 
   it("offers recent sessions and one destination for each other player", async () => {
     const recorded = runtimeSession({
@@ -590,3 +811,34 @@ describe("Live shell", () => {
       .not.toBeInTheDocument();
   });
 });
+
+function viewBox(element: HTMLElement): {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+} {
+  const values = element.getAttribute("viewBox")?.split(" ").map(Number);
+  if (values === undefined || values.length !== 4) {
+    throw new Error("Expected a four-value map viewBox");
+  }
+  return {
+    x: values[0],
+    y: values[1],
+    width: values[2],
+    height: values[3],
+  };
+}
+
+function translatedPoint(element: HTMLElement): { x: number; y: number } {
+  const match = element.getAttribute("transform")?.match(
+    /^translate\(([-\d.]+) ([-\d.]+)\)$/,
+  );
+  if (match === undefined || match === null) {
+    throw new Error("Expected a translated map room");
+  }
+  return {
+    x: Number(match[1]),
+    y: Number(match[2]),
+  };
+}

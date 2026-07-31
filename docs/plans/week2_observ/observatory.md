@@ -198,17 +198,38 @@ of decorative badges.
 
 The journey map has three focus modes:
 
-- Focus radius is the default. It keeps the current position and nearby known
-  rooms legible while the journey grows.
-- Grow keeps the full current journey framed as new rooms arrive.
-- Lantern limits context to roughly two supported edges from the current
-  position for moment-to-moment play.
+- Focus is the default. At the current scale, it adds complete breadth-first
+  shells whose full drawn room footprints stay inside the map pane and outside
+  actual overlay rectangles, with an 18-room shell cap. A footprint includes
+  the cell, title, and external badges. It then fills learned paths through
+  adjacent rooms meeting the same geometry. A bridge crossing a persistent
+  overlay remains visible when it is required to preserve an otherwise
+  admissible path. The rendered set stays connected to the agent. Explicit
+  entry centers the current room without changing scale.
+- Grow presents the full learned journey and supports free panning.
+- Lantern keeps the full graph faintly present. The current room is fully lit,
+  one hop is strong, and two hops remain legible.
 
-The camera can follow the agent, hold the investigator's manual framing, or fit
-the selected evidence. A room opens a compact detail popover with visits,
-entities, exits, confidence, and provenance. The objective beacon appears only
-when a cited sighting or durable knowledge assertion supports a known target
-location.
+Focus remains agent-relative while permitting bounded local inspection. It
+never writes camera scale. A drag keeps Focus active and enters Manual at the
+exact center and scale where the gesture starts. Agent movement recenters and
+resumes Follow without changing scale. Learned connections crossing the Focus
+set render as fixed-size solid chevrons on the pane edge. Their cross-axis
+position follows hidden-room geometry and slides along the edge only to avoid
+complete room footprints. Frontier evidence remains a dashed room stub ending
+in a dot.
+
+Lantern recenters on the current room without changing scale and resumes
+Follow. A Lantern drag hands the same framing to Grow and Manual. Grow can also
+follow the agent, hold the investigator's manual framing, or fit selected
+evidence. Focus room selection tests the actual toolbar, legend, and thought
+dock rectangles plus eight pixels instead of reserving full-width bands. The
+temporary drag hint is not an occluder and disappears after the first drag in
+a session. Fit excludes persistent surfaces' outer edge insets. A room opens a
+compact detail popover
+with visits, entities, exits, confidence, and provenance. The objective beacon
+appears only when a cited sighting or durable knowledge assertion supports a
+known target location.
 
 The opening state prioritizes the world and current intent. Secondary measures
 stay quiet until they change or cross a meaningful threshold.

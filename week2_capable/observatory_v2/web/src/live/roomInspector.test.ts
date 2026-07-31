@@ -23,8 +23,13 @@ describe("room inspector projection", () => {
 
     expect(result).toMatchObject({
       title: "A Nexus",
-      sector: "urban",
-      vnum: 3001,
+      atlas: {
+        vnum: 3001,
+        sector: "urban",
+        zoneLabel: "Midgaard",
+        confidence: "high",
+        sources: 1,
+      },
       description: "A broad crossing.",
       exits: [
         { direction: "north", confirmed: true },
@@ -37,7 +42,6 @@ describe("room inspector projection", () => {
       confidence: "tracked",
       evidence: {
         room: 2,
-        atlas: 1,
         description: 1,
         exits: 1,
         sightings: 2,
@@ -56,8 +60,7 @@ describe("room inspector projection", () => {
     };
 
     expect(projectRoomInspector(node, [node], [], [])).toMatchObject({
-      sector: null,
-      vnum: null,
+      atlas: null,
       description: null,
       spendUsd: null,
       mobSightings: [],

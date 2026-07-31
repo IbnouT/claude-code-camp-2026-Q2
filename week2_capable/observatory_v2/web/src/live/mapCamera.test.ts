@@ -7,13 +7,16 @@ import type { WorldNode } from "../contracts";
 import type { MapGraph } from "./mapModel";
 import {
   centerMapViewportInExtent,
+  clampFocusCamera,
   clampMapCamera,
   fitMapCamera,
+  fitMapCameraToSafeFrame,
   fitMapViewport,
   keepSelectedRoomOutsidePanel,
   interpolateMapCenter,
   mapCameraViewport,
   mapOverlaySafeBand,
+  mapSafeViewport,
   mapContentExtent,
   panMapCamera,
   resolveMapViewport,
@@ -99,6 +102,25 @@ describe("map camera geometry", () => {
     });
   });
 
+  it("fits an extent inside the visible overlay-safe frame", () => {
+    const fitted = fitMapCameraToSafeFrame(
+      { x: 0, y: 0, width: 400, height: 200 },
+      { width: 800, height: 500 },
+      { top: 80, right: 220, bottom: 120, left: 20 },
+    );
+    const viewport = mapCameraViewport(fitted, {
+      width: 800,
+      height: 500,
+    });
+    const scale = 1.4;
+
+    expect(fitted.scale).toBe(scale);
+    expect(viewport.x + 20 / scale).toBeCloseTo(0);
+    expect(viewport.x + (800 - 220) / scale).toBeCloseTo(400);
+    expect(viewport.y + 80 / scale).toBeLessThanOrEqual(0);
+    expect(viewport.y + (500 - 120) / scale).toBeGreaterThanOrEqual(200);
+  });
+
   it("clamps a dragged center without changing scale", () => {
     expect(clampMapCamera(
       {
@@ -113,6 +135,66 @@ describe("map camera geometry", () => {
     });
   });
 
+  it("clamps Focus pan once around the agent and preserves scale", () => {
+    const clamped = clampFocusCamera(
+      {
+        center: { x: 900, y: -500 },
+        scale: 1.25,
+      },
+      { x: 200, y: 160 },
+      { x: 100, y: 100, width: 500, height: 300 },
+      { width: 800, height: 500 },
+    );
+
+    expect(clamped).toEqual({
+      center: { x: 360, y: 60 },
+      scale: 1.25,
+    });
+  });
+
+  it("uses different Focus bounds on the near and far sides", () => {
+    const frame = { width: 800, height: 500 };
+    const extent = { x: 100, y: 100, width: 700, height: 300 };
+    const agent = { x: 180, y: 250 };
+
+    expect(clampFocusCamera(
+      { center: { x: -1_000, y: 250 }, scale: 1 },
+      agent,
+      extent,
+      frame,
+    ).center.x).toBe(36);
+    expect(clampFocusCamera(
+      { center: { x: 1_000, y: 250 }, scale: 1 },
+      agent,
+      extent,
+      frame,
+    ).center.x).toBe(380);
+  });
+
+  it("pins a Focus axis at the available near-side extent", () => {
+    expect(clampFocusCamera(
+      {
+        center: { x: 500, y: 500 },
+        scale: 1,
+      },
+      { x: -100, y: 50 },
+      { x: 0, y: 0, width: 300, height: 200 },
+      { width: 400, height: 300 },
+    ).center.x).toBe(0);
+  });
+
+  it("projects screen overlay insets into the live world viewport", () => {
+    expect(mapSafeViewport(
+      { x: -100, y: -50, width: 800, height: 500 },
+      { width: 800, height: 500 },
+      { top: 60, right: 200, bottom: 100, left: 20 },
+    )).toEqual({
+      x: -80,
+      y: 10,
+      width: 580,
+      height: 340,
+    });
+  });
   it("includes only visible rooms and their frontier marker extents", () => {
     const graph = fixtureGraph();
     const extent = mapContentExtent(

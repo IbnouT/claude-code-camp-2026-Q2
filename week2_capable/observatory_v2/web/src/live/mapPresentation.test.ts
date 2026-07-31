@@ -13,9 +13,10 @@ import type {
 import {
   automaticMapMode,
   changeMapZoom,
-  lanternOpacity,
+  projectLanternOpacities,
   projectMapPresentation,
   transitionMapCamera,
+  visibleRoomComponentSize,
 } from "./mapPresentation";
 
 describe("map presentation", () => {
@@ -25,46 +26,221 @@ describe("map presentation", () => {
     expect(automaticMapMode(40, "lantern")).toBe("lantern");
   });
 
-  it("projects a two-hop focus and one unique boundary count", () => {
-    const graph = lineGraph(5);
-    graph.connections.push(connection("branch", "room-2", "room-4", 8));
+  it("uses only the hard cap when frame measurement is unavailable", () => {
+    const graph = lineGraph(20);
 
     const projection = projectMapPresentation(
       graph,
       "focus",
       null,
-      new Set(),
     );
 
-    expect([...projection.visibleRoomIds].sort()).toEqual([
+    expect(projection.visibleRoomIds.size).toBe(18);
+    expect(projection.visibleRoomIds.has("room-17")).toBe(true);
+    expect(projection.visibleRoomIds.has("room-18")).toBe(false);
+  });
+
+  it("keeps dense focus shells whole beneath the hard cap", () => {
+    const graph = starGraph(20);
+    const projection = projectMapPresentation(
+      graph,
+      "focus",
+      null,
+    );
+
+    expect(projection.visibleRoomIds.size).toBe(1);
+  });
+
+  it("chooses complete Focus shells that fit at the current scale", () => {
+    const projection = projectMapPresentation(
+      lineGraph(20),
+      "focus",
+      null,
+      {
+        frame: { width: 440, height: 120 },
+        overlayRects: [],
+        viewport: { x: -40, y: -30, width: 440, height: 120 },
+      },
+    );
+
+    expect([...projection.visibleRoomIds]).toEqual([
       "room-0",
       "room-1",
       "room-2",
     ]);
-    expect(projection.boundaries).toEqual([
-      { roomId: "room-2", count: 2, expanded: false },
-    ]);
+    expect(projection.focusShellRoomCount).toBe(3);
+    expect(projection.focusFillRoomCount).toBe(0);
   });
 
-  it("expands and retracts only the immediate hidden boundary rooms", () => {
-    const graph = lineGraph(5);
-    const expanded = projectMapPresentation(
+  it("fills geometric holes without refitting or breaking the shell cap", () => {
+    const graph = lineGraph(4);
+    graph.rooms[2].point = { x: 50, y: 0 };
+    graph.rooms[3].point = { x: 400, y: 0 };
+    graph.connections = [
+      connection("edge-0", "room-0", "room-1", 1),
+      connection("edge-1", "room-1", "room-2", 2),
+      connection("edge-2", "room-1", "room-3", 3),
+    ];
+
+    const projection = projectMapPresentation(
       graph,
       "focus",
       null,
-      new Set(["room-2"]),
-    );
-    const retracted = projectMapPresentation(
-      graph,
-      "focus",
-      null,
-      new Set(),
+      {
+        frame: { width: 320, height: 120 },
+        overlayRects: [],
+        viewport: { x: -40, y: -30, width: 320, height: 120 },
+      },
     );
 
-    expect(expanded.visibleRoomIds.has("room-3")).toBe(true);
-    expect(expanded.visibleRoomIds.has("room-4")).toBe(false);
-    expect(expanded.boundaries[0]?.expanded).toBe(true);
-    expect(retracted.visibleRoomIds.has("room-3")).toBe(false);
+    expect([...projection.visibleRoomIds]).toEqual([
+      "room-0",
+      "room-1",
+      "room-2",
+    ]);
+    expect(projection.focusShellRoomCount).toBe(2);
+    expect(projection.focusFillRoomCount).toBe(1);
+  });
+
+  it("keeps iterative geometric fill beneath the hard room cap", () => {
+    const projection = projectMapPresentation(
+      lineGraph(30),
+      "focus",
+      null,
+      {
+        frame: { width: 3_000, height: 400 },
+        overlayRects: [],
+        viewport: { x: -100, y: -100, width: 3_000, height: 400 },
+      },
+    );
+
+    expect(projection.visibleRoomIds.size).toBe(18);
+    expect(visibleRoomComponentSize(
+      lineGraph(30),
+      projection.visibleRoomIds,
+    )).toBe(18);
+  });
+
+  it("prioritizes a fitting selected path without exceeding the cap", () => {
+    const graph = starGraph(30);
+    const projection = projectMapPresentation(
+      graph,
+      "focus",
+      "room-20",
+      {
+        frame: { width: 6_000, height: 400 },
+        overlayRects: [],
+        viewport: { x: -100, y: -100, width: 6_000, height: 400 },
+      },
+    );
+
+    expect(projection.visibleRoomIds.size).toBe(18);
+    expect(projection.visibleRoomIds.has("room-20")).toBe(true);
+    expect(visibleRoomComponentSize(graph, projection.visibleRoomIds)).toBe(18);
+  });
+
+  it("uses local overlay rectangles instead of full-width bands", () => {
+    const graph = lineGraph(2);
+    graph.rooms[1].point = { x: 0, y: 122 };
+
+    const projection = projectMapPresentation(
+      graph,
+      "focus",
+      null,
+      {
+        frame: { width: 500, height: 270 },
+        overlayRects: [{ x: 200, y: 200, width: 100, height: 100 }],
+        viewport: { x: -100, y: -30, width: 500, height: 270 },
+      },
+    );
+
+    expect([...projection.visibleRoomIds]).toEqual(["room-0", "room-1"]);
+    expect(projection.focusShellRoomCount).toBe(2);
+  });
+
+  it("excludes an unneeded room when its footprint intersects an overlay", () => {
+    const graph = lineGraph(2);
+    graph.rooms[1].point = { x: 0, y: 122 };
+
+    const projection = projectMapPresentation(
+      graph,
+      "focus",
+      null,
+      {
+        frame: { width: 500, height: 270 },
+        overlayRects: [{ x: 90, y: 210, width: 90, height: 90 }],
+        viewport: { x: -100, y: -30, width: 500, height: 270 },
+      },
+    );
+
+    expect([...projection.visibleRoomIds]).toEqual(["room-0"]);
+  });
+
+  it("keeps an overlay-crossing bridge needed by fitting rooms", () => {
+    const graph = lineGraph(3);
+    graph.rooms[1].point = { x: 80, y: 0 };
+    graph.rooms[2].point = { x: 160, y: 0 };
+
+    const projection = projectMapPresentation(
+      graph,
+      "focus",
+      null,
+      {
+        frame: { width: 320, height: 120 },
+        overlayRects: [{ x: 120, y: 20, width: 70, height: 70 }],
+        viewport: { x: -40, y: -30, width: 320, height: 120 },
+      },
+    );
+
+    expect([...projection.visibleRoomIds]).toEqual([
+      "room-0",
+      "room-1",
+      "room-2",
+    ]);
+    expect(visibleRoomComponentSize(graph, projection.visibleRoomIds)).toBe(
+      projection.visibleRoomIds.size,
+    );
+  });
+
+  it("does not fill an island beyond a bridge outside the pane", () => {
+    const graph = lineGraph(4);
+    graph.rooms[1].point = { x: 600, y: 0 };
+    graph.rooms[2].point = { x: 60, y: 0 };
+    graph.rooms[3].point = { x: 140, y: 0 };
+
+    const projection = projectMapPresentation(
+      graph,
+      "focus",
+      null,
+      {
+        frame: { width: 280, height: 120 },
+        overlayRects: [],
+        viewport: { x: -40, y: -30, width: 280, height: 120 },
+      },
+    );
+
+    expect([...projection.visibleRoomIds]).toEqual(["room-0"]);
+    expect(visibleRoomComponentSize(graph, projection.visibleRoomIds)).toBe(
+      projection.visibleRoomIds.size,
+    );
+  });
+
+  it("excludes a room when its cell fits but its title is clipped", () => {
+    const graph = lineGraph(2);
+    graph.rooms[1].point = { x: 440, y: 0 };
+
+    const projection = projectMapPresentation(
+      graph,
+      "focus",
+      null,
+      {
+        frame: { width: 500, height: 120 },
+        overlayRects: [],
+        viewport: { x: -40, y: -30, width: 500, height: 120 },
+      },
+    );
+
+    expect([...projection.visibleRoomIds]).toEqual(["room-0"]);
   });
 
   it("keeps an external selection and its deterministic learned path visible", () => {
@@ -73,7 +249,6 @@ describe("map presentation", () => {
       graph,
       "focus",
       "room-5",
-      new Set(),
     );
 
     expect([...projection.visibleRoomIds].sort()).toEqual([
@@ -94,7 +269,7 @@ describe("map presentation", () => {
     ]);
   });
 
-  it("keeps a disconnected external selection addressable", () => {
+  it("does not render a disconnected external selection as an island", () => {
     const graph = lineGraph(3);
     graph.rooms.push({
       node: room("detached", 30),
@@ -105,11 +280,10 @@ describe("map presentation", () => {
       graph,
       "focus",
       "detached",
-      new Set(),
     );
 
-    expect(projection.visibleRoomIds.has("detached")).toBe(true);
-    expect(projection.selectionPathRoomIds).toEqual(["detached"]);
+    expect(projection.visibleRoomIds.has("detached")).toBe(false);
+    expect(projection.selectionPathRoomIds).toEqual([]);
   });
 
   it("keeps complete evidence in Grow and Lantern", () => {
@@ -119,20 +293,21 @@ describe("map presentation", () => {
         graph,
         mode,
         null,
-        new Set(),
       );
       expect(projection.visibleRoomIds.size).toBe(6);
       expect(projection.visibleConnectionIds.size).toBe(5);
-      expect(projection.boundaries).toEqual([]);
     }
   });
 
-  it("uses the retained neutral Lantern distance falloff", () => {
-    const graph = lineGraph(3);
+  it("uses graph-distance Lantern tiers and keeps the graph faint", () => {
+    const graph = lineGraph(5);
+    const opacities = projectLanternOpacities(graph);
 
-    expect(lanternOpacity(graph, "room-0")).toBe(1);
-    expect(lanternOpacity(graph, "room-1")).toBeCloseTo(1 - 148 / 280);
-    expect(lanternOpacity(graph, "room-2")).toBe(0);
+    expect(opacities.get("room-0")).toBe(1);
+    expect(opacities.get("room-1")).toBe(0.8);
+    expect(opacities.get("room-2")).toBe(0.5);
+    expect(opacities.get("room-3")).toBe(0.12);
+    expect(opacities.get("room-4")).toBe(0.12);
   });
 });
 
@@ -175,6 +350,19 @@ function lineGraph(roomCount: number): MapGraph {
     width: roomCount * 148 + 184,
     height: 248,
   };
+}
+
+function starGraph(roomCount: number): MapGraph {
+  const graph = lineGraph(roomCount);
+  graph.connections = graph.rooms.slice(1).map((item, index) => {
+    return connection(
+      `edge-${index}`,
+      "room-0",
+      item.node.id,
+      index + 1,
+    );
+  });
+  return graph;
 }
 
 function connection(

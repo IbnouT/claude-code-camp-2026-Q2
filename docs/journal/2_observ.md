@@ -132,18 +132,31 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
 - Frontier marks become trustworthy when they are projected from retained
   exits after room identity is canonicalized. Drawing first and deduplicating
   later can make one learned doorway appear as several unknown paths.
-- A map presentation and its camera answer different questions. Focus decides
-  which evidence deserves emphasis, while Follow, Manual, and Fit decide where
-  the investigator looks. Treating them as one mode makes selection, drag, and
-  snapshot refreshes fight over the same state.
+- Map presentation and camera remain separate state, but their semantics are
+  not always independent. Focus can permit bounded local inspection while
+  Lantern cannot, because only Focus hides learned topology. Projecting that
+  hidden topology from stable room positions against the live frame keeps its
+  continuation cue truthful as the camera moves.
 - A fixed inspector can preserve map context when its footprint becomes a
   camera inset rather than a layout mutation. The selected room stays visible,
   and the learned coordinates remain honest.
+- Correct evidence can still look untrustworthy when observer facts and agent
+  observations share one provenance list. A visible boundary in the interface
+  should match the boundary in the data.
 - A legend is evidence too. Deriving its rows from the active projection keeps
   hidden frontier and visit marks from being explained as if they were visible.
 - Entering Manual is a behavior change, not a camera transform. Preserving the
   exact center and scale at the gesture boundary removes the jump that makes a
   map feel untrustworthy even when every coordinate is correct.
+- A camera should measure the pane the investigator can actually see. Focus
+  density belongs to room selection, not camera scale: complete shells can
+  adapt around the actual overlay rectangles while the room size and Follow
+  center remain stable. Treating a small dock as a full-width band discards
+  useful map context without making any evidence safer. A room's title and
+  badges belong to its fitted footprint because clipping them changes the
+  evidence the room appears to carry. A geometrically valid fill can still
+  lie about topology when it skips a bridge, so the projected set must also be
+  the agent's connected component.
 
 ## Technical Conclusions
 

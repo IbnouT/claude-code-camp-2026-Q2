@@ -29,32 +29,41 @@ this folder is the binding visual reference.
 - One visual connection per room pair: two-way plain, one-way arrowhead,
   contradictory bent. Traversal counts live in the inspector.
 - Unexplored exits render as short directional stubs, never ghost rooms.
-- Up and down render as glyphs on the room box; a labeled layer
+- Up and down render as glyphs on the room box. A labeled layer
   transition draws only between two placed rooms.
 
 ## Feature checklist (from the approved mockups)
 
 - Header chips: turn/iteration, zone, learned-world count with frontier,
   capture gaps when present.
-- Camera group: follow agent, click-to-center; zoom in/out.
-- Mode group: Grow (complete graph fit, frontier included), Focus
-  (radius with +N boundary expanders), Lantern (light-in-darkness).
-- Agent marker with current-room glow; observed abnormal status glyphs
-  and gold on the marker; recent-path highlight; visit-count badges;
-  combat coloring on the current room; objective beacon with label.
+- Camera group: Follow, Manual, Fit map, zoom in and zoom out.
+- Mode group: Grow shows the complete learned graph. Focus shows complete
+  breadth-first shells around the agent while every room's full drawn
+  footprint fits the pane and clears visible overlays. Its 18-room value is an
+  upper bound. Lantern shows the complete graph in distance-based light tiers.
+- Focus never changes zoom. Entry recenters on the agent and resumes Follow.
+  Only Fit map and the zoom buttons change scale.
+- Focus panning remains bounded with the agent in frame. Agent movement
+  recenters and resumes Follow. Learned rooms outside the projection are
+  announced by fixed-size solid double chevrons on the pane edge.
+- A dashed frontier stub means an observed exit with an unlearned destination.
+  It remains visually distinct from a solid Focus continuation.
+- Lantern does not pan. A drag hands the unchanged view to Grow and Manual.
+- Agent marker with current-room glow, observed abnormal status glyphs
+  and gold on the marker, recent-path highlight, visit-count badges,
+  combat coloring on the current room, and objective beacon with label.
 - Level-up toast from milestone data.
 - Fixed thought dock, bottom-left: the agent's current
-  thinking/planning/acting excerpt. Never overlays rooms: the camera
-  applies a safe inset so no room is framed under the dock. Collapsible.
+  thinking/planning/acting excerpt. It is translucent and collapsible.
 - Fixed room inspector panel, right edge of the stage: opens on room
-  click or Enter; name with sector chip when the atlas correlation is
+  click or Enter. It shows the name with a sector chip when the atlas correlation is
   verified, description, exits with unconfirmed directions, mob and
   object sighting counts, passed count, per-room spend when attributed,
   evidence link. Closes with X, Escape, click outside or re-click. Never
   covers the selected room.
 - Legend: generated from the marker kinds actually drawn in the current
-  mode; collapsible.
-- Every value traces to a typed field; an unavailable value is absent,
+  mode and is collapsible.
+- Every value traces to a typed field. An unavailable value is absent,
   never substituted.
 
 ## Semantic room color
@@ -85,7 +94,7 @@ labels remain readable and never magnifies beyond the standard room size.
 A larger world opens at a readable minimum scale with bounded drag panning.
 M2, evidence semantics: frontier stubs, vertical room glyphs, visit badges.
 Additional camera controls, modes, inspector, thought dock and legend follow
-as their own checkpoints. Mock coordinates are composition guidance;
+as their own checkpoints. Mock coordinates are composition guidance.
 evidence order owns production coordinates.
 
 ## Acceptance (per checkpoint)
@@ -95,6 +104,14 @@ evidence order owns production coordinates.
   Rendered comparisons at 1440x900 cover one room, five rooms and the complete
   recorded world.
 - M2: rendered comparison covering stubs, glyphs and badges.
+- Focus: the rendered set is one connected component containing the agent.
+  Every rendered room's complete DOM rectangle, including its title and
+  external badges, stays inside the map pane. Focus entry and overlay changes
+  preserve camera scale. A structurally required bridge may cross a persistent
+  overlay so an otherwise admissible visible path stays connected. Solid
+  continuation chevrons and dashed frontier stubs remain distinguishable.
+- Lantern: graph-distance tiers preserve the complete learned graph. Dragging
+  hands the unchanged framing to Grow and Manual.
 - Semantic color: all 1,878 rooms receive one category, the frozen file
   contains only reviewed disagreements, representative corrected rooms pass
   API tests, and dark and light rendered captures preserve state precedence.

@@ -34,7 +34,11 @@ export function LiveMapToolbar({
 }: Props) {
   const fitLabel = selectedRoomId === null ? "Fit map" : "Fit selection";
   return (
-    <div className="live-map-toolbar">
+    <div
+      className="live-map-toolbar"
+      data-map-overlay-edge="top"
+      data-map-focus-occluder="true"
+    >
       <div
         aria-label="Map camera"
         className="live-map-toolbar-group"

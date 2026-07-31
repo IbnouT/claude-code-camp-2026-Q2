@@ -20,7 +20,10 @@
 
 .live-map-stage {
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: var(--live-evidence-rail-width);
+  bottom: var(--live-timeline-height);
+  left: 0;
   min-width: 0;
   min-height: 0;
   display: grid;
@@ -71,7 +74,7 @@
 .live-map-toolbar {
   position: absolute;
   top: 14px;
-  right: calc(var(--live-evidence-rail-width) + 18px);
+  right: 18px;
   z-index: 5;
   display: flex;
   align-items: center;
@@ -138,7 +141,6 @@
 }
 
 .live-map-toolbar button:focus-visible,
-.live-map-boundary:focus-visible,
 .live-map-dock-toggle:focus-visible {
   outline: 2px solid var(--color-cyan);
   outline-offset: 2px;
@@ -225,38 +227,78 @@
   fill: currentColor;
 }
 
-.live-map-boundary {
-  cursor: pointer;
+.live-map-continuations {
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 4;
 }
 
-.live-map-boundary path {
-  fill: none;
-  stroke: var(--color-map-room-line);
-  stroke-dasharray: 2 4;
-  stroke-width: 1.5;
-  vector-effect: non-scaling-stroke;
+.live-map-continuation {
+  color: #b99cff;
+  filter: drop-shadow(0 0 5px rgb(185 156 255 / 28%));
+  pointer-events: none;
+  position: absolute;
 }
 
-.live-map-boundary circle {
-  fill: var(--color-raised);
-  stroke: var(--color-map-room-line);
-  stroke-dasharray: 3 3;
-  vector-effect: non-scaling-stroke;
+.live-map-continuation-fade,
+.live-map-continuation-chevron {
+  position: absolute;
 }
 
-.live-map-boundary text {
-  fill: var(--color-map-vertical);
-  font-size: 10px;
-  text-anchor: middle;
+.live-map-continuation[data-edge="top"] .live-map-continuation-chevron {
+  left: 3px;
+  top: 0;
+  transform: rotate(-90deg);
 }
 
-.live-map-boundary.is-expanded circle {
-  fill: var(--color-cyan-soft);
-  stroke: var(--color-cyan);
+.live-map-continuation[data-edge="top"] .live-map-continuation-fade {
+  background: linear-gradient(to bottom, rgb(185 156 255 / 34%), transparent);
+  height: 32px;
+  left: 10px;
+  top: 18px;
+  width: 4px;
 }
 
-.live-map-boundary.is-expanded text {
-  fill: var(--color-cyan);
+.live-map-continuation[data-edge="right"] .live-map-continuation-chevron {
+  right: 0;
+  top: 3px;
+}
+
+.live-map-continuation[data-edge="right"] .live-map-continuation-fade {
+  background: linear-gradient(to left, rgb(185 156 255 / 34%), transparent);
+  height: 4px;
+  right: 18px;
+  top: 10px;
+  width: 32px;
+}
+
+.live-map-continuation[data-edge="bottom"] .live-map-continuation-chevron {
+  bottom: 0;
+  left: 3px;
+  transform: rotate(90deg);
+}
+
+.live-map-continuation[data-edge="bottom"] .live-map-continuation-fade {
+  background: linear-gradient(to top, rgb(185 156 255 / 34%), transparent);
+  bottom: 18px;
+  height: 32px;
+  left: 10px;
+  width: 4px;
+}
+
+.live-map-continuation[data-edge="left"] .live-map-continuation-chevron {
+  left: 0;
+  top: 3px;
+  transform: rotate(180deg);
+}
+
+.live-map-continuation[data-edge="left"] .live-map-continuation-fade {
+  background: linear-gradient(to right, rgb(185 156 255 / 34%), transparent);
+  height: 4px;
+  left: 18px;
+  top: 10px;
+  width: 32px;
 }
 
 .live-map-room rect {
@@ -428,17 +470,37 @@
   text-anchor: middle;
 }
 
-.live-map-content-marker {
-  font-size: 11px;
+.live-map-content-badge {
   pointer-events: none;
+}
+
+.live-map-content-badge circle {
+  vector-effect: non-scaling-stroke;
+}
+
+.live-map-content-badge text {
+  font-size: 8px;
+  font-weight: 700;
   text-anchor: middle;
 }
 
-.live-map-content-marker.is-mob {
+.live-map-content-badge.is-mob circle {
+  fill: #35131b;
+  stroke: #ff5d6c;
+  stroke-width: 1.25;
+}
+
+.live-map-content-badge.is-mob text {
   fill: #ff8178;
 }
 
-.live-map-content-marker.is-object {
+.live-map-content-badge.is-object circle {
+  fill: #33270f;
+  stroke: var(--color-amber);
+  stroke-width: 1.25;
+}
+
+.live-map-content-badge.is-object text {
   fill: var(--color-amber);
 }
 
@@ -473,12 +535,13 @@
   pointer-events: none;
 }
 
-.live-selected-room-ring {
+.live-map-room > rect.live-selected-room-halo {
   fill: none;
-  stroke: #5db4ff;
-  stroke-dasharray: 3 3;
-  stroke-width: 1.5;
-  opacity: .8;
+  stroke: rgb(93 180 255 / 34%);
+  stroke-width: 1.25;
+  filter:
+    drop-shadow(0 0 5px rgb(93 180 255 / 28%))
+    drop-shadow(0 0 11px rgb(93 180 255 / 16%));
   pointer-events: none;
   vector-effect: non-scaling-stroke;
 }
@@ -495,10 +558,9 @@
 
 .live-map-connection-state {
   position: absolute;
-  right: calc(var(--live-evidence-rail-width) + 18px);
+  right: 18px;
   bottom: calc(
-    var(--live-timeline-height)
-    + var(--live-map-overlay-safe-band, 0px)
+    var(--live-map-overlay-safe-band, 0px)
     + 10px
   );
   margin: 0;
@@ -513,7 +575,7 @@
 .live-map-pan-hint {
   position: absolute;
   left: 50%;
-  bottom: calc(var(--live-timeline-height) + 14px);
+  bottom: 14px;
   transform: translateX(-50%);
   margin: 0;
   padding: 7px 10px;
@@ -528,14 +590,14 @@
 .live-map-dock {
   position: absolute;
   z-index: 7;
-  bottom: calc(var(--live-timeline-height) + 18px);
+  bottom: 18px;
   overflow: hidden;
   border: 1px solid var(--color-line-strong);
   border-radius: 12px;
   background:
-    color-mix(in srgb, var(--color-surface) 94%, transparent);
+    color-mix(in srgb, var(--color-surface) 50%, transparent);
   box-shadow: var(--shadow-popover);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(5px) saturate(95%);
   color: var(--color-text);
 }
 
@@ -593,13 +655,21 @@
 }
 
 .live-map-legend {
-  right: calc(var(--live-evidence-rail-width) + 18px);
+  right: 18px;
   width: 190px;
+  background:
+    color-mix(in srgb, var(--color-surface) 50%, transparent);
+  backdrop-filter: blur(5px) saturate(95%);
   transition: right 160ms ease;
+  pointer-events: none;
+}
+
+.live-map-legend .live-map-dock-toggle {
+  pointer-events: auto;
 }
 
 .live-map-stage.has-inspector .live-map-legend {
-  right: calc(var(--live-evidence-rail-width) + 336px);
+  right: 336px;
 }
 
 .live-map-legend-entries {
@@ -633,8 +703,9 @@
 }
 
 .live-map-legend-swatch.is-selected {
-  border: 1px dashed #5db4ff;
+  border: 1px solid rgb(93 180 255 / 70%);
   background: transparent;
+  box-shadow: 0 0 7px rgb(93 180 255 / 38%);
 }
 
 .live-map-legend-swatch.is-frontier {
@@ -644,6 +715,22 @@
   border-top: 2px dashed var(--color-map-frontier);
   border-radius: 0;
   background: transparent;
+}
+
+.live-map-legend-swatch.is-continuation {
+  position: relative;
+  border: 0;
+  background: transparent;
+}
+
+.live-map-legend-swatch.is-continuation::before {
+  content: "»";
+  position: absolute;
+  inset: -4px 0 0;
+  color: #b99cff;
+  font-size: 20px;
+  line-height: 14px;
+  text-align: center;
 }
 
 .live-map-legend-swatch.is-vertical {
@@ -683,21 +770,33 @@
 .live-map-legend-swatch.is-mob,
 .live-map-legend-swatch.is-object {
   position: relative;
-  border: 0;
-  background: transparent;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
 }
 
 .live-map-legend-swatch.is-mob::before,
 .live-map-legend-swatch.is-object::before {
   position: absolute;
   inset: 0;
-  font-size: 11px;
+  font-size: 8px;
+  line-height: 11px;
   text-align: center;
+}
+
+.live-map-legend-swatch.is-mob {
+  border-color: #ff5d6c;
+  background: #35131b;
 }
 
 .live-map-legend-swatch.is-mob::before {
   content: "☠";
   color: #ff8178;
+}
+
+.live-map-legend-swatch.is-object {
+  border-color: var(--color-amber);
+  background: #33270f;
 }
 
 .live-map-legend-swatch.is-object::before {
@@ -709,7 +808,7 @@
   position: absolute;
   z-index: 6;
   top: 62px;
-  right: calc(var(--live-evidence-rail-width) + 18px);
+  right: 18px;
   width: 300px;
   max-height: calc(100% - 80px);
   overflow-y: auto;
@@ -718,10 +817,15 @@
   background:
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--color-surface) 96%, var(--color-cyan) 4%),
-      var(--color-surface)
+      color-mix(
+        in srgb,
+        var(--color-surface) 50%,
+        var(--color-cyan) 3%
+      ),
+      color-mix(in srgb, var(--color-surface) 50%, transparent)
     );
   box-shadow: var(--shadow-popover);
+  backdrop-filter: blur(5px) saturate(95%);
   color: var(--color-text);
 }
 
@@ -735,7 +839,8 @@
   gap: 10px;
   padding: 12px 14px;
   border-bottom: 1px solid var(--color-line);
-  background: var(--color-surface);
+  background:
+    color-mix(in srgb, var(--color-surface) 56%, transparent);
 }
 
 .live-room-inspector-name {
@@ -749,16 +854,6 @@
   font-weight: 600;
 }
 
-.live-room-inspector-name span {
-  padding: 2px 7px;
-  border: 1px solid var(--color-line-strong);
-  border-radius: 6px;
-  background: var(--color-cyan-soft);
-  color: var(--color-cyan);
-  font-size: 10px;
-  text-transform: capitalize;
-}
-
 .live-room-inspector-meta {
   display: flex;
   flex-wrap: wrap;
@@ -766,14 +861,6 @@
   margin-top: 4px;
   color: var(--color-quiet);
   font-size: 11px;
-}
-
-.live-room-inspector-vnum {
-  display: block;
-  margin-top: 4px;
-  color: var(--color-quiet);
-  font-family: var(--font-mono);
-  font-size: 9.5px;
 }
 
 .live-room-inspector-close {
@@ -830,7 +917,8 @@
   padding: 4px 9px;
   border: 1px solid var(--color-line);
   border-radius: 7px;
-  background: var(--color-raised);
+  background:
+    color-mix(in srgb, var(--color-raised) 60%, transparent);
   color: var(--color-text);
   font-size: 11px;
 }
@@ -889,7 +977,8 @@
   padding: 8px 9px;
   border: 1px solid var(--color-line);
   border-radius: 8px;
-  background: var(--color-raised);
+  background:
+    color-mix(in srgb, var(--color-raised) 60%, transparent);
 }
 
 .live-room-inspector-stats small {
@@ -925,6 +1014,44 @@
   margin: 0;
   color: var(--color-quiet);
   font-family: var(--font-mono);
+}
+
+.live-room-inspector-atlas {
+  margin-top: 14px;
+  padding: 1px 10px 9px;
+  border: 1px solid color-mix(
+    in srgb,
+    var(--color-map-room-line) 72%,
+    transparent
+  );
+  border-radius: 9px;
+  background:
+    color-mix(in srgb, var(--color-raised) 46%, transparent);
+}
+
+.live-room-inspector-atlas .live-room-inspector-heading {
+  margin-top: 8px;
+}
+
+.live-room-inspector-atlas dl {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+}
+
+.live-room-inspector-atlas dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--color-muted);
+  font-size: 10.5px;
+}
+
+.live-room-inspector-atlas dd {
+  margin: 0;
+  color: var(--color-quiet);
+  font-family: var(--font-mono);
+  text-align: right;
 }
 
 .live-header {

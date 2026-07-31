@@ -74,7 +74,7 @@ describe("live map room rendering", () => {
     })).toBe("is-beacon");
   });
 
-  it("renders the selected-room ring outside the enlarged square", () => {
+  it("renders a square-aligned selected-room halo", () => {
     render(
       <svg>
         <LiveMapRoom
@@ -93,11 +93,12 @@ describe("live map room rendering", () => {
     const selectedRoom = screen.getByRole("button", {
       name: /Room a/,
     });
-    const ring = selectedRoom.querySelector(".live-selected-room-ring");
-    expect(ring).not.toBeNull();
-    expect(Number(ring?.getAttribute("r"))).toBeGreaterThan(
-      Math.hypot(64, 64) / 2,
-    );
+    const halo = selectedRoom.querySelector(".live-selected-room-halo");
+    expect(halo?.tagName.toLowerCase()).toBe("rect");
+    expect(halo).toHaveAttribute("x", "-6");
+    expect(halo).toHaveAttribute("y", "-6");
+    expect(halo).toHaveAttribute("width", "76");
+    expect(halo).toHaveAttribute("height", "76");
     expect(selectedRoom).toHaveClass("is-selected");
   });
 
@@ -122,7 +123,7 @@ describe("live map room rendering", () => {
     });
     expect(selectedRoom).toHaveClass("is-current", "is-selected");
     expect(
-      selectedRoom.querySelector(".live-selected-room-ring"),
+      selectedRoom.querySelector(".live-selected-room-halo"),
     ).not.toBeNull();
   });
 
@@ -238,7 +239,7 @@ describe("live map room rendering", () => {
     expect(down).toHaveTextContent("▼");
   });
 
-  it("draws only evidence-backed mob and object glyphs", () => {
+  it("draws only evidence-backed mob and object corner badges", () => {
     const node = {
       ...rooms[0],
       mob_sightings: [{
@@ -271,15 +272,57 @@ describe("live map room rendering", () => {
       </svg>,
     );
 
-    expect(view.container.querySelector(
-      ".live-map-content-marker.is-mob",
-    )).toHaveTextContent("☠");
-    expect(view.container.querySelector(
-      ".live-map-content-marker.is-object",
-    )).toHaveTextContent("◇");
+    const mob = view.container.querySelector(
+      ".live-map-content-badge.is-mob",
+    );
+    const object = view.container.querySelector(
+      ".live-map-content-badge.is-object",
+    );
+    expect(mob).toHaveTextContent("☠");
+    expect(mob?.querySelector("circle")).toHaveAttribute("cx", "62");
+    expect(mob?.querySelector("circle")).toHaveAttribute("cy", "0");
+    expect(mob?.querySelector("circle")).toHaveAttribute("r", "7");
+    expect(object).toHaveTextContent("◇");
+    expect(object?.querySelector("circle")).toHaveAttribute("cx", "-2");
+    expect(object?.querySelector("circle")).toHaveAttribute("cy", "62");
     expect(screen.getByRole("button", {
       name: /1 mob sighting, 1 object sighting/,
     })).toBeInTheDocument();
+  });
+
+  it("keeps the mob corner and shifts a repeat badge left", () => {
+    const view = render(
+      <svg>
+        <LiveMapRoom
+          node={{
+            ...rooms[0],
+            visits: 5,
+            mob_sightings: [{
+              name: "a sewer rat",
+              count: 1,
+              first_seq: 4,
+              last_seq: 4,
+              evidence: [4],
+            }],
+          }}
+          point={{ x: 0, y: 0 }}
+          current
+          selected={false}
+          combat={false}
+          beacon={false}
+          verticalMarkers={[]}
+          onSelect={onSelect}
+        />
+      </svg>,
+    );
+
+    const visit = view.container.querySelector(".live-map-visit-badge");
+    const mob = view.container.querySelector(
+      ".live-map-content-badge.is-mob",
+    );
+    expect(visit).toHaveAttribute("data-shifted", "true");
+    expect(visit?.querySelector("circle")).toHaveAttribute("cx", "48");
+    expect(mob?.querySelector("circle")).toHaveAttribute("r", "8");
   });
 });
 

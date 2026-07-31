@@ -9,6 +9,7 @@ import {
   mapRoomWidth,
   type MapPoint,
 } from "./mapModel";
+import { truncateMapRoomTitle } from "./mapRoomFootprint";
 import type { VerticalMarker } from "./markerProjection";
 
 type Props = {
@@ -57,6 +58,10 @@ export const LiveMapRoom = memo(function LiveMapRoom({
     selected,
     beacon,
   });
+  const hasMobSighting = node.mob_sightings.length > 0;
+  const visitBadgeX = hasMobSighting
+    ? mapRoomWidth - 16
+    : mapRoomWidth;
   const select = () => onSelect(node.id);
   const handleKeyDown = (event: KeyboardEvent<SVGGElement>) => {
     if (event.key !== "Enter" && event.key !== " ") return;
@@ -95,11 +100,13 @@ export const LiveMapRoom = memo(function LiveMapRoom({
         />
       ) : null}
       {selected ? (
-        <circle
-          className="live-selected-room-ring"
-          cx={mapRoomWidth / 2}
-          cy={mapRoomHeight / 2}
-          r={Math.hypot(mapRoomWidth, mapRoomHeight) / 2 + 2}
+        <rect
+          className="live-selected-room-halo"
+          height={mapRoomHeight + 12}
+          rx="16"
+          width={mapRoomWidth + 12}
+          x="-6"
+          y="-6"
         />
       ) : null}
       <rect width={mapRoomWidth} height={mapRoomHeight} rx="10" />
@@ -120,36 +127,42 @@ export const LiveMapRoom = memo(function LiveMapRoom({
         </text>
       ))}
       {node.visits > 1 ? (
-        <g className="live-map-visit-badge" data-visits={node.visits}>
-          <circle cx={mapRoomWidth} cy="0" r="10" />
-          <text x={mapRoomWidth} y="3.5">
+        <g
+          className="live-map-visit-badge"
+          data-shifted={hasMobSighting ? "true" : "false"}
+          data-visits={node.visits}
+        >
+          <circle cx={visitBadgeX} cy="0" r="10" />
+          <text x={visitBadgeX} y="3.5">
             ×{node.visits}
           </text>
         </g>
       ) : null}
-      {node.mob_sightings.length > 0 ? (
-        <text
+      {hasMobSighting ? (
+        <g
           aria-label={`${node.mob_sightings.length} mob sighting`}
-          className="live-map-content-marker is-mob"
+          className="live-map-content-badge is-mob"
           data-count={node.mob_sightings.length}
           role="img"
-          x="27"
-          y={mapRoomHeight - 7}
         >
-          ☠
-        </text>
+          <circle
+            cx={mapRoomWidth - 2}
+            cy="0"
+            r={current ? 8 : 7}
+          />
+          <text x={mapRoomWidth - 2} y="2.8">☠</text>
+        </g>
       ) : null}
       {node.object_sightings.length > 0 ? (
-        <text
+        <g
           aria-label={`${node.object_sightings.length} object sighting`}
-          className="live-map-content-marker is-object"
+          className="live-map-content-badge is-object"
           data-count={node.object_sightings.length}
           role="img"
-          x="43"
-          y={mapRoomHeight - 7}
         >
-          ◇
-        </text>
+          <circle cx="-2" cy={mapRoomHeight - 2} r="7" />
+          <text x="-2" y={mapRoomHeight + 1}>◇</text>
+        </g>
       ) : null}
       <text
         className="live-map-room-debug-id"
@@ -165,7 +178,7 @@ export const LiveMapRoom = memo(function LiveMapRoom({
         x={mapRoomWidth / 2}
         y={current ? -14 : mapRoomHeight + 18}
       >
-        {truncate(node.title, 18)}
+        {truncateMapRoomTitle(node.title)}
       </text>
     </g>
   );
@@ -274,10 +287,4 @@ function sameVerticalMarkers(
       return marker.direction === candidate?.direction
         && marker.state === candidate.state;
     });
-}
-
-function truncate(value: string, maximum: number): string {
-  return value.length > maximum
-    ? `${value.slice(0, maximum - 1)}…`
-    : value;
 }

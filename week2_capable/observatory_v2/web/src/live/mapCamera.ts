@@ -17,6 +17,13 @@ export type MapFrame = {
   height: number;
 };
 
+export type MapSafeInsets = {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+};
+
 export type MapCameraResolution = {
   viewport: MapViewport;
   panning: boolean;
@@ -149,6 +156,44 @@ export function fitMapCamera(
   };
 }
 
+export function fitMapCameraToSafeFrame(
+  extent: MapViewport,
+  frame: MapFrame,
+  insets: MapSafeInsets,
+): MapCameraView {
+  const safeWidth = Math.max(frame.width - insets.left - insets.right, 1);
+  const safeHeight = Math.max(frame.height - insets.top - insets.bottom, 1);
+  const center = viewportCenter(extent);
+  if (
+    extent.width <= 0
+    || extent.height <= 0
+    || frame.width <= 0
+    || frame.height <= 0
+  ) {
+    return { center, scale: 1 };
+  }
+  const scale = clamp(
+    Math.min(safeWidth / extent.width, safeHeight / extent.height),
+    minimumCameraScale,
+    maximumCameraScale,
+  );
+  const safeCenter = {
+    x: insets.left + safeWidth / 2,
+    y: insets.top + safeHeight / 2,
+  };
+  const frameCenter = {
+    x: frame.width / 2,
+    y: frame.height / 2,
+  };
+  return {
+    center: {
+      x: center.x - (safeCenter.x - frameCenter.x) / scale,
+      y: center.y - (safeCenter.y - frameCenter.y) / scale,
+    },
+    scale,
+  };
+}
+
 export function zoomMapCamera(
   view: MapCameraView,
   direction: "in" | "out",
@@ -205,6 +250,84 @@ export function clampMapCamera(
   return {
     center: viewportCenter(viewport),
     scale: view.scale,
+  };
+}
+
+export function clampFocusCamera(
+  view: MapCameraView,
+  agent: MapPoint,
+  focusExtent: MapViewport,
+  frame: MapFrame,
+): MapCameraView {
+  const viewport = mapCameraViewport(view, frame);
+  const leftDistance = agent.x - focusExtent.x;
+  const rightDistance = focusExtent.x + focusExtent.width - agent.x;
+  const topDistance = agent.y - focusExtent.y;
+  const bottomDistance = focusExtent.y + focusExtent.height - agent.y;
+  const maximumXOffset = Math.max(
+    0,
+    Math.min(
+      viewport.width / 4,
+      rightDistance + mapRoomWidth,
+    ),
+  );
+  const minimumXOffset = -Math.max(
+    0,
+    Math.min(
+      viewport.width / 4,
+      leftDistance + mapRoomWidth,
+    ),
+  );
+  const maximumYOffset = Math.max(
+    0,
+    Math.min(
+      viewport.height / 4,
+      bottomDistance + mapRoomHeight,
+    ),
+  );
+  const minimumYOffset = -Math.max(
+    0,
+    Math.min(
+      viewport.height / 4,
+      topDistance + mapRoomHeight,
+    ),
+  );
+  return {
+    center: {
+      x: agent.x + clamp(
+        view.center.x - agent.x,
+        minimumXOffset,
+        maximumXOffset,
+      ),
+      y: agent.y + clamp(
+        view.center.y - agent.y,
+        minimumYOffset,
+        maximumYOffset,
+      ),
+    },
+    scale: view.scale,
+  };
+}
+
+export function mapSafeViewport(
+  viewport: MapViewport,
+  frame: MapFrame,
+  insets: MapSafeInsets,
+): MapViewport {
+  if (frame.width <= 0 || frame.height <= 0) return viewport;
+  const horizontalScale = viewport.width / frame.width;
+  const verticalScale = viewport.height / frame.height;
+  return {
+    x: viewport.x + insets.left * horizontalScale,
+    y: viewport.y + insets.top * verticalScale,
+    width: Math.max(
+      viewport.width - (insets.left + insets.right) * horizontalScale,
+      0,
+    ),
+    height: Math.max(
+      viewport.height - (insets.top + insets.bottom) * verticalScale,
+      0,
+    ),
   };
 }
 

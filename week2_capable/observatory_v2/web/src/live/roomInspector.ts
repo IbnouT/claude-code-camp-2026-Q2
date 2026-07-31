@@ -14,18 +14,24 @@ export type RoomInspectorExit = {
 
 export type RoomInspectorEvidence = {
   room: number;
-  atlas: number;
   description: number;
   exits: number;
   sightings: number;
   economics: number;
 };
 
+export type RoomInspectorAtlasReference = {
+  vnum: number;
+  sector: string;
+  zoneLabel: string;
+  confidence: "high" | "medium";
+  sources: number;
+};
+
 export type RoomInspectorProjection = {
   id: string;
   title: string;
-  sector: string | null;
-  vnum: number | null;
+  atlas: RoomInspectorAtlasReference | null;
   description: string | null;
   exits: RoomInspectorExit[];
   mobSightings: WorldSighting[];
@@ -98,8 +104,15 @@ export function projectRoomInspector(
   return {
     id: selectedId,
     title: selected.title,
-    sector: selected.atlas?.sector ?? null,
-    vnum: selected.atlas?.vnum ?? null,
+    atlas: selected.atlas === null || selected.atlas === undefined
+      ? null
+      : {
+        vnum: selected.atlas.vnum,
+        sector: selected.atlas.sector,
+        zoneLabel: selected.atlas.zone_label,
+        confidence: selected.atlas.confidence,
+        sources: new Set(selected.atlas.evidence).size,
+      },
     description: selected.description?.text ?? null,
     exits,
     mobSightings: selected.mob_sightings,
@@ -111,7 +124,6 @@ export function projectRoomInspector(
     confidence: selected.confidence,
     evidence: {
       room: new Set(selected.evidence).size,
-      atlas: new Set(selected.atlas?.evidence ?? []).size,
       description: new Set(selected.description?.evidence ?? []).size,
       exits: exitEvidence.size,
       sightings: sightingEvidence.size,

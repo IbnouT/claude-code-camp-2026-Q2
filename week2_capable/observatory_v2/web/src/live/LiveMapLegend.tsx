@@ -23,6 +23,8 @@ export function LiveMapLegend({
         "live-map-legend",
         expanded ? "is-expanded" : "is-collapsed",
       ].join(" ")}
+      data-map-overlay-edge="bottom"
+      data-map-focus-occluder="true"
     >
       <button
         aria-expanded={expanded}

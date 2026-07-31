@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -20,7 +21,8 @@ import {
   type MapPoint,
 } from "./mapModel";
 import {
-  fitMapCamera,
+  fitMapCameraToSafeFrame,
+  clampFocusCamera,
   interpolateMapCenter,
   keepSelectedRoomOutsidePanel,
   mapCameraViewport,
@@ -31,8 +33,10 @@ import {
   viewportCenter,
   zoomMapCamera,
   type MapCameraView,
+  type MapSafeInsets,
 } from "./mapCamera";
-import { LiveMapBoundary } from "./LiveMapBoundary";
+import { projectFocusContinuations } from "./focusContinuation";
+import { LiveMapContinuation } from "./LiveMapContinuation";
 import { LiveMapFrontier } from "./LiveMapFrontier";
 import { LiveMapLegend } from "./LiveMapLegend";
 import { LiveMapRoom } from "./LiveMapRoom";
@@ -43,14 +47,18 @@ import { projectMapLegend } from "./mapLegend";
 import { projectMapEvidence } from "./markerProjection";
 import {
   automaticMapMode,
-  lanternOpacity,
   maximumMapZoom,
   minimumMapZoom,
+  projectLanternOpacities,
   projectMapPresentation,
-  transitionMapCamera,
+  roomFitsFocusLayout,
+  visibleRoomComponentSize,
   type MapCameraMode,
+  type MapFocusLayout,
   type MapMode,
+  type MapOverlayRect,
 } from "./mapPresentation";
+import { mapRoomFootprint } from "./mapRoomFootprint";
 import {
   projectRoomInspector,
   type RoomInspectorProjection,
@@ -65,6 +73,12 @@ type Props = {
 };
 
 const defaultFrame = { width: 1_600, height: 900 };
+const defaultSafeInsets: MapSafeInsets = {
+  top: 8,
+  right: 8,
+  bottom: 8,
+  left: 8,
+};
 const overlayExpandedByDefault = () => {
   return typeof window === "undefined" || window.innerWidth > 700;
 };
@@ -89,9 +103,6 @@ export function LiveMap({ identity }: Props) {
   });
   const [cameraMode, setCameraMode] = useState<MapCameraMode>("follow");
   const [chosenMode, setChosenMode] = useState<MapMode | null>(null);
-  const [expandedRoomIds, setExpandedRoomIds] = useState<ReadonlySet<string>>(
-    new Set(),
-  );
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(
     selectedRoomFromLocation,
   );
@@ -99,14 +110,19 @@ export function LiveMap({ identity }: Props) {
     overlayExpandedByDefault,
   );
   const [legendExpanded, setLegendExpanded] = useState(
-    overlayExpandedByDefault,
+    false,
   );
+  const [panHintVisible, setPanHintVisible] = useState(true);
   const [dragging, setDragging] = useState(false);
+  const [safeInsets, setSafeInsets] = useState(defaultSafeInsets);
+  const [overlayRects, setOverlayRects] = useState<MapOverlayRect[]>([]);
+  const stageRef = useRef<HTMLElement | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const dragRef = useRef<DragState | null>(null);
   const suppressClickRef = useRef(false);
   const cameraViewRef = useRef(cameraView);
   const followInitializedRef = useRef(false);
+  const previousCurrentRoomIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -163,14 +179,68 @@ export function LiveMap({ identity }: Props) {
     );
   }, [graph.rooms, snapshot]);
   const mode = automaticMapMode(graph.rooms.length, chosenMode);
+  const currentCenter = roomCenter(graph, graph.currentRoomId) ?? {
+    x: graph.x + graph.width / 2,
+    y: graph.y + graph.height / 2,
+  };
+  const focusLayout: MapFocusLayout = {
+    frame,
+    overlayRects,
+    viewport: mapCameraViewport({
+      center: currentCenter,
+      scale: cameraView.scale,
+    }, frame),
+  };
   const presentation = useMemo(() => {
     return projectMapPresentation(
       graph,
       mode,
       selectedRoomId,
-      expandedRoomIds,
+      focusLayout,
     );
-  }, [expandedRoomIds, graph, mode, selectedRoomId]);
+  }, [
+    focusLayout.frame.height,
+    focusLayout.frame.width,
+    focusLayout.overlayRects,
+    focusLayout.viewport.height,
+    focusLayout.viewport.width,
+    focusLayout.viewport.x,
+    focusLayout.viewport.y,
+    graph,
+    mode,
+    selectedRoomId,
+  ]);
+  const focusHiddenInsideCount = useMemo(() => {
+    if (mode !== "focus") return 0;
+    return graph.rooms.filter(({ node, point }) => {
+      return !presentation.visibleRoomIds.has(node.id)
+        && roomFitsFocusLayout(
+          node,
+          point,
+          node.id === graph.currentRoomId,
+          focusLayout,
+        );
+    }).length;
+  }, [
+    focusLayout.frame.height,
+    focusLayout.frame.width,
+    focusLayout.overlayRects,
+    focusLayout.viewport.height,
+    focusLayout.viewport.width,
+    focusLayout.viewport.x,
+    focusLayout.viewport.y,
+    graph.rooms,
+    mode,
+    presentation.visibleRoomIds,
+  ]);
+  const focusComponentRoomCount = useMemo(() => {
+    return mode === "focus"
+      ? visibleRoomComponentSize(graph, presentation.visibleRoomIds)
+      : 0;
+  }, [graph, mode, presentation.visibleRoomIds]);
+  const lanternOpacities = useMemo(() => {
+    return projectLanternOpacities(graph);
+  }, [graph]);
   const markerPoints = useMemo(() => {
     return evidenceMarkers.frontiers.map(({ source, end }) => ({
       source,
@@ -190,6 +260,14 @@ export function LiveMap({ identity }: Props) {
       markerPoints,
     );
   }, [graph, markerPoints, presentation.visibleRoomIds]);
+  const focusRawExtent = useMemo(() => {
+    return mapContentExtent(
+      graph,
+      presentation.visibleRoomIds,
+      [],
+      0,
+    );
+  }, [graph, presentation.visibleRoomIds]);
   const fitExtent = useMemo(() => {
     if (
       selectedRoomId === null
@@ -220,6 +298,52 @@ export function LiveMap({ identity }: Props) {
       }),
     );
   }, [snapshot]);
+  const selectedMapRoom = useMemo(() => {
+    return graph.rooms.find(({ node }) => node.id === selectedRoomId) ?? null;
+  }, [graph.rooms, selectedRoomId]);
+  const inspector = useMemo<RoomInspectorProjection | null>(() => {
+    if (selectedMapRoom === null || snapshot === null) return null;
+    return projectRoomInspector(
+      selectedMapRoom.node,
+      snapshot.world.nodes,
+      snapshot.world.frontier,
+      snapshot.room_economics,
+    );
+  }, [selectedMapRoom, snapshot]);
+  const baseViewport = mapCameraViewport(cameraView, frame);
+  const panelInset = frame.width <= 700
+    ? { right: 0, bottom: Math.min(frame.height * 0.55, 420) + 14 }
+    : { right: 318, bottom: 0 };
+  const projectedViewport = keepSelectedRoomOutsidePanel(
+    baseViewport,
+    frame,
+    selectedMapRoom?.point ?? null,
+    inspector === null
+      ? { right: 0, bottom: 0 }
+      : {
+        right: panelInset.right,
+        bottom: panelInset.bottom,
+      },
+  );
+  const focusContinuations = useMemo(() => {
+    if (mode !== "focus") return [];
+    return projectFocusContinuations(
+      graph,
+      presentation.visibleRoomIds,
+      projectedViewport,
+    );
+  }, [graph, mode, presentation.visibleRoomIds, projectedViewport]);
+  const visibleRoomFootprints = useMemo(() => {
+    return graph.rooms.flatMap(({ node, point }) => {
+      return presentation.visibleRoomIds.has(node.id)
+        ? [mapRoomFootprint(node, point, node.id === graph.currentRoomId)]
+        : [];
+    });
+  }, [
+    graph.currentRoomId,
+    graph.rooms,
+    presentation.visibleRoomIds,
+  ]);
   const legendEntries = useMemo(() => {
     return projectMapLegend({
       rooms: graph.rooms.map(({ node }) => node),
@@ -229,10 +353,12 @@ export function LiveMap({ identity }: Props) {
       combat: Boolean(snapshot?.combat),
       beaconRoomIds,
       evidence: evidenceMarkers,
+      focusContinuationCount: focusContinuations.length,
     });
   }, [
     beaconRoomIds,
     evidenceMarkers,
+    focusContinuations.length,
     graph.currentRoomId,
     graph.rooms,
     presentation.visibleRoomIds,
@@ -257,21 +383,6 @@ export function LiveMap({ identity }: Props) {
     setSelectedRoomId(null);
     syncSelectedRoomToLocation(null);
   }, []);
-  const selectedMapRoom = useMemo(() => {
-    return graph.rooms.find(({ node }) => node.id === selectedRoomId) ?? null;
-  }, [graph.rooms, selectedRoomId]);
-  const inspector = useMemo<RoomInspectorProjection | null>(() => {
-    if (selectedMapRoom === null || snapshot === null) return null;
-    return projectRoomInspector(
-      selectedMapRoom.node,
-      snapshot.world.nodes,
-      snapshot.world.frontier,
-      snapshot.room_economics,
-    );
-  }, [selectedMapRoom, snapshot]);
-  const currentCenter = roomCenter(graph, graph.currentRoomId)
-    ?? viewportCenter(activeExtent);
-
   useEffect(() => {
     cameraViewRef.current = cameraView;
   }, [cameraView]);
@@ -325,11 +436,11 @@ export function LiveMap({ identity }: Props) {
     graph.currentRoomId,
   ]);
 
-  useEffect(() => {
-    const svg = svgRef.current;
-    if (svg === null || typeof ResizeObserver === "undefined") return;
-    const updateFrame = () => {
-      const bounds = svg.getBoundingClientRect();
+  useLayoutEffect(() => {
+    const stage = stageRef.current;
+    if (stage === null || typeof ResizeObserver === "undefined") return;
+    const updateGeometry = () => {
+      const bounds = stage.getBoundingClientRect();
       if (bounds.width <= 0 || bounds.height <= 0) return;
       setFrame((current) => {
         if (
@@ -340,22 +451,117 @@ export function LiveMap({ identity }: Props) {
         }
         return { width: bounds.width, height: bounds.height };
       });
+      const overlays = [...stage.querySelectorAll<HTMLElement>(
+        "[data-map-focus-occluder]",
+      )];
+      const nextInsets = { ...defaultSafeInsets };
+      const nextOverlayRects = overlays.map((overlay) => {
+        const overlayBounds = overlay.getBoundingClientRect();
+        const left = Math.max(overlayBounds.left - bounds.left - 8, 0);
+        const top = Math.max(overlayBounds.top - bounds.top - 8, 0);
+        const right = Math.min(
+          overlayBounds.right - bounds.left + 8,
+          bounds.width,
+        );
+        const bottom = Math.min(
+          overlayBounds.bottom - bounds.top + 8,
+          bounds.height,
+        );
+        return {
+          x: left,
+          y: top,
+          width: Math.max(right - left, 0),
+          height: Math.max(bottom - top, 0),
+        };
+      });
+      for (const overlay of overlays) {
+        const overlayBounds = overlay.getBoundingClientRect();
+        const edge = overlay.dataset.mapOverlayEdge;
+        if (edge === "top") {
+          nextInsets.top = Math.max(
+            nextInsets.top,
+            overlayBounds.bottom - bounds.top + 8,
+          );
+        } else if (edge === "right") {
+          nextInsets.right = Math.max(
+            nextInsets.right,
+            bounds.right - overlayBounds.left + 8,
+          );
+        } else if (edge === "bottom") {
+          nextInsets.bottom = Math.max(
+            nextInsets.bottom,
+            bounds.bottom - overlayBounds.top + 8,
+          );
+        } else if (edge === "left") {
+          nextInsets.left = Math.max(
+            nextInsets.left,
+            overlayBounds.right - bounds.left + 8,
+          );
+        }
+      }
+      setOverlayRects((current) => {
+        return overlayRectsEqual(current, nextOverlayRects)
+          ? current
+          : nextOverlayRects;
+      });
+      setSafeInsets((current) => {
+        if (
+          Math.abs(current.top - nextInsets.top) < 1
+          && Math.abs(current.right - nextInsets.right) < 1
+          && Math.abs(current.bottom - nextInsets.bottom) < 1
+          && Math.abs(current.left - nextInsets.left) < 1
+        ) {
+          return current;
+        }
+        return nextInsets;
+      });
     };
-    const observer = new ResizeObserver(updateFrame);
-    observer.observe(svg);
-    updateFrame();
+    const observer = new ResizeObserver(updateGeometry);
+    observer.observe(stage);
+    for (const overlay of stage.querySelectorAll<HTMLElement>(
+      "[data-map-focus-occluder]",
+    )) {
+      observer.observe(overlay);
+    }
+    updateGeometry();
     return () => observer.disconnect();
-  }, [graph.rooms.length]);
+  }, [
+    graph.rooms.length,
+    inspector,
+    legendEntries.length,
+    legendExpanded,
+    mode,
+    snapshot?.agent_thought,
+    thoughtExpanded,
+  ]);
+
+  useEffect(() => {
+    const previousRoomId = previousCurrentRoomIdRef.current;
+    const currentRoomId = graph.currentRoomId;
+    previousCurrentRoomIdRef.current = currentRoomId;
+    if (
+      mode === "focus"
+      && cameraMode === "manual"
+      && previousRoomId !== null
+      && currentRoomId !== null
+      && previousRoomId !== currentRoomId
+    ) {
+      setCameraMode("follow");
+    }
+  }, [cameraMode, graph.currentRoomId, mode]);
 
   useEffect(() => {
     setCameraView({ center: { x: 0, y: 0 }, scale: 1 });
     followInitializedRef.current = false;
+    previousCurrentRoomIdRef.current = null;
+    setSafeInsets(defaultSafeInsets);
+    setOverlayRects([]);
     setCameraMode("follow");
     setChosenMode(null);
-    setExpandedRoomIds(new Set());
     setSelectedRoomId(selectedRoomFromLocation());
     setThoughtExpanded(overlayExpandedByDefault());
-    setLegendExpanded(overlayExpandedByDefault());
+    setLegendExpanded(false);
+    setPanHintVisible(true);
   }, [identity.sessionId]);
 
   useEffect(() => {
@@ -420,25 +626,11 @@ export function LiveMap({ identity }: Props) {
     graph.rooms.map((room) => [room.node.id, room.point]),
   );
   const effectiveCameraView = cameraView;
-  const cameraViewport = mapCameraViewport(effectiveCameraView, frame);
   const camera = {
-    viewport: cameraViewport,
-    panning: true,
+    viewport: projectedViewport,
+    panning: mode !== "lantern",
   };
-  const panelInset = frame.width <= 700
-    ? { right: 0, bottom: Math.min(frame.height * 0.55, 420) + 14 }
-    : { right: 318, bottom: 0 };
-  const viewport = keepSelectedRoomOutsidePanel(
-    camera.viewport,
-    frame,
-    selectedMapRoom?.point ?? null,
-    inspector === null
-      ? { right: 0, bottom: 0 }
-      : {
-        right: panelInset.right,
-        bottom: panelInset.bottom,
-      },
-  );
+  const viewport = projectedViewport;
   const currentPoint = graph.currentRoomId === null
     ? undefined
     : roomById.get(graph.currentRoomId);
@@ -450,7 +642,7 @@ export function LiveMap({ identity }: Props) {
     ) {
       return 1;
     }
-    return lanternOpacity(graph, roomId);
+    return lanternOpacities.get(roomId) ?? 0.12;
   };
   const handlePointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
     suppressClickRef.current = false;
@@ -482,10 +674,17 @@ export function LiveMap({ identity }: Props) {
       suppressClickRef.current = true;
       event.currentTarget.setPointerCapture(event.pointerId);
       setDragging(true);
+      setPanHintVisible(false);
+      if (mode === "lantern") setChosenMode("grow");
+      setCameraMode("manual");
+      drag.clientX = event.clientX;
+      drag.clientY = event.clientY;
+      drag.center = viewportCenter(viewport);
+      event.preventDefault();
+      return;
     }
     event.preventDefault();
-    setCameraMode((current) => transitionMapCamera(current, "drag"));
-    setCameraView(panMapCamera({
+    const panned = panMapCamera({
       center: drag.center,
       scale: effectiveCameraView.scale,
     }, {
@@ -494,7 +693,24 @@ export function LiveMap({ identity }: Props) {
     }, {
       x: viewport.width / bounds.width,
       y: viewport.height / bounds.height,
-    }));
+    });
+    if (mode === "focus") {
+      const clamped = clampFocusCamera(
+        panned,
+        currentCenter,
+        focusRawExtent,
+        frame,
+      );
+      setCameraView({
+        center: {
+          x: deltaX === 0 ? drag.center.x : clamped.center.x,
+          y: deltaY === 0 ? drag.center.y : clamped.center.y,
+        },
+        scale: clamped.scale,
+      });
+    } else {
+      setCameraView(panned);
+    }
   };
   const stopDragging = (event: ReactPointerEvent<SVGSVGElement>) => {
     const drag = dragRef.current;
@@ -514,8 +730,15 @@ export function LiveMap({ identity }: Props) {
     event.stopPropagation();
   };
   const handleCameraChange = (next: MapCameraMode) => {
+    if (mode === "lantern" && next !== "follow") {
+      setChosenMode("grow");
+    }
     if (next === "fit") {
-      setCameraView(fitMapCamera(fitExtent, frame));
+      setCameraView(fitMapCameraToSafeFrame(
+        fitExtent,
+        frame,
+        safeInsets,
+      ));
     } else {
       setCameraView((current) => ({
         center: viewportCenter(viewport),
@@ -525,6 +748,21 @@ export function LiveMap({ identity }: Props) {
     setCameraMode(next);
   };
   const handleModeChange = (next: MapMode) => {
+    if (next === "focus") {
+      followInitializedRef.current = true;
+      setCameraView((current) => ({
+        center: currentCenter,
+        scale: current.scale,
+      }));
+      setCameraMode("follow");
+    } else if (next === "lantern") {
+      followInitializedRef.current = true;
+      setCameraView((current) => ({
+        center: currentCenter,
+        scale: current.scale,
+      }));
+      setCameraMode("follow");
+    }
     setChosenMode(next);
   };
   const handleZoom = (direction: "in" | "out") => {
@@ -535,22 +773,32 @@ export function LiveMap({ identity }: Props) {
       }, direction);
     });
   };
-  const handleToggleBoundary = (roomId: string) => {
-    setExpandedRoomIds((current) => {
-      const next = new Set(current);
-      if (next.has(roomId)) next.delete(roomId);
-      else next.add(roomId);
-      return next;
-    });
-  };
   return (
     <section
+      ref={stageRef}
       className={[
         "live-map-stage",
         mode === "lantern" ? "is-lantern" : "",
         inspector === null ? "" : "has-inspector",
       ].filter(Boolean).join(" ")}
       aria-label="Learned world map"
+      data-focus-fill-count={mode === "focus"
+        ? presentation.focusFillRoomCount
+        : undefined}
+      data-focus-component-count={mode === "focus"
+        ? focusComponentRoomCount
+        : undefined}
+      data-focus-hidden-inside-count={mode === "focus"
+        ? focusHiddenInsideCount
+        : undefined}
+      data-focus-overlay-count={mode === "focus"
+        ? overlayRects.length
+        : undefined}
+      data-focus-pane-height={mode === "focus" ? frame.height : undefined}
+      data-focus-pane-width={mode === "focus" ? frame.width : undefined}
+      data-focus-shell-count={mode === "focus"
+        ? presentation.focusShellRoomCount
+        : undefined}
       style={{
         "--live-map-overlay-safe-band": `${overlayBand}px`,
       } as CSSProperties}
@@ -674,27 +922,25 @@ export function LiveMap({ identity }: Props) {
             )];
           })}
         </g>
-        <g className="live-map-boundaries">
-          {mode === "focus" && currentPoint !== undefined
-            ? presentation.boundaries.flatMap((boundary) => {
-              const room = graph.rooms.find(({ node }) => {
-                return node.id === boundary.roomId;
-              });
-              if (room === undefined) return [];
-              return [(
-                <LiveMapBoundary
-                  key={boundary.roomId}
-                  boundary={boundary}
-                  currentPoint={currentPoint}
-                  point={room.point}
-                  roomTitle={room.node.title}
-                  onToggle={handleToggleBoundary}
-                />
-              )];
-            })
-            : null}
-        </g>
       </svg>
+      {mode === "focus" ? (
+        <div
+          aria-label="Learned map continuations"
+          className="live-map-continuations"
+        >
+          {focusContinuations.map((marker) => (
+            <LiveMapContinuation
+              frame={frame}
+              key={marker.edge}
+              marker={marker}
+              overlayRects={overlayRects}
+              safeInsets={defaultSafeInsets}
+              viewport={viewport}
+              visibleRoomFootprints={visibleRoomFootprints}
+            />
+          ))}
+        </div>
+      ) : null}
       {inspector === null ? null : (
         <LiveRoomInspector
           room={inspector}
@@ -713,8 +959,10 @@ export function LiveMap({ identity }: Props) {
         expanded={legendExpanded}
         onToggle={() => setLegendExpanded((current) => !current)}
       />
-      {camera.panning ? (
-        <p className="live-map-pan-hint">Drag to explore the learned world.</p>
+      {camera.panning && panHintVisible ? (
+        <p className="live-map-pan-hint">
+          Drag to explore the learned world.
+        </p>
       ) : null}
       {state === "reconnecting" ? (
         <p className="live-map-connection-state" role="status">
@@ -772,6 +1020,21 @@ function bentPath(source: MapPoint, target: MapPoint): string {
   const controlX = middleX - (deltaY / length) * 34;
   const controlY = middleY + (deltaX / length) * 34;
   return `M ${source.x} ${source.y} Q ${controlX} ${controlY} ${target.x} ${target.y}`;
+}
+
+function overlayRectsEqual(
+  left: readonly MapOverlayRect[],
+  right: readonly MapOverlayRect[],
+): boolean {
+  return left.length === right.length
+    && left.every((rect, index) => {
+      const candidate = right[index];
+      return candidate !== undefined
+        && Math.abs(rect.x - candidate.x) < 1
+        && Math.abs(rect.y - candidate.y) < 1
+        && Math.abs(rect.width - candidate.width) < 1
+        && Math.abs(rect.height - candidate.height) < 1;
+    });
 }
 
 function isSnapshot(value: unknown): value is Snapshot {

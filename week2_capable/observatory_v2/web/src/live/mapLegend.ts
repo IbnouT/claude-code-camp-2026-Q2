@@ -6,6 +6,7 @@ export type MapLegendKind =
   | "current"
   | "selected"
   | "frontier"
+  | "continuation"
   | "vertical"
   | "visits"
   | "beacon"
@@ -25,6 +26,7 @@ type MapLegendInput = {
   combat: boolean;
   beaconRoomIds: ReadonlySet<string>;
   evidence: MapEvidenceProjection;
+  focusContinuationCount?: number;
 };
 
 export function projectMapLegend({
@@ -35,6 +37,7 @@ export function projectMapLegend({
   combat,
   beaconRoomIds,
   evidence,
+  focusContinuationCount = 0,
 }: MapLegendInput): MapLegendEntry[] {
   const visibleRooms = rooms.filter(({ id }) => visibleRoomIds.has(id));
   if (visibleRooms.length === 0) return [];
@@ -54,6 +57,12 @@ export function projectMapLegend({
   }
   if (evidence.frontiers.some(({ source }) => visibleRoomIds.has(source))) {
     entries.push({ kind: "frontier", label: "Frontier exit" });
+  }
+  if (focusContinuationCount > 0) {
+    entries.push({
+      kind: "continuation",
+      label: "Learned map continues",
+    });
   }
   if ([...evidence.verticalByRoom].some(([roomId, markers]) => {
     return visibleRoomIds.has(roomId) && markers.length > 0;

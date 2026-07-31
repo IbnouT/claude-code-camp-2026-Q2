@@ -28,6 +28,8 @@ export function LiveThoughtDock({
         "live-thought-dock",
         expanded ? "is-expanded" : "is-collapsed",
       ].join(" ")}
+      data-map-overlay-edge="bottom"
+      data-map-focus-occluder="true"
     >
       <button
         aria-expanded={expanded}
