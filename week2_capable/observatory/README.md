@@ -33,6 +33,7 @@ Live is connected to registered runtime evidence:
 - Pause, scrub, bookmark, and return-to-live controls.
 - Grow, Focus, and Lantern world modes.
 - One evidence-backed world surface shared by Live and Sessions.
+- Reset, relocation, and reconnect receipts break learned traversal continuity.
 - Duplicate room identities, candidate explanations, sightings, and objective beacons.
 - An isolated observer atlas with overview and zone level-of-detail.
 - A structured list equivalent for both the journey graph and atlas canvas.

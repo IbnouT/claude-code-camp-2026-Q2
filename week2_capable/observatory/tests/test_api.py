@@ -934,6 +934,200 @@ def test_world_projection_counts_room_sightings_with_exact_evidence():
     assert node.object_sightings[0].evidence == (2,)
 
 
+def test_world_projection_excludes_admin_relocation_verification():
+    events = (
+        Event(
+            seq=1,
+            session="session",
+            at=1.0,
+            monotonic=1.0,
+            kind="observation",
+            trace_id="bakery-look",
+            payload={
+                "kind": "room",
+                "title": "The Bakery",
+                "exits": ["south"],
+                "mobs": [],
+                "objects": ["a loaf of bread"],
+            },
+        ),
+        Event(
+            seq=2,
+            session="session",
+            at=2.0,
+            monotonic=2.0,
+            kind="position",
+            trace_id="bakery-look",
+            payload={
+                "place": 1,
+                "title": "The Bakery",
+                "confidence": "tracked",
+                "method": "new-title",
+            },
+        ),
+        Event(
+            seq=3,
+            session="session",
+            at=3.0,
+            monotonic=3.0,
+            kind="control_state",
+            trace_id=None,
+            payload={"state": "paused"},
+        ),
+        Event(
+            seq=4,
+            session="session",
+            at=4.0,
+            monotonic=4.0,
+            kind="observation",
+            trace_id=None,
+            payload={
+                "kind": "room",
+                "title": "The Temple Of Midgaard",
+                "exits": ["north", "down"],
+                "mobs": ["a temple guard"],
+                "objects": ["a brass key"],
+            },
+        ),
+        Event(
+            seq=5,
+            session="session",
+            at=5.0,
+            monotonic=5.0,
+            kind="position",
+            trace_id=None,
+            payload={
+                "place": 2,
+                "title": "The Temple Of Midgaard",
+                "confidence": "tracked",
+                "method": "new-title",
+            },
+        ),
+        Event(
+            seq=6,
+            session="session",
+            at=6.0,
+            monotonic=6.0,
+            kind="relocation_receipt",
+            trace_id=None,
+            payload={
+                "ok": True,
+                "action": "relocate",
+                "verified_room_vnum": 3001,
+            },
+        ),
+        Event(
+            seq=7,
+            session="session",
+            at=7.0,
+            monotonic=7.0,
+            kind="control_state",
+            trace_id=None,
+            payload={"state": "running"},
+        ),
+        Event(
+            seq=8,
+            session="session",
+            at=8.0,
+            monotonic=8.0,
+            kind="command",
+            trace_id="temple-look",
+            payload={"line": "look"},
+        ),
+        Event(
+            seq=9,
+            session="session",
+            at=9.0,
+            monotonic=9.0,
+            kind="observation",
+            trace_id="temple-look",
+            payload={
+                "kind": "room",
+                "title": "The Temple Of Midgaard",
+                "exits": ["north", "down"],
+                "mobs": ["a temple acolyte"],
+                "objects": ["a silver bell"],
+            },
+        ),
+        Event(
+            seq=10,
+            session="session",
+            at=10.0,
+            monotonic=10.0,
+            kind="position",
+            trace_id="temple-look",
+            payload={
+                "place": 2,
+                "title": "The Temple Of Midgaard",
+                "confidence": "tracked",
+                "method": "unique-title+exits",
+            },
+        ),
+    )
+
+    world = project_world_events(events)
+
+    assert world.edges == ()
+    bakery = next(node for node in world.nodes if node.place == 1)
+    temple = next(node for node in world.nodes if node.place == 2)
+    assert bakery.visits == 1
+    assert bakery.objects == ("a loaf of bread",)
+    assert temple.visits == 1
+    assert temple.mobs == ("a temple acolyte",)
+    assert temple.objects == ("a silver bell",)
+    assert temple.mob_sightings[0].evidence == (10,)
+    assert temple.object_sightings[0].evidence == (10,)
+
+
+def test_world_projection_breaks_each_retained_control_boundary():
+    for boundary_kind in (
+        "relocation_receipt",
+        "reset_receipt",
+        "session_reconnect",
+    ):
+        events = (
+            Event(
+                seq=1,
+                session="session",
+                at=1.0,
+                monotonic=1.0,
+                kind="position",
+                trace_id="before",
+                payload={
+                    "place": 1,
+                    "title": "The Bakery",
+                    "confidence": "tracked",
+                    "method": "new-title",
+                },
+            ),
+            Event(
+                seq=2,
+                session="session",
+                at=2.0,
+                monotonic=2.0,
+                kind=boundary_kind,
+                trace_id=None,
+                payload={"ok": True},
+            ),
+            Event(
+                seq=3,
+                session="session",
+                at=3.0,
+                monotonic=3.0,
+                kind="position",
+                trace_id="after",
+                payload={
+                    "place": 2,
+                    "title": "The Temple Of Midgaard",
+                    "confidence": "tracked",
+                    "method": "new-title",
+                },
+            ),
+        )
+
+        assert project_world_events(events).edges == (), boundary_kind
+
+
 def test_rendering_comparison_aligns_semantics_and_replays_same_results(
     tmp_path,
 ):

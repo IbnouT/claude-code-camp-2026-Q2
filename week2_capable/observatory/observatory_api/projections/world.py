@@ -25,6 +25,11 @@ from ..contracts import (
 )
 
 WorldRow = tuple[int, str, str | None, str | dict[str, Any]]
+CONTROL_BOUNDARY_KINDS = frozenset({
+    "relocation_receipt",
+    "reset_receipt",
+    "session_reconnect",
+})
 
 
 def project_world(
@@ -96,10 +101,28 @@ def _project(
     ambiguous_sequence: int | None = None
     ambiguous_method = "candidate"
     explicit_candidates: tuple[int, ...] = ()
+    control_verification = False
 
     for seq, kind, trace_id, encoded in rows:
         payload = _payload(encoded)
         if payload is None:
+            continue
+        if kind == "control_state":
+            state = payload.get("state")
+            if state == "paused":
+                control_verification = True
+            elif state in {"running", "quarantined"}:
+                control_verification = False
+            last_place = None
+            current_title = None
+            current_confidence = "unknown"
+            continue
+        if kind in CONTROL_BOUNDARY_KINDS:
+            last_place = None
+            current_title = None
+            current_confidence = "unknown"
+            continue
+        if control_verification:
             continue
         if kind == "command" and trace_id:
             line = str(payload.get("line", ""))

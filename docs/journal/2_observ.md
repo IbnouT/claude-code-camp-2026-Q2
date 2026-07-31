@@ -164,6 +164,10 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
   viewport differs from the product, or its replay exercises another client
   pipeline. Stating the gap is more useful than publishing a number that proves
   the wrong claim.
+- An append-only log can retain every true event while a projection still
+  invents a journey. Control receipts must be traversal boundaries, otherwise
+  an administrator moving a player looks exactly like the player discovering
+  a path.
 
 ## Technical Conclusions
 

@@ -16,6 +16,10 @@ this folder is the binding visual reference.
   Flee, recall, death relocation, teleport and unknown transitions carry
   no direction vector: their targets join a floating cluster region and
   the connection renders as a dashed displacement link labeled by kind.
+- Authenticated reset, relocation and reconnect receipts break player
+  traversal continuity. Control-generated verification contributes no room
+  visit, sighting or edge. The first subsequent player position starts a new
+  observed component without an inbound edge.
 - An occupied cell opens by shifting every room in the anchor's evidence
   component at or beyond the requested cell along the incoming axis. Whole
   lateral rows move together. The new room takes its requested integer cell.
