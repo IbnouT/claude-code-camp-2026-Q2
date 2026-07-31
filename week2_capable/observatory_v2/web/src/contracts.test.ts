@@ -33,6 +33,18 @@ const snapshot = {
   position_method: "room_observation",
   combat: false,
   combat_episode: null,
+  friction: {
+    kind: null,
+    repeated_command: null,
+    repeated_count: 0,
+    distinct_places: 0,
+    iterations: 0,
+    new_places: 0,
+    window_iterations: 0,
+    iterations_since_new_place: null,
+    threshold: null,
+    evidence: [],
+  },
   vitals: { hit: 41 },
   player_status: {
     fields: {

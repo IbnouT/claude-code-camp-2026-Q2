@@ -90,8 +90,8 @@ def test_score_publishes_full_typed_player_state() -> None:
         "This ranks you as a Newbie (level 2).\r\n"
         "You are standing.\r\n"
         "You are hungry.\r\n"
+        "You are intoxicated.\r\n"
         "You are poisoned.\r\n"
-        "You are encumbered.\r\n"
         "12H 90M 41V > ",
         WIRE,
     )
@@ -113,9 +113,8 @@ def test_score_publishes_full_typed_player_state() -> None:
         "max_move": 82,
         "hungry": True,
         "thirsty": False,
-        "drunk": False,
+        "drunk": True,
         "poisoned": True,
-        "encumbered": True,
         "alignment": -5,
         "exp": 14,
         "gold": 23,
@@ -141,3 +140,15 @@ def test_player_state_deltas_capture_posture_and_conditions() -> None:
     ]
     assert {"posture": "sitting"} in states
     assert {"thirsty": True} in states
+
+
+def test_carry_failure_does_not_invent_an_encumbered_state() -> None:
+    found = parse("You can't carry that much.\r\n20H 100M 82V > ", WIRE)
+
+    states = [
+        item.values
+        for item in found
+        if isinstance(item, PlayerStateObservation)
+    ]
+
+    assert all("encumbered" not in state for state in states)

@@ -39,9 +39,9 @@ changed by this plan.
   `player_status.fields.max_*`, which arrive only from `score`. Mixing the two
   sources makes current values appear stale after a score.
 - Level and gold from `player_status`, which observes them only from `score`.
-- Observed conditions: hungry, thirsty, drunk, poisoned, encumbered. A
-  condition renders its observed boolean when the key is present. A key absent
-  from `player_status.fields` is omitted rather than described.
+- Observed conditions: hungry, thirsty, drunk, poisoned. A chip renders only
+  when the condition is observed true. Observed-false and absent conditions do
+  not spend rail space.
 
 ### LIVE ECONOMICS
 
@@ -63,12 +63,11 @@ changed by this plan.
 
 The block remains in one stable position at the bottom of the rail.
 
-- The quiet state says `No friction detected` and names what was checked.
 - The fired state names `confusion_loop` or `progress_stall`, shows its retained
   evidence, and provides `Inspect attempts`.
 - The measurements include:
 
-  - new places observed over the last iterations
+  - new places observed over the last ten iterations
   - iterations since the last new place
   - repeated-command count for the current room when above one
 

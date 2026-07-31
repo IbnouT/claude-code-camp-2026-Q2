@@ -12,26 +12,38 @@ import {
   responseTrend,
   tokensIn,
 } from "./liveEvidence";
+import { LiveFrictionBlock } from "./LiveFrictionBlock";
+import type { LiveSnapshotState } from "./useLiveSnapshot";
 
-const conditionLabels: Record<string, [string, string]> = {
-  hungry: ["Hungry", "Not hungry"],
-  thirsty: ["Thirsty", "Not thirsty"],
-  drunk: ["Drunk", "Sober"],
-  poisoned: ["Poisoned", "Not poisoned"],
-  encumbered: ["Encumbered", "Not encumbered"],
+const conditionPresentations: Record<string, {
+  label: string;
+  tone: "bad" | "warn";
+}> = {
+  hungry: { label: "Hungry", tone: "warn" },
+  thirsty: { label: "Thirsty", tone: "warn" },
+  drunk: { label: "Intoxicated", tone: "warn" },
+  poisoned: { label: "Poisoned", tone: "bad" },
 };
 
-export function LiveEvidenceRail({ snapshot }: { snapshot: Snapshot | null }) {
+export function LiveEvidenceRail({
+  captureStatus,
+  connectionState,
+  snapshot,
+}: {
+  captureStatus: string | null;
+  connectionState: LiveSnapshotState;
+  snapshot: Snapshot | null;
+}) {
   if (snapshot === null) {
     return <p className="live-rail-empty">Waiting for retained evidence…</p>;
   }
   const fields = snapshot.player_status.fields;
   const posture = fields.posture?.value;
   const command = latestCommand(snapshot);
-  const conditions = Object.entries(conditionLabels).flatMap(([key, labels]) => {
+  const conditions = Object.entries(conditionPresentations).flatMap(([key, presentation]) => {
     const observed = fields[key];
-    return typeof observed?.value === "boolean"
-      ? [{ key, label: observed.value ? labels[0] : labels[1], observed }]
+    return observed?.value === true
+      ? [{ key, observed, ...presentation }]
       : [];
   });
   return (
@@ -56,16 +68,19 @@ export function LiveEvidenceRail({ snapshot }: { snapshot: Snapshot | null }) {
       <RailBlock title="Character">
         <VitalBar
           label="HP"
+          tone="hit"
           value={snapshot.vitals.hit}
           maximum={observedNumber(fields, "max_hit")}
         />
         <VitalBar
           label="Mana"
+          tone="mana"
           value={snapshot.vitals.mana}
           maximum={observedNumber(fields, "max_mana")}
         />
         <VitalBar
           label="Move"
+          tone="move"
           value={snapshot.vitals.move}
           maximum={observedNumber(fields, "max_move")}
         />
@@ -75,8 +90,14 @@ export function LiveEvidenceRail({ snapshot }: { snapshot: Snapshot | null }) {
         </div>
         {conditions.length === 0 ? null : (
           <div className="live-condition-list" aria-label="Observed conditions">
-            {conditions.map(({ key, label, observed }) => (
-              <span key={key} title={evidenceTitle(observed)}>{label}</span>
+            {conditions.map(({ key, label, observed, tone }) => (
+              <span
+                className={`is-${tone}`}
+                key={key}
+                title={evidenceTitle(observed)}
+              >
+                {label}
+              </span>
             ))}
           </div>
         )}
@@ -85,6 +106,11 @@ export function LiveEvidenceRail({ snapshot }: { snapshot: Snapshot | null }) {
       <RailBlock title="Live economics">
         <LiveEconomics snapshot={snapshot} />
       </RailBlock>
+      <LiveFrictionBlock
+        captureStatus={captureStatus}
+        connectionState={connectionState}
+        snapshot={snapshot}
+      />
     </div>
   );
 }
@@ -126,10 +152,12 @@ function EvidenceText({
 function VitalBar({
   label,
   maximum,
+  tone,
   value,
 }: {
   label: string;
   maximum: number | null;
+  tone: "hit" | "mana" | "move";
   value: number | undefined;
 }) {
   const observed = typeof value === "number";
@@ -137,7 +165,7 @@ function VitalBar({
     ? Math.min(Math.max(value / maximum, 0), 1)
     : 0;
   return (
-    <div className="live-vital">
+    <div className={`live-vital is-${tone}`}>
       <span>{label}</span>
       <strong>{observed
         ? maximum === null ? value : `${value} / ${maximum}`

@@ -630,7 +630,6 @@ async def test_live_snapshot_exposes_observed_status_economics_and_frontier(
                 "thirsty": False,
                 "drunk": False,
                 "poisoned": False,
-                "encumbered": False,
             },
             "confidence": "high",
             "method": "score",

@@ -270,7 +270,6 @@ function snapshot(through: number) {
         thirsty: observedStatus(false, 1),
         drunk: observedStatus(false, 1),
         poisoned: observedStatus(false, 1),
-        encumbered: observedStatus(false, 1),
       },
       capture_gaps: [],
     },

@@ -242,6 +242,23 @@ class LiveCombatEpisode(BaseModel):
     evidence: tuple[int, ...]
 
 
+class LiveFrictionDiagnostic(BaseModel):
+    """Prefix-local navigation friction using the recorded-session rules."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    kind: Literal["confusion_loop", "progress_stall"] | None
+    repeated_command: str | None
+    repeated_count: int
+    distinct_places: int
+    iterations: int
+    new_places: int
+    window_iterations: int
+    iterations_since_new_place: int | None
+    threshold: str | None
+    evidence: tuple[int, ...]
+
+
 class LiveJourneySnapshot(BaseModel):
     """One deterministic Live projection at an exact gateway sequence."""
 
@@ -275,6 +292,7 @@ class LiveJourneySnapshot(BaseModel):
     position_method: str | None
     combat: bool
     combat_episode: LiveCombatEpisode | None
+    friction: LiveFrictionDiagnostic
     vitals: dict[str, int]
     player_status: LivePlayerStatus
     cost_usd: float

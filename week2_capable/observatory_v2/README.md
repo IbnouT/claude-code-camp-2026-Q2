@@ -129,6 +129,9 @@ navigation without changing the selected evidence source. The objective strip,
 evidence rail, active-combat panel, and thought age expose retained state
 without claiming that a stale observation is current. Message agent inserts
 guidance at the next iteration boundary for a running, controllable session.
+The rail keeps navigation progress in one stable block, emphasizes retained
+friction rules when they fire, and states lifecycle or capture conditions when
+measurements would be unsafe.
 
 ### Learned-world map
 
@@ -154,7 +157,7 @@ npm test
 npm run build
 ```
 
-The frontend suite contains 137 tests across 19 files. `npm run build` runs
+The frontend suite contains 139 tests across 19 files. `npm run build` runs
 strict TypeScript checking with `tsc --noEmit` before producing the Vite
 production bundle.
 

@@ -29,6 +29,8 @@ Live is connected to registered runtime evidence:
 - Registered players and sessions discovered without scanning by file time.
 - Live SSE and recorded replay pass through one deterministic event reducer.
 - World, objective, cost, tokens, iterations, activity, and source completeness.
+- Prefix-local loop and spatial-stall diagnostics reuse the recorded-session
+  thresholds and retain their triggering gateway sequences.
 - One causal clock reconstructs every panel at a selected sequence.
 - Pause, scrub, bookmark, and return-to-live controls.
 - Grow, Focus, and Lantern world modes.

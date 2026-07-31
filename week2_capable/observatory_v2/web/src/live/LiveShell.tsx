@@ -164,7 +164,11 @@ export function LiveShell({
           >
             Evidence
           </button>
-          <LiveEvidenceRail snapshot={snapshot} />
+          <LiveEvidenceRail
+            captureStatus={selectedSession?.capture_status ?? null}
+            connectionState={snapshotState}
+            snapshot={snapshot}
+          />
         </aside>
         <section
           aria-label="Causal timeline"

@@ -110,6 +110,18 @@ function runtimeSnapshot(overrides: Partial<Snapshot> = {}): Snapshot {
     position_method: "fixture",
     combat: false,
     combat_episode: null,
+    friction: {
+      kind: null,
+      repeated_command: null,
+      repeated_count: 0,
+      distinct_places: 2,
+      iterations: 4,
+      new_places: 2,
+      window_iterations: 4,
+      iterations_since_new_place: 1,
+      threshold: null,
+      evidence: [],
+    },
     vitals: {},
     player_status: { fields: {}, capture_gaps: [] },
     cost_usd: 0,
@@ -328,8 +340,13 @@ describe("Live shell", () => {
     expect(rail).toHaveTextContent("Attacking a large kobold");
     expect(rail).toHaveTextContent("kill kobold");
     expect(rail).toHaveTextContent("30 / 41");
+    expect(screen.getByText("30 / 41").closest(".live-vital")).toHaveClass("is-hit");
+    expect(screen.getByText("22 / 24").closest(".live-vital")).toHaveClass("is-mana");
+    expect(screen.getByText("49 / 50").closest(".live-vital")).toHaveClass("is-move");
     expect(rail).toHaveTextContent("Hungry");
-    expect(rail).toHaveTextContent("Not thirsty");
+    expect(screen.getByText("Hungry").closest(".live-condition-list > span"))
+      .toHaveClass("is-warn");
+    expect(rail).not.toHaveTextContent("Not thirsty");
     expect(rail).not.toHaveTextContent("poisoned");
     expect(rail).toHaveTextContent("Turn spend");
     expect(rail).toHaveTextContent("$0.030 / $0.200");
@@ -414,6 +431,53 @@ describe("Live shell", () => {
     await user.click(screen.getByRole("button", { name: "Open Live evidence" }));
     expect(rail).toHaveClass("is-open");
     expect(rail).toHaveTextContent("Live economics");
+  });
+
+  it("keeps friction stable and names the retained rule when it fires", async () => {
+    const user = userEvent.setup();
+    const session = runtimeSession({ capture_status: "complete" });
+    const snapshot = runtimeSnapshot({
+      friction: {
+        kind: "confusion_loop",
+        repeated_command: "east",
+        repeated_count: 5,
+        distinct_places: 6,
+        iterations: 12,
+        new_places: 1,
+        window_iterations: 10,
+        iterations_since_new_place: 6,
+        threshold: "same command recorded at least five times",
+        evidence: [31, 33, 35, 37, 39],
+      },
+    });
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      return Promise.resolve(String(input).includes("/snapshot")
+        ? snapshotResponse(snapshot)
+        : catalogResponse(runtimeCatalog([session])));
+    });
+    render(<LiveShell identity={identity} />);
+
+    expect(await screen.findByText("Possible navigation loop")).toBeInTheDocument();
+    const progress = screen.getByRole("heading", { name: "Progress" }).parentElement;
+    expect(progress).toHaveTextContent("1 new place · 10 iterations");
+    expect(progress).toHaveTextContent("east repeated ×5 in the current room");
+    await user.click(screen.getByRole("button", { name: "Inspect attempts" }));
+    expect(screen.getByText("Evidence sequences 31, 33, 35, 37, 39"))
+      .toBeInTheDocument();
+  });
+
+  it("keeps progress measurements visible during combat", async () => {
+    const snapshot = runtimeSnapshot({ combat: true });
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      return Promise.resolve(String(input).includes("/snapshot")
+        ? snapshotResponse(snapshot)
+        : catalogResponse(runtimeCatalog([runtimeSession({ capture_status: "complete" })])));
+    });
+    render(<LiveShell identity={identity} />);
+
+    expect(await screen.findByText("Combat in progress. Spatial progress may pause."))
+      .toBeInTheDocument();
+    expect(screen.getByText("2 new places · 4 iterations")).toBeInTheDocument();
   });
 
   it("renders one verified context chip and the learned-world map", async () => {

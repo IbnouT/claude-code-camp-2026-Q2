@@ -246,6 +246,19 @@ export type LiveCombatEpisode = {
   evidence: number[];
 };
 
+export type LiveFrictionDiagnostic = {
+  kind: "confusion_loop" | "progress_stall" | null;
+  repeated_command: string | null;
+  repeated_count: number;
+  distinct_places: number;
+  iterations: number;
+  new_places: number;
+  window_iterations: number;
+  iterations_since_new_place: number | null;
+  threshold: string | null;
+  evidence: number[];
+};
+
 export type Snapshot = {
   session_id: string;
   gateway_session_id: string;
@@ -275,6 +288,7 @@ export type Snapshot = {
   position_method: string | null;
   combat: boolean;
   combat_episode: LiveCombatEpisode | null;
+  friction: LiveFrictionDiagnostic;
   vitals: Record<string, number>;
   player_status: {
     fields: Record<string, Observed>;
@@ -348,6 +362,7 @@ export function decodeSnapshot(value: unknown): Snapshot {
     && isNullableRecord(value.agent_belief)
     && isNullableRecord(value.zone)
     && isNullableRecord(value.combat_episode)
+    && isFrictionDiagnostic(value.friction)
     && isNullableRecord(value.unattributed_room_economics)
     && isNumberRecord(value.vitals)
     && isNumberRecord(value.usage)
@@ -357,6 +372,23 @@ export function decodeSnapshot(value: unknown): Snapshot {
     throw new Error("live snapshot has an invalid shape");
   }
   return value as Snapshot;
+}
+
+function isFrictionDiagnostic(value: unknown): boolean {
+  return isRecord(value)
+    && (value.kind === null
+      || value.kind === "confusion_loop"
+      || value.kind === "progress_stall")
+    && isNullableString(value.repeated_command)
+    && typeof value.repeated_count === "number"
+    && typeof value.distinct_places === "number"
+    && typeof value.iterations === "number"
+    && typeof value.new_places === "number"
+    && typeof value.window_iterations === "number"
+    && (value.iterations_since_new_place === null
+      || typeof value.iterations_since_new_place === "number")
+    && isNullableString(value.threshold)
+    && Array.isArray(value.evidence);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

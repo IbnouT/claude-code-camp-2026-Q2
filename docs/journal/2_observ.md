@@ -171,6 +171,9 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
 - Live status is trustworthy only when each value keeps its own observation
   clock. Prompt vitals, score maxima, tool calls, and response economics can
   all be true at different moments.
+- Continuous progress measurements make a threshold legible before it fires.
+  Lifecycle and capture guards prevent those measurements from implying
+  precision the retained prefix cannot support.
 
 ## Technical Conclusions
 

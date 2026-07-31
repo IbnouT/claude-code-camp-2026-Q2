@@ -61,6 +61,7 @@
   bottom: var(--live-timeline-height);
   width: var(--live-evidence-rail-width);
   border-left: 1px solid var(--color-line);
+  background: var(--color-surface);
   overflow-y: auto;
   pointer-events: auto;
 }
@@ -109,8 +110,11 @@
 }
 
 .live-rail-content {
+  min-height: 100%;
   display: grid;
   gap: 0;
+  align-content: start;
+  background: var(--color-surface);
 }
 
 .live-rail-toggle {
@@ -126,33 +130,37 @@
 .live-rail-block {
   display: grid;
   gap: 10px;
-  padding: 15px 16px;
+  padding: 14px 16px;
   border-bottom: 1px solid var(--color-line);
 }
 
 .live-rail-block h2 {
   margin: 0;
   color: var(--color-quiet);
-  font-size: 9px;
-  font-weight: 650;
+  font-size: 10.5px;
+  font-weight: 600;
   letter-spacing: .14em;
   text-transform: uppercase;
 }
 
 .live-posture-pill,
-.live-condition-list span {
+.live-condition-list > span {
   width: fit-content;
-  padding: 4px 8px;
-  border: 1px solid var(--color-line-strong);
-  border-radius: 999px;
+  padding: 5px 10px;
+  border-radius: 8px;
   background: var(--color-raised);
   color: var(--color-text);
-  font-size: 10px;
+  font-size: 11.5px;
   text-transform: capitalize;
 }
 
 .live-posture-pill {
+  padding: 3px 9px;
+  border: 1px solid var(--color-line);
+  border-radius: 7px;
+  background: var(--color-soft);
   color: var(--color-green);
+  font-size: 11px;
 }
 
 .live-evidence-text {
@@ -161,14 +169,13 @@
 }
 
 .live-evidence-text small,
-.live-vital > span:first-child,
 .live-character-facts small,
 .live-spend small,
 .live-economics-grid small,
 .live-context-fill small,
 .live-cost-sparkline figcaption {
   color: var(--color-quiet);
-  font-size: 8.5px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: .1em;
   text-transform: uppercase;
@@ -176,16 +183,22 @@
 
 .live-evidence-text strong {
   color: var(--color-text);
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 12.5px;
+  font-weight: 600;
   line-height: 1.45;
 }
 
 .live-vital {
   display: grid;
-  grid-template-columns: 36px minmax(0, 1fr) auto;
+  grid-template-columns: 44px minmax(0, 1fr) 72px;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.live-vital > span:first-child {
+  color: var(--color-muted);
+  font-size: 12px;
 }
 
 .live-vital strong,
@@ -195,21 +208,25 @@
 .live-context-fill strong {
   color: var(--color-text);
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 500;
 }
 
 .live-vital strong {
   grid-column: 3;
+  width: 72px;
+  color: var(--color-muted);
+  font-size: 12px;
+  text-align: right;
 }
 
 .live-vital-track,
 .live-spend-track,
 .live-context-fill > span {
-  height: 5px;
+  height: 8px;
   overflow: hidden;
-  border-radius: 999px;
-  background: var(--color-raised);
+  border-radius: 6px;
+  background: #0c1320;
 }
 
 .live-vital-track {
@@ -223,40 +240,135 @@
   height: 100%;
   display: block;
   border-radius: inherit;
-  background: var(--color-cyan);
 }
 
-.live-character-facts,
+.live-vital.is-hit .live-vital-track i {
+  background: linear-gradient(90deg, #ff5d6c, #f5c463);
+}
+
+.live-vital.is-mana .live-vital-track i {
+  background: linear-gradient(90deg, #5db4ff, #9a8cff);
+}
+
+.live-vital.is-move .live-vital-track i {
+  background: linear-gradient(90deg, #5fdd9d, #4fd6c9);
+}
+
 .live-economics-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 7px;
+  gap: 10px;
+  margin-top: 4px;
 }
 
-.live-character-facts > div,
 .live-economics-grid > div {
   min-width: 0;
   display: grid;
   gap: 3px;
-  padding: 8px;
+  padding: 10px 11px;
   border: 1px solid var(--color-line);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--color-raised) 58%, transparent);
+  border-radius: 10px;
+  background: #0c131d;
+}
+
+.live-character-facts {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-block: 1px;
+}
+
+.live-character-facts > div {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.live-character-facts > div:last-child strong {
+  color: var(--color-amber);
 }
 
 .live-condition-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 6px;
 }
 
-.live-condition-list span {
+.live-condition-list > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.live-condition-list > span.is-warn {
+  background: var(--color-amber-soft);
+  color: var(--color-amber);
+}
+
+.live-condition-list > span.is-bad {
+  background: var(--color-coral-soft);
+  color: var(--color-coral);
+}
+
+.live-friction-block {
+  min-height: 126px;
+}
+
+.live-friction-block.is-fired {
+  border-left: 3px solid var(--color-amber);
+  background: color-mix(in srgb, var(--color-amber) 7%, transparent);
+}
+
+.live-friction-result {
+  display: grid;
+  gap: 6px;
+}
+
+.live-friction-result strong {
+  color: var(--color-green);
+  font-size: 12.5px;
+}
+
+.live-friction-block.is-fired .live-friction-result strong {
+  color: var(--color-amber);
+}
+
+.live-friction-result.is-guarded strong {
   color: var(--color-muted);
+}
+
+.live-friction-result p,
+.live-friction-result small {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.live-friction-result code {
+  color: var(--color-amber);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.live-friction-result button {
+  width: fit-content;
+  padding: 5px 8px;
+  border: 1px solid var(--color-line);
+  border-radius: 7px;
+  background: var(--color-raised);
+  color: var(--color-cyan);
+  font-size: 9.5px;
+}
+
+.live-friction-result .live-friction-evidence {
+  font-family: var(--font-mono);
+  font-size: 9px;
 }
 
 .live-spend {
   display: grid;
-  gap: 7px;
+  gap: 9px;
 }
 
 .live-spend > div,
@@ -271,13 +383,24 @@
   display: block;
 }
 
+.live-spend strong {
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 600;
+}
+
 .live-spend-track i {
   background: var(--color-amber);
 }
 
+.live-economics-grid strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .live-economics-grid em {
   color: var(--color-quiet);
-  font-size: 8.5px;
+  font-size: 10px;
   font-style: normal;
 }
 
@@ -289,20 +412,20 @@
 
 .live-cost-sparkline svg {
   width: 100%;
-  height: 36px;
+  height: 26px;
   overflow: visible;
 }
 
 .live-cost-sparkline polyline {
   fill: none;
-  stroke: var(--color-cyan);
-  stroke-width: 2;
+  stroke: #4fd6c9;
+  stroke-width: 1.6;
   vector-effect: non-scaling-stroke;
 }
 
 .live-cost-sparkline > span {
-  color: var(--color-quiet);
-  font-size: 10px;
+  color: var(--color-muted);
+  font-size: 11px;
 }
 
 .live-context-fill {
@@ -312,6 +435,16 @@
 
 .live-context-fill > span {
   grid-column: 1 / -1;
+}
+
+:root[data-theme="light"] .live-vital-track,
+:root[data-theme="light"] .live-spend-track,
+:root[data-theme="light"] .live-context-fill > span {
+  background: var(--color-soft);
+}
+
+:root[data-theme="light"] .live-economics-grid > div {
+  background: var(--color-raised);
 }
 
 .live-combat-panel {

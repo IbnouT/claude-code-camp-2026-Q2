@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import bisect
 import re
-from collections import deque
+from collections import Counter, deque
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -15,6 +15,7 @@ from ..contracts import (
     LiveCombatEpisode,
     LiveCombatLine,
     LiveEconomicsPoint,
+    LiveFrictionDiagnostic,
     LiveJourneySnapshot,
     LiveMilestone,
     LiveObjectiveContext,
@@ -209,6 +210,16 @@ def project_live(
         expected_sequence=selected,
     )
     milestones = _milestones(gateway_prefix)
+    friction = _friction(
+        gateway_prefix,
+        _integer(iteration.get("n")) if iteration else 0,
+        [
+            event
+            for event in agent_prefix
+            if event.get("phase") == "iteration"
+        ],
+        world,
+    )
     timeline = _quiet_cohorts(
         _timeline(gateway_prefix, agent_prefix),
         milestones,
@@ -276,6 +287,7 @@ def project_live(
         ),
         combat=combat_episode.active if combat_episode is not None else False,
         combat_episode=combat_episode,
+        friction=friction,
         vitals=(
             {
                 key: _integer(vitals_event.payload.get(key))
@@ -303,6 +315,110 @@ def project_live(
         world=world,
         timeline=timeline,
         capture_gaps=tuple(capture_gaps),
+    )
+
+
+def _friction(
+    events: list[Event],
+    iterations: int,
+    iteration_events: list[dict[str, Any]],
+    world: WorldProjection,
+) -> LiveFrictionDiagnostic:
+    positions = [event for event in events if event.kind == "position"]
+    iteration_points = sorted(
+        (
+            _stamp(event.get("at")),
+            _integer(event.get("n")),
+        )
+        for event in iteration_events
+        if _stamp(event.get("at")) > 0 and _integer(event.get("n")) > 0
+    )
+    iteration_times = [point[0] for point in iteration_points]
+
+    def iteration_at(observed_at: float) -> int:
+        index = bisect.bisect_right(iteration_times, observed_at)
+        return iteration_points[index - 1][1] if index else 0
+
+    first_seen: set[object] = set()
+    first_observations: list[tuple[int, int]] = []
+    for position in positions:
+        place = position.payload.get("place")
+        if not isinstance(place, (int, str)) or place in first_seen:
+            continue
+        first_seen.add(place)
+        first_observations.append((iteration_at(position.at), position.seq))
+
+    window_iterations = min(iterations, 10)
+    window_start = max(1, iterations - window_iterations + 1)
+    new_places = sum(
+        1
+        for observed_iteration, _ in first_observations
+        if observed_iteration >= window_start
+    )
+    iterations_since_new_place = (
+        max(0, iterations - first_observations[-1][0])
+        if first_observations
+        else None
+    )
+
+    command_events = [
+        event
+        for event in events
+        if event.kind == "command"
+        and (_text(event.payload.get("line")) or "").strip()
+    ]
+    current_room_commands: list[Event] = []
+    if positions:
+        current_place = positions[-1].payload.get("place")
+        room_entry_sequence = positions[-1].seq
+        for position in reversed(positions[:-1]):
+            if position.payload.get("place") != current_place:
+                break
+            room_entry_sequence = position.seq
+        current_room_commands = [
+            event
+            for event in command_events
+            if event.seq > room_entry_sequence
+        ]
+    counts = Counter(
+        (_text(event.payload.get("line")) or "").strip().casefold()
+        for event in current_room_commands
+    )
+    repeated_command: str | None = None
+    repeated_count = 0
+    if counts:
+        repeated_command, repeated_count = counts.most_common(1)[0]
+    distinct_places = len(world.nodes)
+    kind: Literal["confusion_loop", "progress_stall"] | None = None
+    threshold: str | None = None
+    evidence: tuple[int, ...] = ()
+    if repeated_command is not None and repeated_count >= 5:
+        kind = "confusion_loop"
+        threshold = "same command recorded at least five times"
+        evidence = tuple(
+            event.seq
+            for event in current_room_commands
+            if (_text(event.payload.get("line")) or "").strip().casefold()
+            == repeated_command
+        )[-5:]
+    elif (
+        iterations >= 10
+        and distinct_places <= max(1, iterations // 10)
+    ):
+        kind = "progress_stall"
+        threshold = "ten or more iterations per distinct observed place"
+        evidence = tuple(event.seq for event in positions)[-5:]
+    return LiveFrictionDiagnostic(
+        kind=kind,
+        repeated_command=repeated_command,
+        repeated_count=repeated_count,
+        distinct_places=distinct_places,
+        iterations=iterations,
+        new_places=new_places,
+        window_iterations=window_iterations,
+        iterations_since_new_place=iterations_since_new_place,
+        threshold=threshold,
+        evidence=evidence,
     )
 
 
@@ -1049,7 +1165,6 @@ def _player_status(
         "thirsty",
         "drunk",
         "poisoned",
-        "encumbered",
     )
     return LivePlayerStatus(
         fields=fields,

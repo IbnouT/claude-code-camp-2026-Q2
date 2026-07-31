@@ -62,15 +62,10 @@ SPEECH_LINE = re.compile(
     r"^(\w+) (says|shouts|gossips|tells you|yells|whispers),?\s*'(.*)'", re.I
 )
 CONDITION_LINE = re.compile(
-    r"^You are (hungry|thirsty|drunk|poisoned|encumbered|too exhausted)\.?",
+    r"^You are (hungry|thirsty|drunk|intoxicated|poisoned|too exhausted)\.?",
     re.I,
 )
 POISON_LINE = re.compile(r"\b(you are poisoned|poison courses through)\b", re.I)
-ENCUMBERED_LINE = re.compile(
-    r"\b(you are encumbered|carrying too much|too heavy for you|"
-    r"cannot carry that much|can't carry that much)\b",
-    re.I,
-)
 ITEM_LINE = re.compile(r"^You (get|drop|put|wear|wield|remove|eat|drink) ", re.I)
 FURNITURE_LINE = re.compile(
     r"^[-=~_]{3,}\s*$|^\s*##\s+Available\s+Item\s+Cost|"
@@ -218,9 +213,10 @@ def parse(raw: bytes | str, wire_ref: WireReference) -> list[Observation]:
     score_conditions = {
         "hungry": bool(re.search(r"\bYou are hungry\.", frame_text, re.I)),
         "thirsty": bool(re.search(r"\bYou are thirsty\.", frame_text, re.I)),
-        "drunk": bool(re.search(r"\bYou are drunk\.", frame_text, re.I)),
+        "drunk": bool(
+            re.search(r"\bYou are (?:drunk|intoxicated)\.", frame_text, re.I)
+        ),
         "poisoned": bool(POISON_LINE.search(frame_text)),
-        "encumbered": bool(ENCUMBERED_LINE.search(frame_text)),
     }
 
     def add(
@@ -413,16 +409,16 @@ def parse(raw: bytes | str, wire_ref: WireReference) -> list[Observation]:
             continue
 
         condition = CONDITION_LINE.search(line)
-        if condition or POISON_LINE.search(line) or ENCUMBERED_LINE.search(line):
+        if condition or POISON_LINE.search(line):
             values: dict[str, int | bool | str] = {}
             if condition:
                 name = condition.group(1).casefold()
+                if name == "intoxicated":
+                    name = "drunk"
                 if name in score_conditions:
                     values[name] = True
             if POISON_LINE.search(line):
                 values["poisoned"] = True
-            if ENCUMBERED_LINE.search(line):
-                values["encumbered"] = True
             add(
                 "player_state",
                 line,
