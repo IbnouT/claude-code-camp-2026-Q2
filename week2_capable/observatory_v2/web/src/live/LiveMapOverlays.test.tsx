@@ -39,6 +39,15 @@ describe("live map overlays", () => {
     expect(screen.getByText(thought.text)).toBeInTheDocument();
     expect(screen.getByText("agent log line 723 · line 723"))
       .toHaveAttribute("title", "Observed 2026-07-31T04:01:26Z");
+    expect(screen.getByRole("complementary", {
+      name: "Agent thought",
+    })).toHaveAttribute("data-map-marker-occluder", "true");
+    expect(screen.getByRole("complementary", {
+      name: "Agent thought",
+    })).not.toHaveAttribute("data-map-focus-occluder");
+    expect(screen.getByRole("complementary", {
+      name: "Agent thought",
+    })).not.toHaveAttribute("data-map-overlay-edge");
   });
 
   it.each([

@@ -39,7 +39,8 @@ this folder is the binding visual reference.
 - Camera group: Follow, Manual, Fit map, zoom in and zoom out.
 - Mode group: Grow shows the complete learned graph. Focus shows complete
   breadth-first shells around the agent while every room's full drawn
-  footprint fits the pane and clears visible overlays. Its 18-room value is an
+  footprint fits the pane and clears the toolbar and legend. The translucent
+  thought dock does not constrain room membership. Its 18-room value is an
   upper bound. Lantern shows the complete graph in distance-based light tiers.
 - Focus shows as much of the neighborhood as fits at the viewer's chosen
   scale. Zooming out widens the lens, zooming in narrows it, and continuation

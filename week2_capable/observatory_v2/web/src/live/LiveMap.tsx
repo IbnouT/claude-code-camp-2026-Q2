@@ -115,7 +115,12 @@ export function LiveMap({ identity }: Props) {
   const [panHintVisible, setPanHintVisible] = useState(true);
   const [dragging, setDragging] = useState(false);
   const [safeInsets, setSafeInsets] = useState(defaultSafeInsets);
-  const [overlayRects, setOverlayRects] = useState<MapOverlayRect[]>([]);
+  const [focusOverlayRects, setFocusOverlayRects] = useState<MapOverlayRect[]>(
+    [],
+  );
+  const [markerOverlayRects, setMarkerOverlayRects] = useState<MapOverlayRect[]>(
+    [],
+  );
   const stageRef = useRef<HTMLElement | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -185,7 +190,7 @@ export function LiveMap({ identity }: Props) {
   };
   const focusLayout: MapFocusLayout = {
     frame,
-    overlayRects,
+    overlayRects: focusOverlayRects,
     viewport: mapCameraViewport({
       center: currentCenter,
       scale: cameraView.scale,
@@ -451,11 +456,14 @@ export function LiveMap({ identity }: Props) {
         }
         return { width: bounds.width, height: bounds.height };
       });
-      const overlays = [...stage.querySelectorAll<HTMLElement>(
+      const focusOccluders = [...stage.querySelectorAll<HTMLElement>(
         "[data-map-focus-occluder]",
       )];
+      const markerOccluders = [...stage.querySelectorAll<HTMLElement>(
+        "[data-map-focus-occluder], [data-map-marker-occluder]",
+      )];
       const nextInsets = { ...defaultSafeInsets };
-      const nextOverlayRects = overlays.map((overlay) => {
+      const projectOverlay = (overlay: HTMLElement): MapOverlayRect => {
         const overlayBounds = overlay.getBoundingClientRect();
         const left = Math.max(overlayBounds.left - bounds.left - 8, 0);
         const top = Math.max(overlayBounds.top - bounds.top - 8, 0);
@@ -473,8 +481,10 @@ export function LiveMap({ identity }: Props) {
           width: Math.max(right - left, 0),
           height: Math.max(bottom - top, 0),
         };
-      });
-      for (const overlay of overlays) {
+      };
+      const nextFocusOverlayRects = focusOccluders.map(projectOverlay);
+      const nextMarkerOverlayRects = markerOccluders.map(projectOverlay);
+      for (const overlay of focusOccluders) {
         const overlayBounds = overlay.getBoundingClientRect();
         const edge = overlay.dataset.mapOverlayEdge;
         if (edge === "top") {
@@ -499,10 +509,15 @@ export function LiveMap({ identity }: Props) {
           );
         }
       }
-      setOverlayRects((current) => {
-        return overlayRectsEqual(current, nextOverlayRects)
+      setFocusOverlayRects((current) => {
+        return overlayRectsEqual(current, nextFocusOverlayRects)
           ? current
-          : nextOverlayRects;
+          : nextFocusOverlayRects;
+      });
+      setMarkerOverlayRects((current) => {
+        return overlayRectsEqual(current, nextMarkerOverlayRects)
+          ? current
+          : nextMarkerOverlayRects;
       });
       setSafeInsets((current) => {
         if (
@@ -519,7 +534,7 @@ export function LiveMap({ identity }: Props) {
     const observer = new ResizeObserver(updateGeometry);
     observer.observe(stage);
     for (const overlay of stage.querySelectorAll<HTMLElement>(
-      "[data-map-focus-occluder]",
+      "[data-map-focus-occluder], [data-map-marker-occluder]",
     )) {
       observer.observe(overlay);
     }
@@ -555,7 +570,8 @@ export function LiveMap({ identity }: Props) {
     followInitializedRef.current = false;
     previousCurrentRoomIdRef.current = null;
     setSafeInsets(defaultSafeInsets);
-    setOverlayRects([]);
+    setFocusOverlayRects([]);
+    setMarkerOverlayRects([]);
     setCameraMode("follow");
     setChosenMode(null);
     setSelectedRoomId(selectedRoomFromLocation());
@@ -792,7 +808,7 @@ export function LiveMap({ identity }: Props) {
         ? focusHiddenInsideCount
         : undefined}
       data-focus-overlay-count={mode === "focus"
-        ? overlayRects.length
+        ? focusOverlayRects.length
         : undefined}
       data-focus-pane-height={mode === "focus" ? frame.height : undefined}
       data-focus-pane-width={mode === "focus" ? frame.width : undefined}
@@ -933,7 +949,7 @@ export function LiveMap({ identity }: Props) {
               frame={frame}
               key={marker.edge}
               marker={marker}
-              overlayRects={overlayRects}
+              overlayRects={markerOverlayRects}
               safeInsets={defaultSafeInsets}
               viewport={viewport}
               visibleRoomFootprints={visibleRoomFootprints}
