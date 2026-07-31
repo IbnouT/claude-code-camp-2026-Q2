@@ -12,6 +12,7 @@ from typing import Sequence
 
 from .config import Config
 from .errors import ConfigError
+from .objective import ObjectiveContext
 from .runtime import CharacterAlreadyRunning, RuntimeSession
 from .version import __version__
 
@@ -54,12 +55,61 @@ def main(argv: Sequence[str] | None = None) -> int:
         metavar="NAME@VERSION",
         help="reset the selected authenticated session before the first model call",
     )
+    parser.add_argument(
+        "--relocate-temple",
+        action="store_true",
+        help="move the selected player to the Temple before the first instruction",
+    )
+    parser.add_argument(
+        "--objective-title",
+        help="concise authored objective title retained for observers",
+    )
+    parser.add_argument(
+        "--objective-clue",
+        help="optional authored location or strategy clue",
+    )
+    parser.add_argument(
+        "--objective-source-kind",
+        choices=("benchmark", "operator"),
+        default="operator",
+        help="source of the structured objective metadata",
+    )
+    parser.add_argument(
+        "--objective-revision",
+        type=int,
+        default=1,
+        help="positive authored objective revision",
+    )
     arguments = parser.parse_args(argv)
     task = sys.stdin.read().strip() if arguments.task_stdin else None
     if arguments.task_stdin and not task:
         parser.error("--task-stdin received an empty task")
-    if arguments.reset_baseline and not arguments.task_stdin:
-        parser.error("--reset-baseline requires --task-stdin")
+    if arguments.reset_baseline and arguments.relocate_temple:
+        parser.error("--reset-baseline and --relocate-temple are mutually exclusive")
+    if (
+        not arguments.task_stdin
+        and (
+            arguments.objective_title is not None
+            or arguments.objective_clue is not None
+            or arguments.objective_source_kind != "operator"
+            or arguments.objective_revision != 1
+        )
+    ):
+        parser.error("objective metadata requires --task-stdin")
+    try:
+        objective = (
+            ObjectiveContext.create(
+                task or "",
+                title=arguments.objective_title,
+                clue=arguments.objective_clue,
+                source_kind=arguments.objective_source_kind,
+                revision=arguments.objective_revision,
+            )
+            if task is not None
+            else None
+        )
+    except ValueError as error:
+        parser.error(str(error))
 
     config = Config()
     player_id = arguments.player_profile or config.mud_player_profile
@@ -92,6 +142,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         child_env["BOUKENSHA_ADMIN_SECRET_FILE"] = str(admin_secret_file)
     if task is not None:
         child_env["BOUKENSHA_LAUNCH_TASK"] = task
+    if objective is not None:
+        child_env["BOUKENSHA_OBJECTIVE_CONTEXT"] = objective.encode()
     if arguments.reset_baseline:
         child_env["BOUKENSHA_RESET_BASELINE"] = arguments.reset_baseline
         raw_timeout = config.dig(
@@ -110,6 +162,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "gateway.reset.client_timeout_seconds must be positive"
             )
         child_env["BOUKENSHA_RESET_CLIENT_TIMEOUT"] = str(reset_timeout)
+    if arguments.relocate_temple:
+        child_env["BOUKENSHA_RELOCATE_TEMPLE"] = "1"
     process: subprocess.Popen | None = None
     exit_code = 1
     try:

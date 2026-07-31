@@ -14,7 +14,7 @@ from typing import Any, Awaitable, Callable, Literal, Mapping, Sequence
 from dotenv import dotenv_values
 from pydantic import BaseModel, ConfigDict, Field
 
-from .baseline import baseline
+from .baseline import TEMPLE, baseline
 from .knowledge import KnowledgeStore, Snapshot
 from .reset_client import ObservedState, parse_score, verify
 from .session import Session
@@ -28,7 +28,7 @@ class ControlRequest(BaseModel):
 
     protocol_version: int = 1
     request_id: str = Field(min_length=1, max_length=200)
-    action: Literal["reset", "knowledge_restore"] = "reset"
+    action: Literal["reset", "relocate", "knowledge_restore"] = "reset"
     token: str = Field(min_length=16, max_length=200)
     expected_state: str = "running"
     session_id: str
@@ -293,6 +293,87 @@ class ResetCoordinator:
             )
             return receipt
 
+    async def relocate(self, request: ControlRequest) -> dict[str, Any]:
+        """Pause, relocate, verify the Temple, and preserve all other state."""
+
+        if request.protocol_version != 1 or request.action != "relocate":
+            raise ResetControlError("unsupported control request")
+        self._validate_binding(request)
+        player = self._session()
+        if player is None or not player.logged_in:
+            raise ResetControlError("selected gateway session is not authenticated")
+        self._validate_sequence(player, request)
+        if request.expected_state != player.control_state:
+            raise ResetControlError(
+                f"expected {request.expected_state!r}, found {player.control_state!r}"
+            )
+        reset_id = secrets.token_hex(16)
+        child_request = {
+            "protocol_version": 1,
+            "action": "relocate",
+            "request_id": request.request_id,
+            "reset_id": reset_id,
+            "session_id": request.session_id,
+            "gateway_session_id": request.gateway_session_id,
+            "player_id": request.player_id,
+            "character": request.character,
+            "configuration_digest": request.expected_configuration_digest,
+            "nonce": request.nonce,
+        }
+        self._project("pausing", reset_id=reset_id)
+        async with player.pause(timeout=self.pause_timeout):
+            self._project("paused", reset_id=reset_id)
+            child = await self._admin_runner(
+                child_request,
+                self.admin_journal,
+                self.progress_path,
+                self.child_timeout,
+            )
+            applied = tuple(map(str, child.get("applied") or ()))
+            located = _located(child.get("located"))
+            ok = (
+                child.get("ok") is True
+                and located is not None
+                and located[0] == TEMPLE
+            )
+            if ok:
+                player.journal.append(
+                    player.id,
+                    "observer_probe",
+                    {
+                        "command": "look",
+                        "reason": "post_relocation_room_state",
+                        "reset_id": reset_id,
+                    },
+                )
+                await player.reset_command("look")
+            receipt = {
+                "ok": ok,
+                "action": "relocate",
+                "request_id": request.request_id,
+                "reset_id": reset_id,
+                "session_id": request.session_id,
+                "gateway_session_id": request.gateway_session_id,
+                "player_id": request.player_id,
+                "character": request.character,
+                "verified_room_vnum": None if located is None else located[0],
+                "verified_room_title": None if located is None else located[1],
+                "applied": applied,
+                "error": child.get("error"),
+                "error_type": child.get("error_type"),
+            }
+            if not ok and applied:
+                player.quarantine("Temple relocation verification failed")
+                self._project(
+                    "quarantined",
+                    reset_id=reset_id,
+                    reason="relocation_failed",
+                )
+            else:
+                self._project("running", reset_id=reset_id)
+            player.journal.append(player.id, "relocation_receipt", receipt)
+            return receipt
+
     async def _verify_mortal(self, player: Session) -> ObservedState:
         await player.reset_command("save")
         await player.reconnect_for_reset()
@@ -361,6 +442,7 @@ class ResetCoordinator:
         knowledge_snapshot: Snapshot | None,
         knowledge_retractions: int,
     ) -> dict[str, Any]:
+        located = _located(child.get("located")) if ok else None
         return {
             "ok": ok,
             "request_id": request.request_id,
@@ -373,6 +455,12 @@ class ResetCoordinator:
             "baseline_id": request.baseline_id,
             "baseline_version": request.baseline_version,
             "configuration_digest": request.expected_configuration_digest,
+            "verified_room_vnum": (
+                None if located is None else located[0]
+            ),
+            "verified_room_title": (
+                None if located is None else located[1]
+            ),
             "state": None if state is None else asdict(state),
             "drift": dict(drift),
             "unread": () if state is None else state.unread,
@@ -521,11 +609,12 @@ class ResetControlServer:
             async with self._request_lock:
                 response = self._responses.get(request.request_id)
                 if response is None:
-                    response = (
-                        await self.coordinator.reset(request)
-                        if request.action == "reset"
-                        else await self.coordinator.restore_knowledge(request)
-                    )
+                    if request.action == "reset":
+                        response = await self.coordinator.reset(request)
+                    elif request.action == "relocate":
+                        response = await self.coordinator.relocate(request)
+                    else:
+                        response = await self.coordinator.restore_knowledge(request)
                     self._responses[request.request_id] = response
         except Exception as error:
             response = {

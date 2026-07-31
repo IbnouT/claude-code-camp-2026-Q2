@@ -4,7 +4,12 @@ from types import SimpleNamespace
 
 import pytest
 
-from admin_process.reset import DEFAULT_FIELDS, ResetConflict, ResetPlan
+from admin_process.reset import (
+    DEFAULT_FIELDS,
+    RelocationPlan,
+    ResetConflict,
+    ResetPlan,
+)
 from mud_gateway.journal import Journal
 from mud_gateway.reset_client import ObservedState, parse_score, verify
 
@@ -78,6 +83,28 @@ async def test_admin_applies_only_to_the_authenticated_player_name(tmp_path) -> 
         applied = journal.since("admin-test", kind="reset_applied")
         assert len(applied) == 1
         assert applied[0].payload["session_id"] == "mortal-session"
+    finally:
+        journal.close()
+
+
+async def test_relocation_changes_only_the_selected_players_room(tmp_path) -> None:
+    journal = Journal(tmp_path / "journal.db")
+    try:
+        admin = FakeAdmin(journal)
+        outcome = await RelocationPlan().apply(
+            admin,
+            "poucet",
+            session_id="mortal-session",
+        )
+
+        assert outcome.ok
+        assert admin.calls == [
+            ("locate_all", "poucet"),
+            ("goto", 3001),
+            ("transfer", "poucet"),
+            ("locate", "poucet"),
+        ]
+        assert journal.since("admin-test", kind="relocation_applied")
     finally:
         journal.close()
 

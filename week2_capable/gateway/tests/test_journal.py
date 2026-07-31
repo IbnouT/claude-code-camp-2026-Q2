@@ -50,6 +50,12 @@ class TestOrdering:
         assert journal.last_seq("s1") == top
         assert journal.last_seq("absent") == 0
 
+    def test_sessions_are_ordered_by_latest_activity(self, journal):
+        journal.append("z-old", "wire", {})
+        journal.append("a-new", "wire", {})
+        journal.append("z-old", "wire", {})
+        assert journal.sessions() == ["a-new", "z-old"]
+
 
 class TestTheResumableCursor:
     def test_since_returns_only_what_follows_the_cursor(self, journal):

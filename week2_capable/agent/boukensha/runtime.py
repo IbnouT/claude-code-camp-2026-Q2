@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     updated_at TEXT NOT NULL,
     ended_at TEXT,
     exit_code INTEGER,
+    stop_mode TEXT,
     capture_status TEXT NOT NULL DEFAULT 'complete',
     legacy INTEGER NOT NULL DEFAULT 0
 );

@@ -9,7 +9,7 @@ import pytest
 
 from mud_gateway.commands import AVAILABLE, BY_NAME, IMMORTAL, build
 from mud_gateway.journal import Journal
-from mud_gateway.mcp_server import execute, failure
+from mud_gateway.mcp_server import execute, failure, seed_login_observations
 from mud_gateway.profiles import PermissionDenied, Surface, load_profile
 from mud_gateway.results import CommandFailure, CommandObservation
 from mud_gateway.session import Reply
@@ -145,6 +145,19 @@ def journal(tmp_path):
 
 
 class TestTypedExecution:
+    async def test_login_seeds_room_and_player_state_without_a_model(
+            self, journal):
+        session = ScriptedSession(journal)
+
+        await seed_login_observations(session, journal)
+
+        assert session.lines == ["look", "score"]
+        probes = journal.since("s1", kind="observer_probe")
+        assert [probe.payload for probe in probes] == [
+            {"command": "look", "reason": "login_room_state"},
+            {"command": "score", "reason": "login_player_state"},
+        ]
+
     async def test_execution_returns_a_typed_observation_and_trace(
             self, journal):
         surface = Surface(load_profile("direct-core"))

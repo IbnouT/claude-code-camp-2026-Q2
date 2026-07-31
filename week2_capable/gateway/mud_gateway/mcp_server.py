@@ -31,6 +31,23 @@ from .session import Session
 from .settings import GatewaySettings
 
 
+async def seed_login_observations(session: Session, journal: Journal) -> None:
+    """Capture the initial room and player state without invoking a model."""
+
+    for command, reason in (
+        ("look", "login_room_state"),
+        ("score", "login_player_state"),
+    ):
+        trace_id = uuid.uuid4().hex
+        journal.append(
+            session.id,
+            "observer_probe",
+            {"command": command, "reason": reason},
+            trace_id=trace_id,
+        )
+        await session.command(command, trace_id=trace_id)
+
+
 async def execute(
         session: Session | None,
         invocation: Invocation,
@@ -257,14 +274,7 @@ async def serve(
             )
             record_profile(journal, session.id, surface)
             await session.open()
-            trace_id = uuid.uuid4().hex
-            journal.append(
-                session.id,
-                "observer_probe",
-                {"command": "score", "reason": "login_player_state"},
-                trace_id=trace_id,
-            )
-            await session.command("score", trace_id=trace_id)
+            await seed_login_observations(session, journal)
         return session
 
     @server.list_tools()

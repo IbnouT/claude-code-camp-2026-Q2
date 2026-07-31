@@ -115,7 +115,18 @@ def test_attempt_uses_supervised_selected_session_reset(
     assert command[-2:] == ["--player-profile", "poucet"]
     assert "--task-stdin" in command
     assert command[command.index("--reset-baseline") + 1] == "level1-temple@1"
+    assert command[command.index("--objective-title") + 1] == J1.objective_title
+    assert command[command.index("--objective-source-kind") + 1] == "benchmark"
     assert captured["input"] == J1.order + "\n"
+
+
+def test_journey_keeps_prompt_title_and_clue_distinct() -> None:
+    assert J2.order == (
+        "Travel north from the Temple into the newbie zone and find the "
+        "Massive Minotaur."
+    )
+    assert J2.objective_title == "Find the Massive Minotaur"
+    assert J2.clue == "north of the Temple · newbie area"
 
 
 def test_unpriced_and_incomplete_attempts_do_not_aggregate(tmp_path: Path) -> None:

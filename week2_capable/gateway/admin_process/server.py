@@ -16,7 +16,7 @@ from mud_gateway.admin import AdminSession
 from mud_gateway.baseline import baseline
 from mud_gateway.journal import Journal
 
-from .reset import ResetMutationError, ResetPlan
+from .reset import RelocationPlan, ResetMutationError, ResetPlan
 
 
 class ResetRequest(BaseModel):
@@ -32,9 +32,12 @@ class ResetRequest(BaseModel):
     gateway_session_id: str = Field(min_length=1, max_length=200)
     player_id: str = Field(min_length=1, max_length=200)
     character: str = Field(pattern=r"^[A-Za-z][A-Za-z0-9_-]*$")
-    baseline_id: str
-    baseline_version: int = Field(ge=1)
-    baseline_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
+    baseline_id: str | None = None
+    baseline_version: int | None = Field(default=None, ge=1)
+    baseline_digest: str | None = Field(
+        default=None,
+        pattern=r"^[0-9a-f]{64}$",
+    )
     configuration_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
     nonce: str = Field(min_length=16, max_length=200)
     retry_of: str | None = None
@@ -74,12 +77,20 @@ async def execute(
     host: str,
     port: int,
 ) -> dict[str, Any]:
-    """Apply exactly one validated baseline and return one final receipt."""
-    if request.protocol_version != 1 or request.action != "reset":
+    """Apply exactly one validated reset or location-only operation."""
+    if request.protocol_version != 1 or request.action not in {"reset", "relocate"}:
         raise ValueError("unsupported reset protocol request")
-    selected = baseline(request.baseline_id, request.baseline_version)
-    if selected.digest != request.baseline_digest:
-        raise ValueError("reset baseline digest mismatch")
+    selected = None
+    if request.action == "reset":
+        if (
+            request.baseline_id is None
+            or request.baseline_version is None
+            or request.baseline_digest is None
+        ):
+            raise ValueError("reset baseline identity is required")
+        selected = baseline(request.baseline_id, request.baseline_version)
+        if selected.digest != request.baseline_digest:
+            raise ValueError("reset baseline digest mismatch")
 
     journal = Journal(journal_path)
     admin = AdminSession(
@@ -92,12 +103,20 @@ async def execute(
     progress = ProgressWriter(progress_path, request.reset_id)
     try:
         await admin.open()
-        outcome = await ResetPlan(
-            selected.fields,
-            room=selected.room,
-            reset_id=request.reset_id,
-            on_progress=progress.append,
-        ).apply(
+        plan = (
+            ResetPlan(
+                selected.fields,
+                room=selected.room,
+                reset_id=request.reset_id,
+                on_progress=progress.append,
+            )
+            if selected is not None
+            else RelocationPlan(
+                reset_id=request.reset_id,
+                on_progress=progress.append,
+            )
+        )
+        outcome = await plan.apply(
             admin,
             request.character,
             session_id=request.session_id,
@@ -110,9 +129,10 @@ async def execute(
             "gateway_session_id": request.gateway_session_id,
             "player_id": request.player_id,
             "character": outcome.player,
-            "baseline_id": selected.id,
-            "baseline_version": selected.version,
-            "baseline_digest": selected.digest,
+            "action": request.action,
+            "baseline_id": None if selected is None else selected.id,
+            "baseline_version": None if selected is None else selected.version,
+            "baseline_digest": None if selected is None else selected.digest,
             "located": outcome.located,
             "drift": outcome.drift,
             "applied": outcome.applied,

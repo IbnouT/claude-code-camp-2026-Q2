@@ -143,6 +143,17 @@ def _launch_agent(
             "--task-stdin",
             "--reset-baseline",
             "level1-temple@1",
+            "--objective-title",
+            journey.objective_title,
+            "--objective-source-kind",
+            "benchmark",
+            "--objective-revision",
+            "1",
+            *(
+                ["--objective-clue", journey.clue]
+                if journey.clue is not None
+                else []
+            ),
             "--player-profile",
             config.player_profile,
         ],

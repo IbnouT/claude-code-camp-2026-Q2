@@ -13,6 +13,13 @@ class Journey:
 
     id: str
     order: str
+    title: str | None = None
+    clue: str | None = None
+
+    @property
+    def objective_title(self) -> str:
+        """Return the concise authored title retained for observers."""
+        return self.title or self.order
 
 
 @dataclass(frozen=True)
@@ -23,10 +30,16 @@ class Verdict:
     evidence: tuple[str, ...]
 
 
-J1 = Journey("J1", "Find the bakery and read the menu.")
+J1 = Journey(
+    "J1",
+    "Find the bakery and read the menu.",
+    title="Find the bakery and read the menu",
+)
 J2 = Journey(
     "J2",
     "Travel north from the Temple into the newbie zone and find the Massive Minotaur.",
+    title="Find the Massive Minotaur",
+    clue="north of the Temple · newbie area",
 )
 JOURNEYS = {journey.id: journey for journey in (J1, J2)}
 

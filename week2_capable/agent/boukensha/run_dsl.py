@@ -30,10 +30,15 @@ from .errors import ConfigError, McpServerError, McpToolCollisionError
 from .logger import Logger
 from .message import Message
 from .operator_control import OperatorStopped, start_operator_control
+from .objective import ObjectiveContext
 from .prompt_builder import PromptBuilder
 from .registry import Registry
 from .repl import Repl
-from .session_control import SessionControlError, reset_selected_session
+from .session_control import (
+    SessionControlError,
+    relocate_selected_session,
+    reset_selected_session,
+)
 from .tasks import Player
 from .tools import mcp as mcp_host
 from .version import __version__
@@ -142,7 +147,8 @@ def _assemble(*,
               context_window: int | None,
               setup: Callable[[RunDSL], None] | None,
               transport: Transport | None,
-              sleep: Callable[[float], None] | None) -> _Assembled:
+              sleep: Callable[[float], None] | None,
+              objective_context: ObjectiveContext | None = None) -> _Assembled:
     """Resolve config and build the full primitive chain once.
 
     Returns every piece ``run`` and ``repl`` need: the wired components, the
@@ -204,6 +210,9 @@ def _assemble(*,
     # are present when the prompt builder snapshots the toolset below.
     servers = _register_mcp_servers(registry, cfg.mcp_servers())
     reset_baseline = os.environ.get("BOUKENSHA_RESET_BASELINE")
+    relocate_temple = os.environ.get("BOUKENSHA_RELOCATE_TEMPLE") == "1"
+    if reset_baseline and relocate_temple:
+        raise ConfigError("reset baseline and Temple relocation cannot both run")
     if reset_baseline:
         session_dir = os.environ.get("BOUKENSHA_SESSION_DIR")
         if not session_dir:
@@ -220,12 +229,27 @@ def _assemble(*,
             )
         except SessionControlError as error:
             raise ConfigError(f"gateway reset failed: {error}") from error
+    elif relocate_temple:
+        session_dir = os.environ.get("BOUKENSHA_SESSION_DIR")
+        if not session_dir:
+            raise ConfigError(
+                "Temple relocation requires the launcher runtime session"
+            )
+        try:
+            relocate_selected_session(
+                Path(session_dir),
+                timeout=float(
+                    os.environ.get("BOUKENSHA_RESET_CLIENT_TIMEOUT", "45")
+                ),
+            )
+        except SessionControlError as error:
+            raise ConfigError(f"gateway relocation failed: {error}") from error
     if setup is not None:
         setup(RunDSL(registry))
 
     builder = PromptBuilder(ctx, be, tuple(registry.tools.values()))
     client = Client(builder, transport=transport, sleep=sleep)
-    logger = Logger(log=log, snapshot={
+    snapshot: dict[str, Any] = {
         "task": Player.task_name,
         "system": system,
         "max_iterations": effective_max_iterations,
@@ -243,7 +267,10 @@ def _assemble(*,
         "rates": be.rates,
         "cache_min_tokens": be.cache_min_tokens,
         "caches": be.caches,
-    })
+    }
+    if objective_context is not None:
+        snapshot["objective"] = objective_context.as_log()
+    logger = Logger(log=log, snapshot=snapshot)
 
     return _Assembled(
         context=ctx,
@@ -275,6 +302,7 @@ def run(task: str, *,
         max_output_tokens: int | None = None,
         thinking: str | None = None,
         context_window: int | None = None,
+        objective_context: ObjectiveContext | None = None,
         setup: Callable[[RunDSL], None] | None = None,
         transport: Transport | None = None,
         sleep: Callable[[float], None] | None = None) -> str:
@@ -307,6 +335,9 @@ def run(task: str, *,
             max_iterations=max_iterations,
             max_output_tokens=max_output_tokens, context_window=context_window,
             setup=setup, transport=transport, sleep=sleep,
+            objective_context=(
+                objective_context or ObjectiveContext.create(task)
+            ),
         )
         logger = assembled.logger
         operator_pair = start_operator_control()
@@ -378,6 +409,7 @@ def repl(*,
             max_iterations=max_iterations,
             max_output_tokens=max_output_tokens, context_window=context_window,
             setup=setup, transport=transport, sleep=sleep,
+            objective_context=None,
         )
         logger = assembled.logger
         operator_pair = start_operator_control()

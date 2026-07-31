@@ -153,3 +153,77 @@ class ResetPlan:
         applied.append(operation)
         if self.on_progress is not None:
             self.on_progress(operation)
+
+
+class RelocationPlan:
+    """Move one exclusively owned player without restoring any other state."""
+
+    def __init__(
+        self,
+        *,
+        room: int = TEMPLE,
+        reset_id: str | None = None,
+        on_progress: Callable[[str], None] | None = None,
+    ) -> None:
+        self.room = room
+        self.reset_id = reset_id
+        self.on_progress = on_progress
+
+    async def apply(
+        self,
+        admin: AdminSession,
+        player_name: str,
+        *,
+        session_id: str,
+    ) -> ResetOutcome:
+        reset_id = self.reset_id or uuid.uuid4().hex
+        active = await admin.locate_all(player_name)
+        if len(active) != 1:
+            raise ResetConflict(
+                f"relocation requires one active {player_name!r} session, "
+                f"found {len(active)}"
+            )
+        applied: list[str] = []
+        try:
+            await admin.goto(self.room)
+            self._record(applied, "goto")
+            await admin.transfer(player_name)
+            self._record(applied, "transfer")
+            located = await admin.locate(player_name)
+        except Exception as error:
+            raise ResetMutationError(
+                str(error),
+                reset_id=reset_id,
+                applied=tuple(applied),
+            ) from error
+        drift: dict[str, tuple[object, object]] = {}
+        if located is None:
+            drift["room"] = (self.room, None)
+        elif located[0] != self.room:
+            drift["room"] = (self.room, located[0])
+        admin.journal.append(
+            admin.session.id,
+            "relocation_applied",
+            {
+                "reset_id": reset_id,
+                "player": player_name,
+                "session_id": session_id,
+                "ok": not drift,
+                "located": located,
+                "drift": drift,
+                "applied": applied,
+            },
+        )
+        return ResetOutcome(
+            reset_id,
+            player_name,
+            session_id,
+            located,
+            drift,
+            tuple(applied),
+        )
+
+    def _record(self, applied: list[str], operation: str) -> None:
+        applied.append(operation)
+        if self.on_progress is not None:
+            self.on_progress(operation)

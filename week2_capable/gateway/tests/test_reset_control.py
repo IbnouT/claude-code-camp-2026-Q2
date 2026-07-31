@@ -163,11 +163,63 @@ async def test_reset_uses_selected_session_for_verification(tmp_path: Path) -> N
         assert receipt["ok"] is True
         assert receipt["session_id"] == "session-1"
         assert receipt["gateway_session_id"] == "gateway-1"
+        assert receipt["verified_room_vnum"] == 3001
+        assert receipt["verified_room_title"] == "The Temple Of Midgaard"
         assert player.commands == ["save", "score", "look"]
         assert player.reconnects == 1
         assert player.control_state == "running"
         assert child_requests[0]["character"] == "Tester"
         assert journal.since("gateway-1", kind="reset_receipt")
+    finally:
+        journal.close()
+
+
+async def test_relocation_pauses_and_retains_a_verified_receipt(
+    tmp_path: Path,
+) -> None:
+    settings = make_settings(tmp_path)
+    journal = Journal(settings.journal)
+    player = FakeSession(journal)
+    child_requests: list[dict[str, object]] = []
+
+    async def admin(
+        payload: dict[str, object],
+        _journal: Path,
+        _progress: Path,
+        _timeout: float,
+    ) -> dict[str, object]:
+        child_requests.append(payload)
+        return {
+            "ok": True,
+            "applied": ("goto", "transfer"),
+            "located": (3001, "The Temple Of Midgaard"),
+            "exit_status": 0,
+        }
+
+    try:
+        receipt = await ResetCoordinator(
+            settings,
+            session=lambda: player,
+            admin_runner=admin,
+        ).relocate(
+            request(
+                settings,
+                action="relocate",
+                baseline_id=None,
+                baseline_version=None,
+            )
+        )
+
+        assert receipt["ok"] is True
+        assert receipt["action"] == "relocate"
+        assert receipt["verified_room_vnum"] == 3001
+        assert receipt["applied"] == ("goto", "transfer")
+        assert child_requests[0]["action"] == "relocate"
+        assert "baseline_id" not in child_requests[0]
+        assert player.commands == ["look"]
+        assert player.reconnects == 0
+        assert player.control_state == "running"
+        assert journal.since("gateway-1", kind="relocation_receipt")
     finally:
         journal.close()
 
