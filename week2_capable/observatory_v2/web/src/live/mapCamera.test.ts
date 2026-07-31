@@ -8,6 +8,7 @@ import type { MapGraph } from "./mapModel";
 import {
   centerMapViewportInExtent,
   fitMapViewport,
+  keepSelectedRoomOutsidePanel,
   mapContentExtent,
   resolveMapViewport,
   roomCenter,
@@ -218,6 +219,53 @@ describe("map camera geometry", () => {
     expect(zoomed.viewport.height).toBe(normal.viewport.height / 2);
   });
 
+  it("moves only enough to keep a selected square beside the inspector", () => {
+    const viewport = { x: 0, y: 0, width: 1_600, height: 900 };
+    const shifted = keepSelectedRoomOutsidePanel(
+      viewport,
+      { width: 1_600, height: 900 },
+      { x: 1_380, y: 20 },
+      { right: 336, bottom: 0 },
+    );
+
+    expect(shifted).toEqual({
+      x: 236,
+      y: 0,
+      width: 1_600,
+      height: 900,
+    });
+  });
+
+  it("does not disturb framing when selection clears or stays outside the panel", () => {
+    const viewport = { x: 0, y: 0, width: 1_600, height: 900 };
+
+    expect(keepSelectedRoomOutsidePanel(
+      viewport,
+      { width: 1_600, height: 900 },
+      null,
+      { right: 336, bottom: 0 },
+    )).toBe(viewport);
+    expect(keepSelectedRoomOutsidePanel(
+      viewport,
+      { width: 1_600, height: 900 },
+      { x: 100, y: 800 },
+      { right: 336, bottom: 0 },
+    )).toBe(viewport);
+  });
+
+  it("moves narrow framing above a bottom-sheet inspector", () => {
+    expect(keepSelectedRoomOutsidePanel(
+      { x: 0, y: 0, width: 390, height: 700 },
+      { width: 390, height: 700 },
+      { x: 100, y: 620 },
+      { right: 0, bottom: 385 },
+    )).toEqual({
+      x: 0,
+      y: 417,
+      width: 390,
+      height: 700,
+    });
+  });
 });
 
 function fixtureGraph(): MapGraph {
@@ -243,8 +291,13 @@ function room(
     id,
     place: 1,
     title: id,
+    description: null,
     atlas: null,
     exits: [],
+    mobs: [],
+    objects: [],
+    mob_sightings: [],
+    object_sightings: [],
     visits: 1,
     evidence: [1],
     first_seq: 1,

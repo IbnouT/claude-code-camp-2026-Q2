@@ -68,6 +68,14 @@ function runtimeSnapshot(): Snapshot {
     turn: 4,
     latest_sequence: 42,
     cost_usd: 0,
+    room_economics: [{
+      node_id: "place:2",
+      response_count: 1,
+      cost_usd: 0.014,
+      first_response: 2,
+      last_response: 2,
+      evidence: ["agent:response:2"],
+    }],
     player_status: { fields: {} },
     world: {
       current_title: "A Nexus",
@@ -77,7 +85,12 @@ function runtimeSnapshot(): Snapshot {
           id: "place:1",
           place: 1,
           title: "More Of The Hallway",
+          description: null,
           exits: ["n"],
+          mobs: [],
+          objects: [],
+          mob_sightings: [],
+          object_sightings: [],
           visits: 1,
           evidence: [10],
           first_seq: 10,
@@ -90,7 +103,36 @@ function runtimeSnapshot(): Snapshot {
           id: "place:2",
           place: 2,
           title: "A Nexus",
+          description: {
+            text: "A broad crossing.",
+            evidence: [20],
+          },
+          atlas: {
+            vnum: 3001,
+            zone_id: 30,
+            zone_label: "Midgaard",
+            sector: "urban",
+            atlas_digest: "fixture",
+            confidence: "high",
+            evidence: ["atlas:3001"],
+          },
           exits: ["s"],
+          mobs: ["a large kobold"],
+          objects: ["a brass key"],
+          mob_sightings: [{
+            name: "a large kobold",
+            count: 2,
+            first_seq: 20,
+            last_seq: 41,
+            evidence: [20, 41],
+          }],
+          object_sightings: [{
+            name: "a brass key",
+            count: 1,
+            first_seq: 23,
+            last_seq: 23,
+            evidence: [23],
+          }],
           visits: 1,
           evidence: [20],
           first_seq: 20,
@@ -134,6 +176,11 @@ function useCatalog(catalog: Catalog): void {
 
 describe("Live shell", () => {
   beforeEach(() => {
+    window.history.replaceState(
+      {},
+      "",
+      `/live?player=${identity.playerId}&session=${identity.sessionId}`,
+    );
     vi.stubGlobal("fetch", vi.fn().mockImplementation((input: RequestInfo | URL) => {
       return Promise.resolve(
         String(input).includes("/snapshot")
@@ -169,8 +216,79 @@ describe("Live shell", () => {
       name: "Learned world, 2 rooms",
     })).toBeInTheDocument();
     expect(screen.getByLabelText(
-      "Agent in A Nexus, observed place 2",
+      /Agent in A Nexus, atlas-correlated vnum 3001/,
     )).toBeInTheDocument();
+  });
+
+  it("opens, retargets, and closes the evidence-backed room inspector", async () => {
+    const user = userEvent.setup();
+    render(<LiveShell identity={identity} />);
+    const nexus = await screen.findByRole("button", {
+      name: /Agent in A Nexus/,
+    });
+    const hallway = screen.getByRole("button", {
+      name: /More Of The Hallway/,
+    });
+
+    await user.click(nexus);
+    const inspector = screen.getByRole("complementary", {
+      name: "Room inspector, A Nexus",
+    });
+    expect(inspector).toHaveTextContent("A broad crossing.");
+    expect(inspector).toHaveTextContent("a large kobold");
+    expect(inspector).toHaveTextContent("a brass key");
+    expect(inspector).toHaveTextContent("$0.014");
+    expect(new URL(window.location.href).searchParams.get("room"))
+      .toBe("vnum:3001");
+
+    await user.click(hallway);
+    expect(screen.getByRole("complementary", {
+      name: "Room inspector, More Of The Hallway",
+    })).toBeInTheDocument();
+    await user.click(hallway);
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+    expect(new URL(window.location.href).searchParams.has("room")).toBe(false);
+
+    hallway.focus();
+    await user.keyboard("{Enter}");
+    expect(screen.getByRole("complementary", {
+      name: "Room inspector, More Of The Hallway",
+    })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", {
+      name: "Close room inspector",
+    }));
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+
+    await user.click(nexus);
+    await user.click(screen.getByRole("button", { name: "Lantern" }));
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+  });
+
+  it("closes the inspector before an open Ask dialog on Escape", async () => {
+    const user = userEvent.setup();
+    render(<LiveShell identity={identity} />);
+    await user.click(await screen.findByRole("button", {
+      name: /Agent in A Nexus/,
+    }));
+    await user.keyboard("{Control>}k{/Control}");
+
+    expect(screen.getByRole("complementary", {
+      name: "Room inspector, A Nexus",
+    })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", {
+      name: "Ask about this session",
+    })).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+    expect(screen.getByRole("dialog", {
+      name: "Ask about this session",
+    })).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", {
+      name: "Ask about this session",
+    })).not.toBeInTheDocument();
   });
 
   it("opens scoped Ask from the header and keyboard entry", async () => {

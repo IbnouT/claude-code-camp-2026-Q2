@@ -136,6 +136,9 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
   which evidence deserves emphasis, while Follow, Manual, and Fit decide where
   the investigator looks. Treating them as one mode makes selection, drag, and
   snapshot refreshes fight over the same state.
+- A fixed inspector can preserve map context when its footprint becomes a
+  camera inset rather than a layout mutation. The selected room stays visible,
+  and the learned coordinates remain honest.
 
 ## Technical Conclusions
 

@@ -45,6 +45,13 @@ next step only on Ibnou's approval.
 - Follow, Manual, and context-aware Fit remain independent from presentation.
   Zoom stays between `0.75` and `2`, drag enters Manual, and selected-room Fit
   frames the deterministic learned path.
+- Selecting a room opens the fixed map inspector with retained description,
+  exits, sightings, visits, attributed spend, confidence, and provenance.
+  Escape, its close control, outside click, or room re-click closes it and
+  clears the stable `room` URL parameter.
+- The inspector shifts camera framing by the smallest safe distance rather
+  than covering the selected square. Narrow layouts use a scrolling bottom
+  sheet with the same evidence contract.
 - Session identity comes only from the deep link.
 - One context chip combines player, lifecycle state, and session identity.
 - Its popover switches to live runs, opens recordings in Sessions, and exposes

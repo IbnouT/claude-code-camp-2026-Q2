@@ -285,6 +285,7 @@ function room(id: string, sector: string): WorldNode {
     id,
     place: id.charCodeAt(0),
     title: `Room ${id}`,
+    description: null,
     atlas: {
       vnum: id.charCodeAt(0),
       zone_id: 30,
@@ -295,6 +296,10 @@ function room(id: string, sector: string): WorldNode {
       evidence: ["fixture"],
     },
     exits: [],
+    mobs: [],
+    objects: [],
+    mob_sightings: [],
+    object_sightings: [],
     visits: 1,
     evidence: [1],
     first_seq: 1,

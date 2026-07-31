@@ -18,6 +18,7 @@ import {
   type MapPoint,
 } from "./mapModel";
 import {
+  keepSelectedRoomOutsidePanel,
   mapContentExtent,
   resolveMapViewport,
   viewportCenter,
@@ -26,6 +27,7 @@ import { LiveMapBoundary } from "./LiveMapBoundary";
 import { LiveMapFrontier } from "./LiveMapFrontier";
 import { LiveMapRoom } from "./LiveMapRoom";
 import { LiveMapToolbar } from "./LiveMapToolbar";
+import { LiveRoomInspector } from "./LiveRoomInspector";
 import { projectMapEvidence } from "./markerProjection";
 import {
   automaticMapMode,
@@ -38,6 +40,10 @@ import {
   type MapCameraMode,
   type MapMode,
 } from "./mapPresentation";
+import {
+  projectRoomInspector,
+  type RoomInspectorProjection,
+} from "./roomInspector";
 import {
   selectedRoomFromLocation,
   syncSelectedRoomToLocation,
@@ -195,6 +201,22 @@ export function LiveMap({ identity }: Props) {
       return next;
     });
   }, []);
+  const closeSelectedRoom = useCallback(() => {
+    setSelectedRoomId(null);
+    syncSelectedRoomToLocation(null);
+  }, []);
+  const selectedMapRoom = useMemo(() => {
+    return graph.rooms.find(({ node }) => node.id === selectedRoomId) ?? null;
+  }, [graph.rooms, selectedRoomId]);
+  const inspector = useMemo<RoomInspectorProjection | null>(() => {
+    if (selectedMapRoom === null || snapshot === null) return null;
+    return projectRoomInspector(
+      selectedMapRoom.node,
+      snapshot.world.nodes,
+      snapshot.world.frontier,
+      snapshot.room_economics,
+    );
+  }, [selectedMapRoom, snapshot]);
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -226,6 +248,36 @@ export function LiveMap({ identity }: Props) {
     setExpandedRoomIds(new Set());
     setSelectedRoomId(selectedRoomFromLocation());
   }, [identity.sessionId]);
+
+  useEffect(() => {
+    if (selectedRoomId === null) return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      closeSelectedRoom();
+    };
+    const handleOutsidePointer = (event: PointerEvent) => {
+      if (!(event.target instanceof Element)) return;
+      if (
+        event.target.closest(".live-room-inspector") !== null
+        || event.target.closest(".live-map-room") !== null
+      ) {
+        return;
+      }
+      closeSelectedRoom();
+    };
+    window.addEventListener("keydown", handleEscape, { capture: true });
+    document.addEventListener("pointerdown", handleOutsidePointer, {
+      capture: true,
+    });
+    return () => {
+      window.removeEventListener("keydown", handleEscape, { capture: true });
+      document.removeEventListener("pointerdown", handleOutsidePointer, {
+        capture: true,
+      });
+    };
+  }, [closeSelectedRoom, selectedRoomId]);
 
   if (snapshot === null) {
     return (
@@ -259,7 +311,15 @@ export function LiveMap({ identity }: Props) {
     manualCenter: panCenter,
     zoom,
   });
-  const viewport = camera.viewport;
+  const panelInset = frame.width <= 700
+    ? { right: 0, bottom: Math.min(frame.height * 0.55, 420) + 14 }
+    : { right: 318, bottom: 0 };
+  const viewport = keepSelectedRoomOutsidePanel(
+    camera.viewport,
+    frame,
+    selectedMapRoom?.point ?? null,
+    inspector === null ? { right: 0, bottom: 0 } : panelInset,
+  );
   const currentPoint = graph.currentRoomId === null
     ? undefined
     : roomById.get(graph.currentRoomId);
@@ -488,6 +548,12 @@ export function LiveMap({ identity }: Props) {
             : null}
         </g>
       </svg>
+      {inspector === null ? null : (
+        <LiveRoomInspector
+          room={inspector}
+          onClose={closeSelectedRoom}
+        />
+      )}
       {camera.panning ? (
         <p className="live-map-pan-hint">Drag to explore the learned world.</p>
       ) : null}
@@ -557,5 +623,6 @@ function isSnapshot(value: unknown): value is Snapshot {
     && candidate.world !== null
     && Array.isArray(candidate.world.nodes)
     && Array.isArray(candidate.world.edges)
-    && Array.isArray(candidate.world.frontier);
+    && Array.isArray(candidate.world.frontier)
+    && Array.isArray(candidate.room_economics);
 }

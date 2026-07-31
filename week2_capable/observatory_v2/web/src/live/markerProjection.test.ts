@@ -109,6 +109,7 @@ function room(
     id,
     place: vnum,
     title: `Room ${vnum}`,
+    description: null,
     atlas: {
       vnum,
       zone_id: 30,
@@ -119,6 +120,10 @@ function room(
       evidence: ["fixture"],
     },
     exits,
+    mobs: [],
+    objects: [],
+    mob_sightings: [],
+    object_sightings: [],
     visits: 1,
     evidence: [1],
     first_seq: 1,

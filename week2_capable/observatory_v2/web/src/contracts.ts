@@ -27,10 +27,24 @@ export type Catalog = {
 
 export type Observed = { value: number | boolean | string };
 
+export type WorldRoomDescription = {
+  text: string;
+  evidence: number[];
+};
+
+export type WorldSighting = {
+  name: string;
+  count: number;
+  first_seq: number;
+  last_seq: number;
+  evidence: number[];
+};
+
 export type WorldNode = {
   id: string;
   place: number;
   title: string;
+  description: WorldRoomDescription | null;
   atlas?: {
     vnum: number;
     zone_id: number;
@@ -41,6 +55,10 @@ export type WorldNode = {
     evidence: string[];
   } | null;
   exits: string[];
+  mobs: string[];
+  objects: string[];
+  mob_sightings: WorldSighting[];
+  object_sightings: WorldSighting[];
   visits: number;
   evidence: number[];
   first_seq: number;
@@ -66,12 +84,22 @@ export type WorldFrontier = {
   evidence: number[];
 };
 
+export type RoomEconomics = {
+  node_id: string;
+  response_count: number;
+  cost_usd: number;
+  first_response: number;
+  last_response: number;
+  evidence: string[];
+};
+
 export type Snapshot = {
   player_id: string;
   character: string;
   turn: number | null;
   latest_sequence: number;
   cost_usd: number;
+  room_economics: RoomEconomics[];
   combat?: boolean;
   player_status: { fields: Record<string, Observed> };
   world: {

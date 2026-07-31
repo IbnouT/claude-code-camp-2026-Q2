@@ -453,6 +453,228 @@
   pointer-events: none;
 }
 
+.live-room-inspector {
+  position: absolute;
+  z-index: 6;
+  top: 62px;
+  right: 18px;
+  width: 300px;
+  max-height: calc(100% - 80px);
+  overflow-y: auto;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 14px;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-surface) 96%, var(--color-cyan) 4%),
+      var(--color-surface)
+    );
+  box-shadow: var(--shadow-popover);
+  color: var(--color-text);
+}
+
+.live-room-inspector-header {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-surface);
+}
+
+.live-room-inspector-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.live-room-inspector-name strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.live-room-inspector-name span {
+  padding: 2px 7px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 6px;
+  background: var(--color-cyan-soft);
+  color: var(--color-cyan);
+  font-size: 10px;
+  text-transform: capitalize;
+}
+
+.live-room-inspector-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 4px;
+  color: var(--color-quiet);
+  font-size: 11px;
+}
+
+.live-room-inspector-vnum {
+  display: block;
+  margin-top: 4px;
+  color: var(--color-quiet);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+}
+
+.live-room-inspector-close {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  flex: none;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--color-quiet);
+  cursor: pointer;
+}
+
+.live-room-inspector-close:hover {
+  background: var(--color-raised);
+  color: var(--color-text);
+}
+
+.live-room-inspector-close:focus-visible {
+  outline: 2px solid var(--color-cyan);
+  outline-offset: 2px;
+}
+
+.live-room-inspector-body {
+  padding: 12px 14px 14px;
+}
+
+.live-room-inspector-description {
+  margin: 0 0 12px;
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.live-room-inspector-heading {
+  margin: 12px 0 6px;
+  color: var(--color-quiet);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.live-room-inspector-exits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.live-room-inspector-exits span {
+  padding: 4px 9px;
+  border: 1px solid var(--color-line);
+  border-radius: 7px;
+  background: var(--color-raised);
+  color: var(--color-text);
+  font-size: 11px;
+}
+
+.live-room-inspector-exits .is-unconfirmed,
+.live-room-inspector-exits .is-unavailable {
+  color: var(--color-quiet);
+}
+
+.live-room-inspector-sightings {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.live-room-inspector-sightings li {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text);
+  font-size: 12px;
+}
+
+.live-room-inspector-sightings .is-mob {
+  color: var(--color-coral);
+}
+
+.live-room-inspector-sightings .is-object {
+  color: var(--color-amber);
+}
+
+.live-room-inspector-sightings small,
+.live-room-inspector-empty {
+  color: var(--color-quiet);
+  font-size: 11px;
+}
+
+.live-room-inspector-empty {
+  margin: 0;
+}
+
+.live-room-inspector-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.live-room-inspector-stats > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  padding: 8px 9px;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  background: var(--color-raised);
+}
+
+.live-room-inspector-stats small {
+  color: var(--color-quiet);
+  font-size: 9.5px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.live-room-inspector-stats strong {
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+}
+
+.live-room-inspector-provenance {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+}
+
+.live-room-inspector-provenance > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--color-muted);
+  font-size: 10.5px;
+}
+
+.live-room-inspector-provenance dd {
+  margin: 0;
+  color: var(--color-quiet);
+  font-family: var(--font-mono);
+}
+
 .live-header {
   position: relative;
   z-index: 30;
@@ -1305,5 +1527,16 @@
   .live-context-id,
   .live-context-trigger > span[aria-hidden="true"] {
     display: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .live-room-inspector {
+    top: auto;
+    right: 14px;
+    bottom: 14px;
+    left: 14px;
+    width: auto;
+    max-height: min(55%, 420px);
   }
 }

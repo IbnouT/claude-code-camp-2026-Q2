@@ -1,6 +1,8 @@
 import type {
   WorldEdge,
   WorldNode,
+  WorldRoomDescription,
+  WorldSighting,
 } from "../contracts";
 
 export type MapPoint = {
@@ -206,7 +208,18 @@ function canonicalizeAtlasRooms(
     }
     canonicalNodes.set(canonicalId, {
       ...existing,
+      description: latestDescription(existing, node),
       exits: [...new Set([...existing.exits, ...node.exits])].sort(),
+      mobs: [...new Set([...existing.mobs, ...node.mobs])].sort(),
+      objects: [...new Set([...existing.objects, ...node.objects])].sort(),
+      mob_sightings: mergeSightings(
+        existing.mob_sightings,
+        node.mob_sightings,
+      ),
+      object_sightings: mergeSightings(
+        existing.object_sightings,
+        node.object_sightings,
+      ),
       visits: existing.visits + node.visits,
       evidence: [...new Set([...existing.evidence, ...node.evidence])].sort(
         (left, right) => left - right,
@@ -235,6 +248,45 @@ function canonicalizeAtlasRooms(
     nodes: [...canonicalNodes.values()],
     edges: canonicalEdges,
   };
+}
+
+function latestDescription(
+  existing: WorldNode,
+  candidate: WorldNode,
+): WorldRoomDescription | null {
+  if (candidate.description === null) return existing.description;
+  if (existing.description === null) return candidate.description;
+  return candidate.last_seq >= existing.last_seq
+    ? candidate.description
+    : existing.description;
+}
+
+function mergeSightings(
+  existing: WorldSighting[],
+  candidate: WorldSighting[],
+): WorldSighting[] {
+  const merged = new Map<string, WorldSighting>();
+  for (const sighting of [...existing, ...candidate]) {
+    const current = merged.get(sighting.name);
+    if (current === undefined) {
+      merged.set(sighting.name, sighting);
+      continue;
+    }
+    merged.set(sighting.name, {
+      name: sighting.name,
+      count: current.count + sighting.count,
+      first_seq: Math.min(current.first_seq, sighting.first_seq),
+      last_seq: Math.max(current.last_seq, sighting.last_seq),
+      evidence: [...new Set([
+        ...current.evidence,
+        ...sighting.evidence,
+      ])].sort((left, right) => left - right),
+    });
+  }
+  return [...merged.values()].sort((left, right) => {
+    return left.first_seq - right.first_seq
+      || left.name.localeCompare(right.name);
+  });
 }
 
 function mergedState(

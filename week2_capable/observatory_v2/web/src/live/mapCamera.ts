@@ -210,6 +210,42 @@ export function viewportCenter(viewport: MapViewport): MapPoint {
   };
 }
 
+export function keepSelectedRoomOutsidePanel(
+  viewport: MapViewport,
+  frame: MapFrame,
+  roomPoint: MapPoint | null,
+  panelInset: { right: number; bottom: number },
+  screenMargin = 18,
+): MapViewport {
+  if (
+    roomPoint === null
+    || frame.width <= 0
+    || frame.height <= 0
+  ) {
+    return viewport;
+  }
+  const horizontalScale = viewport.width / frame.width;
+  const verticalScale = viewport.height / frame.height;
+  const selectedRight = roomPoint.x + mapRoomWidth + 38 * horizontalScale;
+  const selectedBottom = roomPoint.y + mapRoomHeight + 30 * verticalScale;
+  const safeRight = panelInset.right <= 0
+    ? Number.POSITIVE_INFINITY
+    : viewport.x
+      + (frame.width - panelInset.right - screenMargin) * horizontalScale;
+  const safeBottom = panelInset.bottom <= 0
+    ? Number.POSITIVE_INFINITY
+    : viewport.y
+      + (frame.height - panelInset.bottom - screenMargin) * verticalScale;
+  const deltaX = Math.max(selectedRight - safeRight, 0);
+  const deltaY = Math.max(selectedBottom - safeBottom, 0);
+  if (deltaX === 0 && deltaY === 0) return viewport;
+  return {
+    ...viewport,
+    x: viewport.x + deltaX,
+    y: viewport.y + deltaY,
+  };
+}
+
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(Math.max(value, minimum), maximum);
 }

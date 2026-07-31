@@ -269,10 +269,37 @@ describe("structural map model", () => {
     const first = {
       ...room("first", 10),
       atlas: atlasIdentity(3001, "inside"),
+      description: { text: "First description", evidence: [10] },
+      mobs: ["kobold"],
+      mob_sightings: [{
+        name: "kobold",
+        count: 1,
+        first_seq: 10,
+        last_seq: 10,
+        evidence: [10],
+      }],
     };
     const repeated = {
       ...room("repeated", 20),
       atlas: atlasIdentity(3001, "inside"),
+      description: { text: "Latest description", evidence: [20] },
+      exits: ["east"],
+      mobs: ["kobold"],
+      objects: ["key"],
+      mob_sightings: [{
+        name: "kobold",
+        count: 2,
+        first_seq: 20,
+        last_seq: 22,
+        evidence: [20, 22],
+      }],
+      object_sightings: [{
+        name: "key",
+        count: 1,
+        first_seq: 21,
+        last_seq: 21,
+        evidence: [21],
+      }],
     };
     const neighbor = {
       ...room("neighbor", 30),
@@ -291,6 +318,20 @@ describe("structural map model", () => {
       .toMatchObject({
         visits: 2,
         evidence: [10, 20],
+        description: {
+          text: "Latest description",
+          evidence: [20],
+        },
+        exits: ["east"],
+        mobs: ["kobold"],
+        objects: ["key"],
+        mob_sightings: [{
+          name: "kobold",
+          count: 3,
+          first_seq: 10,
+          last_seq: 22,
+          evidence: [10, 20, 22],
+        }],
         method: "atlas-vnum-canonical",
       });
     expect(graph.connections).toHaveLength(1);
@@ -302,7 +343,12 @@ function room(id: string, firstSequence: number): WorldNode {
     id,
     place: firstSequence,
     title: `Room ${id}`,
+    description: null,
     exits: [],
+    mobs: [],
+    objects: [],
+    mob_sightings: [],
+    object_sightings: [],
     visits: 1,
     evidence: [firstSequence],
     first_seq: firstSequence,
