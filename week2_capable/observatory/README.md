@@ -192,6 +192,7 @@ variables provide process-local source paths and overrides:
 | --- | --- | --- |
 | `BOUKENSHA_DIR` | nearest `.boukensha` ancestor | Registered player sessions and runtime evidence |
 | `BOUKENSHA_WORLD` | `observatory.world.path` | One-run override for the observer atlas source |
+| `OBSERVATORY_ENABLE_SECTOR_OVERRIDES` | `0` | Expose the reviewed semantic atlas categories when set to `1` |
 | `OBSERVATORY_GATEWAY_URL` | `http://127.0.0.1:8765` | Gateway HTTP and SSE source |
 | `OBSERVATORY_AGENT_EVENTS` | disabled | Agent event source |
 | `OBSERVATORY_BENCHMARK_ROOT` | disabled | Benchmark evidence root |

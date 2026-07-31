@@ -23,6 +23,18 @@ SECTOR_CATEGORIES = frozenset(
     }
 )
 DEFAULT_OVERRIDE_PATH = Path(__file__).with_name("atlas_sector_overrides.json")
+DEFAULT_SECTOR_CATEGORIES = {
+    "inside": "interior",
+    "city": "urban",
+    "field": "open-land",
+    "forest": "woodland",
+    "hills": "highland",
+    "mountain": "highland",
+    "water (swimmable)": "water",
+    "water (not swimmable)": "water",
+    "flying": "special",
+    "underwater": "water",
+}
 
 
 @dataclass(frozen=True)
@@ -33,6 +45,12 @@ class SectorOverride:
     original_sector: str
     corrected_category: str
     rationale: str
+
+
+def default_sector_category(raw_sector: str) -> str:
+    """Project one known engine sector into the observer vocabulary."""
+
+    return DEFAULT_SECTOR_CATEGORIES.get(raw_sector, raw_sector)
 
 
 def load_sector_overrides(

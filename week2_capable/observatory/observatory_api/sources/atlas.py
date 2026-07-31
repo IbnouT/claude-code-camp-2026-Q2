@@ -11,7 +11,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from ..contracts import AtlasNode, AtlasProjection, AtlasZone
-from .sector_overrides import DEFAULT_OVERRIDE_PATH, load_sector_overrides
+from .sector_overrides import (
+    DEFAULT_OVERRIDE_PATH,
+    default_sector_category,
+    load_sector_overrides,
+)
 
 DIRECTIONS = ("north", "east", "south", "west", "up", "down")
 _DIRECTION_ALIASES = {
@@ -232,8 +236,12 @@ class AtlasSource:
             digest.update(path.name.encode())
             digest.update(text.encode())
             rooms.update(_parse(text))
+        semantic_enabled = (
+            self._override_path is not None
+            and self._override_path.is_file()
+        )
         overrides = load_sector_overrides(self._override_path)
-        if self._override_path is not None and self._override_path.is_file():
+        if semantic_enabled:
             digest.update(self._override_path.read_bytes())
         for vnum, override in overrides.items():
             room = rooms.get(vnum)
@@ -244,6 +252,21 @@ class AtlasSource:
                     f"Atlas sector override {vnum} expected "
                     f"{override.original_sector!r}, found {room.sector!r}."
                 )
+        if semantic_enabled:
+            rooms = {
+                vnum: AtlasRoom(
+                    vnum=room.vnum,
+                    title=room.title,
+                    zone=room.zone,
+                    sector=default_sector_category(room.sector),
+                    exits=room.exits,
+                )
+                for vnum, room in rooms.items()
+            }
+        for vnum, override in overrides.items():
+            room = rooms.get(vnum)
+            if room is None:
+                continue
             rooms[vnum] = AtlasRoom(
                 vnum=room.vnum,
                 title=room.title,

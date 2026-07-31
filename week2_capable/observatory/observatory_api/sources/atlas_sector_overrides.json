@@ -1,0 +1,4779 @@
+{
+  "version": 1,
+  "source": "CircleMUD world files",
+  "room_count": 1878,
+  "categories": [
+    "special",
+    "underground",
+    "water",
+    "sacred",
+    "commerce",
+    "civic",
+    "route",
+    "interior",
+    "urban",
+    "open-land",
+    "woodland",
+    "highland"
+  ],
+  "overrides": [
+    {
+      "vnum": 0,
+      "original_sector": "city",
+      "corrected_category": "special",
+      "rationale": "title: void"
+    },
+    {
+      "vnum": 1,
+      "original_sector": "city",
+      "corrected_category": "special",
+      "rationale": "title: limbo; description: void, formless"
+    },
+    {
+      "vnum": 914,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 1201,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: inn; description: inn"
+    },
+    {
+      "vnum": 1205,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title: post office, office; description: post office, office"
+    },
+    {
+      "vnum": 1500,
+      "original_sector": "hills",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 1501,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 1502,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 1503,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 1504,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 1537,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2515,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2517,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2518,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: tavern; description: tavern"
+    },
+    {
+      "vnum": 2519,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: shop; description: store"
+    },
+    {
+      "vnum": 2522,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2523,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2524,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2525,
+      "original_sector": "inside",
+      "corrected_category": "water",
+      "rationale": "title: pool; description: pool"
+    },
+    {
+      "vnum": 2526,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2528,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title: office; description: office"
+    },
+    {
+      "vnum": 2529,
+      "original_sector": "inside",
+      "corrected_category": "water",
+      "rationale": "title: pool"
+    },
+    {
+      "vnum": 2530,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2531,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: hallway; description: hallway"
+    },
+    {
+      "vnum": 2534,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2538,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2540,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2543,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2545,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2547,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: hallway; description: hallway"
+    },
+    {
+      "vnum": 2548,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2550,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2551,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2553,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: hallway; description: hallway"
+    },
+    {
+      "vnum": 2555,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2556,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2558,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2560,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: hallway; description: hallway"
+    },
+    {
+      "vnum": 2562,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2563,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2566,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2568,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: stairs; description: hallway, stairs"
+    },
+    {
+      "vnum": 2569,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: stairway; description: hallway, corridors"
+    },
+    {
+      "vnum": 2570,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2571,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title: office; description: office"
+    },
+    {
+      "vnum": 2572,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2574,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2576,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: hallway; description: hallway"
+    },
+    {
+      "vnum": 2577,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2578,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2580,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2583,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: hallway; description: hallway"
+    },
+    {
+      "vnum": 2584,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2585,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2587,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2589,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: hallway; description: hallway"
+    },
+    {
+      "vnum": 2591,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2593,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2596,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2598,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: hallway; description: hallway, stairs"
+    },
+    {
+      "vnum": 2599,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: stairway; description: hallway, stairway"
+    },
+    {
+      "vnum": 2600,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2604,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2605,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2606,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: hallway; description: hallway"
+    },
+    {
+      "vnum": 2607,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2608,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2613,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2614,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: hallway; description: hallway"
+    },
+    {
+      "vnum": 2615,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2616,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2619,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2621,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: hallway; description: hallway"
+    },
+    {
+      "vnum": 2622,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2626,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2627,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2628,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: hallway; description: hallway, stairs"
+    },
+    {
+      "vnum": 2629,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2630,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2631,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: corridor; description: corridor"
+    },
+    {
+      "vnum": 2632,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2633,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: intersection; description: corridor, intersection"
+    },
+    {
+      "vnum": 2634,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2636,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2646,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2647,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: corridor; description: corridor"
+    },
+    {
+      "vnum": 2650,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: intersection; description: hallways, intersection"
+    },
+    {
+      "vnum": 2651,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: hallway; description: hallway"
+    },
+    {
+      "vnum": 2652,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: hallway; description: hallway"
+    },
+    {
+      "vnum": 2658,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2659,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2660,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: hallway; description: hallway"
+    },
+    {
+      "vnum": 2665,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2666,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2673,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2674,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2675,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 2680,
+      "original_sector": "inside",
+      "corrected_category": "sacred",
+      "rationale": "title: altar; description: chapel, altar"
+    },
+    {
+      "vnum": 2682,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 3001,
+      "original_sector": "inside",
+      "corrected_category": "sacred",
+      "rationale": "title: temple; description: temple, donation room"
+    },
+    {
+      "vnum": 3002,
+      "original_sector": "inside",
+      "corrected_category": "sacred",
+      "rationale": "title: sanctum, clerics; description: altar, sanctum"
+    },
+    {
+      "vnum": 3003,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: bar; description: bar"
+    },
+    {
+      "vnum": 3004,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "guild function overrides cleric ownership"
+    },
+    {
+      "vnum": 3006,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: inn; description: inn, bar"
+    },
+    {
+      "vnum": 3007,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "description identifies the room's commerce function"
+    },
+    {
+      "vnum": 3008,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title: reception; description: reception"
+    },
+    {
+      "vnum": 3009,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: bakery; description: bakery"
+    },
+    {
+      "vnum": 3010,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: store; description: store"
+    },
+    {
+      "vnum": 3011,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: shop; description: shop"
+    },
+    {
+      "vnum": 3012,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: street; description: street"
+    },
+    {
+      "vnum": 3013,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: street; description: street"
+    },
+    {
+      "vnum": 3015,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: street; description: street, crossing"
+    },
+    {
+      "vnum": 3016,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: street; description: street"
+    },
+    {
+      "vnum": 3017,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title identifies the room's civic function"
+    },
+    {
+      "vnum": 3018,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: bar; description: bar"
+    },
+    {
+      "vnum": 3020,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: armory; description: armory"
+    },
+    {
+      "vnum": 3021,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title identifies the room's civic function"
+    },
+    {
+      "vnum": 3022,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: bar; description: bar"
+    },
+    {
+      "vnum": 3027,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title identifies the room's civic function"
+    },
+    {
+      "vnum": 3028,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: bar; description: bar"
+    },
+    {
+      "vnum": 3031,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: shop; description: shop, store"
+    },
+    {
+      "vnum": 3032,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: shop, store; description: shop"
+    },
+    {
+      "vnum": 3033,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: shop"
+    },
+    {
+      "vnum": 3042,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 3043,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 3047,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road, bridge"
+    },
+    {
+      "vnum": 3048,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: inn; description: inn"
+    },
+    {
+      "vnum": 3051,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: bridge; description: bridge"
+    },
+    {
+      "vnum": 3054,
+      "original_sector": "inside",
+      "corrected_category": "sacred",
+      "rationale": "title: temple, altar; description: temple, altar"
+    },
+    {
+      "vnum": 3055,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: store"
+    },
+    {
+      "vnum": 3058,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: shoppe; description: shop"
+    },
+    {
+      "vnum": 3059,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "description identifies a dirt path leading away"
+    },
+    {
+      "vnum": 3060,
+      "original_sector": "city",
+      "corrected_category": "open-land",
+      "rationale": "title: field; description: field"
+    },
+    {
+      "vnum": 3061,
+      "original_sector": "city",
+      "corrected_category": "open-land",
+      "rationale": "title: field; 2 connected titles"
+    },
+    {
+      "vnum": 3062,
+      "original_sector": "city",
+      "corrected_category": "civic",
+      "rationale": "title: post office, office; description: post office, office"
+    },
+    {
+      "vnum": 3063,
+      "original_sector": "city",
+      "corrected_category": "sacred",
+      "rationale": "title: donation room; description: temple"
+    },
+    {
+      "vnum": 3066,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title: path; description: path"
+    },
+    {
+      "vnum": 3106,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: cafe; description: cafe"
+    },
+    {
+      "vnum": 3107,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 3108,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 3109,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 3111,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 3112,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "description: road, path; 2 connected titles"
+    },
+    {
+      "vnum": 3113,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 3115,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 3116,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "description: path, avenue; 2 connected titles"
+    },
+    {
+      "vnum": 3117,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: avenue; description: avenue"
+    },
+    {
+      "vnum": 3118,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 3119,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: avenue; description: road, avenue"
+    },
+    {
+      "vnum": 3120,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 3121,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: avenue; description: road, avenue"
+    },
+    {
+      "vnum": 3122,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road, street"
+    },
+    {
+      "vnum": 3123,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: street; description: road, street"
+    },
+    {
+      "vnum": 3124,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: street; description: street"
+    },
+    {
+      "vnum": 3125,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: avenue; description: avenue"
+    },
+    {
+      "vnum": 3126,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 3131,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 3132,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: avenue; description: lane, avenue"
+    },
+    {
+      "vnum": 3133,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: avenue; description: road, avenue"
+    },
+    {
+      "vnum": 3134,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: avenue; description: road, avenue"
+    },
+    {
+      "vnum": 3135,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road, crossing"
+    },
+    {
+      "vnum": 3136,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road, crossing"
+    },
+    {
+      "vnum": 3138,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title: office; description: office"
+    },
+    {
+      "vnum": 3139,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: lane; description: lane, avenue"
+    },
+    {
+      "vnum": 3140,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: lane; description: road, lane"
+    },
+    {
+      "vnum": 3141,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: lane; description: lane"
+    },
+    {
+      "vnum": 3150,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 3151,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 3152,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 3153,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 3155,
+      "original_sector": "inside",
+      "corrected_category": "sacred",
+      "rationale": "title: chapel; description: chapel, altar"
+    },
+    {
+      "vnum": 3200,
+      "original_sector": "water (not swimmable)",
+      "corrected_category": "route",
+      "rationale": "title: bridge; description: bridge"
+    },
+    {
+      "vnum": 3300,
+      "original_sector": "mountain",
+      "corrected_category": "route",
+      "rationale": "title: trail; description: road, trail"
+    },
+    {
+      "vnum": 3301,
+      "original_sector": "mountain",
+      "corrected_category": "route",
+      "rationale": "title: trail; description: trail"
+    },
+    {
+      "vnum": 3302,
+      "original_sector": "mountain",
+      "corrected_category": "route",
+      "rationale": "title: path; description: path"
+    },
+    {
+      "vnum": 3308,
+      "original_sector": "mountain",
+      "corrected_category": "route",
+      "rationale": "title: paths"
+    },
+    {
+      "vnum": 3317,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave"
+    },
+    {
+      "vnum": 3318,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave"
+    },
+    {
+      "vnum": 3319,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave"
+    },
+    {
+      "vnum": 3320,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: cave; 2 connected titles"
+    },
+    {
+      "vnum": 3321,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: cave; 2 connected titles"
+    },
+    {
+      "vnum": 3322,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave"
+    },
+    {
+      "vnum": 3323,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: cave; 1 connected title"
+    },
+    {
+      "vnum": 3324,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave"
+    },
+    {
+      "vnum": 3325,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave"
+    },
+    {
+      "vnum": 3326,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave"
+    },
+    {
+      "vnum": 3327,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: tunnel"
+    },
+    {
+      "vnum": 3328,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave, tunnel"
+    },
+    {
+      "vnum": 3330,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: cavern; description: cavern"
+    },
+    {
+      "vnum": 3331,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave"
+    },
+    {
+      "vnum": 3332,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: cave; 2 connected titles"
+    },
+    {
+      "vnum": 3333,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: cave; 2 connected titles"
+    },
+    {
+      "vnum": 3334,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: tunnel"
+    },
+    {
+      "vnum": 3335,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: tunnels"
+    },
+    {
+      "vnum": 3336,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: tunnel"
+    },
+    {
+      "vnum": 3337,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: cave; 2 connected titles"
+    },
+    {
+      "vnum": 3338,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: tunnel"
+    },
+    {
+      "vnum": 3339,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: tunnel"
+    },
+    {
+      "vnum": 3340,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: passage; description: passage"
+    },
+    {
+      "vnum": 3343,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 3344,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: tavern; description: bar"
+    },
+    {
+      "vnum": 3345,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: store"
+    },
+    {
+      "vnum": 3346,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road, intersection"
+    },
+    {
+      "vnum": 3348,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 3349,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 3350,
+      "original_sector": "city",
+      "corrected_category": "commerce",
+      "rationale": "title: market"
+    },
+    {
+      "vnum": 3351,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 3353,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 3355,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road, intersection"
+    },
+    {
+      "vnum": 3356,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: inn; description: inn"
+    },
+    {
+      "vnum": 3358,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title: reception"
+    },
+    {
+      "vnum": 3362,
+      "original_sector": "city",
+      "corrected_category": "interior",
+      "rationale": "title: cottage; 1 connected title"
+    },
+    {
+      "vnum": 3367,
+      "original_sector": "mountain",
+      "corrected_category": "route",
+      "rationale": "title: path; description: path"
+    },
+    {
+      "vnum": 3368,
+      "original_sector": "mountain",
+      "corrected_category": "route",
+      "rationale": "title: path; 1 connected title"
+    },
+    {
+      "vnum": 3369,
+      "original_sector": "hills",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave, tunnels"
+    },
+    {
+      "vnum": 3370,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnels"
+    },
+    {
+      "vnum": 3371,
+      "original_sector": "hills",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 3373,
+      "original_sector": "hills",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: cave, tunnel"
+    },
+    {
+      "vnum": 3374,
+      "original_sector": "hills",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 3500,
+      "original_sector": "city",
+      "corrected_category": "open-land",
+      "rationale": "title: plains; description: plains"
+    },
+    {
+      "vnum": 3501,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 3504,
+      "original_sector": "forest",
+      "corrected_category": "urban",
+      "rationale": "title: gate; description: city, gate"
+    },
+    {
+      "vnum": 3508,
+      "original_sector": "forest",
+      "corrected_category": "route",
+      "rationale": "title: path; description: path"
+    },
+    {
+      "vnum": 3510,
+      "original_sector": "forest",
+      "corrected_category": "route",
+      "rationale": "title: crossroads; description: paths"
+    },
+    {
+      "vnum": 3511,
+      "original_sector": "forest",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 3517,
+      "original_sector": "forest",
+      "corrected_category": "highland",
+      "rationale": "title: mountains; description: mountains"
+    },
+    {
+      "vnum": 3519,
+      "original_sector": "forest",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 3552,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 3553,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 3555,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 3556,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "description: cavern, tunnel; 1 connected title"
+    },
+    {
+      "vnum": 3574,
+      "original_sector": "city",
+      "corrected_category": "commerce",
+      "rationale": "title: inn; description: inn, bar"
+    },
+    {
+      "vnum": 3576,
+      "original_sector": "city",
+      "corrected_category": "commerce",
+      "rationale": "title: bar; 1 connected title"
+    },
+    {
+      "vnum": 3579,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: inn; 1 connected title"
+    },
+    {
+      "vnum": 3581,
+      "original_sector": "forest",
+      "corrected_category": "route",
+      "rationale": "title: trail; description: path"
+    },
+    {
+      "vnum": 3582,
+      "original_sector": "forest",
+      "corrected_category": "route",
+      "rationale": "title: trail; description: path"
+    },
+    {
+      "vnum": 3584,
+      "original_sector": "forest",
+      "corrected_category": "route",
+      "rationale": "title: trail; description: path"
+    },
+    {
+      "vnum": 4002,
+      "original_sector": "hills",
+      "corrected_category": "route",
+      "rationale": "title: path; description: path, trail"
+    },
+    {
+      "vnum": 4010,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave, tunnel"
+    },
+    {
+      "vnum": 4011,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 4012,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: cave, tunnel"
+    },
+    {
+      "vnum": 4013,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 4014,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: cave, tunnel"
+    },
+    {
+      "vnum": 4015,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 4016,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave, tunnel"
+    },
+    {
+      "vnum": 4017,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave"
+    },
+    {
+      "vnum": 4018,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave, tunnel"
+    },
+    {
+      "vnum": 4019,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; 2 connected titles"
+    },
+    {
+      "vnum": 4022,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: cave, tunnel"
+    },
+    {
+      "vnum": 4023,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave, tunnel"
+    },
+    {
+      "vnum": 4024,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 4025,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave, tunnels"
+    },
+    {
+      "vnum": 4026,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnels; description: cave, tunnels"
+    },
+    {
+      "vnum": 4027,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 4028,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 4029,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave, tunnel"
+    },
+    {
+      "vnum": 4030,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave, tunnel"
+    },
+    {
+      "vnum": 4033,
+      "original_sector": "hills",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 4034,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "description: path, intersection; 1 connected title"
+    },
+    {
+      "vnum": 4037,
+      "original_sector": "hills",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 4043,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: tunnel"
+    },
+    {
+      "vnum": 4044,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cavern, tunnel"
+    },
+    {
+      "vnum": 4045,
+      "original_sector": "mountain",
+      "corrected_category": "route",
+      "rationale": "title: trail; description: trail"
+    },
+    {
+      "vnum": 4050,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 4051,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 4052,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 4053,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: underground, cave"
+    },
+    {
+      "vnum": 4054,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave, tunnels"
+    },
+    {
+      "vnum": 4056,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave"
+    },
+    {
+      "vnum": 4059,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 4060,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: cave, tunnel"
+    },
+    {
+      "vnum": 4061,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave, tunnels"
+    },
+    {
+      "vnum": 4064,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: cave, tunnel"
+    },
+    {
+      "vnum": 4065,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "description: cave, tunnel; 1 connected title"
+    },
+    {
+      "vnum": 4066,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "description: cavern, tunnel; 1 connected title"
+    },
+    {
+      "vnum": 4068,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave"
+    },
+    {
+      "vnum": 4069,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave, tunnel"
+    },
+    {
+      "vnum": 4070,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave"
+    },
+    {
+      "vnum": 4071,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave, tunnel"
+    },
+    {
+      "vnum": 4072,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: cave, tunnel"
+    },
+    {
+      "vnum": 4073,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 4077,
+      "original_sector": "mountain",
+      "corrected_category": "open-land",
+      "rationale": "title: valley; description: valley"
+    },
+    {
+      "vnum": 4078,
+      "original_sector": "mountain",
+      "corrected_category": "open-land",
+      "rationale": "title: valley; description: valley"
+    },
+    {
+      "vnum": 4100,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 4101,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 4102,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 4103,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 4104,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: cavern, tunnel"
+    },
+    {
+      "vnum": 4105,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cavern"
+    },
+    {
+      "vnum": 4106,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cavern"
+    },
+    {
+      "vnum": 4107,
+      "original_sector": "forest",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 4108,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cavern"
+    },
+    {
+      "vnum": 4109,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cavern"
+    },
+    {
+      "vnum": 4111,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 4112,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 4113,
+      "original_sector": "forest",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 4114,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cavern"
+    },
+    {
+      "vnum": 4115,
+      "original_sector": "forest",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 4116,
+      "original_sector": "forest",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 4117,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; 1 connected title"
+    },
+    {
+      "vnum": 4118,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave"
+    },
+    {
+      "vnum": 4119,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave"
+    },
+    {
+      "vnum": 4120,
+      "original_sector": "forest",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 4121,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 4122,
+      "original_sector": "forest",
+      "corrected_category": "interior",
+      "rationale": "title: chamber; description: chamber"
+    },
+    {
+      "vnum": 4123,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave"
+    },
+    {
+      "vnum": 4124,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave"
+    },
+    {
+      "vnum": 4125,
+      "original_sector": "forest",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 5001,
+      "original_sector": "water (not swimmable)",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 5002,
+      "original_sector": "water (not swimmable)",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 5003,
+      "original_sector": "water (not swimmable)",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 5004,
+      "original_sector": "water (not swimmable)",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 5005,
+      "original_sector": "water (not swimmable)",
+      "corrected_category": "underground",
+      "rationale": "title: underground; description: underground, tunnel"
+    },
+    {
+      "vnum": 5006,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 5007,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 5008,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: cave; 1 connected title"
+    },
+    {
+      "vnum": 5010,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave"
+    },
+    {
+      "vnum": 5011,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cavern"
+    },
+    {
+      "vnum": 5013,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave"
+    },
+    {
+      "vnum": 5014,
+      "original_sector": "mountain",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 5016,
+      "original_sector": "mountain",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 5018,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: cavern; description: cavern"
+    },
+    {
+      "vnum": 5020,
+      "original_sector": "mountain",
+      "corrected_category": "route",
+      "rationale": "title: path; description: path"
+    },
+    {
+      "vnum": 5021,
+      "original_sector": "mountain",
+      "corrected_category": "sacred",
+      "rationale": "title: temple; description: temple"
+    },
+    {
+      "vnum": 5022,
+      "original_sector": "mountain",
+      "corrected_category": "route",
+      "rationale": "title: passage; description: path"
+    },
+    {
+      "vnum": 5023,
+      "original_sector": "mountain",
+      "corrected_category": "route",
+      "rationale": "title: passage; description: path"
+    },
+    {
+      "vnum": 5062,
+      "original_sector": "mountain",
+      "corrected_category": "route",
+      "rationale": "title: bridge; description: bridge"
+    },
+    {
+      "vnum": 5064,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave"
+    },
+    {
+      "vnum": 5065,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "description: cave, tunnel; 2 connected titles"
+    },
+    {
+      "vnum": 5066,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 5067,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 5069,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: cavern"
+    },
+    {
+      "vnum": 5100,
+      "original_sector": "inside",
+      "corrected_category": "urban",
+      "rationale": "title: city; description: city, gate"
+    },
+    {
+      "vnum": 5101,
+      "original_sector": "inside",
+      "corrected_category": "urban",
+      "rationale": "title: city; description: gate"
+    },
+    {
+      "vnum": 5102,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: street; description: street"
+    },
+    {
+      "vnum": 5103,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: street; description: street"
+    },
+    {
+      "vnum": 5106,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: street; description: street"
+    },
+    {
+      "vnum": 5107,
+      "original_sector": "inside",
+      "corrected_category": "urban",
+      "rationale": "title: city; description: city"
+    },
+    {
+      "vnum": 5110,
+      "original_sector": "inside",
+      "corrected_category": "urban",
+      "rationale": "title: gate; description: city, gate"
+    },
+    {
+      "vnum": 5114,
+      "original_sector": "inside",
+      "corrected_category": "urban",
+      "rationale": "title: city; description: city"
+    },
+    {
+      "vnum": 5115,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: street; description: street"
+    },
+    {
+      "vnum": 5116,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "academy function overrides cleric ownership"
+    },
+    {
+      "vnum": 5117,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: street; description: street"
+    },
+    {
+      "vnum": 5118,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title identifies the room's civic function"
+    },
+    {
+      "vnum": 5119,
+      "original_sector": "inside",
+      "corrected_category": "sacred",
+      "rationale": "title: temple; description: temple"
+    },
+    {
+      "vnum": 5120,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title identifies the room's civic function"
+    },
+    {
+      "vnum": 5121,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: street; description: street"
+    },
+    {
+      "vnum": 5123,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: street; description: street"
+    },
+    {
+      "vnum": 5127,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 5128,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 5129,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 5130,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 5131,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 5132,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 5134,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 5135,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: stairway; description: stairway"
+    },
+    {
+      "vnum": 5136,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: hallway; description: hallway"
+    },
+    {
+      "vnum": 5138,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: hallway; description: hallway, stairs"
+    },
+    {
+      "vnum": 5140,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: stairway; description: stairs"
+    },
+    {
+      "vnum": 5145,
+      "original_sector": "inside",
+      "corrected_category": "sacred",
+      "rationale": "title: altar; description: altar"
+    },
+    {
+      "vnum": 5201,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: street; description: street"
+    },
+    {
+      "vnum": 5202,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: street; description: street"
+    },
+    {
+      "vnum": 5203,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: path; description: path"
+    },
+    {
+      "vnum": 5204,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: path; description: path"
+    },
+    {
+      "vnum": 5205,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: path; description: path"
+    },
+    {
+      "vnum": 5206,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: path; description: path"
+    },
+    {
+      "vnum": 5207,
+      "original_sector": "city",
+      "corrected_category": "commerce",
+      "rationale": "title: market; description: shops"
+    },
+    {
+      "vnum": 5208,
+      "original_sector": "city",
+      "corrected_category": "commerce",
+      "rationale": "title: market; description: market"
+    },
+    {
+      "vnum": 5209,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: street; description: street"
+    },
+    {
+      "vnum": 5210,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: street; description: street"
+    },
+    {
+      "vnum": 5211,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: street; description: street, path"
+    },
+    {
+      "vnum": 5212,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: street; description: street"
+    },
+    {
+      "vnum": 5213,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: street; description: street"
+    },
+    {
+      "vnum": 5214,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: street; description: street"
+    },
+    {
+      "vnum": 5219,
+      "original_sector": "city",
+      "corrected_category": "civic",
+      "rationale": "title identifies the room's civic function"
+    },
+    {
+      "vnum": 5221,
+      "original_sector": "city",
+      "corrected_category": "commerce",
+      "rationale": "title: smithy"
+    },
+    {
+      "vnum": 5229,
+      "original_sector": "city",
+      "corrected_category": "commerce",
+      "rationale": "title: shop; description: shop"
+    },
+    {
+      "vnum": 5230,
+      "original_sector": "city",
+      "corrected_category": "commerce",
+      "rationale": "title: tavern; description: tavern"
+    },
+    {
+      "vnum": 5231,
+      "original_sector": "city",
+      "corrected_category": "civic",
+      "rationale": "title: city hall; description: reception"
+    },
+    {
+      "vnum": 5232,
+      "original_sector": "city",
+      "corrected_category": "civic",
+      "rationale": "title: city hall; description: city hall, reception"
+    },
+    {
+      "vnum": 5233,
+      "original_sector": "city",
+      "corrected_category": "civic",
+      "rationale": "title: city hall; description: reception, office"
+    },
+    {
+      "vnum": 5235,
+      "original_sector": "city",
+      "corrected_category": "interior",
+      "rationale": "title: house; description: hall"
+    },
+    {
+      "vnum": 5236,
+      "original_sector": "city",
+      "corrected_category": "interior",
+      "rationale": "title: home; description: house"
+    },
+    {
+      "vnum": 5242,
+      "original_sector": "city",
+      "corrected_category": "interior",
+      "rationale": "title: house; description: house"
+    },
+    {
+      "vnum": 5244,
+      "original_sector": "city",
+      "corrected_category": "interior",
+      "rationale": "title: house; description: home"
+    },
+    {
+      "vnum": 5250,
+      "original_sector": "city",
+      "corrected_category": "sacred",
+      "rationale": "title: temple; description: temple, altar"
+    },
+    {
+      "vnum": 5310,
+      "original_sector": "inside",
+      "corrected_category": "special",
+      "rationale": "title: fire pool"
+    },
+    {
+      "vnum": 5311,
+      "original_sector": "water (not swimmable)",
+      "corrected_category": "interior",
+      "rationale": "title: chamber; description: chamber"
+    },
+    {
+      "vnum": 5325,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: tomb; description: tomb"
+    },
+    {
+      "vnum": 5326,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: tomb; description: tomb"
+    },
+    {
+      "vnum": 5327,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: stairway; description: stairway, steps"
+    },
+    {
+      "vnum": 5328,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: stairway; description: stairway, steps"
+    },
+    {
+      "vnum": 5329,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: stairway; description: stairway"
+    },
+    {
+      "vnum": 5332,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: tomb; description: tomb"
+    },
+    {
+      "vnum": 5333,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: tomb; description: tomb"
+    },
+    {
+      "vnum": 5334,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 5335,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 5336,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 5338,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: stairway; description: hallway, stairs"
+    },
+    {
+      "vnum": 5339,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: hallway; description: passage, hallway"
+    },
+    {
+      "vnum": 5341,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: hallway; description: passage, hallway"
+    },
+    {
+      "vnum": 5342,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: hallway; description: hallway"
+    },
+    {
+      "vnum": 5343,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "description: passage, hallway; 1 connected title"
+    },
+    {
+      "vnum": 5344,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: tomb; description: tomb"
+    },
+    {
+      "vnum": 5345,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: tomb; description: tomb, graves"
+    },
+    {
+      "vnum": 5346,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: hallway; description: hallway"
+    },
+    {
+      "vnum": 5347,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: crypt; description: crypt"
+    },
+    {
+      "vnum": 5350,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: crypt; description: crypt"
+    },
+    {
+      "vnum": 5400,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: inn; description: inn"
+    },
+    {
+      "vnum": 5401,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title: reception; description: reception"
+    },
+    {
+      "vnum": 5402,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: inn; description: bar"
+    },
+    {
+      "vnum": 5412,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: bridge; description: bridge"
+    },
+    {
+      "vnum": 5420,
+      "original_sector": "city",
+      "corrected_category": "interior",
+      "rationale": "description: halls, palace; 1 connected title"
+    },
+    {
+      "vnum": 5424,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: street; description: road, street"
+    },
+    {
+      "vnum": 5425,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: street; description: road, street"
+    },
+    {
+      "vnum": 5426,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: street; description: street"
+    },
+    {
+      "vnum": 5427,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: street; description: junction"
+    },
+    {
+      "vnum": 5428,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: street; description: road, street"
+    },
+    {
+      "vnum": 5429,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: street; description: street"
+    },
+    {
+      "vnum": 5430,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: street; description: street"
+    },
+    {
+      "vnum": 5433,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: drive; 1 connected title"
+    },
+    {
+      "vnum": 5434,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: drive; description: drive"
+    },
+    {
+      "vnum": 5435,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: drive; description: road, trail"
+    },
+    {
+      "vnum": 5436,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: drive; description: drive"
+    },
+    {
+      "vnum": 5437,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: drive; description: road, drive"
+    },
+    {
+      "vnum": 5438,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: drive; description: road"
+    },
+    {
+      "vnum": 5439,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: drive; description: drive"
+    },
+    {
+      "vnum": 5440,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: drive; description: drive"
+    },
+    {
+      "vnum": 5441,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: drive; description: drive"
+    },
+    {
+      "vnum": 5442,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: drive; 1 connected title"
+    },
+    {
+      "vnum": 5443,
+      "original_sector": "city",
+      "corrected_category": "water",
+      "rationale": "description: river, docks; 1 connected title"
+    },
+    {
+      "vnum": 5451,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "description: avenue, intersection"
+    },
+    {
+      "vnum": 5457,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: underground; 2 connected titles"
+    },
+    {
+      "vnum": 5462,
+      "original_sector": "city",
+      "corrected_category": "civic",
+      "rationale": "description: guild, museum; 2 connected titles"
+    },
+    {
+      "vnum": 5464,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "description: road, street; 1 connected title"
+    },
+    {
+      "vnum": 5475,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: underground; description: underground"
+    },
+    {
+      "vnum": 5476,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: underground; 2 connected titles"
+    },
+    {
+      "vnum": 5477,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: underground; description: tunnel"
+    },
+    {
+      "vnum": 5478,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: underground; 2 connected titles"
+    },
+    {
+      "vnum": 5479,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: underground; 1 connected title"
+    },
+    {
+      "vnum": 5480,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: underground; 2 connected titles"
+    },
+    {
+      "vnum": 5481,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: underground; 2 connected titles"
+    },
+    {
+      "vnum": 5482,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: underground; description: tunnel"
+    },
+    {
+      "vnum": 5488,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 5489,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 5490,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 5491,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 5492,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: underground; 2 connected titles"
+    },
+    {
+      "vnum": 5493,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: underground; 2 connected titles"
+    },
+    {
+      "vnum": 5500,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: underground; 2 connected titles"
+    },
+    {
+      "vnum": 5501,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: underground; 2 connected titles"
+    },
+    {
+      "vnum": 5502,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: underground; 1 connected title"
+    },
+    {
+      "vnum": 5503,
+      "original_sector": "inside",
+      "corrected_category": "sacred",
+      "rationale": "title: sanctum, clerics; description: sanctum"
+    },
+    {
+      "vnum": 5505,
+      "original_sector": "inside",
+      "corrected_category": "sacred",
+      "rationale": "title: altar; description: temple, altar"
+    },
+    {
+      "vnum": 5506,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title identifies the room's civic function"
+    },
+    {
+      "vnum": 5507,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title identifies the room's civic function"
+    },
+    {
+      "vnum": 5508,
+      "original_sector": "inside",
+      "corrected_category": "sacred",
+      "rationale": "title: temple; description: temple, clerics"
+    },
+    {
+      "vnum": 5509,
+      "original_sector": "inside",
+      "corrected_category": "sacred",
+      "rationale": "title: temple; 4 connected titles"
+    },
+    {
+      "vnum": 5510,
+      "original_sector": "inside",
+      "corrected_category": "sacred",
+      "rationale": "title: donation room; description: temple, donation room"
+    },
+    {
+      "vnum": 5511,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title: museum; description: museum"
+    },
+    {
+      "vnum": 5512,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "guild function overrides cleric ownership"
+    },
+    {
+      "vnum": 5516,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title: museum; description: museum"
+    },
+    {
+      "vnum": 5521,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: bank; 1 connected title"
+    },
+    {
+      "vnum": 5524,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: shop; description: shop"
+    },
+    {
+      "vnum": 5526,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title identifies the room's civic function"
+    },
+    {
+      "vnum": 5527,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: shop; description: shops"
+    },
+    {
+      "vnum": 5528,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: store; 1 connected title"
+    },
+    {
+      "vnum": 5529,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "description: shop, armoury; title and description identify retail goods"
+    },
+    {
+      "vnum": 5530,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title identifies the room's civic function"
+    },
+    {
+      "vnum": 5531,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title identifies the room's civic function"
+    },
+    {
+      "vnum": 5532,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title identifies the room's civic function"
+    },
+    {
+      "vnum": 5537,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: shoppe"
+    },
+    {
+      "vnum": 5538,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: inn; description: inn, bar"
+    },
+    {
+      "vnum": 5553,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title: jail; description: jail"
+    },
+    {
+      "vnum": 5554,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title: city hall"
+    },
+    {
+      "vnum": 5555,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title identifies the room's civic function"
+    },
+    {
+      "vnum": 5556,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title identifies the room's civic function"
+    },
+    {
+      "vnum": 5564,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title identifies the room's civic function"
+    },
+    {
+      "vnum": 5566,
+      "original_sector": "inside",
+      "corrected_category": "sacred",
+      "rationale": "title: shrine"
+    },
+    {
+      "vnum": 5575,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: dungeon"
+    },
+    {
+      "vnum": 5583,
+      "original_sector": "inside",
+      "corrected_category": "open-land",
+      "rationale": "title: garden; description: gardens"
+    },
+    {
+      "vnum": 5592,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel, dungeon; description: tunnel"
+    },
+    {
+      "vnum": 5593,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel, dungeon; description: tunnel"
+    },
+    {
+      "vnum": 5594,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel, dungeon; description: tunnel"
+    },
+    {
+      "vnum": 5595,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel, dungeon; description: tunnel"
+    },
+    {
+      "vnum": 5609,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title: bridge; description: bridge"
+    },
+    {
+      "vnum": 5610,
+      "original_sector": "mountain",
+      "corrected_category": "open-land",
+      "rationale": "title: valley; description: valley"
+    },
+    {
+      "vnum": 5615,
+      "original_sector": "mountain",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 5616,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 5617,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 5618,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 5630,
+      "original_sector": "hills",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 5631,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 5632,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 5633,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 5656,
+      "original_sector": "inside",
+      "corrected_category": "highland",
+      "rationale": "title: mountains; description: mountains"
+    },
+    {
+      "vnum": 5683,
+      "original_sector": "field",
+      "corrected_category": "woodland",
+      "rationale": "title and description identify one continuous forest walk"
+    },
+    {
+      "vnum": 5690,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title: road; description: roads"
+    },
+    {
+      "vnum": 5691,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 5692,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 5693,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title: road; 1 connected title"
+    },
+    {
+      "vnum": 5695,
+      "original_sector": "city",
+      "corrected_category": "water",
+      "rationale": "title: dock; description: dock"
+    },
+    {
+      "vnum": 6000,
+      "original_sector": "field",
+      "corrected_category": "woodland",
+      "rationale": "title and description identify one continuous forest walk"
+    },
+    {
+      "vnum": 6022,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave"
+    },
+    {
+      "vnum": 6073,
+      "original_sector": "hills",
+      "corrected_category": "woodland",
+      "rationale": "title and description identify one continuous forest walk"
+    },
+    {
+      "vnum": 6076,
+      "original_sector": "hills",
+      "corrected_category": "woodland",
+      "rationale": "title and description identify one continuous forest walk"
+    },
+    {
+      "vnum": 6077,
+      "original_sector": "hills",
+      "corrected_category": "woodland",
+      "rationale": "title and description identify one continuous forest walk"
+    },
+    {
+      "vnum": 6078,
+      "original_sector": "hills",
+      "corrected_category": "woodland",
+      "rationale": "title and description identify one continuous forest walk"
+    },
+    {
+      "vnum": 6079,
+      "original_sector": "hills",
+      "corrected_category": "woodland",
+      "rationale": "title and description identify one continuous forest walk"
+    },
+    {
+      "vnum": 6080,
+      "original_sector": "hills",
+      "corrected_category": "woodland",
+      "rationale": "title and description identify one continuous forest walk"
+    },
+    {
+      "vnum": 6081,
+      "original_sector": "hills",
+      "corrected_category": "woodland",
+      "rationale": "title and description identify one continuous forest walk"
+    },
+    {
+      "vnum": 6082,
+      "original_sector": "hills",
+      "corrected_category": "woodland",
+      "rationale": "title and description identify one continuous forest walk"
+    },
+    {
+      "vnum": 6090,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 6091,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 6092,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 6143,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave"
+    },
+    {
+      "vnum": 6150,
+      "original_sector": "forest",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 6151,
+      "original_sector": "forest",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 6154,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: underground"
+    },
+    {
+      "vnum": 6155,
+      "original_sector": "forest",
+      "corrected_category": "sacred",
+      "rationale": "title: temple; description: temple, altar"
+    },
+    {
+      "vnum": 6209,
+      "original_sector": "forest",
+      "corrected_category": "water",
+      "rationale": "title: river; description: river"
+    },
+    {
+      "vnum": 6214,
+      "original_sector": "field",
+      "corrected_category": "water",
+      "rationale": "title: river; description: river"
+    },
+    {
+      "vnum": 6215,
+      "original_sector": "field",
+      "corrected_category": "water",
+      "rationale": "title: river; description: river"
+    },
+    {
+      "vnum": 6216,
+      "original_sector": "field",
+      "corrected_category": "water",
+      "rationale": "title: river; description: river"
+    },
+    {
+      "vnum": 6239,
+      "original_sector": "field",
+      "corrected_category": "water",
+      "rationale": "title: river; description: river"
+    },
+    {
+      "vnum": 6240,
+      "original_sector": "field",
+      "corrected_category": "water",
+      "rationale": "title: river; description: river"
+    },
+    {
+      "vnum": 6242,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave, tunnel"
+    },
+    {
+      "vnum": 6243,
+      "original_sector": "hills",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 6244,
+      "original_sector": "hills",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: cave, tunnel"
+    },
+    {
+      "vnum": 6245,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: cave, tunnel"
+    },
+    {
+      "vnum": 6246,
+      "original_sector": "hills",
+      "corrected_category": "underground",
+      "rationale": "title: cave; 2 connected titles"
+    },
+    {
+      "vnum": 6247,
+      "original_sector": "hills",
+      "corrected_category": "underground",
+      "rationale": "title: cave; 3 connected titles"
+    },
+    {
+      "vnum": 6248,
+      "original_sector": "hills",
+      "corrected_category": "underground",
+      "rationale": "title: cave; 2 connected titles"
+    },
+    {
+      "vnum": 6249,
+      "original_sector": "hills",
+      "corrected_category": "underground",
+      "rationale": "title: cave; 3 connected titles"
+    },
+    {
+      "vnum": 6250,
+      "original_sector": "hills",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave"
+    },
+    {
+      "vnum": 6251,
+      "original_sector": "hills",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave"
+    },
+    {
+      "vnum": 6252,
+      "original_sector": "hills",
+      "corrected_category": "underground",
+      "rationale": "title: cave; 2 connected titles"
+    },
+    {
+      "vnum": 6253,
+      "original_sector": "hills",
+      "corrected_category": "underground",
+      "rationale": "title: cave; 3 connected titles"
+    },
+    {
+      "vnum": 6254,
+      "original_sector": "hills",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave"
+    },
+    {
+      "vnum": 6255,
+      "original_sector": "hills",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 6256,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 6258,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 6302,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title: passage; description: paths"
+    },
+    {
+      "vnum": 6304,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title: passage; description: passage"
+    },
+    {
+      "vnum": 6305,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title: path; 2 connected titles"
+    },
+    {
+      "vnum": 6306,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title: path; 2 connected titles"
+    },
+    {
+      "vnum": 6307,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title: path; 2 connected titles"
+    },
+    {
+      "vnum": 6308,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title: path; 4 connected titles"
+    },
+    {
+      "vnum": 6309,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title: path; description: road"
+    },
+    {
+      "vnum": 6320,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title: path; description: path"
+    },
+    {
+      "vnum": 6323,
+      "original_sector": "field",
+      "corrected_category": "woodland",
+      "rationale": "title and description identify one continuous forest walk"
+    },
+    {
+      "vnum": 6325,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title: path; description: path"
+    },
+    {
+      "vnum": 6326,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 6328,
+      "original_sector": "field",
+      "corrected_category": "special",
+      "rationale": "title: ethereal; description: ethereal"
+    },
+    {
+      "vnum": 6335,
+      "original_sector": "field",
+      "corrected_category": "special",
+      "rationale": "title: ethereal; description: ethereal"
+    },
+    {
+      "vnum": 6340,
+      "original_sector": "field",
+      "corrected_category": "interior",
+      "rationale": "title: room"
+    },
+    {
+      "vnum": 6345,
+      "original_sector": "field",
+      "corrected_category": "special",
+      "rationale": "title: ethereal; description: ethereal"
+    },
+    {
+      "vnum": 6350,
+      "original_sector": "field",
+      "corrected_category": "interior",
+      "rationale": "title: chamber"
+    },
+    {
+      "vnum": 6355,
+      "original_sector": "field",
+      "corrected_category": "special",
+      "rationale": "title: ethereal; description: ethereal"
+    },
+    {
+      "vnum": 6365,
+      "original_sector": "field",
+      "corrected_category": "special",
+      "rationale": "title: ethereal; description: ethereal"
+    },
+    {
+      "vnum": 6367,
+      "original_sector": "field",
+      "corrected_category": "interior",
+      "rationale": "title: room; description: room"
+    },
+    {
+      "vnum": 6391,
+      "original_sector": "field",
+      "corrected_category": "interior",
+      "rationale": "title: chamber"
+    },
+    {
+      "vnum": 6405,
+      "original_sector": "forest",
+      "corrected_category": "open-land",
+      "rationale": "title: valley; description: valley"
+    },
+    {
+      "vnum": 6409,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 6417,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 6420,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 6430,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title: office"
+    },
+    {
+      "vnum": 6434,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 6437,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 6438,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 6439,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 6442,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 6443,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 6500,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 6501,
+      "original_sector": "hills",
+      "corrected_category": "woodland",
+      "rationale": "title and description identify one continuous forest walk"
+    },
+    {
+      "vnum": 6504,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 6505,
+      "original_sector": "field",
+      "corrected_category": "highland",
+      "rationale": "title: mountain; description: mountain"
+    },
+    {
+      "vnum": 6506,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: path; description: path"
+    },
+    {
+      "vnum": 6507,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 6508,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: path; description: path"
+    },
+    {
+      "vnum": 6514,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 6515,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: road; description: path"
+    },
+    {
+      "vnum": 6516,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: shop; description: shop"
+    },
+    {
+      "vnum": 6517,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 6518,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: shops; description: shops"
+    },
+    {
+      "vnum": 6519,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 6520,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 6521,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "description places the room on a route outside a facility"
+    },
+    {
+      "vnum": 6527,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: cellar; description: cellar"
+    },
+    {
+      "vnum": 6529,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: stairs; description: stairs"
+    },
+    {
+      "vnum": 6530,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: stairs; description: stairs"
+    },
+    {
+      "vnum": 6534,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title: hospital; description: hospital"
+    },
+    {
+      "vnum": 6535,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: bakery; 1 connected title"
+    },
+    {
+      "vnum": 6540,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 6542,
+      "original_sector": "inside",
+      "corrected_category": "underground",
+      "rationale": "title: mineshaft; description: mineshaft"
+    },
+    {
+      "vnum": 6543,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: path; description: path"
+    },
+    {
+      "vnum": 6544,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: crossroad; description: path, crossroad"
+    },
+    {
+      "vnum": 7001,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewer"
+    },
+    {
+      "vnum": 7002,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewer"
+    },
+    {
+      "vnum": 7005,
+      "original_sector": "hills",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewer"
+    },
+    {
+      "vnum": 7006,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; 2 connected titles"
+    },
+    {
+      "vnum": 7007,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; 1 connected title"
+    },
+    {
+      "vnum": 7008,
+      "original_sector": "hills",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 7009,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewer"
+    },
+    {
+      "vnum": 7010,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewer"
+    },
+    {
+      "vnum": 7011,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; 2 connected titles"
+    },
+    {
+      "vnum": 7012,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; 1 connected title"
+    },
+    {
+      "vnum": 7013,
+      "original_sector": "mountain",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 7014,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewer"
+    },
+    {
+      "vnum": 7017,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; 1 connected title"
+    },
+    {
+      "vnum": 7018,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: junction; description: junction"
+    },
+    {
+      "vnum": 7021,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: junction; 1 connected title"
+    },
+    {
+      "vnum": 7022,
+      "original_sector": "mountain",
+      "corrected_category": "interior",
+      "rationale": "title: room"
+    },
+    {
+      "vnum": 7024,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewer"
+    },
+    {
+      "vnum": 7025,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: intersection; description: intersection"
+    },
+    {
+      "vnum": 7026,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 7028,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewer"
+    },
+    {
+      "vnum": 7029,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: junction; description: junction"
+    },
+    {
+      "vnum": 7030,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: junction; 2 connected titles"
+    },
+    {
+      "vnum": 7031,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: junction; description: junction"
+    },
+    {
+      "vnum": 7034,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; 2 connected titles"
+    },
+    {
+      "vnum": 7035,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; 1 connected title"
+    },
+    {
+      "vnum": 7037,
+      "original_sector": "city",
+      "corrected_category": "interior",
+      "rationale": "title: room; description: room"
+    },
+    {
+      "vnum": 7038,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: junction; description: junction"
+    },
+    {
+      "vnum": 7039,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: sewer"
+    },
+    {
+      "vnum": 7043,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: sewer"
+    },
+    {
+      "vnum": 7044,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 7045,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewers"
+    },
+    {
+      "vnum": 7046,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; 2 connected titles"
+    },
+    {
+      "vnum": 7047,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; 1 connected title"
+    },
+    {
+      "vnum": 7048,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: sewers; description: sewer"
+    },
+    {
+      "vnum": 7049,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 7050,
+      "original_sector": "city",
+      "corrected_category": "interior",
+      "rationale": "title: room; description: room"
+    },
+    {
+      "vnum": 7051,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewer"
+    },
+    {
+      "vnum": 7052,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewer"
+    },
+    {
+      "vnum": 7055,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; 1 connected title"
+    },
+    {
+      "vnum": 7056,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 7061,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewer"
+    },
+    {
+      "vnum": 7062,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewer"
+    },
+    {
+      "vnum": 7063,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewer"
+    },
+    {
+      "vnum": 7064,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewer"
+    },
+    {
+      "vnum": 7065,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewer"
+    },
+    {
+      "vnum": 7066,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewer"
+    },
+    {
+      "vnum": 7067,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewer"
+    },
+    {
+      "vnum": 7068,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewer"
+    },
+    {
+      "vnum": 7069,
+      "original_sector": "mountain",
+      "corrected_category": "water",
+      "rationale": "title: pool; description: waterfall, pool"
+    },
+    {
+      "vnum": 7070,
+      "original_sector": "mountain",
+      "corrected_category": "water",
+      "rationale": "title: pool; description: waterfall, pool"
+    },
+    {
+      "vnum": 7103,
+      "original_sector": "hills",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewer"
+    },
+    {
+      "vnum": 7104,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "description places the room inside an underground enclosure"
+    },
+    {
+      "vnum": 7112,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: intersection; description: intersection"
+    },
+    {
+      "vnum": 7117,
+      "original_sector": "mountain",
+      "corrected_category": "route",
+      "rationale": "description: path, step"
+    },
+    {
+      "vnum": 7118,
+      "original_sector": "mountain",
+      "corrected_category": "route",
+      "rationale": "description: path, step"
+    },
+    {
+      "vnum": 7119,
+      "original_sector": "mountain",
+      "corrected_category": "route",
+      "rationale": "description: path, step"
+    },
+    {
+      "vnum": 7120,
+      "original_sector": "mountain",
+      "corrected_category": "route",
+      "rationale": "description: path, step"
+    },
+    {
+      "vnum": 7129,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewer"
+    },
+    {
+      "vnum": 7210,
+      "original_sector": "forest",
+      "corrected_category": "route",
+      "rationale": "title: junction; description: junction"
+    },
+    {
+      "vnum": 7211,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: sewer, drain"
+    },
+    {
+      "vnum": 7212,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: sewer, drain; description: sewer, drain"
+    },
+    {
+      "vnum": 7213,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: sewer, drain; description: sewer, drain"
+    },
+    {
+      "vnum": 7214,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: drain; description: sewer, drain"
+    },
+    {
+      "vnum": 7215,
+      "original_sector": "hills",
+      "corrected_category": "underground",
+      "rationale": "title: drain; description: sewer, drain"
+    },
+    {
+      "vnum": 7216,
+      "original_sector": "water (swimmable)",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; 2 connected titles"
+    },
+    {
+      "vnum": 7217,
+      "original_sector": "hills",
+      "corrected_category": "underground",
+      "rationale": "title: drain; description: sewer, drain"
+    },
+    {
+      "vnum": 7218,
+      "original_sector": "forest",
+      "corrected_category": "interior",
+      "rationale": "title: room; description: room"
+    },
+    {
+      "vnum": 7219,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: sewer, drain; description: sewer, drain"
+    },
+    {
+      "vnum": 7220,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: drain; description: sewer, drain"
+    },
+    {
+      "vnum": 7221,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: sewer, drain; description: sewer, drain"
+    },
+    {
+      "vnum": 7222,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: sewer, drain; description: drain"
+    },
+    {
+      "vnum": 7223,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewer"
+    },
+    {
+      "vnum": 7224,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewer"
+    },
+    {
+      "vnum": 7225,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewer, drain"
+    },
+    {
+      "vnum": 7229,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewer, drain"
+    },
+    {
+      "vnum": 7230,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewer, drain"
+    },
+    {
+      "vnum": 7231,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewer"
+    },
+    {
+      "vnum": 7232,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: sewer; description: sewer, drain"
+    },
+    {
+      "vnum": 7233,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "title: sewer, drain; description: sewer, drain"
+    },
+    {
+      "vnum": 7234,
+      "original_sector": "forest",
+      "corrected_category": "underground",
+      "rationale": "description: sewer, drain; 1 connected title"
+    },
+    {
+      "vnum": 7281,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 7283,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: crossing; description: hallway"
+    },
+    {
+      "vnum": 7285,
+      "original_sector": "city",
+      "corrected_category": "interior",
+      "rationale": "title: room; description: room"
+    },
+    {
+      "vnum": 7300,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave"
+    },
+    {
+      "vnum": 7301,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: cave, tunnel; description: tunnel"
+    },
+    {
+      "vnum": 7302,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: cave; 3 connected titles"
+    },
+    {
+      "vnum": 7303,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "title: cave; 3 connected titles"
+    },
+    {
+      "vnum": 7304,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "title: cave; 1 connected title"
+    },
+    {
+      "vnum": 7305,
+      "original_sector": "city",
+      "corrected_category": "interior",
+      "rationale": "title: room; description: room"
+    },
+    {
+      "vnum": 7307,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 7308,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; 2 connected titles"
+    },
+    {
+      "vnum": 7309,
+      "original_sector": "city",
+      "corrected_category": "interior",
+      "rationale": "title: room; description: room"
+    },
+    {
+      "vnum": 7310,
+      "original_sector": "city",
+      "corrected_category": "interior",
+      "rationale": "title: room; 1 connected title"
+    },
+    {
+      "vnum": 7311,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave"
+    },
+    {
+      "vnum": 7312,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 7313,
+      "original_sector": "forest",
+      "corrected_category": "interior",
+      "rationale": "title: room; description: room"
+    },
+    {
+      "vnum": 7315,
+      "original_sector": "city",
+      "corrected_category": "interior",
+      "rationale": "title: room; description: room"
+    },
+    {
+      "vnum": 7316,
+      "original_sector": "city",
+      "corrected_category": "interior",
+      "rationale": "title: room; description: room"
+    },
+    {
+      "vnum": 7321,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 7322,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 7323,
+      "original_sector": "city",
+      "corrected_category": "interior",
+      "rationale": "title: room; 1 connected title"
+    },
+    {
+      "vnum": 7324,
+      "original_sector": "city",
+      "corrected_category": "interior",
+      "rationale": "title: hall; description: hall"
+    },
+    {
+      "vnum": 7325,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 7326,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 7327,
+      "original_sector": "field",
+      "corrected_category": "interior",
+      "rationale": "title: room; description: room"
+    },
+    {
+      "vnum": 7329,
+      "original_sector": "city",
+      "corrected_category": "interior",
+      "rationale": "title: room; description: room"
+    },
+    {
+      "vnum": 7330,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 7331,
+      "original_sector": "city",
+      "corrected_category": "interior",
+      "rationale": "title: room; description: room"
+    },
+    {
+      "vnum": 7333,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 7334,
+      "original_sector": "city",
+      "corrected_category": "interior",
+      "rationale": "title: room; description: room"
+    },
+    {
+      "vnum": 7335,
+      "original_sector": "city",
+      "corrected_category": "underground",
+      "rationale": "title: tunnel; description: tunnel"
+    },
+    {
+      "vnum": 7336,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "description: tunnel; 3 connected titles"
+    },
+    {
+      "vnum": 7337,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: tunnel"
+    },
+    {
+      "vnum": 7338,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "title: cave; 2 connected titles"
+    },
+    {
+      "vnum": 7339,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "title: cave; 2 connected titles"
+    },
+    {
+      "vnum": 7340,
+      "original_sector": "mountain",
+      "corrected_category": "underground",
+      "rationale": "title: cave; 3 connected titles"
+    },
+    {
+      "vnum": 7341,
+      "original_sector": "field",
+      "corrected_category": "underground",
+      "rationale": "title: cave; description: cave"
+    },
+    {
+      "vnum": 7342,
+      "original_sector": "hills",
+      "corrected_category": "water",
+      "rationale": "title: pool; description: lake"
+    },
+    {
+      "vnum": 7344,
+      "original_sector": "mountain",
+      "corrected_category": "water",
+      "rationale": "title: pool; 2 connected titles"
+    },
+    {
+      "vnum": 7909,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: stairs; description: stairway"
+    },
+    {
+      "vnum": 12003,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "description: hallway, stairs"
+    },
+    {
+      "vnum": 12011,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title: station"
+    },
+    {
+      "vnum": 12012,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 12019,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: highway; description: road"
+    },
+    {
+      "vnum": 12026,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 12027,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "description: road, path; 2 connected titles"
+    },
+    {
+      "vnum": 12030,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: drive; description: road"
+    },
+    {
+      "vnum": 12031,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: drive; description: road, drive"
+    },
+    {
+      "vnum": 12033,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: drive; description: road, drive"
+    },
+    {
+      "vnum": 12034,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: drive; description: road, path"
+    },
+    {
+      "vnum": 12036,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title: office; description: office"
+    },
+    {
+      "vnum": 12039,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: avenue; description: road"
+    },
+    {
+      "vnum": 12042,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: shop; description: shop"
+    },
+    {
+      "vnum": 12046,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: avenue; description: road, steps"
+    },
+    {
+      "vnum": 12058,
+      "original_sector": "hills",
+      "corrected_category": "open-land",
+      "rationale": "title: valley; description: valley"
+    },
+    {
+      "vnum": 12062,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "description identifies the room's commerce function"
+    },
+    {
+      "vnum": 12063,
+      "original_sector": "inside",
+      "corrected_category": "commerce",
+      "rationale": "title: store; description: store"
+    },
+    {
+      "vnum": 12065,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 12066,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 12067,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 12068,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: trail; description: road, path"
+    },
+    {
+      "vnum": 15000,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road, trail"
+    },
+    {
+      "vnum": 15001,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 15002,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 15003,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 15006,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 15010,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 15014,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 15015,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 15019,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 15020,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 15021,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: corridor; description: corridor"
+    },
+    {
+      "vnum": 15022,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: corridor; description: corridor"
+    },
+    {
+      "vnum": 15024,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 15029,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 15030,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: corridor; description: corridor"
+    },
+    {
+      "vnum": 15031,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 15032,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 15033,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 15035,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 15040,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 15045,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 15055,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: stairs; description: stairs"
+    },
+    {
+      "vnum": 15057,
+      "original_sector": "inside",
+      "corrected_category": "civic",
+      "rationale": "title: prison"
+    },
+    {
+      "vnum": 15061,
+      "original_sector": "hills",
+      "corrected_category": "woodland",
+      "rationale": "title and description identify one continuous forest walk"
+    },
+    {
+      "vnum": 15062,
+      "original_sector": "hills",
+      "corrected_category": "woodland",
+      "rationale": "title and description identify one continuous forest walk"
+    },
+    {
+      "vnum": 15063,
+      "original_sector": "hills",
+      "corrected_category": "woodland",
+      "rationale": "title and description identify one continuous forest walk"
+    },
+    {
+      "vnum": 15064,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 15065,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 15066,
+      "original_sector": "field",
+      "corrected_category": "route",
+      "rationale": "title: road; description: road"
+    },
+    {
+      "vnum": 15071,
+      "original_sector": "field",
+      "corrected_category": "commerce",
+      "rationale": "title: shop; description: shop"
+    },
+    {
+      "vnum": 15072,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 15073,
+      "original_sector": "city",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 18601,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: passage; description: hallway, corridor"
+    },
+    {
+      "vnum": 18602,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: hallway; description: hallway"
+    },
+    {
+      "vnum": 18603,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "description: passages, hallway; 4 connected titles"
+    },
+    {
+      "vnum": 18604,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 18607,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: hallway; description: passage, hallways"
+    },
+    {
+      "vnum": 18608,
+      "original_sector": "inside",
+      "corrected_category": "open-land",
+      "rationale": "title: field; description: field"
+    },
+    {
+      "vnum": 18609,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: passage; description: hallway"
+    },
+    {
+      "vnum": 18610,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: hallway; description: hallway"
+    },
+    {
+      "vnum": 18611,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "description: passage, hallway; 2 connected titles"
+    },
+    {
+      "vnum": 18620,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: passage; 1 connected title"
+    },
+    {
+      "vnum": 18621,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: passage, intersection; description: passage, corridor"
+    },
+    {
+      "vnum": 18623,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: hallway; 1 connected title"
+    },
+    {
+      "vnum": 18626,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: passage; description: passage"
+    },
+    {
+      "vnum": 18627,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 18630,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: passage; description: passage"
+    },
+    {
+      "vnum": 18631,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 18634,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: passages, intersection; 1 connected title"
+    },
+    {
+      "vnum": 18635,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: passage"
+    },
+    {
+      "vnum": 18641,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 18642,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: stairs; description: passage, stair"
+    },
+    {
+      "vnum": 18644,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 18646,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title identifies the room's primary route function"
+    },
+    {
+      "vnum": 18647,
+      "original_sector": "inside",
+      "corrected_category": "route",
+      "rationale": "title: stairs; description: passage, stair"
+    }
+  ]
+}

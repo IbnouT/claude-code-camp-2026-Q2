@@ -228,6 +228,10 @@
   font-weight: 600;
 }
 
+.live-map-room.is-combat .live-map-room-debug-id {
+  fill: #fff;
+}
+
 .live-current-room-glow {
   fill: url("#live-current-room-glow");
   pointer-events: none;
