@@ -393,6 +393,154 @@ describe("Live shell", () => {
     });
   });
 
+  it("steps through typed causal landmarks and returns to live", async () => {
+    const user = userEvent.setup();
+    const latest = runtimeSnapshot({
+      cost_usd: 0.042,
+      economics: [
+        {
+          response: 1,
+          at: "2026-07-31T04:00:00Z",
+          cost_usd: 0.012,
+          cumulative_cost_usd: 0.012,
+          context_tokens: 1_200,
+        },
+        {
+          response: 2,
+          at: "2026-07-31T04:01:00Z",
+          cost_usd: 0.03,
+          cumulative_cost_usd: 0.042,
+          context_tokens: 2_400,
+        },
+      ],
+      milestones: [{
+        kind: "level_up",
+        sequence: 30,
+        at: 1_753_937_310,
+        previous: 1,
+        current: 2,
+        evidence: "gateway player_state seq 30",
+      }],
+      rooms: [
+        {
+          id: "place:1",
+          place: 1,
+          title: "The Temple",
+          exits: ["south"],
+          first_sequence: 10,
+          last_sequence: 19,
+          visits: 1,
+          state: "observed",
+          confidence: "tracked",
+        },
+        {
+          id: "place:2",
+          place: 2,
+          title: "Market Square",
+          exits: ["north"],
+          first_sequence: 20,
+          last_sequence: 42,
+          visits: 1,
+          state: "current",
+          confidence: "tracked",
+        },
+      ],
+      timeline: [
+        {
+          id: "gateway:10",
+          sequence: 10,
+          at: 1_753_937_300,
+          source: "gateway",
+          kind: "position",
+          label: "The Temple",
+          cost_usd: 0,
+          tokens: 0,
+          trace_id: "trace-10",
+          quiet_cohort: null,
+        },
+        {
+          id: "gateway:20",
+          sequence: 20,
+          at: 1_753_937_305,
+          source: "gateway",
+          kind: "position",
+          label: "Market Square",
+          cost_usd: 0,
+          tokens: 0,
+          trace_id: "trace-20",
+          quiet_cohort: null,
+        },
+      ],
+    });
+    const historical = (through: number) => runtimeSnapshot({
+      ...latest,
+      following_live: false,
+      through_sequence: through,
+      selected_at: 1_753_937_300 + through,
+      cost_usd: through === 30 ? 0.03 : 0.02,
+    });
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      const through = new URL(url, window.location.origin)
+        .searchParams.get("through");
+      if (url.includes("/snapshot")) {
+        return Promise.resolve(snapshotResponse(
+          through === null ? latest : historical(Number(through)),
+        ));
+      }
+      return Promise.resolve(catalogResponse());
+    });
+    render(<LiveShell identity={identity} />);
+
+    const timeline = await screen.findByRole("region", {
+      name: "Causal timeline",
+    });
+    expect(timeline).toHaveTextContent("following live");
+    expect(screen.getByRole("button", {
+      name: "Room: The Temple, sequence 10",
+    })).toBeInTheDocument();
+    expect(screen.getByRole("button", {
+      name: "Room: Market Square, sequence 20",
+    })).toBeInTheDocument();
+    expect(screen.getByRole("button", {
+      name: "Level up: Level 2, sequence 30",
+    })).toBeInTheDocument();
+    expect(screen.getByRole("img", {
+      name: "Cumulative session cost",
+    })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", {
+      name: "Previous landmark",
+    }));
+    expect(await screen.findByRole("button", {
+      name: "Return to live",
+    })).toBeInTheDocument();
+    expect(timeline).toHaveTextContent("seq 30 / 42");
+    expect(timeline).toHaveTextContent("inspecting history");
+    expect(new URL(window.location.href).searchParams.get("through")).toBe("30");
+    expect(screen.getByRole("button", { name: "Message agent" }))
+      .toBeDisabled();
+
+    await user.click(screen.getByRole("button", {
+      name: "Previous landmark",
+    }));
+    await waitFor(() => {
+      expect(timeline).toHaveTextContent("seq 20 / 42");
+    });
+    await user.click(screen.getByRole("button", { name: "Next landmark" }));
+    await waitFor(() => {
+      expect(timeline).toHaveTextContent("seq 30 / 42");
+    });
+
+    await user.click(screen.getByRole("button", { name: "Return to live" }));
+    await waitFor(() => {
+      expect(timeline).toHaveTextContent("following live");
+    });
+    expect(new URL(window.location.href).searchParams.has("through")).toBe(false);
+    expect(screen.getByRole("button", { name: "Message agent" }))
+      .toBeEnabled();
+  });
+
   it("shows only evidence-backed active combat detail", async () => {
     const snapshot = runtimeSnapshot({
       combat: true,

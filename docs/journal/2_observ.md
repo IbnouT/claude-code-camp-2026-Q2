@@ -174,6 +174,9 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
 - Continuous progress measurements make a threshold legible before it fires.
   Lifecycle and capture guards prevent those measurements from implying
   precision the retained prefix cannot support.
+- Historical inspection needs two simultaneous truths: the selected prefix and
+  the latest retained snapshot. Without the second, stepping backward erases
+  the future landmarks needed to step forward or return to live.
 
 ## Technical Conclusions
 

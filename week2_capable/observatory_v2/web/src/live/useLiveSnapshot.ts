@@ -10,32 +10,53 @@ import type { LiveRouteIdentity } from "../routes";
 
 export type LiveSnapshotState = "loading" | "ready" | "reconnecting";
 
-export function useLiveSnapshot(identity: LiveRouteIdentity | null): {
+async function fetchSnapshot(
+  url: string,
+  signal: AbortSignal,
+): Promise<Snapshot> {
+  const response = await fetch(url, {
+    cache: "no-store",
+    signal,
+  });
+  if (!response.ok) {
+    throw new Error(`Snapshot unavailable (${response.status})`);
+  }
+  return decodeSnapshot(await response.json() as unknown);
+}
+
+export function useLiveSnapshot(
+  identity: LiveRouteIdentity | null,
+  throughSequence: number | null = null,
+): {
+  latestSnapshot: Snapshot | null;
   snapshot: Snapshot | null;
   state: LiveSnapshotState;
 } {
+  const [latestSnapshot, setLatestSnapshot] = useState<Snapshot | null>(null);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [state, setState] = useState<LiveSnapshotState>("loading");
 
   useEffect(() => {
+    setLatestSnapshot(null);
     setSnapshot(null);
     setState("loading");
     if (identity === null) return;
     const controller = new AbortController();
     let timer = 0;
     const load = () => {
-      fetch(`/api/sessions/${encodeURIComponent(identity.sessionId)}/snapshot`, {
-        cache: "no-store",
-        signal: controller.signal,
-      })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`Snapshot unavailable (${response.status})`);
-          }
-          return response.json() as Promise<unknown>;
-        })
-        .then((value) => {
-          setSnapshot(decodeSnapshot(value));
+      const url = `/api/sessions/${encodeURIComponent(identity.sessionId)}/snapshot`;
+      const request = throughSequence === null
+        ? fetchSnapshot(url, controller.signal).then(
+          (nextSnapshot) => [nextSnapshot, nextSnapshot] as const,
+        )
+        : Promise.all([
+          fetchSnapshot(url, controller.signal),
+          fetchSnapshot(`${url}?through=${throughSequence}`, controller.signal),
+        ]);
+      request
+        .then(([nextLatestSnapshot, nextSnapshot]) => {
+          setLatestSnapshot(nextLatestSnapshot);
+          setSnapshot(nextSnapshot);
           setState("ready");
         })
         .catch((reason: unknown) => {
@@ -55,7 +76,7 @@ export function useLiveSnapshot(identity: LiveRouteIdentity | null): {
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, [identity]);
+  }, [identity, throughSequence]);
 
-  return { snapshot, state };
+  return { latestSnapshot, snapshot, state };
 }

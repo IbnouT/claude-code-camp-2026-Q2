@@ -15,6 +15,7 @@ flowchart LR
     W --> V["Live"]
     V --> M["Learned-world map"]
     V --> E["Live evidence rail"]
+    V --> T["Causal timeline"]
     V --> C["Agent guidance"]
     M --> I["Room inspector"]
 ```
@@ -131,7 +132,10 @@ without claiming that a stale observation is current. Message agent inserts
 guidance at the next iteration boundary for a running, controllable session.
 The rail keeps navigation progress in one stable block, emphasizes retained
 friction rules when they fire, and states lifecycle or capture conditions when
-measurements would be unsafe.
+measurements would be unsafe. The causal timeline keeps a current snapshot
+beside any selected historical prefix, so room and level-up landmarks can step
+backward and forward without losing the route back to live. Its cost curve
+comes only from retained response economics.
 
 ### Learned-world map
 
@@ -157,7 +161,7 @@ npm test
 npm run build
 ```
 
-The frontend suite contains 139 tests across 19 files. `npm run build` runs
+The frontend suite contains 140 tests across 19 files. `npm run build` runs
 strict TypeScript checking with `tsc --noEmit` before producing the Vite
 production bundle.
 

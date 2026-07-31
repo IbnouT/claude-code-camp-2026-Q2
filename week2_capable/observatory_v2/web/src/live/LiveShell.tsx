@@ -6,6 +6,7 @@ import type { Catalog } from "../contracts";
 import type { LiveRouteIdentity } from "../routes";
 import type { Theme } from "../theme";
 import { LiveAskDialog } from "./LiveAskDialog";
+import { LiveCausalTimeline } from "./LiveCausalTimeline";
 import type { ContextState } from "./LiveContextSwitcher";
 import { LiveHeader } from "./LiveHeader";
 import { LiveMap } from "./LiveMap";
@@ -36,9 +37,17 @@ export function LiveShell({
   const [catalogRevision, setCatalogRevision] = useState(0);
   const [stopOpen, setStopOpen] = useState(false);
   const [messageOpen, setMessageOpen] = useState(false);
+  const [throughSequence, setThroughSequence] = useState<number | null>(() => {
+    const value = Number(new URL(window.location.href).searchParams.get("through"));
+    return Number.isInteger(value) && value > 0 ? value : null;
+  });
   const [railOpen, setRailOpen] = useState(() => window.innerWidth > 700);
   const [contextState, setContextState] = useState<ContextState>("checking");
-  const { snapshot, state: snapshotState } = useLiveSnapshot(identity);
+  const {
+    latestSnapshot,
+    snapshot,
+    state: snapshotState,
+  } = useLiveSnapshot(identity, throughSequence);
   const selectedSession = identity === null ? undefined : catalog?.sessions.find(
     (session) => session.id === identity.sessionId
       && session.player_id === identity.playerId,
@@ -47,6 +56,23 @@ export function LiveShell({
     && snapshot.following_live
     && contextState === "running"
     && selectedSession?.control_available === true;
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (throughSequence === null) {
+      url.searchParams.delete("through");
+    } else {
+      url.searchParams.set("through", String(throughSequence));
+    }
+    window.history.replaceState(null, "", url);
+  }, [throughSequence]);
+
+  useEffect(() => {
+    const value = Number(
+      new URL(window.location.href).searchParams.get("through"),
+    );
+    setThroughSequence(Number.isInteger(value) && value > 0 ? value : null);
+  }, [identity?.playerId, identity?.sessionId]);
 
   useEffect(() => {
     if (identity === null) {
@@ -174,7 +200,12 @@ export function LiveShell({
           aria-label="Causal timeline"
           className="live-layout-reserve live-causal-timeline"
         >
-          <span>Causal timeline</span>
+          <LiveCausalTimeline
+            latestSnapshot={latestSnapshot}
+            snapshot={snapshot}
+            state={snapshotState}
+            onSelectThrough={setThroughSequence}
+          />
         </section>
       </main>
       {askOpen && identity !== null ? (
