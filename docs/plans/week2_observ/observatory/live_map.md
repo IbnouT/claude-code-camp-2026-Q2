@@ -114,6 +114,8 @@ evidence order owns production coordinates.
   preserve camera scale. A structurally required bridge may cross a persistent
   overlay so an otherwise admissible visible path stays connected. Solid
   continuation chevrons and dashed frontier stubs remain distinguishable.
+  Agent-movement recentring is verified by the polling integration test, and
+  in-browser observation of two consecutive live transitions was not performed.
 - Lantern: graph-distance tiers preserve the complete learned graph. Dragging
   hands the unchanged framing to Grow and Manual.
 - Semantic color: all 1,878 rooms receive one category, the frozen file
