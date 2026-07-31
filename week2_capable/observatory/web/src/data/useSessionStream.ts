@@ -146,7 +146,14 @@ async function connect(
     }
     const replay = decodeEvidenceText(await replayResponse.text());
     let cursor = replay.at(-1)?.seq ?? 0;
-    const requested = Number(new URL(window.location.href).searchParams.get("seq"));
+    /* Session-scoped time selection: honor a requested seq ONLY when the
+       URL's session parameter matches the session being connected —
+       otherwise a previous session's seq would place this one at an
+       unrelated historical prefix. */
+    const pageUrl = new URL(window.location.href);
+    const requested = pageUrl.searchParams.get("session") === session.id
+      ? Number(pageUrl.searchParams.get("seq"))
+      : Number.NaN;
     const replayed = ingestEvidence(createEvidenceState(session.gateway_session_id), replay);
     update(
       Number.isInteger(requested) && requested > 0

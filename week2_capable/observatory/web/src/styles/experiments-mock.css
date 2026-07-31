@@ -1,0 +1,389 @@
+/* Experiments — visual transcription from experiments.html onto the existing
+   workbench selectors. Colors normalized to design-system tokens per the B1
+   one-design-system rule (this mock predates palette normalization); sizes,
+   spacing, weights, and composition transcribe from the mock. Loaded after
+   experiments.css so these values govern. */
+
+.experiments-workspace {
+  --live-aqua: #5db4ff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  line-height: normal;
+}
+
+/* ---- left rail ---- */
+.experiments-workspace .experiment-rail {
+  width: 230px;
+  flex: none;
+  border-right: 1px solid var(--color-line);
+  background: var(--color-surface);
+  overflow: auto;
+  padding: 12px;
+}
+
+.experiments-workspace .rail-title {
+  margin: 6px 6px 8px;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-quiet);
+  font-weight: 600;
+}
+
+.experiments-workspace .experiment-card {
+  padding: 10px 11px;
+  border-radius: 10px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: transparent;
+}
+
+.experiments-workspace .experiment-card:hover { background: var(--color-raised); }
+
+.experiments-workspace .experiment-card[aria-current="true"],
+.experiments-workspace .experiment-card.on {
+  background: var(--color-cyan-soft);
+  border-color: var(--color-line-strong);
+}
+
+.experiments-workspace .experiment-card .experiment-card-top {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.experiments-workspace .experiment-card small {
+  font-size: 11px;
+  color: var(--color-quiet);
+  margin-top: 3px;
+  display: block;
+}
+
+.experiments-workspace .rail-new {
+  width: 100%;
+  margin-top: 6px;
+  font-size: 12.5px;
+  padding: 9px;
+  border-radius: 10px;
+  border: 1px dashed #2f5680;
+  background: transparent;
+  color: var(--live-aqua);
+}
+
+/* ---- workbench header ---- */
+.experiments-workspace .experiment-main { flex: 1; min-width: 0; overflow: auto; padding: 18px 22px; }
+
+.experiments-workspace .experiment-title-line { display: flex; align-items: center; gap: 12px; }
+
+.experiments-workspace .experiment-title-line h1,
+.experiments-workspace .experiment-title-line h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.experiments-workspace .experiment-title-line .state-chip {
+  font-size: 10.5px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: var(--color-green-soft);
+  color: var(--color-green);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.experiments-workspace .experiment-predicate {
+  color: var(--color-muted);
+  font-size: 13px;
+  margin: 6px 0 2px;
+}
+
+.experiments-workspace .experiment-summary-meta {
+  color: var(--color-quiet);
+  font-size: 12px;
+  margin-bottom: 16px;
+}
+
+/* section LABEL only — content inside sections keeps normal body type */
+.experiments-workspace .experiment-section > h2:first-child,
+.experiments-workspace .experiment-section > h3:first-child,
+.experiments-workspace .experiment-section-label {
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-quiet);
+  margin: 6px 0 10px;
+  font-weight: 600;
+}
+
+.experiments-workspace .experiment-section {
+  font-size: 13px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--color-text);
+}
+
+.experiments-workspace .registry-panel,
+.experiments-workspace .experiment-rail-note {
+  font-size: 11.5px;
+  color: var(--color-quiet);
+  background: var(--color-raised);
+  border: 1px solid var(--color-line);
+  border-radius: 9px;
+  padding: 9px 12px;
+  margin-bottom: 14px;
+}
+
+.experiments-workspace .registry-panel b { color: var(--live-aqua); }
+
+.experiments-workspace .new-flag {
+  font-size: 8.5px;
+  background: var(--color-violet-soft);
+  color: var(--color-violet);
+  border: 1px solid #33265a;
+  border-radius: 4px;
+  padding: 1px 4px;
+  margin-left: 6px;
+  letter-spacing: 0.06em;
+}
+
+/* ---- arms ---- */
+.experiments-workspace .experiment-arms {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.experiments-workspace .experiment-arm {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  overflow: hidden;
+  padding: 0;
+}
+
+.experiments-workspace .arm-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.experiments-workspace .arm-heading .arm-tag {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 13px;
+  background: var(--color-cyan-soft);
+  color: var(--color-cyan);
+}
+
+.experiments-workspace .experiment-arm:nth-child(2) .arm-tag {
+  background: var(--color-violet-soft);
+  color: var(--color-violet);
+}
+
+.experiments-workspace .arm-heading b { font-size: 14px; }
+.experiments-workspace .arm-heading small { color: var(--color-quiet); font-size: 11px; margin-left: auto; }
+
+.experiments-workspace .registry-fields > * {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--color-line);
+  font-size: 12.5px;
+}
+
+.experiments-workspace .registry-fields > *:last-child { border-bottom: none; }
+
+.experiments-workspace .registry-fields label,
+.experiments-workspace .knob-name {
+  width: 150px;
+  color: var(--color-muted);
+  flex: none;
+}
+
+.experiments-workspace .registry-path {
+  display: block;
+  font-size: 9px;
+  color: var(--color-quiet);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.experiments-workspace .arm-value { flex: 1; color: var(--color-text); font-weight: 600; }
+.experiments-workspace .arm-value.diff { color: var(--color-amber); }
+
+.experiments-workspace .knob {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--color-line);
+  font-size: 12.5px;
+}
+
+.experiments-workspace .knob:last-child { border-bottom: none; }
+
+.experiments-workspace .knob-switch {
+  width: 34px;
+  height: 19px;
+  border-radius: 20px;
+  background: #20304a;
+  position: relative;
+  flex: none;
+  display: inline-block;
+}
+
+.experiments-workspace .knob-switch i {
+  position: absolute;
+  top: 2px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #8fb0d0;
+  transition: 0.2s;
+}
+
+.experiments-workspace .knob-switch.on { background: #134536; }
+.experiments-workspace .knob-switch.on i { left: 17px; background: #5fdd9d; }
+.experiments-workspace .knob-switch.off i { left: 2px; }
+
+/* ---- results ---- */
+.experiments-workspace .comparison-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.experiments-workspace .comparison-metric {
+  background: var(--color-raised);
+  border: 1px solid var(--color-line);
+  border-radius: 11px;
+  padding: 12px;
+}
+
+.experiments-workspace .comparison-metric .metric-name {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-quiet);
+}
+
+.experiments-workspace .metric-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.experiments-workspace .metric-row .metric-arm { width: 16px; font-weight: 700; }
+.experiments-workspace .metric-row:first-of-type .metric-arm { color: var(--color-cyan); }
+.experiments-workspace .metric-row + .metric-row .metric-arm { color: var(--color-violet); }
+
+.experiments-workspace .metric-row .metric-track {
+  flex: 1;
+  height: 9px;
+  border-radius: 6px;
+  background: var(--color-bg);
+  overflow: hidden;
+}
+
+.experiments-workspace .metric-row .metric-track i { display: block; height: 100%; }
+
+.experiments-workspace .metric-row .metric-value {
+  width: 70px;
+  text-align: right;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+}
+
+.experiments-workspace .metric-win {
+  margin-left: 6px;
+  font-size: 9px;
+  color: var(--color-green);
+}
+
+.experiments-workspace .experiment-verdict {
+  margin-top: 16px;
+  background: var(--color-green-soft);
+  border: 1px solid #1d4432;
+  border-radius: 11px;
+  padding: 13px 15px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.experiments-workspace .experiment-verdict b { color: var(--color-green); }
+
+.experiments-workspace .results-footnote {
+  color: var(--color-quiet);
+  font-size: 11.5px;
+  margin-top: 10px;
+}
+
+/* lens nav compacted into a small segmented control (the mock's single
+   workbench is the Compare default; other views stay reachable, small) */
+.experiments-workspace .experiment-lenses {
+  display: inline-flex;
+  gap: 2px;
+  background: var(--color-raised);
+  border: 1px solid var(--color-line);
+  border-radius: 9px;
+  padding: 3px;
+  margin: 4px 0 14px;
+}
+
+.experiments-workspace .experiment-lenses button {
+  font-size: 11.5px;
+  line-height: 13px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  color: var(--color-quiet);
+  background: transparent;
+  border: 0;
+}
+
+.experiments-workspace .experiment-lenses button[aria-pressed="true"] {
+  background: var(--color-cyan-soft);
+  color: var(--color-cyan);
+}
+
+/* lifecycle (Run lens only) reads as a compact ordered strip */
+.experiments-workspace .experiment-lifecycle {
+  display: flex;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+  font-size: 11.5px;
+  color: var(--color-quiet);
+}
+
+.experiments-workspace .experiment-lifecycle li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--color-raised);
+  border: 1px solid var(--color-line);
+  border-radius: 9px;
+  padding: 7px 10px;
+}
+
+.experiments-workspace .experiment-lifecycle li.is-complete { color: var(--color-green); }
+.experiments-workspace .experiment-lifecycle li strong {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+.experiments-workspace .experiment-lifecycle li small { color: var(--color-quiet); }

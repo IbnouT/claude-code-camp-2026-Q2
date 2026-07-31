@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import "../../styles/experiments.css";
+import "../../styles/experiments-mock.css";
 import type {
   ComparisonCohort,
   ComparisonMode,
@@ -200,6 +201,17 @@ export function ExperimentsWorkspace({ onOpenRun, playerProfile }: Props) {
             ))}
           </details>
         ) : null}
+        <div className="rail-title rail-section">
+          <span><p className="eyebrow">Templates</p></span>
+        </div>
+        <div className="experiment-rail-note">
+          <span>
+            <small>
+              No saved templates yet. A template contract has not been designed;
+              drafts are working copies, never presented as templates.
+            </small>
+          </span>
+        </div>
         <div className="experiment-rail-note">
           <ShieldCheck size={15} aria-hidden="true" />
           <span>
@@ -230,11 +242,13 @@ export function ExperimentsWorkspace({ onOpenRun, playerProfile }: Props) {
             }}
           />
         ) : null}
-        <Lifecycle
-          comparison={comparison}
-          definition={activeDefinition}
-          job={selectedJob}
-        />
+        {lens === "run" ? (
+          <Lifecycle
+            comparison={comparison}
+            definition={activeDefinition}
+            job={selectedJob}
+          />
+        ) : null}
         <nav className="experiment-lenses" aria-label="Experiment views">
           {([
             ["compare", "Compare"],
@@ -829,12 +843,24 @@ function ComparisonView({
           <p>Only the model-facing gateway result changes. Model, tools, reset, and objective stay fixed.</p>
         </div>
         <div className="experiment-arms">
-          {comparison.definition.arms.map((arm) => {
+          {comparison.definition.arms.map((arm, armIndex) => {
             const cohort = comparison.cohorts.find((item) => item.mode === arm.id);
+            const differing = new Set(
+              comparison.registry
+                .filter((feature) => {
+                  const values = comparison.definition.arms.map(
+                    (candidate) => candidate.values[feature.id] ?? feature.default,
+                  );
+                  return new Set(values.map((value) => String(value))).size > 1;
+                })
+                .map((feature) => feature.id),
+            );
             return cohort ? (
               <ArmCard
                 arm={arm}
+                armTag={String.fromCharCode(65 + armIndex)}
                 cohort={cohort}
+                differing={differing}
                 features={comparison.registry}
                 selected={selectedMode === arm.id}
                 onSelect={() => onSelectMode(arm.id as ComparisonMode)}
@@ -868,17 +894,25 @@ function ComparisonView({
           />
           <MetricComparison
             cohorts={comparison.cohorts}
-            label="Mean tool calls"
-            value={(item) => `${item.calls_mean.toFixed(1)} ± ${item.calls_stdev.toFixed(1)}`}
+            label="Avg turns to goal"
+            value={(item) => item.calls_mean.toFixed(0)}
             magnitude={(item) => item.calls_mean}
             lower
             onOpen={onOpenSamples}
           />
           <MetricComparison
             cohorts={comparison.cohorts}
-            label="Corrective calls"
-            value={(item) => String(item.corrective_calls)}
-            magnitude={(item) => item.corrective_calls}
+            label="Failures"
+            value={(item) => `${item.samples - item.successes} / ${item.samples}`}
+            magnitude={(item) => item.samples - item.successes}
+            lower
+            onOpen={onOpenSamples}
+          />
+          <MetricComparison
+            cohorts={comparison.cohorts}
+            label="Result payload / turn"
+            value={(item) => `${Math.round(item.attention.result_chars / Math.max(1, item.calls_mean)).toLocaleString()}`}
+            magnitude={(item) => item.attention.result_chars / Math.max(1, item.calls_mean)}
             lower
             onOpen={onOpenSamples}
           />
@@ -886,12 +920,40 @@ function ComparisonView({
         <div className="experiment-verdict">
           <CircleDollarSign aria-hidden="true" />
           <span>
-            <strong>{cheapest.mode} is cheapest, not automatically “best.”</strong>
-            <p>
-              All arms succeeded. Cost differences overlap cohort variability,
-              so the workbench keeps distributions and evidence visible instead
-              of manufacturing a winner.
-            </p>
+            {(() => {
+              const ranked = [...comparison.cohorts].sort((a, b) =>
+                (b.successes / b.samples) - (a.successes / a.samples)
+                || a.cost_mean - b.cost_mean);
+              const best = ranked[0];
+              const rest = ranked.slice(1);
+              const label = (mode: string) =>
+                comparison.definition.arms.find((arm) => arm.id === mode)?.label
+                ?? mode;
+              if (!best) return <strong>No retained cohorts to compare.</strong>;
+              const costEdge = rest.length > 0 && rest[0].cost_mean > 0
+                ? Math.round(
+                  (1 - best.cost_mean / rest[0].cost_mean) * 100,
+                )
+                : null;
+              return (
+                <>
+                  <strong>
+                    ▲ {label(best.mode)} leads for this objective.
+                  </strong>
+                  <p>
+                    {`Verified success ${best.successes}/${best.samples}`}
+                    {rest.map((cohort) =>
+                      ` vs ${cohort.successes}/${cohort.samples} (${label(cohort.mode)})`)
+                      .join("")}
+                    {costEdge !== null && costEdge > 0
+                      ? ` at ${costEdge}% lower mean cost.`
+                      : "."}
+                    {" "}Every figure opens its retained samples; distributions
+                    stay visible rather than a manufactured winner.
+                  </p>
+                </>
+              );
+            })()}
           </span>
         </div>
       </section>
@@ -901,14 +963,16 @@ function ComparisonView({
           <p className="eyebrow">First semantic divergence</p>
           <h2>{comparison.divergence.summary}</h2>
           <div className="divergence-lanes">
-            {modes.map((mode) => (
-              <div key={mode}>
-                <b>{mode}</b>
-                <span>{comparison.divergence.actions[mode]}</span>
+            {comparison.definition.arms
+              .filter((arm) => arm.id in comparison.divergence.actions)
+              .map((arm) => (
+              <div key={arm.id}>
+                <b>{arm.label}</b>
+                <span>{comparison.divergence.actions[arm.id]}</span>
                 <button
                   type="button"
                   onClick={() => {
-                    const run = comparison.samples.find((sample) => sample.mode === mode);
+                    const run = comparison.samples.find((sample) => sample.mode === arm.id);
                     if (run) onOpenRun(run.run_id);
                   }}
                 >
@@ -937,14 +1001,18 @@ function ComparisonView({
 
 function ArmCard({
   arm,
+  armTag,
   cohort,
   features,
+  differing,
   selected,
   onSelect,
 }: {
   arm: ExperimentArmDefinition;
+  armTag: string;
   cohort: ComparisonCohort;
   features: ExperimentFeature[];
+  differing: ReadonlySet<string>;
   selected: boolean;
   onSelect: () => void;
 }) {
@@ -956,14 +1024,42 @@ function ArmCard({
       onClick={onSelect}
     >
       <span className="arm-heading">
+        <span aria-hidden="true" className="arm-tag">{armTag}</span>
         <b>{arm.label}</b><small>{cohort.samples} runs</small>
       </span>
-      {features.slice(0, 4).map((feature) => (
-        <span className="arm-value" key={feature.id}>
-          <span><small>{feature.group}</small>{feature.label}</span>
-          <strong>{String(arm.values[feature.id] ?? feature.default)}</strong>
-        </span>
-      ))}
+      <span className="registry-fields">
+        {features.map((feature) => {
+          const value = arm.values[feature.id] ?? feature.default;
+          return (
+            <span className="knob" key={feature.id}>
+              <span className="knob-name">
+                {feature.label}
+                {("added_since_last_run" in feature && (feature as { added_since_last_run?: boolean }).added_since_last_run) ? (
+                  <span className="new-flag">NEW</span>
+                ) : null}
+                <span className="registry-path">registry · {feature.id}</span>
+              </span>
+              {typeof value === "boolean" ? (
+                <span
+                  aria-label={`${feature.label}: ${value ? "on" : "off"}`}
+                  className={value ? "knob-switch on" : "knob-switch off"}
+                  role="img"
+                >
+                  <i />
+                </span>
+              ) : (
+                <strong
+                  className={differing.has(feature.id)
+                    ? "arm-value diff"
+                    : "arm-value"}
+                >
+                  {String(value)}
+                </strong>
+              )}
+            </span>
+          );
+        })}
+      </span>
     </button>
   );
 }

@@ -84,6 +84,18 @@ export async function mockExperiment(page: Page) {
   });
 }
 
+export async function mockExperimentFidelity(page: Page) {
+  await mockExperiment(page);
+  await page.unroute("**/api/comparisons/j1-rendering-n10");
+  await page.route("**/api/comparisons/j1-rendering-n10", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(fidelityFixture()),
+    });
+  });
+}
+
 export async function mockExperimentExecution(page: Page) {
   const sample = {
     id: "raw-001-fixture",
@@ -359,6 +371,154 @@ function fixture(): RunComparison {
       "All three policies completed every reset-verified journey.",
       "Minimal used more model calls than raw.",
       "Cost differences overlap cohort variability.",
+    ],
+  };
+}
+
+function fidelityFixture(): RunComparison {
+  const comparison = fixture();
+  const rich = comparison.cohorts.find((cohort) => cohort.mode === "full");
+  const lean = comparison.cohorts.find((cohort) => cohort.mode === "raw");
+  if (!rich || !lean) {
+    throw new Error("experiment fidelity fixture requires full and raw cohorts");
+  }
+  const shared = {
+    "model.id": "Sonnet",
+    "render.structured": true,
+  };
+  return {
+    ...comparison,
+    title: "Rendering × tool surface",
+    definition: {
+      ...comparison.definition,
+      title: "Rendering × tool surface",
+      arms: [
+        {
+          id: "full",
+          label: "Rich pipeline",
+          values: {
+            ...shared,
+            "tools.profile": "full (25 tools)",
+            "ml.look_target": true,
+            "render.mode": "full",
+            "ml.fingerprint": true,
+          },
+        },
+        {
+          id: "raw",
+          label: "Lean pipeline",
+          values: {
+            ...shared,
+            "tools.profile": "minimal (8 tools)",
+            "ml.look_target": false,
+            "render.mode": "raw",
+            "ml.fingerprint": false,
+          },
+        },
+      ],
+      effective_max_spend_usd: 3,
+      stop: {
+        ...comparison.definition.stop,
+        max_total_cost_usd: 3,
+      },
+    },
+    registry: [
+      feature("model.id", "Model", "model", "text", "Sonnet", [], "model"),
+      feature(
+        "tools.profile",
+        "Tool surface",
+        "tools",
+        "enum",
+        "full (25 tools)",
+        ["full (25 tools)", "minimal (8 tools)"],
+        "tools.profile",
+      ),
+      feature(
+        "render.structured",
+        "Structured preprocessing",
+        "rendering",
+        "boolean",
+        true,
+        [],
+        "render.structured",
+      ),
+      feature(
+        "ml.look_target",
+        "ML semantic extractor",
+        "rendering",
+        "boolean",
+        false,
+        [],
+        "ml.look_target",
+      ),
+      feature(
+        "render.mode",
+        "Response envelope",
+        "rendering",
+        "enum",
+        "full",
+        ["full", "raw"],
+        "render.mode",
+      ),
+      feature(
+        "ml.fingerprint",
+        "Room fingerprinting",
+        "rendering",
+        "boolean",
+        false,
+        [],
+        "ml.fingerprint",
+      ),
+    ],
+    cohorts: [
+      {
+        ...rich,
+        samples: 10,
+        successes: 9,
+        cost_mean: 0.089,
+        cost_median: 0.089,
+        cost_stdev: 0,
+        calls_mean: 28,
+        calls_stdev: 0,
+        corrective_calls: 1,
+        attention: {
+          ...rich.attention,
+          result_chars: 1_240 * 28,
+        },
+      },
+      {
+        ...lean,
+        samples: 10,
+        successes: 10,
+        cost_mean: 0.055,
+        cost_median: 0.055,
+        cost_stdev: 0,
+        calls_mean: 34,
+        calls_stdev: 0,
+        corrective_calls: 0,
+        attention: {
+          ...lean.attention,
+          result_chars: 500 * 34,
+        },
+      },
+    ],
+    samples: comparison.samples.filter(
+      (sample) => sample.mode === "full" || sample.mode === "raw",
+    ),
+    lanes: comparison.lanes.filter(
+      (lane) => lane.mode === "full" || lane.mode === "raw",
+    ),
+    divergence: {
+      index: 6,
+      summary: "Turn 6: the rich arm inspects while the lean arm moves directly.",
+      actions: {
+        full: "room_inspect",
+        raw: "move directly",
+      },
+    },
+    findings: [
+      "Lean matched or improved verified success at 38% lower mean cost.",
+      "The first semantic divergence occurred at turn 6.",
     ],
   };
 }

@@ -2,6 +2,8 @@ import { Search, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type { AskResponse, QueryScope } from "../../data/ask";
+import type { WorkspaceFixture } from "../../app/shellTypes";
+import { EvidenceForms } from "../system/EvidenceForms";
 import { SearchAnswer } from "./SearchAnswer";
 import { StructuredQueryEditor } from "./StructuredQueryEditor";
 import {
@@ -17,6 +19,10 @@ type Props = {
   scopeLabel?: string;
   scope: QueryScope;
   modelAvailable?: boolean;
+  selectedEvidence?: {
+    id: string;
+    forms: WorkspaceFixture["evidence"];
+  } | null;
   onClose: () => void;
   onOpenCitation?: (citationId: string) => void;
 };
@@ -26,6 +32,7 @@ export function SearchDialog({
   scopeLabel,
   scope,
   modelAvailable = false,
+  selectedEvidence = null,
   onClose,
   onOpenCitation,
 }: Props) {
@@ -215,6 +222,13 @@ export function SearchDialog({
             {scopeDescription(scope, scopeReady)}
           </small>
         </div>
+        {selectedEvidence ? (
+          <div className="search-selected-evidence">
+            <p className="eyebrow">Contextual drill-down</p>
+            <h2>Selected evidence {selectedEvidence.id}</h2>
+            <EvidenceForms evidence={selectedEvidence.forms} />
+          </div>
+        ) : null}
         <StructuredQueryEditor
           scope={scope}
           enabled={structured}

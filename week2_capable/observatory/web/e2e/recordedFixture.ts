@@ -223,6 +223,173 @@ export const investigation = {
   capture_gaps: [],
 };
 
+const fidelityRecords = [
+  {
+    ...evidence(
+      "agent:iteration-1",
+      null,
+      "agent",
+      "believed",
+      "response",
+      1,
+      "Iteration 1",
+    ),
+    iteration: 1,
+    turn: 16,
+    preview: "Orient at the Temple of Midgaard.",
+  },
+  {
+    ...evidence(
+      "agent:context",
+      "agent:iteration-1",
+      "agent",
+      "rendered",
+      "context",
+      2,
+      "Context injected",
+    ),
+    iteration: 2,
+    turn: 18,
+    room_id: "place:temple",
+    preview: "memory unchanged · [here] The Temple Of Midgaard (visit 18)",
+  },
+  {
+    ...evidence(
+      "agent:plan",
+      "agent:context",
+      "agent",
+      "believed",
+      "plan",
+      3,
+      "Plan",
+    ),
+    iteration: 2,
+    turn: 18,
+    room_id: "place:temple",
+    preview: "I'll plan a route from the temple to the bakery.",
+  },
+  {
+    ...evidence(
+      "agent:model",
+      "agent:plan",
+      "agent",
+      "believed",
+      "response",
+      4,
+      "Model call",
+    ),
+    iteration: 2,
+    turn: 18,
+    room_id: "place:temple",
+    duration_ms: 1_300,
+    cost_usd: 0.0027,
+    tokens: 84,
+    preview: "Plan a known route to the bakery.",
+  },
+  {
+    ...evidence(
+      "agent:route",
+      "agent:model",
+      "agent",
+      "parsed",
+      "tool_call",
+      5,
+      'plan_route(destination: "bakery")',
+    ),
+    iteration: 2,
+    turn: 18,
+    room_id: "place:temple",
+    duration_ms: 26,
+    preview: "Temple → Temple Square → Market Square → Main Street → Bakery",
+  },
+  {
+    ...evidence(
+      "agent:iteration-4",
+      "agent:route",
+      "agent",
+      "believed",
+      "response",
+      6,
+      "Iteration 4 · at The Bakery",
+    ),
+    iteration: 4,
+    turn: 31,
+    room_id: "place:bakery",
+    cost_usd: 0.0034,
+  },
+  {
+    ...evidence(
+      "benchmark:objective",
+      "agent:iteration-4",
+      "benchmark",
+      "truth",
+      "outcome",
+      7,
+      "Objective met",
+    ),
+    iteration: 5,
+    turn: 34,
+    room_id: "place:bakery",
+    cost_usd: 0.0021,
+    status: "success",
+    preview: "A danish is present in the verified inventory.",
+  },
+];
+
+const fidelityInvestigation = {
+  ...investigation,
+  run: {
+    ...investigation.run,
+    label: "J1 · bakery",
+    journey: "J1",
+    attempt: "bakery",
+    success: true,
+    stop_reason: "objective_met",
+    iterations: 6,
+    cost_usd: 0.031,
+  },
+  objective: "Reach the bakery from the temple and buy a danish.",
+  records: fidelityRecords,
+  diagnostics: [],
+  world: {
+    ...investigation.world,
+    nodes: [
+      worldNode("place:temple", 1, "The Temple Of Midgaard"),
+      worldNode("place:square", 2, "Temple Square"),
+      worldNode("place:market", 3, "Market Square"),
+      worldNode("place:street", 4, "Main Street"),
+      worldNode("place:bakery", 5, "The Bakery"),
+    ],
+    edges: [
+      worldEdge("temple:square", "place:temple", "place:square", "south"),
+      worldEdge("square:market", "place:square", "place:market", "east"),
+      worldEdge("market:street", "place:market", "place:street", "north"),
+      worldEdge("street:bakery", "place:street", "place:bakery", "east"),
+    ],
+    current_title: "The Bakery",
+    current_confidence: "tracked",
+    candidates: ["place:bakery"],
+    candidate_details: [],
+    duplicate_titles: [],
+    unknown_positions: 0,
+  },
+  cost: {
+    ...investigation.cost,
+    total_usd: 0.031,
+    response_total_usd: 0.031,
+    raw_response_total_usd: 0.031,
+    fresh_input_tokens: 2_400,
+    cache_read_tokens: 4_900,
+    cache_write_tokens: 0,
+    output_tokens: 84,
+    points: [
+      costPoint("agent:model", 2, 0.0027, 2_300),
+      costPoint("agent:iteration-4", 4, 0.0034, 4_900),
+      costPoint("benchmark:objective", 5, 0.0021, 4_100),
+    ],
+  },
+};
+
 export async function mockRecorded(page: Page) {
   await page.route("**/api/recorded-sessions", async (route) => {
     await route.fulfill({
@@ -330,6 +497,77 @@ export async function mockRecorded(page: Page) {
       }),
     });
   });
+}
+
+export async function mockRecordedFidelity(page: Page) {
+  await mockRecorded(page);
+  await page.unroute("**/api/recorded-sessions");
+  await page.unroute(`**/api/recorded-sessions/${runId}`);
+  await page.route("**/api/recorded-sessions", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        version: 1,
+        players: [{ id: "poucet-recorded", label: "poucet" }],
+        sessions: [{
+          id: runId,
+          source_kind: "experiment_sample",
+          player_id: "poucet-recorded",
+          gateway_session_id: "gateway-j1",
+          label: "J1 · bakery",
+          journey: "J1",
+          attempt: "bakery",
+          success: true,
+          stop_reason: "objective_met",
+          iterations: 6,
+          cost_usd: 0.031,
+          result_mode: "full",
+        }],
+      }),
+    });
+  });
+  await page.route(`**/api/recorded-sessions/${runId}`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(fidelityInvestigation),
+    });
+  });
+}
+
+function worldNode(id: string, place: number, title: string) {
+  return {
+    id,
+    place,
+    title,
+    exits: [],
+    mobs: [],
+    objects: [],
+    visits: 1,
+    evidence: [place],
+    first_seq: place,
+    last_seq: place,
+    state: "observed",
+    confidence: "tracked",
+    method: "position evidence",
+  };
+}
+
+function worldEdge(
+  id: string,
+  source: string,
+  target: string,
+  direction: string,
+) {
+  return {
+    id,
+    source,
+    target,
+    direction,
+    traversals: 1,
+    evidence: [1],
+  };
 }
 
 function evidence(

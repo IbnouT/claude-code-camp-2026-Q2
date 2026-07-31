@@ -9,7 +9,7 @@
   --color-line-strong: #2b3947;
   --color-text: #edf4f8;
   --color-muted: #8493a1;
-  --color-quiet: #7a8996;
+  --color-quiet: #596775;
   --color-cyan: #68e1dc;
   --color-cyan-soft: #163738;
   --color-amber: #eac06a;
@@ -27,7 +27,7 @@
   --shadow-raised: 0 24px 70px rgb(0 0 0 / 32%);
   --shadow-popover: 0 20px 50px rgb(0 0 0 / 42%);
   --font-ui: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   --radius-xs: 6px;
   --radius-sm: 8px;
   --radius-md: 10px;
@@ -43,7 +43,7 @@
   --focus-ring: 0 0 0 3px rgb(104 225 220 / 22%);
   --motion-fast: 120ms;
   --motion-normal: 180ms;
-  --header-height: 66px;
+  --header-height: 62px;
   --content-gap: 14px;
   --card-padding: 16px;
   --control-height: 38px;
@@ -60,16 +60,16 @@
   --color-line-strong: #c6d0db;
   --color-text: #12202b;
   --color-muted: #4e5d6b;
-  --color-quiet: #5d6f7e;
-  --color-cyan: #066b67;
+  --color-quiet: #8394a2;
+  --color-cyan: #0c8f88;
   --color-cyan-soft: #d3efed;
-  --color-amber: #866000;
+  --color-amber: #9a6f00;
   --color-amber-soft: #f6eccf;
-  --color-coral: #c93d48;
+  --color-coral: #d3454f;
   --color-coral-soft: #f7dcdd;
   --color-violet: #5a4bc4;
   --color-violet-soft: #e6e2fb;
-  --color-green: #116a3b;
+  --color-green: #1f9256;
   --color-green-soft: #dcefe3;
   --color-map-grid: rgb(12 143 136 / 7%);
   --color-map-glow: rgb(12 143 136 / 15%);

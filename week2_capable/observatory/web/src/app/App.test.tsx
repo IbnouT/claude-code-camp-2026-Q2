@@ -42,11 +42,13 @@ const sessions = [
 
 let controlRequests: unknown[] = [];
 let recoveryRequests: unknown[] = [];
+let snapshotOverrides: Record<string, Record<string, unknown>> = {};
 
 describe("observatory product shell", () => {
   beforeEach(() => {
     controlRequests = [];
     recoveryRequests = [];
+    snapshotOverrides = {};
     window.history.replaceState(null, "", "/?space=live");
     vi.stubGlobal("fetch", vi.fn(async (
       input: RequestInfo | URL,
@@ -159,7 +161,10 @@ describe("observatory product shell", () => {
         });
       }
       if (url.pathname.endsWith("/snapshot")) {
-        return jsonResponse(snapshotFor(selected));
+        return jsonResponse({
+          ...snapshotFor(selected),
+          ...snapshotOverrides[selected],
+        });
       }
       if (url.pathname.endsWith("/control") && init?.method === "POST") {
         const request = JSON.parse(String(init.body)) as {
@@ -187,12 +192,88 @@ describe("observatory product shell", () => {
       screen.getByRole("navigation", { name: "Observatory spaces" }),
     ).toBeVisible();
     expect(screen.getByRole("combobox", { name: "Player" })).toBeVisible();
-    expect(screen.getByRole("combobox", { name: "Session" })).toBeVisible();
-    expect(await screen.findByRole("heading", { name: "Living world" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Session" })).toBeVisible();
+    expect(
+      await screen.findByRole("region", { name: "Live cockpit" }),
+    ).toBeVisible();
     expect((await screen.findAllByText("Alpha Temple")).length).toBeGreaterThan(0);
-    expect(screen.getByText("Agent event stream is incomplete")).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent("capture gaps 1");
+    expect(screen.getByRole("status"))
+      .toHaveAttribute("title", "agent_events_incomplete");
     expect(screen.queryByText("Benchmark deliberately unavailable"))
       .not.toBeInTheDocument();
+  });
+
+  it("separates leaving Live from stopping the running session", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole("region", { name: "Live cockpit" });
+
+    await user.click(screen.getByRole("button", { name: "Session" }));
+    const menu = screen.getByRole("menu", { name: "Session menu" });
+    expect(
+      within(menu).getByRole("menuitem", { name: /Leave Live view/ }),
+    ).toHaveTextContent("The agent keeps running");
+    await user.click(
+      within(menu).getByRole("menuitem", { name: /Stop session/ }),
+    );
+
+    const dialog = screen.getByRole("dialog", {
+      name: "Stop this session?",
+    });
+    expect(
+      within(dialog).getByRole("button", { name: "Cancel" }),
+    ).toHaveFocus();
+    await user.keyboard("{Escape}");
+    expect(
+      screen.queryByRole("dialog", { name: "Stop this session?" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps the full retained intent available behind a bounded display", async () => {
+    render(<App />);
+
+    expect(await screen.findByText("Agent intends")).toBeVisible();
+    const intent = screen.getByTitle(
+      "Moving east toward the retained objective through the learned route",
+    );
+    expect(intent).toHaveClass("intent-value");
+    expect(intent).toHaveTextContent(
+      "Moving east toward the retained objective through the learned route",
+    );
+  });
+
+  it("keeps completed combat history separate from current observed state", async () => {
+    snapshotOverrides.alpha = {
+      combat: false,
+      combat_episode: {
+        active: false,
+        opponent: "a large kobold",
+        first_observed_turn: 3,
+        observed_exchanges: 1,
+        outcome: "victory",
+        command_trace: "trace-combat",
+        lines: [{
+          text: "A large kobold is dead!",
+          sequence: 2,
+          observed_at: 2,
+          confidence: "medium",
+          method: "combat-colour-or-verb",
+          evidence: "gateway observation seq 2",
+        }],
+        evidence: [1, 2],
+      },
+    };
+    render(<App />);
+
+    expect(
+      await screen.findByText("Victory: a large kobold"),
+    ).toBeVisible();
+    const observed = screen.getByText("Observed").parentElement;
+    expect(observed).not.toBeNull();
+    expect(within(observed as HTMLElement).getByText("Alpha Temple"))
+      .toBeVisible();
+    expect(screen.queryByText("In combat")).not.toBeInTheDocument();
   });
 
   it("keeps global context while moving between spaces", async () => {
@@ -204,7 +285,7 @@ describe("observatory product shell", () => {
     );
     await user.click(screen.getByRole("button", { name: "Knowledge" }));
     expect(screen.getByRole("combobox", { name: "Player" })).toHaveValue("beta");
-    expect(screen.queryByRole("combobox", { name: "Session" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Session" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Load recorded evidence" }))
       .not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Direct the agent/ }))
@@ -212,13 +293,14 @@ describe("observatory product shell", () => {
     expect(
       await screen.findByRole("button", { name: "Search knowledge" }),
     ).toBeVisible();
-    expect(
-      screen.getByText(/Learned state, contradictions, and recovery history/),
-    ).toBeVisible();
+    expect(screen.getByRole("region", { name: "Player knowledge" }))
+      .toBeVisible();
+    expect(screen.getByRole("button", { name: "Learned map" }))
+      .toHaveAttribute("aria-current", "page");
 
     await user.click(screen.getByRole("button", { name: "Sessions" }));
     expect(
-      await screen.findByRole("combobox", { name: "Session" }),
+      await screen.findByRole("button", { name: "Session" }),
     ).toBeVisible();
     expect(screen.getByRole("button", { name: "Load recorded evidence" }))
       .toBeEnabled();
@@ -227,14 +309,18 @@ describe("observatory product shell", () => {
   it("opens deterministic Ask from the scoped Live workspace action", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await user.click(screen.getByRole("button", { name: "Ask about this run" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Ask about this session" }),
+    );
     const dialog = screen.getByRole("dialog", { name: "Ask or search evidence" });
     expect(dialog).toBeVisible();
     expect(
       within(dialog).getByText("Ask with evidence, even without a model"),
     ).toBeVisible();
     await user.keyboard("{Escape}");
-    expect(screen.getByRole("button", { name: "Ask about this run" })).toHaveFocus();
+    expect(
+      screen.getByRole("button", { name: "Ask about this session" }),
+    ).toHaveFocus();
   });
 
   it("confirms knowledge reset against the selected live sequence", async () => {
@@ -266,7 +352,11 @@ describe("observatory product shell", () => {
   it("sends operator guidance only to the selected live session", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await user.click(await screen.findByRole("button", { name: /Direct the agent/ }));
+    await user.click(
+      await screen.findByRole("textbox", {
+        name: "Open the agent control dialog",
+      }),
+    );
     const dialog = screen.getByRole("dialog", { name: "Direct the selected agent" });
     expect(dialog).toBeVisible();
     expect(within(dialog).getByText("Authenticated live session")).toBeVisible();
@@ -289,11 +379,20 @@ describe("observatory product shell", () => {
   it("makes every evidence form explicit, including a missing truth form", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await user.click(await screen.findByRole("tab", { name: /Truth/ }));
+    const evidenceLinks = await screen.findAllByRole("button", {
+      name: /Open evidence:/,
+    });
+    await user.click(evidenceLinks[0]);
+    const dialog = screen.getByRole("dialog", {
+      name: "Ask or search evidence",
+    });
+    await user.click(within(dialog).getByRole("tab", { name: /Truth/ }));
     expect(
-      screen.getByText("Observer truth is not configured for this live session."),
+      within(dialog).getByText(
+        "Observer truth is not configured for this live session.",
+      ),
     ).toBeVisible();
-    expect(screen.getByText("missing")).toBeVisible();
+    expect(within(dialog).getByText("missing")).toBeVisible();
   });
 
   it("changes player and session evidence without leaking the prior player", async () => {
@@ -308,16 +407,18 @@ describe("observatory product shell", () => {
       expect(screen.getAllByText("Beta Field").length).toBeGreaterThan(0);
     });
     expect(screen.queryAllByText("Alpha Temple")).toHaveLength(0);
-    expect(screen.getByRole("combobox", { name: "Session" }))
-      .toHaveValue("session-beta");
-    expect(screen.getByRole("button", { name: "Control unavailable" }))
+    expect(screen.getByRole("button", { name: "Session" }))
+      .toHaveTextContent("stopped · 2 events");
+    expect(screen.getByRole("textbox", {
+      name: "Open the agent control dialog",
+    }))
       .toBeDisabled();
   });
 
   it("reopens a verified incident without polling live sources", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByRole("heading", { name: "Living world" });
+    await screen.findByRole("region", { name: "Live cockpit" });
     await user.click(screen.getByRole("button", { name: "Sessions" }));
     const payload = offlineIncidentPayload();
     const file = new File([
@@ -334,9 +435,12 @@ describe("observatory product shell", () => {
 
     await user.upload(input, file);
 
-    expect(
-      await screen.findByText("Offline · integrity-verified incident capsule"),
-    ).toBeVisible();
+    const offlineBadge = await screen.findByText("offline capsule");
+    expect(offlineBadge).toBeVisible();
+    expect(offlineBadge).toHaveAttribute(
+      "title",
+      "Sanitized incident capsule · integrity verified",
+    );
     expect(screen.getByRole("combobox", { name: "Player" })).toHaveValue(
       "offline-player",
     );
@@ -393,16 +497,57 @@ function snapshotFor(player: string) {
     latest_sequence: 2,
     selected_at: 2,
     objective: `Explore as ${player}`,
+    objective_initial: {
+      title: `Explore as ${player}`,
+      clue: null,
+      source_kind: "operator",
+      revision: 1,
+      evidence: "agent log line 1",
+    },
+    objective_context: {
+      title: `Explore as ${player}`,
+      clue: null,
+      source_kind: "operator",
+      revision: 1,
+      evidence: "agent log line 1",
+    },
+    suggested_action: null,
+    recent_path: null,
+    agent_thought: null,
+    agent_belief: live
+      ? {
+        text: "Moving east toward the retained objective through the learned route",
+        phase: "tool_call",
+        observed_at: "2026-07-30T08:01:00Z",
+        line: 7,
+        evidence: "agent log line 7",
+      }
+      : null,
     model: "test-model",
     tools: ["look", "move"],
+    turn: 1,
     iteration: 1,
+    context_limit: 200_000,
     current_room: title,
+    zone: null,
     position_confidence: "high",
     position_method: "room-id",
     combat: false,
+    combat_episode: null,
     vitals: { hit: 100, mana: 80, move: 90 },
+    player_status: {
+      fields: {},
+      capture_gaps: [],
+    },
     cost_usd: player === "alpha" ? 0.01 : 0.02,
+    current_turn_cost_usd: player === "alpha" ? 0.01 : 0.02,
+    spend_cap_usd: 0.5,
+    spend_cap_scope: "session",
+    economics: [],
+    room_economics: [],
+    unattributed_room_economics: null,
     usage: { fresh_input: 100, cache_read: 0, cache_write: 0, output: 10 },
+    milestones: [],
     parse_miss_rate: 0,
     rooms: [{
       id: `place-${player}`,
@@ -438,6 +583,7 @@ function snapshotFor(player: string) {
       candidate_details: [],
       duplicate_titles: [],
       objective_beacons: [],
+      frontier: [],
       parse_miss_rate: 0,
       parse_misses: [],
       unknown_positions: 0,

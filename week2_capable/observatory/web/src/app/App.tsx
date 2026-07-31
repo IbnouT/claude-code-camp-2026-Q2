@@ -22,8 +22,13 @@ import type {
   ControlDraft,
   ControlReceipt,
 } from "../components/shell/AgentControlDialog";
+import {
+  SessionExitDialog,
+  type StopReceipt,
+} from "../components/shell/SessionExitDialog";
 import { InvestigationShell } from "../components/shell/InvestigationShell";
 import { SearchDialog } from "../components/shell/SearchDialog";
+import { liveEvidenceForms } from "./liveEvidence";
 
 const LiveCockpit = lazy(async () => ({
   default: (await import("../components/live/LiveCockpit")).LiveCockpit,
@@ -43,6 +48,9 @@ const KnowledgeWorkspace = lazy(async () => ({
     await import("../components/knowledge/KnowledgeWorkspace")
   ).KnowledgeWorkspace,
 }));
+
+const LAUNCHER = "http://127.0.0.1:8791/";
+const SUPERVISOR = "http://127.0.0.1:8792";
 
 function spaceFromUrl(): Space {
   const requested = new URL(window.location.href).searchParams.get("space");
@@ -78,6 +86,7 @@ export function App() {
   const recorded = useRecordedSessions(recordedRun, online);
   const [searchOpen, setSearchOpen] = useState(false);
   const [controlOpen, setControlOpen] = useState(false);
+  const [stopOpen, setStopOpen] = useState(false);
   const liveSessionsForPlayer = runtime.catalog.sessions.filter(
     (candidate) => candidate.player_id === player,
   );
@@ -100,7 +109,7 @@ export function App() {
       if (!options.has(candidate.player_id)) {
         options.set(candidate.player_id, {
           id: candidate.player_id,
-          label: `${candidate.player_id} · recorded`,
+          label: candidate.player_id,
           detail: "Recorded evidence",
         });
       }
@@ -140,8 +149,8 @@ export function App() {
     .filter((candidate) => candidate.player_id === player)
     .map((candidate) => ({
       id: candidate.id,
-      label: `${candidate.success ? "✓" : "!"} ${candidate.journey} · ${candidate.result_mode} · ${candidate.iterations} turns`,
-      detail: "Recorded experiment sample",
+      label: `${candidate.success ? "✓" : "!"} ${journeyName(candidate.journey)}`,
+      detail: `${candidate.result_mode} · ${candidate.iterations} turns · ${candidate.attempt}`,
     }));
   if (
     offlineCapsule
@@ -295,6 +304,13 @@ export function App() {
     return () => window.removeEventListener("keydown", handleKey);
   }, [online]);
 
+  const selectedEvidenceId = new URL(window.location.href).searchParams.get(
+    "evidence",
+  );
+  const selectedEvidenceForms = space === "live"
+    ? liveEvidenceForms(selectedEvidenceId, live)
+    : null;
+
   return (
     <div className="app-shell">
       <CanonicalHeader
@@ -304,6 +320,12 @@ export function App() {
         selectedSession={headerSession}
         sessions={sessionOptions}
         theme={preferences.theme}
+        canStopSession={
+          space === "live"
+          && selectedSession?.live === true
+          && selectedSession.state !== "draining"
+        }
+        onLeaveLive={() => window.location.assign(LAUNCHER)}
         onPlayerChange={(nextPlayer) => {
           if (offlineCapsule?.payload.player_id !== nextPlayer) {
             setOfflineCapsule(null);
@@ -325,6 +347,7 @@ export function App() {
           );
           setRecordedRun(nextRecorded?.id ?? "");
         }}
+        onRequestStop={() => setStopOpen(true)}
         onSessionChange={(sessionId) => {
           if (space !== "sessions") {
             setLiveSession(sessionId);
@@ -476,12 +499,23 @@ export function App() {
       {online ? <SearchDialog
         open={searchOpen}
         modelAvailable={capabilities.features.includes("copilot-model")}
+        selectedEvidence={
+          selectedEvidenceId && selectedEvidenceForms
+            ? {
+              id: selectedEvidenceId,
+              forms: selectedEvidenceForms,
+            }
+            : null
+        }
         scope={{
           space,
           ...(player ? { player_id: player } : {}),
           ...(space === "live" && liveSession
             ? {
               live_session_id: liveSession,
+              ...(selectedEvidenceId
+                ? { selected_record_id: selectedEvidenceId }
+                : {}),
               through_sequence: (
                 live.snapshot?.through_sequence
                 ?? live.selectedSequence
@@ -578,8 +612,26 @@ export function App() {
         onClose={() => setControlOpen(false)}
         onSubmit={(draft) => submitControl(liveSession, draft)}
       />
+      <SessionExitDialog
+        open={stopOpen}
+        player={player}
+        session={liveSession}
+        onCancel={() => setStopOpen(false)}
+        onConfirm={async () => {
+          const receipt = await stopSession(liveSession);
+          setStopOpen(false);
+          window.location.assign(LAUNCHER);
+          return receipt;
+        }}
+      />
     </div>
   );
+}
+
+function journeyName(journey: string) {
+  if (journey === "J1") return "J1 · bakery";
+  if (journey === "J2") return "J2 · minotaur";
+  return journey;
 }
 
 async function submitControl(
@@ -607,4 +659,27 @@ async function submitControl(
     throw new Error(payload.detail ?? `control returned ${response.status}`);
   }
   return payload as ControlReceipt;
+}
+
+async function stopSession(session: string): Promise<StopReceipt> {
+  const response = await fetch(
+    `${SUPERVISOR}/api/sessions/${encodeURIComponent(session)}/stop`,
+    { method: "POST" },
+  );
+  const payload = await response.json() as {
+    detail?: string;
+  } & Partial<StopReceipt>;
+  if (
+    !response.ok
+    || typeof payload.session_id !== "string"
+    || typeof payload.player_id !== "string"
+    || payload.state !== "stopped"
+    || !(
+      payload.mode === "cooperative"
+      || payload.mode === "forced_after_grace"
+    )
+  ) {
+    throw new Error(payload.detail ?? `stop returned ${response.status}`);
+  }
+  return payload as StopReceipt;
 }

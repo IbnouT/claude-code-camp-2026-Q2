@@ -1,0 +1,272 @@
+/* Knowledge — visual transcription from knowledge.html (+ entities/dense) onto
+   the existing knowledge selectors. Palette exact-equal to tokens (this mock
+   family is token-native). Loaded after knowledge.css so these values govern. */
+
+.knowledge-workspace {
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: normal;
+}
+
+/* ---- lens tabs (subbar) ---- */
+.knowledge-workspace .knowledge-lenses {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 22px;
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-surface);
+}
+
+.knowledge-workspace .knowledge-lenses button {
+  font-size: 13px;
+  padding: 7px 13px;
+  border-radius: 9px;
+  color: var(--color-muted);
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+}
+
+.knowledge-workspace .knowledge-lenses button[aria-current="page"],
+.knowledge-workspace .knowledge-lenses button[aria-current="true"],
+.knowledge-workspace .knowledge-lenses button.on {
+  background: var(--color-soft);
+  color: var(--color-text);
+  box-shadow: inset 0 0 0 1px var(--color-line-strong);
+}
+
+.knowledge-workspace .truth-quarantine {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--color-quiet);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.knowledge-workspace .lens-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--color-line);
+  margin: 0 4px;
+}
+
+.knowledge-workspace .knowledge-lenses .lens-secondary {
+  font-size: 11.5px;
+  padding: 5px 10px;
+  color: var(--color-quiet);
+}
+
+.knowledge-workspace .knowledge-cumulative {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--color-quiet);
+}
+
+.knowledge-workspace .knowledge-cumulative .warn {
+  color: var(--color-coral);
+  border-color: #3e2425;
+}
+
+/* ---- panes/cards ---- */
+.knowledge-workspace .knowledge-panel,
+.knowledge-workspace .knowledge-overview {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 13px;
+  padding: 14px 15px;
+  box-shadow: var(--shadow-raised);
+}
+
+.knowledge-workspace .knowledge-heading {
+  margin: 0 0 10px;
+  font-size: 11px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--color-quiet);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.knowledge-workspace .knowledge-heading .knowledge-heading-actions {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--color-muted);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* ---- entity table ---- */
+.knowledge-workspace .entity-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.knowledge-workspace .entity-table th {
+  text-align: left;
+  color: var(--color-quiet);
+  font-size: 9.5px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  padding: 0 0 7px;
+  font-weight: 600;
+}
+
+.knowledge-workspace .entity-table td {
+  padding: 8px 0;
+  border-top: 1px solid var(--color-line);
+  color: var(--color-muted);
+}
+
+.knowledge-workspace .entity-table td .entity-name {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.knowledge-workspace .provenance-badge {
+  font-size: 9.5px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--color-cyan-soft);
+  color: var(--color-cyan);
+}
+
+.knowledge-workspace .provenance-badge.expected {
+  background: var(--color-amber-soft);
+  color: var(--color-amber);
+}
+
+/* ---- search + filters (entities tab) ---- */
+.knowledge-workspace .knowledge-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--color-quiet);
+  background: var(--color-raised);
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+.knowledge-workspace .entity-type-filter {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.knowledge-workspace .entity-type-filter button {
+  font-size: 11.5px;
+  padding: 5px 11px;
+  border-radius: 8px;
+  color: var(--color-muted);
+  background: var(--color-raised);
+  border: 1px solid var(--color-line);
+  cursor: pointer;
+}
+
+.knowledge-workspace .entity-type-filter button[aria-pressed="true"],
+.knowledge-workspace .entity-type-filter button.on {
+  background: var(--color-cyan-soft);
+  color: var(--color-cyan);
+}
+
+.knowledge-workspace .knowledge-count {
+  font-size: 11.5px;
+  color: var(--color-quiet);
+}
+
+/* ---- milestones/progression ---- */
+.knowledge-workspace .knowledge-history {
+  position: relative;
+  padding-left: 20px;
+}
+
+.knowledge-workspace .knowledge-history::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  background: var(--color-line);
+}
+
+.knowledge-workspace .knowledge-history .milestone-row {
+  position: relative;
+  padding: 0 0 13px;
+}
+
+.knowledge-workspace .knowledge-history .milestone-row:last-child { padding-bottom: 0; }
+
+.knowledge-workspace .knowledge-history .milestone-dot {
+  position: absolute;
+  left: -18px;
+  top: 2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 2px solid var(--color-surface);
+  background: var(--color-cyan);
+}
+
+.knowledge-workspace .knowledge-history .milestone-title {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.knowledge-workspace .knowledge-history .milestone-sub {
+  font-size: 11px;
+  color: var(--color-quiet);
+}
+
+/* ---- map summary / dense ---- */
+.knowledge-workspace .knowledge-map-summary {
+  font-size: 11.5px;
+  color: var(--color-muted);
+}
+
+.knowledge-workspace .knowledge-map-summary b { color: var(--color-text); }
+
+.knowledge-workspace .knowledge-zone-grid,
+.knowledge-workspace .knowledge-room-grid {
+  gap: 10px;
+}
+
+.knowledge-workspace .knowledge-gap {
+  font-size: 11.5px;
+  color: var(--color-quiet);
+  background: var(--color-raised);
+  border: 1px solid var(--color-line);
+  border-radius: 9px;
+  padding: 9px 12px;
+}
+
+/* ---- snapshot / cursor actions ---- */
+.knowledge-workspace .snapshot-list button,
+.knowledge-workspace .knowledge-toolbar button {
+  font-size: 11.5px;
+  color: var(--color-muted);
+  background: var(--color-raised);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  padding: 5px 10px;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  cursor: pointer;
+}
+
+.knowledge-workspace .knowledge-toolbar button.warn {
+  color: var(--color-coral);
+  border-color: #3e2425;
+}

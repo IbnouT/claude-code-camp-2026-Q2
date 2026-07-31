@@ -2,9 +2,24 @@ export type WorldNodeData = {
   id: string;
   place: number;
   title: string;
+  description: {
+    text: string;
+    evidence: number[];
+  } | null;
+  atlas: {
+    vnum: number;
+    zone_id: number;
+    zone_label: string;
+    sector: string;
+    atlas_digest: string;
+    confidence: "high" | "medium";
+    evidence: string[];
+  } | null;
   exits: string[];
   mobs: string[];
   objects: string[];
+  mob_sightings: WorldSightingData[];
+  object_sightings: WorldSightingData[];
   visits: number;
   evidence: number[];
   first_seq: number;
@@ -12,6 +27,14 @@ export type WorldNodeData = {
   state: "observed" | "candidate" | "current";
   confidence: string;
   method: string;
+};
+
+export type WorldSightingData = {
+  name: string;
+  count: number;
+  first_seq: number;
+  last_seq: number;
+  evidence: number[];
 };
 
 export type WorldEdgeData = {
@@ -32,6 +55,13 @@ export type WorldCandidateData = {
   evidence: number[];
 };
 
+export type WorldFrontierData = {
+  id: string;
+  source: string;
+  direction: string;
+  evidence: number[];
+};
+
 export type WorldProjectionData = {
   nodes: WorldNodeData[];
   edges: WorldEdgeData[];
@@ -49,6 +79,7 @@ export type WorldProjectionData = {
     reason: string;
     evidence: number[];
   }[];
+  frontier: WorldFrontierData[];
   parse_miss_rate: number;
   parse_misses: {
     sequence: number;
@@ -67,6 +98,7 @@ export const emptyWorld: WorldProjectionData = {
   candidate_details: [],
   duplicate_titles: [],
   objective_beacons: [],
+  frontier: [],
   parse_miss_rate: 0,
   parse_misses: [],
   unknown_positions: 0,
@@ -94,9 +126,10 @@ export type AtlasProjectionData = {
   }[];
   nodes: {
     id: string;
-    vnum: number;
-    title: string;
-    zone: number;
-    exits: Record<string, number>;
+  vnum: number;
+  title: string;
+  zone: number;
+  sector: string;
+  exits: Record<string, number>;
   }[];
 };

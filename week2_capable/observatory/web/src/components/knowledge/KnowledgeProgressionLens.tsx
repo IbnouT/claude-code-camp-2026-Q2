@@ -1,4 +1,4 @@
-import { Backpack, Gauge, Milestone, ShieldAlert } from "lucide-react";
+import { Backpack, Gauge, ShieldAlert } from "lucide-react";
 import type { KnowledgeAssertion } from "../../data/knowledge";
 import { AssertionList } from "./AssertionList";
 
@@ -25,12 +25,6 @@ const groups = [
     label: "Conditions",
     icon: ShieldAlert,
     terms: ["condition", "hungry", "thirsty", "affect", "combat"],
-  },
-  {
-    id: "milestones",
-    label: "Milestones and objectives",
-    icon: Milestone,
-    terms: ["milestone", "objective", "quest", "progress", "achievement"],
   },
 ] as const;
 

@@ -40,6 +40,14 @@ type Props = {
   onSubmit: (draft: ControlDraft) => Promise<ControlReceipt>;
 };
 
+type ControlPrefill = {
+  instruction: string;
+  reason: string;
+  expected_sequence: number;
+};
+
+const CONTROL_PREFILL_EVENT = "boukensha:control-prefill";
+
 const actions: {
   id: ControlAction;
   label: string;
@@ -68,15 +76,36 @@ export function AgentControlDialog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<ControlReceipt | null>(null);
+  const [prefill, setPrefill] = useState<ControlPrefill | null>(null);
   const input = useRef<HTMLTextAreaElement>(null);
   const needsInstruction = action === "guide" || action === "revise";
   const canSubmit = !busy && (!needsInstruction || instruction.trim().length > 0);
+  const expectedSequence = prefill?.expected_sequence ?? sequence;
+
+  useEffect(() => {
+    const receivePrefill = (event: Event) => {
+      if (!(event instanceof CustomEvent) || !isControlPrefill(event.detail)) {
+        return;
+      }
+      setAction("guide");
+      setInstruction(event.detail.instruction);
+      setPrefill(event.detail);
+      setError(null);
+      setReceipt(null);
+    };
+    window.addEventListener(CONTROL_PREFILL_EVENT, receivePrefill);
+    return () => {
+      window.removeEventListener(CONTROL_PREFILL_EVENT, receivePrefill);
+    };
+  }, []);
 
   useEffect(() => {
     if (open) {
       setError(null);
       setReceipt(null);
       input.current?.focus();
+    } else {
+      setPrefill(null);
     }
   }, [open]);
 
@@ -95,7 +124,7 @@ export function AgentControlDialog({
         request_id: crypto.randomUUID(),
         action,
         instruction: needsInstruction ? instruction.trim() : null,
-        expected_sequence: sequence,
+        expected_sequence: expectedSequence,
       });
       setReceipt(result);
     } catch (caught) {
@@ -132,7 +161,7 @@ export function AgentControlDialog({
         <div className="control-scope">
           <div><small>Player</small><strong>{selectedPlayer}</strong></div>
           <div><small>Session</small><strong>{selectedSession}</strong></div>
-          <div><small>Expected sequence</small><strong>#{sequence}</strong></div>
+          <div><small>Expected sequence</small><strong>#{expectedSequence}</strong></div>
           <StateBadge state="actual">Authenticated live session</StateBadge>
         </div>
 
@@ -187,6 +216,9 @@ export function AgentControlDialog({
           </div>
           <dl>
             <div><dt>Insertion</dt><dd>Next safe iteration boundary</dd></div>
+            {prefill ? (
+              <div><dt>Evidence-backed suggestion</dt><dd>{prefill.reason}</dd></div>
+            ) : null}
             <div><dt>Current goal</dt><dd>{objective ?? "Not captured"}</dd></div>
             <div>
               <dt>Allowed tools</dt>
@@ -194,7 +226,10 @@ export function AgentControlDialog({
             </div>
             <div><dt>Model</dt><dd>{model ?? "Not captured"}</dd></div>
             <div><dt>Maximum additional spend</dt><dd>Not captured</dd></div>
-            <div><dt>Concurrency check</dt><dd>Session must remain at seq {sequence}</dd></div>
+            <div>
+              <dt>Concurrency check</dt>
+              <dd>Session must remain at seq {expectedSequence}</dd>
+            </div>
           </dl>
         </section>
 
@@ -239,6 +274,21 @@ export function AgentControlDialog({
         </footer>
       </section>
     </div>
+  );
+}
+
+function isControlPrefill(value: unknown): value is ControlPrefill {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const candidate = value as Partial<ControlPrefill>;
+  return (
+    typeof candidate.instruction === "string"
+    && candidate.instruction.trim().length > 0
+    && typeof candidate.reason === "string"
+    && candidate.reason.trim().length > 0
+    && Number.isInteger(candidate.expected_sequence)
+    && (candidate.expected_sequence ?? -1) >= 0
   );
 }
 

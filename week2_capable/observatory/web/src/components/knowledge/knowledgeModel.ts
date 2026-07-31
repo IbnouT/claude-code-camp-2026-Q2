@@ -8,6 +8,7 @@ export type KnowledgeLensId =
   | "map"
   | "entities"
   | "progression"
+  | "milestones"
   | "snapshots"
   | "history";
 
@@ -37,7 +38,7 @@ export function visibleAssertions(
 
 export function assertionCategory(
   assertion: KnowledgeAssertion,
-): "map" | "entities" | "progression" {
+): "map" | "entities" | "progression" | "milestones" {
   const subject = assertion.subject.toLocaleLowerCase();
   const predicate = assertion.predicate.toLocaleLowerCase();
   if (
@@ -52,7 +53,23 @@ export function assertionCategory(
     || subject.startsWith("npc:")
     || predicate.includes("sighting")
   ) return "entities";
+  if (isMilestoneAssertion(assertion)) return "milestones";
   return "progression";
+}
+
+export function isMilestoneAssertion(
+  assertion: KnowledgeAssertion,
+): boolean {
+  const value = `${assertion.subject} ${assertion.predicate}`
+    .toLocaleLowerCase();
+  return [
+    "milestone",
+    "objective",
+    "quest",
+    "achievement",
+    "level_up",
+    "level-up",
+  ].some((term) => value.includes(term));
 }
 
 export function humanizeKnowledge(value: string): string {

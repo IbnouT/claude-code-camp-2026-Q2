@@ -1,464 +1,914 @@
+import "../../styles/live-cockpit.css";
+import { useState } from "react";
+import type {
+  LiveEconomicsPoint,
+  LiveSessionState,
+  LiveSnapshot,
+  LiveTimelineItem,
+  RuntimeSession,
+} from "../../data/liveContracts";
 import {
-  AlertTriangle,
-  ArrowRight,
-  Bookmark,
-  CircleDollarSign,
-  Clock3,
-  Database,
-  Gauge,
-  Pause,
-  Play,
-  Radio,
-  Route,
-  Search,
-  ShieldCheck,
-  Sparkles,
-} from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import "../../styles/world.css";
-import type { ShellCapabilities, WorkspaceFixture } from "../../app/shellTypes";
-import type { RuntimeSession } from "../../data/liveContracts";
-import type { SessionEvidence } from "../../data/useSessionStream";
-import { emptyWorld } from "../../data/worldContracts";
-import { EvidenceForms } from "../system/EvidenceForms";
-import { StateBadge } from "../system/StateBadge";
-import { WorldExplorer } from "../world/WorldExplorer";
+  formatLiveCount,
+  formatLiveUsd,
+  latestTimelineItem,
+  liveInputTokens,
+  liveOutputTokens,
+  type MapMode,
+} from "./liveCockpitModel";
+import { LiveStage, type CameraMode } from "./LiveStage";
 
 type Props = {
-  capabilities: ShellCapabilities;
-  live: SessionEvidence;
+  capabilities: unknown;
+  live: LiveSessionState;
   session: RuntimeSession | null;
   onOpenControl: () => void;
   onOpenSearch: () => void;
 };
 
-export function LiveCockpit({
-  capabilities,
-  live,
-  session,
+const CONNECTION_MESSAGES: Record<string, string> = {
+  discovering: "Discovering live sessions…",
+  waiting: "Waiting for the first event from this session.",
+  unavailable:
+    "The live endpoint is unavailable. Evidence already captured stays readable.",
+  ended: "This session has ended. Its full journey remains replayable.",
+};
+
+function vitalLabel(key: string): string {
+  if (key === "hit") return "HP";
+  return key.charAt(0).toUpperCase() + key.slice(1);
+}
+
+const VITAL_FILLS: Record<string, string> = {
+  hit: "linear-gradient(90deg,#ff5d6c,#f5c463)",
+  mana: "linear-gradient(90deg,#5db4ff,#9a8cff)",
+  move: "linear-gradient(90deg,#5fdd9d,#4fd6c9)",
+};
+
+function combatLineClass(label: string): string {
+  const text = label.toLowerCase();
+  if (text.includes("critical")) return "crit";
+  if (text.includes("dead") || text.includes("killed") || text.includes("xp")) {
+    return "kill";
+  }
+  if (text.includes("hits you") || text.includes("wounds you")) return "dmgin";
+  return "hit";
+}
+
+function timelineWeight(item: LiveTimelineItem): "major" | "minor" {
+  const kind = item.kind.toLowerCase();
+  return kind.includes("combat")
+      || kind.includes("level")
+      || kind.includes("milestone")
+      || kind.includes("position")
+      || kind.includes("room")
+    ? "major"
+    : "minor";
+}
+
+function timelineWord(item: LiveTimelineItem): string {
+  const kind = item.kind.toLowerCase();
+  if (kind.includes("combat")) return "combat";
+  if (kind.includes("level")) return "level up";
+  if (kind.includes("position") || kind.includes("room")) return "room";
+  return item.kind;
+}
+
+function percent(seq: number, first: number, last: number): number {
+  if (last <= first) return 50;
+  return Math.min(98, Math.max(2, ((seq - first) / (last - first)) * 100));
+}
+
+function costCurve(values: number[], width: number, height: number): string {
+  const top = values.at(-1) ?? 0;
+  if (values.length < 2 || top <= 0) return "";
+  return values
+    .map((value, index) => {
+      const x = (index / (values.length - 1)) * width;
+      const y = height - 4 - (value / top) * (height - 8);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+}
+
+function cumulativeCostPoints(
+  items: LiveTimelineItem[],
+  width: number,
+  height: number,
+): string {
+  const costs: number[] = [];
+  let running = 0;
+  for (const item of items) {
+    running += item.cost_usd;
+    costs.push(running);
+  }
+  return costCurve(costs, width, height);
+}
+
+function CostSpark({ economics }: { economics: LiveEconomicsPoint[] }) {
+  const points = costCurve(
+    economics.map((point) => point.cumulative_cost_usd),
+    260,
+    26,
+  );
+  if (points === "") {
+    return <div className="minirow">cost points not captured yet</div>;
+  }
+  return (
+    <svg aria-hidden="true" className="spark" preserveAspectRatio="none" viewBox="0 0 260 26">
+      <polyline fill="none" points={points} stroke="#4fd6c9" strokeWidth="1.6" />
+      <polygon fill="#4fd6c922" points={`0,26 ${points} 260,26`} />
+    </svg>
+  );
+}
+
+function cacheHitRate(usage: Record<string, number>): number | null {
+  let cached = 0;
+  let fresh = 0;
+  for (const [key, value] of Object.entries(usage)) {
+    if (key.includes("cache_read")) cached += value;
+    else if (key.includes("input")) fresh += value;
+  }
+  const total = cached + fresh;
+  return total > 0 ? Math.round((cached / total) * 100) : null;
+}
+
+function costPerTurnDelta(items: LiveTimelineItem[]): number | null {
+  const paid = items.filter((item) => item.cost_usd > 0);
+  const last = paid.at(-1);
+  const prev = paid.at(-2);
+  if (!last || !prev || prev.cost_usd === 0) return null;
+  return Math.round(((last.cost_usd - prev.cost_usd) / prev.cost_usd) * 100);
+}
+
+function Rail({
+  snapshot,
+  controlAvailable,
   onOpenControl,
+}: {
+  snapshot: LiveSnapshot;
+  controlAvailable: boolean;
+  onOpenControl: () => void;
+}) {
+  const guard = controlAvailable ? onOpenControl : undefined;
+  const latest = latestTimelineItem(snapshot);
+  const turnCost = snapshot.current_turn_cost_usd;
+  const economics = snapshot.economics;
+  const lastPoint = economics.at(-1);
+  const prevPoint = economics.at(-2);
+  const delta = lastPoint && prevPoint && prevPoint.cost_usd > 0
+    ? Math.round(
+      ((lastPoint.cost_usd - prevPoint.cost_usd) / prevPoint.cost_usd) * 100,
+    )
+    : costPerTurnDelta(snapshot.timeline);
+  const cache = cacheHitRate(snapshot.usage);
+  const statusFields = snapshot.player_status.fields;
+  const vitalMax = (key: string): number | null => {
+    const field = statusFields[`${key}_max`] ?? statusFields[`max_${key}`];
+    if (field && typeof field.value === "number") return field.value;
+    const retained = snapshot.vitals[`${key}_max`];
+    return typeof retained === "number" ? retained : null;
+  };
+  const vitalValue = (key: string): number | null => {
+    const field = statusFields[key];
+    if (field && typeof field.value === "number") return field.value;
+    return key in snapshot.vitals ? snapshot.vitals[key] : null;
+  };
+  const belief = snapshot.agent_belief;
+
+  return (
+    <aside aria-label="Live session detail" className="rail">
+      <div className="card obj">
+        <h4>Objective</h4>
+        <b>
+          {(snapshot.objective_initial ?? snapshot.objective_context)?.title
+            ?? snapshot.objective
+            ?? "No objective recorded"}
+        </b>
+        {(snapshot.objective_initial ?? snapshot.objective_context)?.clue ? (
+          <div className="sub" title="Objective clue from the objective definition, not observed world truth">
+            {(snapshot.objective_initial ?? snapshot.objective_context)?.clue}
+          </div>
+        ) : null}
+        <div className="prog" title="Objective progress is not measured live">
+          <i style={{ width: 0 }} />
+        </div>
+        <div className="belief">
+          <div>
+            <small>Agent intends</small>
+            <b
+              className="intent-value"
+              title={belief?.text ?? undefined}
+            >
+              {belief?.text ?? "not observed"}
+            </b>
+          </div>
+          <div className={snapshot.combat ? "warn" : undefined}>
+            <small>Observed</small>
+            <b>
+              {snapshot.combat
+                ? "In combat"
+                : snapshot.current_room ?? "not observed"}
+            </b>
+          </div>
+        </div>
+      </div>
+
+      <div className="card agentcard">
+        <h4>Direct the agent</h4>
+        <div className="curgoal">
+          Current goal:{" "}
+          <b>
+            {snapshot.objective_context?.title
+              ?? snapshot.objective
+              ?? "none recorded"}
+          </b>
+        </div>
+        <div className="compose">
+          <input
+            aria-label="Open the agent control dialog"
+            disabled={!controlAvailable}
+            placeholder="Set or change the goal, or nudge…"
+            readOnly
+            onClick={guard}
+            onFocus={guard}
+          />
+          <button disabled={!controlAvailable} type="button" onClick={guard}>
+            Send
+          </button>
+        </div>
+        <div className="quick">
+          <button disabled={!controlAvailable} type="button" onClick={guard}>
+            ↻ Reconsider route
+          </button>
+          {snapshot.suggested_action ? (
+            <button
+              disabled={!controlAvailable}
+              title={snapshot.suggested_action.reason}
+              type="button"
+              onClick={controlAvailable
+                ? () => {
+                  window.dispatchEvent(
+                    new CustomEvent("boukensha:control-prefill", {
+                      detail: {
+                        instruction: snapshot.suggested_action?.instruction,
+                        reason: snapshot.suggested_action?.reason,
+                        expected_sequence:
+                          snapshot.suggested_action?.expected_sequence,
+                      },
+                    }),
+                  );
+                  onOpenControl();
+                }
+                : undefined}
+            >
+              ⤴ {snapshot.suggested_action.label}
+            </button>
+          ) : null}
+          <button disabled={!controlAvailable} type="button" onClick={guard}>
+            ✎ Replace goal
+          </button>
+        </div>
+        <div className="ghint">
+          {controlAvailable
+            ? "Delivered to the agent (mortal) on this live session · asks you"
+              + " to confirm before it takes effect · never writes to the game"
+              + " world directly."
+            : `Read-only: this session has no live control endpoint${
+              snapshot.control_state ? ` (${snapshot.control_state})` : ""
+            }. The cockpit keeps showing captured evidence.`}
+        </div>
+      </div>
+
+      <div className="card">
+        <h4>Vitals</h4>
+        {(["hit", "mana", "move"] as const).every(
+          (key) => vitalValue(key) === null,
+        ) ? (
+          <div className="sub">Vitals not captured yet.</div>
+        ) : (
+          <div className="vit">
+            {(["hit", "mana", "move"] as const)
+              .filter((key) => vitalValue(key) !== null)
+              .map((key) => {
+                const value = vitalValue(key) as number;
+                const max = vitalMax(key);
+                return (
+                  <div className="vrow" key={key}>
+                    <span className="lab">{vitalLabel(key)}</span>
+                    <span
+                      className="bar"
+                      title={max === null
+                        ? "Maximum is not captured; the bar shows no invented ratio"
+                        : undefined}
+                    >
+                      <i
+                        style={{
+                          width: max === null || max <= 0
+                            ? 0
+                            : `${Math.min(100, (value / max) * 100)}%`,
+                          background: VITAL_FILLS[key],
+                        }}
+                      />
+                    </span>
+                    <span className="num">
+                      {max === null ? value : `${value}/${max}`}
+                    </span>
+                  </div>
+                );
+              })}
+          </div>
+        )}
+      </div>
+
+      <div className="card">
+        <h4>Live economics</h4>
+        <div className="econ">
+          <div className="stat">
+            <div className="k">Spend so far</div>
+            <div
+              className="v"
+              title={snapshot.spend_cap_usd === null
+                ? "No spend cap is configured on this session"
+                : undefined}
+            >
+              {formatLiveUsd(snapshot.cost_usd)}
+              {snapshot.spend_cap_usd === null ? null : (
+                <small> / {formatLiveUsd(snapshot.spend_cap_usd)} cap</small>
+              )}
+            </div>
+          </div>
+          <div className="stat">
+            <div className="k">Cost / turn</div>
+            <div className="v">
+              {formatLiveUsd(turnCost)}
+              {delta === null ? null : (
+                <small className={delta >= 0 ? "delta up" : "delta dn"}>
+                  {" "}{delta >= 0 ? "▲" : "▼"} {Math.abs(delta)}%
+                </small>
+              )}
+            </div>
+          </div>
+          <div className="stat wide">
+            <div className="k">Cost per response: cumulative</div>
+            <CostSpark economics={economics} />
+            <div className="minirow">
+              <span>context growth drives the climb</span>
+              <span className="mono">↑</span>
+            </div>
+          </div>
+          <div className="stat">
+            <div className="k">Tokens · in/out</div>
+            <div className="v" style={{ fontSize: 14 }}>
+              {formatLiveCount(liveInputTokens(snapshot))}{" "}
+              <small>/ {formatLiveCount(liveOutputTokens(snapshot))}</small>
+            </div>
+          </div>
+          <div className="stat">
+            <div className="k">Cache hit</div>
+            <div className="v">{cache === null ? "—" : `${cache}%`}</div>
+          </div>
+          <div className="stat wide">
+            <div className="minirow" style={{ marginTop: 0 }}>
+              <span>Context window</span>
+              <span className="mono">
+                {lastPoint
+                  ? formatLiveCount(lastPoint.context_tokens)
+                  : "not observed"}
+                {" / "}
+                {snapshot.context_limit === null
+                  ? "not observed"
+                  : formatLiveCount(snapshot.context_limit)}
+              </span>
+            </div>
+            <div className="prog" style={{ marginTop: 6 }}>
+              <i
+                style={{
+                  width: lastPoint
+                      && snapshot.context_limit !== null
+                      && snapshot.context_limit > 0
+                    ? `${Math.min(100, (lastPoint.context_tokens / snapshot.context_limit) * 100)}%`
+                    : 0,
+                  background: "linear-gradient(90deg,#5db4ff,#9a8cff)",
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="card">
+        <h4>Activity</h4>
+        <div className="actv">
+          {snapshot.combat ? (
+            <span aria-hidden="true" className="ic">⚔</span>
+          ) : null}
+          <span>{latest?.label ?? "No activity captured yet."}</span>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+/** Semantic timeline projection: the full retained timeline stays evidence;
+ * the spine renders semantic MARKERS (room transitions, milestones, combat
+ * episode boundaries, control actions) plus deterministic clusters of minor
+ * activity, with forward headroom while following live. */
+type SpineMarker = {
+  key: string;
+  kind: "room" | "milestone" | "combat" | "control" | "cluster";
+  sequence: number;
+  label: string;
+  count: number;
+  firstId: string;
+};
+
+const HEADROOM_MAX = 92;
+
+/** Quiet semantic spine (mock signature): ONE labelled room-entry landmark,
+ * the LATEST level transition, combat start (quiet) + latest combat
+ * (labelled) when the episode spans several retained observations, and all
+ * remaining records collapsed into server-assigned quiet_cohort runs.
+ * Every retained event stays reachable through the cluster evidence
+ * links. */
+function spineMarkers(snapshot: LiveSnapshot): SpineMarker[] {
+  const markers: SpineMarker[] = [];
+  const consumed = new Set<string>();
+
+  // Representative room-entry landmark: the first transition to a new room
+  // label inside the visible window.
+  let lastRoomLabel: string | null = null;
+  let roomLandmark: (typeof snapshot.timeline)[number] | null = null;
+  for (const item of snapshot.timeline) {
+    const kind = item.kind.toLowerCase();
+    if (kind.includes("position") || kind.includes("room")) {
+      if (item.label !== lastRoomLabel) {
+        lastRoomLabel = item.label;
+        if (roomLandmark === null) roomLandmark = item;
+      }
+    }
+  }
+  if (roomLandmark) {
+    consumed.add(roomLandmark.id);
+    markers.push({
+      key: `room-${roomLandmark.id}`,
+      kind: "room",
+      sequence: roomLandmark.sequence,
+      label: roomLandmark.label,
+      count: 1,
+      firstId: roomLandmark.id,
+    });
+  }
+
+  // Combat: episode start (quiet) + latest observation (labelled); a single
+  // retained observation projects one marker.
+  const combatRecords = snapshot.timeline.filter((item) =>
+    item.kind.toLowerCase().includes("combat"));
+  const combatStart = combatRecords.at(0);
+  const combatLatest = combatRecords.at(-1);
+  if (combatStart) {
+    consumed.add(combatStart.id);
+    markers.push({
+      key: `combat-${combatStart.id}`,
+      kind: "combat",
+      sequence: combatStart.sequence,
+      label: "combat",
+      count: 1,
+      firstId: combatStart.id,
+    });
+  }
+  if (combatLatest && combatLatest.id !== combatStart?.id) {
+    consumed.add(combatLatest.id);
+    markers.push({
+      key: `combat-${combatLatest.id}`,
+      kind: "combat",
+      sequence: combatLatest.sequence,
+      label: "combat",
+      count: 1,
+      firstId: combatLatest.id,
+    });
+  }
+
+  // Operator control actions stay individually visible (quiet).
+  for (const item of snapshot.timeline) {
+    const kind = item.kind.toLowerCase();
+    if (kind.includes("control") || kind.includes("operator")) {
+      consumed.add(item.id);
+      markers.push({
+        key: `control-${item.id}`,
+        kind: "control",
+        sequence: item.sequence,
+        label: item.label,
+        count: 1,
+        firstId: item.id,
+      });
+    }
+  }
+
+  // Latest level transition only. A level transition is a gateway
+  // player-state observation, so the correlated timeline record (same
+  // sequence) is consumed here — it must not count again inside a quiet
+  // cluster.
+  const milestone = snapshot.milestones.at(-1);
+  if (milestone) {
+    for (const item of snapshot.timeline) {
+      if (item.sequence === milestone.sequence) consumed.add(item.id);
+    }
+    markers.push({
+      key: `milestone-${milestone.sequence}`,
+      kind: "milestone",
+      sequence: milestone.sequence,
+      label: "level up",
+      count: 1,
+      firstId: milestone.evidence,
+    });
+  }
+
+  // Quiet activity cohorts: server-assigned, evidence-backed runs
+  // (timeline[].quiet_cohort — landmarks keep null). One marker per cohort
+  // at the member median sequence; positions derive purely from retained
+  // record sequences.
+  const cohorts = new Map<string, typeof snapshot.timeline>();
+  for (const item of snapshot.timeline) {
+    if (consumed.has(item.id) || item.quiet_cohort === null) continue;
+    const list = cohorts.get(item.quiet_cohort);
+    if (list) list.push(item);
+    else cohorts.set(item.quiet_cohort, [item]);
+  }
+  for (const [cohort, list] of cohorts) {
+    markers.push({
+      key: `cluster-${cohort}`,
+      kind: "cluster",
+      sequence: list[Math.floor(list.length / 2)].sequence,
+      label: `${list.length} retained records`,
+      count: list.length,
+      firstId: list[0].id,
+    });
+  }
+
+  return markers.sort((a, b) => a.sequence - b.sequence);
+}
+
+function markerColor(kind: SpineMarker["kind"]): string {
+  if (kind === "combat") return "var(--live-rose)";
+  if (kind === "milestone") return "var(--live-amber)";
+  if (kind === "room") return "var(--live-aqua)";
+  if (kind === "control") return "var(--color-cyan)";
+  return "#2f5680";
+}
+
+function Spine({
+  snapshot,
   onOpenSearch,
-}: Props) {
-  const [bookmarks, setBookmarks] = useState<number[]>([]);
-  const [selectedWorldNodeId, setSelectedWorldNodeId] = useState<string | null>(null);
-  useEffect(() => {
-    setBookmarks([]);
-    setSelectedWorldNodeId(null);
-  }, [session?.id]);
-  const snapshot = live.snapshot;
-  const selectedEvent = live.events.find(
-    (event) => event.seq === live.selectedSequence,
-  );
-  const evidence = useMemo<WorkspaceFixture["evidence"]>(
-    () => evidenceFor(snapshot, selectedEvent?.kind, selectedEvent?.data),
-    [selectedEvent, snapshot],
-  );
-  const liveSources = capabilities.sources.filter(
-    (source) => source.id === "gateway" || source.id === "agent",
-  );
-  const readySources = liveSources.filter(
-    (source) => source.state === "ready",
-  ).length;
-  const unavailableSource = liveSources.find(
-    (source) => source.state === "unavailable",
-  );
-  const incompleteSources = liveSources.filter(
-    (source) => source.state !== "ready",
-  );
-  const latestAt = live.events.at(-1)?.at;
-  const freshness = latestAt === undefined
-    ? "no event yet"
-    : formatAge(Math.max(0, Date.now() - latestAt * 1_000));
-  const tokens = snapshot === null
-    ? 0
-    : Object.values(snapshot.usage).reduce((total, value) => total + value, 0);
-  const canControl = Boolean(
-    session?.live
-    && session.control_available
-    && !["capture_gap", "quarantined", "stopped"].includes(
-      snapshot?.control_state ?? "",
-    ),
+}: {
+  snapshot: LiveSnapshot;
+  onOpenSearch: () => void;
+}) {
+  const items = snapshot.timeline;
+  const first = items.at(0)?.sequence ?? 0;
+  const last = Math.max(snapshot.latest_sequence, items.at(-1)?.sequence ?? 0);
+  // Forward headroom: positions scale into [2, 92] while following live.
+  const pos = (sequence: number): number =>
+    last <= first
+      ? 50
+      : 2 + ((sequence - first) / (last - first)) * (HEADROOM_MAX - 2);
+  const markers = spineMarkers(snapshot);
+  // Label the latest marker of each distinct semantic kind.
+  const labelled = (["room", "milestone", "combat"] as const)
+    .map((kind) =>
+      [...markers].reverse().find((marker) => marker.kind === kind))
+    .filter((marker): marker is SpineMarker => marker !== undefined);
+  const costPoints = costCurve(
+    snapshot.economics.map((point) => point.cumulative_cost_usd),
+    (900 * HEADROOM_MAX) / 100,
+    22,
   );
 
   return (
-    <div className="workspace live-workspace">
-      <section className="workspace-intro" aria-labelledby="workspace-title">
-        <div>
-          <p className="eyebrow">Live · {connectionLabel(live.connection)}</p>
-          <h1 id="workspace-title">
-            {snapshot?.combat
-              ? "The agent is in combat"
-              : "Watch the journey form as the agent acts"}
-          </h1>
-          <p>
-            {session === null
-              ? "Start an agent or select a registered session to observe it."
-              : `${session.character} · ${shortId(session.id)} · ${session.state}`}
-          </p>
-        </div>
-        <div className="workspace-actions">
-          <button className="secondary-button" type="button" onClick={onOpenSearch}>
-            <Search size={14} aria-hidden="true" />
-            Ask about this run
-          </button>
-          <div className="workspace-status">
-            <StateBadge state={live.connection === "unavailable" ? "incomplete" : "actual"}>
-              {connectionLabel(live.connection)}
-            </StateBadge>
-            <span>
-              <Clock3 size={13} aria-hidden="true" />
-              seq {live.selectedSequence}/{live.latestSequence}
-            </span>
-            <span><Radio size={13} aria-hidden="true" /> {freshness}</span>
-          </div>
-        </div>
-      </section>
-
-      {live.error ? (
-        <section className="inline-failure" role="alert">
-          <AlertTriangle size={17} aria-hidden="true" />
-          <span>
-            <strong>Live evidence is unavailable</strong>
-            <small>{live.error}</small>
-          </span>
-        </section>
-      ) : null}
-
-      <section className="workspace-grid">
-        <WorldExplorer
-          className="world-card"
-          combat={snapshot?.combat}
-          eyebrow="Selected journey"
-          onSelectNode={setSelectedWorldNodeId}
-          selectedNodeId={selectedWorldNodeId}
-          title="Living world"
-          world={snapshot?.world ?? emptyWorld}
+    <div className="spine">
+      <div className="sh">
+        <small>Journey timeline</small>
+        <span className="rt">
+          turn {snapshot.turn ?? snapshot.iteration}
+          {" · "}
+          {snapshot.following_live ? "following live" : "time travel"}
+          {"  ·  "}
+          {formatLiveUsd(snapshot.cost_usd)} spent
+        </span>
+      </div>
+      <div className="track">
+        <div className="axis" />
+        {costPoints === "" ? null : (
+          <svg aria-hidden="true" className="costline" preserveAspectRatio="none" viewBox="0 0 900 22">
+            <polyline fill="none" points={costPoints} stroke="#243449" strokeWidth="1.4" />
+          </svg>
+        )}
+        {markers.map((marker) => (
+          <button
+            aria-label={marker.count > 1
+              ? `Open ${marker.count} retained records near sequence ${marker.sequence}`
+              : `Open evidence: ${marker.label} at sequence ${marker.sequence}`}
+            className={marker.kind === "cluster" ? "ev small" : "ev"}
+            key={marker.key}
+            style={{
+              left: `${pos(marker.sequence)}%`,
+              background: markerColor(marker.kind),
+            }}
+            title={marker.label}
+            type="button"
+            onClick={() => {
+              const url = new URL(window.location.href);
+              url.searchParams.set("evidence", marker.firstId);
+              url.searchParams.set("seq", String(marker.sequence));
+              window.history.replaceState(null, "", url);
+              onOpenSearch();
+            }}
+          />
+        ))}
+        <div
+          className="cursor"
+          style={{ left: `${pos(snapshot.through_sequence)}%` }}
         />
-
-        <aside className="attention-rail" aria-label="Run context and attention">
-          <section className="attention-card">
-            <div className="panel-heading">
-              <span>
-                <p className="eyebrow">Objective</p>
-                <h2>{snapshot?.objective ?? "Objective not captured"}</h2>
-              </span>
-              <Route size={17} aria-hidden="true" />
-            </div>
-            <div className="belief-block">
-              <StateBadge state="actual">Observed</StateBadge>
-              <p>
-                {snapshot?.current_room
-                  ? `The latest observed room is ${snapshot.current_room}.`
-                  : "No room observation is available in this prefix."}
-              </p>
-            </div>
-            <div className="belief-block">
-              <StateBadge state="believed">Agent account</StateBadge>
-              <p>
-                Agent reasoning appears only when its event stream contains it.
-                It is never inferred from gateway activity.
-              </p>
-            </div>
-            <button
-              className="primary-button full-width"
-              disabled={!canControl}
-              type="button"
-              onClick={onOpenControl}
-            >
-              {canControl ? "Direct the agent" : "Control unavailable"}
-              <ArrowRight size={14} aria-hidden="true" />
-            </button>
-          </section>
-
-          {snapshot !== null && snapshot.capture_gaps.length > 0 ? (
-            <section className="attention-card diagnostic-card">
-              <div className="diagnostic-icon" aria-hidden="true">
-                <AlertTriangle size={17} />
-              </div>
-              <div>
-                <p className="eyebrow">Capture gap</p>
-                <h2>{captureGapTitle(snapshot.capture_gaps[0])}</h2>
-                <p>{captureGapDetail(snapshot.capture_gaps[0])}</p>
-                <button className="text-button" type="button">
-                  Inspect instrumentation <ArrowRight size={13} aria-hidden="true" />
-                </button>
-              </div>
-            </section>
-          ) : null}
-
-          {unavailableSource !== undefined ? (
-            <section className="attention-card diagnostic-card">
-              <div className="diagnostic-icon" aria-hidden="true">
-                <AlertTriangle size={17} />
-              </div>
-              <div>
-                <p className="eyebrow">Instrumentation issue</p>
-                <h2>{unavailableSource.label} is unavailable</h2>
-                <p>{unavailableSource.detail}</p>
-              </div>
-            </section>
-          ) : null}
-
-          <section className="metrics-card" aria-label="Live economics">
-            <div>
-              <CircleDollarSign size={15} aria-hidden="true" />
-              <span>
-                <small>Observed cost</small>
-                <strong>{formatUsd(snapshot?.cost_usd)}</strong>
-              </span>
-            </div>
-            <div>
-              <Gauge size={15} aria-hidden="true" />
-              <span>
-                <small>Iteration</small>
-                <strong>{snapshot?.iteration ?? 0}</strong>
-              </span>
-            </div>
-            <div>
-              <Database size={15} aria-hidden="true" />
-              <span>
-                <small>Tokens</small>
-                <strong>{formatCount(tokens)}</strong>
-              </span>
-            </div>
-          </section>
-
-          <section className="source-card">
-            <ShieldCheck size={17} aria-hidden="true" />
-            <span>
-              <small>Instrumentation completeness</small>
-              <strong>
-                {snapshot?.capture_gaps.length
-                  ? `${snapshot.capture_gaps.length} visible capture gap${snapshot.capture_gaps.length === 1 ? "" : "s"}`
-                  : `${readySources}/${liveSources.length} Live sources ready`}
-              </strong>
-            </span>
-            <StateBadge state={
-              snapshot?.capture_gaps.length || incompleteSources.length
-                ? "incomplete"
-                : "actual"
-            }>
-              {snapshot?.capture_gaps.length || incompleteSources.length
-                ? "Incomplete"
-                : "Complete"}
-            </StateBadge>
-          </section>
-        </aside>
-
-        <section className="timeline-card live-timeline" aria-labelledby="timeline-heading">
-          <div className="panel-heading">
-            <span>
-              <p className="eyebrow">Causal time</p>
-              <h2 id="timeline-heading">Activity</h2>
-            </span>
-            <div className="timeline-controls">
-              <button
-                className="icon-button"
-                disabled={!live.followingLive || live.latestSequence === 0}
-                type="button"
-                aria-label="Pause live following"
-                onClick={() => live.select(live.latestSequence)}
-              >
-                <Pause size={14} aria-hidden="true" />
-              </button>
-              <button
-                className="icon-button"
-                disabled={live.followingLive}
-                type="button"
-                aria-label="Return to live"
-                onClick={live.resume}
-              >
-                <Play size={14} aria-hidden="true" />
-              </button>
-              <button
-                className="icon-button"
-                disabled={live.selectedSequence === 0}
-                type="button"
-                aria-label="Bookmark selected sequence"
-                onClick={() => {
-                  setBookmarks((current) => (
-                    current.includes(live.selectedSequence)
-                      ? current.filter((value) => value !== live.selectedSequence)
-                      : [...current, live.selectedSequence].sort((left, right) => left - right)
-                  ));
-                }}
-              >
-                <Bookmark size={14} aria-hidden="true" />
-              </button>
-            </div>
-          </div>
-          <div className="time-scrubber">
-            <input
-              aria-label="Selected sequence"
-              disabled={live.latestSequence === 0}
-              max={Math.max(1, live.latestSequence)}
-              min="1"
-              type="range"
-              value={Math.max(1, live.selectedSequence)}
-              onChange={(event) => live.select(Number(event.target.value))}
-            />
-            <span>
-              {live.followingLive ? "Following live" : `Paused at #${live.selectedSequence}`}
-            </span>
-            {bookmarks.length > 0 ? (
-              <span>{bookmarks.length} bookmark{bookmarks.length === 1 ? "" : "s"}</span>
-            ) : null}
-          </div>
-          {snapshot !== null && snapshot.timeline.length > 0 ? (
-            <ol className="timeline-list">
-              {snapshot.timeline.slice(-30).map((item) => (
-                <li
-                  className={`timeline-item item-${timelineKind(item.kind)} ${
-                    item.sequence === live.selectedSequence ? "is-selected" : ""
-                  }`}
-                  key={item.id}
-                >
-                  <button
-                    aria-label={`Select sequence ${item.sequence}: ${item.label}`}
-                    disabled={item.sequence === 0}
-                    type="button"
-                    onClick={() => live.select(item.sequence)}
-                  >
-                    <span className="timeline-symbol" aria-hidden="true" />
-                    <time>{formatTime(item.at)}</time>
-                    <span className="timeline-label">{item.label}</span>
-                    <code>#{item.sequence || "pre"}</code>
-                    <span className="timeline-cost">
-                      {item.cost_usd > 0 ? formatUsd(item.cost_usd) : item.source}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <div className="timeline-empty">No causal events captured yet.</div>
-          )}
-        </section>
-
-        <EvidenceForms evidence={evidence} />
-      </section>
-
-      <footer className="workspace-footer">
-        <span>
-          <Sparkles size={13} aria-hidden="true" />
-          {session?.legacy ? "Legacy gateway source" : "Launcher registry source"}
-        </span>
-        <span>
-          {live.followingLive ? "Live prefix" : `Historical prefix through #${live.selectedSequence}`}
-        </span>
-      </footer>
+        {labelled.map((marker) => (
+          <span
+            className="tlab"
+            key={`label-${marker.key}`}
+            style={{ left: `${pos(marker.sequence)}%` }}
+          >
+            {marker.kind === "room"
+              ? "room"
+              : marker.kind === "milestone"
+                ? "level up"
+                : "combat"}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
 
-function evidenceFor(
-  snapshot: SessionEvidence["snapshot"],
-  selectedKind: string | undefined,
-  selectedData: Record<string, unknown> | undefined,
-): WorkspaceFixture["evidence"] {
-  const selected = selectedData === undefined
-    ? "No event is selected."
-    : JSON.stringify(selectedData, null, 2);
-  return {
-    wire: {
-      state: selectedKind === "wire" ? "available" : "missing",
-      preview: selectedKind === "wire"
-        ? selected
-        : "Select a wire event to inspect its captured frame metadata.",
-    },
-    parsed: {
-      state: snapshot?.current_room ? "available" : "missing",
-      preview: snapshot?.current_room
-        ? `room=${snapshot.current_room} · confidence=${snapshot.position_confidence} · method=${snapshot.position_method ?? "not captured"}`
-        : "No parsed position exists in this prefix.",
-    },
-    rendered: {
-      state: snapshot ? "available" : "missing",
-      preview: snapshot
-        ? `${snapshot.rooms.length} observed spatial identities · ${snapshot.timeline.length} causal items`
-        : "No live projection is available.",
-    },
-    believed: {
-      state: "missing",
-      preview: "No agent belief record is linked to the selected event.",
-    },
-    truth: {
-      state: "missing",
-      preview: "Observer truth is not configured for this live session.",
-    },
-  };
-}
+const MAP_MODES: { id: MapMode; label: string }[] = [
+  { id: "grow", label: "Grow" },
+  { id: "focus", label: "Focus" },
+  { id: "lantern", label: "Lantern" },
+];
 
-function connectionLabel(value: SessionEvidence["connection"]): string {
-  return {
-    discovering: "Discovering sessions",
-    waiting: "Waiting for evidence",
-    streaming: "Streaming",
-    paused: "Viewing history",
-    replaying: "Reconstructing",
-    ended: "Recorded session",
-    unavailable: "Unavailable",
-  }[value];
-}
+/** Small worlds render whole (Grow); Focus becomes the default once the
+ *  learned graph is large enough to crowd (map_modes.html: "crowds fast:
+ *  40+ rooms"). Explicit user choice always wins. */
+const FOCUS_AUTO_THRESHOLD = 12;
 
-function captureGapTitle(value: string): string {
-  return {
-    agent_events_missing: "Agent events were not captured",
-    agent_events_incomplete: "Agent event stream is incomplete",
-    gateway_events_missing: "Gateway events were not captured",
-    position_not_observed: "Position has not been observed",
-  }[value] ?? value.replaceAll("_", " ");
-}
+export function LiveCockpit({ live, session, onOpenControl, onOpenSearch }: Props) {
+  const [chosenMode, setChosenMode] = useState<MapMode | null>(null);
+  const [camera, setCamera] = useState<CameraMode>("follow");
+  const [zoom, setZoom] = useState(1);
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(
+    () => new URL(window.location.href).searchParams.get("room"),
+  );
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  const snapshot = live.snapshot;
+  const mode: MapMode = chosenMode
+    ?? ((snapshot?.world.nodes.length ?? 0) > FOCUS_AUTO_THRESHOLD
+      ? "focus"
+      : "grow");
+  const emptyMessage = snapshot === null
+    ? CONNECTION_MESSAGES[live.connection]
+      ?? (live.error ?? "No live evidence is available yet.")
+    : null;
 
-function captureGapDetail(value: string): string {
-  if (value.startsWith("agent_events")) {
-    return "Gateway activity remains visible, but objective, reasoning, tokens, and model cost cannot be reconstructed.";
+  if (snapshot === null) {
+    return (
+      <div aria-label="Live cockpit" className="live-cockpit" role="region">
+        <div className="body">
+          <div className="stage">
+            <div className="stage-empty" role="status">{emptyMessage}</div>
+          </div>
+        </div>
+      </div>
+    );
   }
-  if (value === "gateway_events_missing") {
-    return "The agent record may exist, but no game or parser evidence can be shown.";
-  }
-  return "The map remains empty until a traceable room or position observation arrives.";
-}
+  const controlAvailable = session?.control_available === true;
 
-function timelineKind(kind: string): string {
-  if (kind.includes("tool") || kind === "command") {
-    return "tool";
-  }
-  if (kind.includes("observation") || kind === "position") {
-    return "observation";
-  }
-  if (kind.includes("diagnostic") || kind.includes("limit")) {
-    return "diagnostic";
-  }
-  return "model";
-}
+  const observedRooms = snapshot.world.nodes.filter(
+    (node) => node.state !== "candidate",
+  ).length;
+  const candidateRooms = snapshot.world.nodes.length - observedRooms;
+  const milestone = snapshot.milestones
+    .filter((item) => item.sequence <= snapshot.through_sequence)
+    .at(-1);
+  const milestoneRecent = milestone !== undefined
+    && snapshot.through_sequence - milestone.sequence < 100;
+  const thought = snapshot.agent_thought;
+  const episode = snapshot.combat_episode;
 
-function formatTime(value: number): string {
-  return new Date(value * 1_000).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-}
+  return (
+    <div aria-label="Live cockpit" className="live-cockpit" role="region">
+      <div className="body">
+        <div className="stage">
+          <div className="stagehead">
+            <span className="chip">
+              Turn <b>{snapshot.turn ?? "not observed"}</b>
+              {" / iteration "}
+              <b>{snapshot.iteration}</b>
+            </span>
+            <span className="chip">
+              Zone <b>{snapshot.zone?.label ?? "unknown"}</b>
+            </span>
+            <span className="chip">
+              Learned world <b>{observedRooms} rooms</b>
+              {snapshot.world.frontier.length > 0
+                ? ` · ${snapshot.world.frontier.length} frontier`
+                : ""}
+            </span>
+            {snapshot.capture_gaps.length > 0 ? (
+              <span
+                className="chip gap"
+                role="status"
+                title={snapshot.capture_gaps.join(" · ")}
+              >
+                capture gaps <b>{snapshot.capture_gaps.length}</b>
+              </span>
+            ) : null}
+          </div>
+          <div className="stagetools">
+            <div aria-label="Camera" className="toolbar" role="group">
+              <small className="toolbar-label">Camera</small>
+              <button
+                className={camera === "follow" ? "on" : undefined}
+                title="Follow agent"
+                type="button"
+                onClick={() => setCamera("follow")}
+              >
+                ⌖ Follow agent
+              </button>
+              <button
+                className={camera === "center" ? "on" : undefined}
+                title="Center the map on a clicked room"
+                type="button"
+                onClick={() => setCamera("center")}
+              >
+                ✛ Click-to-center
+              </button>
+            </div>
+            <div aria-label="Map mode" className="toolbar" role="group">
+              {MAP_MODES.map((item) => (
+                <button
+                  className={mode === item.id ? "on" : undefined}
+                  key={item.id}
+                  type="button"
+                  onClick={() => setChosenMode(item.id)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+            <button
+              aria-label="Zoom in"
+              className="tool"
+              title="Zoom in"
+              type="button"
+              onClick={() => setZoom((value) => Math.min(2, value * 1.25))}
+            >
+              +
+            </button>
+            <button
+              aria-label="Zoom out"
+              className="tool"
+              title="Zoom out"
+              type="button"
+              onClick={() => setZoom((value) => Math.max(0.5, value / 1.25))}
+            >
+              −
+            </button>
+            <button
+              aria-label="Ask about this session"
+              className="tool ask"
+              title="Ask about this session (⌘K)"
+              type="button"
+              onClick={onOpenSearch}
+            >
+              Ask
+            </button>
+          </div>
 
-function formatAge(milliseconds: number): string {
-  if (milliseconds < 1_000) {
-    return `${Math.round(milliseconds)} ms`;
-  }
-  if (milliseconds < 60_000) {
-    return `${Math.round(milliseconds / 1_000)} s`;
-  }
-  return `${Math.round(milliseconds / 60_000)} min`;
-}
+          {milestone && milestoneRecent ? (
+            <div className="toast" role="status">
+              ▲ LEVEL UP: now level {milestone.current}
+            </div>
+          ) : null}
 
-function formatUsd(value: number | undefined): string {
-  return value === undefined ? "not captured" : `$${value.toFixed(4)}`;
-}
+          <LiveStage
+            camera={camera}
+            zoom={zoom}
+            expanded={expanded}
+            mode={mode}
+            selectedRoomId={selectedRoomId}
+            snapshot={snapshot}
+            thought={thought}
+            onOpenEvidence={(node) => {
+              const url = new URL(window.location.href);
+              url.searchParams.set("room", node.id);
+              url.searchParams.set("seq", String(node.last_seq));
+              window.history.replaceState(null, "", url);
+              onOpenSearch();
+            }}
+            onSelectRoom={(roomId) => {
+              setSelectedRoomId(roomId);
+              const url = new URL(window.location.href);
+              if (roomId) url.searchParams.set("room", roomId);
+              else url.searchParams.delete("room");
+              window.history.replaceState(null, "", url);
+            }}
+            onToggleExpand={(boundaryId) => {
+              setExpanded((previous) => {
+                const next = new Set(previous);
+                if (next.has(boundaryId)) next.delete(boundaryId);
+                else next.add(boundaryId);
+                return next;
+              });
+            }}
+          />
 
-function formatCount(value: number): string {
-  return value >= 1_000 ? `${(value / 1_000).toFixed(1)}k` : String(value);
-}
+          {episode && (episode.active || episode.outcome !== null) ? (
+            <div className="combat">
+              <div className="ch">
+                <span aria-hidden="true" className="ic">⚔</span>
+                <div>
+                  <b>
+                    {episode.active
+                      ? episode.opponent === null
+                        ? "In combat"
+                        : `In combat: ${episode.opponent}`
+                      : episode.outcome === "victory"
+                        ? `Victory${episode.opponent ? `: ${episode.opponent}` : ""}`
+                        : episode.outcome === "defeated"
+                          ? "Defeated"
+                          : episode.outcome === "fled"
+                            ? "Fled combat"
+                            : `Combat ${episode.outcome ?? "ended"}`}
+                  </b>
+                  <br />
+                  <small>
+                    exchange {episode.observed_exchanges}
+                    {episode.first_observed_turn === null
+                      ? ""
+                      : ` · since turn ${episode.first_observed_turn}`}
+                  </small>
+                </div>
+              </div>
+              <div className="lines mono">
+                {episode.lines.length === 0 ? (
+                  <span className="hit">combat lines not captured</span>
+                ) : (
+                  episode.lines.slice(-4).map((line) => (
+                    <span
+                      className={combatLineClass(line.text)}
+                      key={line.sequence}
+                    >
+                      {line.text}
+                    </span>
+                  ))
+                )}
+              </div>
+            </div>
+          ) : null}
 
-function shortId(value: string): string {
-  return value.length > 12 ? `${value.slice(0, 8)}…` : value;
+          <div className="legend">
+            <h5>Legend</h5>
+            <div className="row">
+              <span className="sw" style={{ background: "#1c3350", border: "1px solid #2f5680" }} />
+              Visited room
+            </div>
+            <div className="row">
+              <span className="sw" style={{ background: "#3a1620", border: "1px solid #ff5d6c" }} />
+              Current · combat
+            </div>
+            <div className="row">
+              <span className="sw" style={{ background: "none", border: "1px dashed #26374b" }} />
+              Frontier (unexplored)
+            </div>
+            <div className="row">
+              <span className="sw" style={{ background: "none", border: "1px dashed #6a5a2a" }} />
+              Ambiguous (dup title)
+            </div>
+            <div className="row">
+              <span className="sw" style={{ background: "#ff5d6c", borderRadius: "50%" }} />
+              Mob sighting
+            </div>
+          </div>
+
+          <div className="hint">
+            Click any room, event, or cost point to open its evidence: summary → wire.
+          </div>
+        </div>
+
+        <Rail
+          controlAvailable={controlAvailable}
+          snapshot={snapshot}
+          onOpenControl={onOpenControl}
+        />
+      </div>
+
+      <Spine snapshot={snapshot} onOpenSearch={onOpenSearch} />
+    </div>
+  );
 }

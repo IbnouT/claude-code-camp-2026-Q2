@@ -2,14 +2,19 @@ import {
   Activity,
   BookOpen,
   ChevronDown,
+  CircleStop,
   Download,
+  DoorOpen,
   FlaskConical,
   Moon,
   Sun,
   Telescope,
-  Users,
 } from "lucide-react";
-import { useRef } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import type {
   SelectorOption,
   Space,
@@ -23,7 +28,10 @@ type Props = {
   selectedSession: string;
   sessions: SelectorOption[];
   theme: Theme;
+  canStopSession: boolean;
+  onLeaveLive: () => void;
   onPlayerChange: (player: string) => void;
+  onRequestStop: () => void;
   onSessionChange: (session: string) => void;
   onSpaceChange: (space: Space) => void;
   onThemeChange: (theme: Theme) => void;
@@ -48,15 +56,45 @@ export function CanonicalHeader({
   selectedSession,
   sessions,
   theme,
+  canStopSession,
+  onLeaveLive,
   onPlayerChange,
+  onRequestStop,
   onSessionChange,
   onSpaceChange,
   onThemeChange,
   onLoadEvidence,
 }: Props) {
   const evidenceInput = useRef<HTMLInputElement>(null);
+  const sessionMenu = useRef<HTMLDivElement>(null);
+  const [sessionMenuOpen, setSessionMenuOpen] = useState(false);
   const sessionApplies = activeSpace === "live" || activeSpace === "sessions";
-  const loadApplies = activeSpace === "sessions";
+  const loadApplies = activeSpace === "sessions" || activeSpace === "live";
+  const selectedSessionLabel = sessions.find(
+    (session) => session.id === selectedSession,
+  )?.label ?? sessions[0]?.label ?? "No sessions";
+
+  useEffect(() => {
+    if (!sessionMenuOpen) return;
+    const close = (event: KeyboardEvent | PointerEvent) => {
+      if (event instanceof KeyboardEvent && event.key === "Escape") {
+        setSessionMenuOpen(false);
+        return;
+      }
+      if (
+        event instanceof PointerEvent
+        && !sessionMenu.current?.contains(event.target as Node)
+      ) {
+        setSessionMenuOpen(false);
+      }
+    };
+    window.addEventListener("keydown", close);
+    window.addEventListener("pointerdown", close);
+    return () => {
+      window.removeEventListener("keydown", close);
+      window.removeEventListener("pointerdown", close);
+    };
+  }, [sessionMenuOpen]);
 
   return (
     <header className="canonical-header">
@@ -87,8 +125,7 @@ export function CanonicalHeader({
 
       <div className="header-context">
         <label className="context-select">
-          <Users size={14} aria-hidden="true" />
-          <span className="sr-only">Player</span>
+          <small>Player</small>
           <select
             aria-label="Player"
             value={selectedPlayer}
@@ -104,22 +141,82 @@ export function CanonicalHeader({
         </label>
 
         {sessionApplies ? (
-          <label className="context-select session-select">
-            <span className="connection-dot" aria-hidden="true" />
-            <span className="sr-only">Session</span>
-            <select
+          <div className="session-context" ref={sessionMenu}>
+            <button
+              aria-expanded={sessionMenuOpen}
+              aria-haspopup="menu"
               aria-label="Session"
-              value={selectedSession}
-              onChange={(event) => onSessionChange(event.target.value)}
+              className="context-select session-select session-menu-trigger"
+              type="button"
+              onClick={() => setSessionMenuOpen((open) => !open)}
             >
-              {sessions.map((session) => (
-                <option key={session.id} value={session.id}>
-                  {session.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown size={13} aria-hidden="true" />
-          </label>
+              <small>Session</small>
+              <span>{selectedSessionLabel}</span>
+              <ChevronDown size={13} aria-hidden="true" />
+            </button>
+            {sessionMenuOpen ? (
+              <div
+                aria-label="Session menu"
+                className="session-menu"
+                role="menu"
+              >
+                {sessions.map((session) => (
+                  <button
+                    aria-current={
+                      session.id === selectedSession ? "true" : undefined
+                    }
+                    disabled={!session.id}
+                    key={session.id || "empty"}
+                    role="menuitem"
+                    type="button"
+                    onClick={() => {
+                      onSessionChange(session.id);
+                      setSessionMenuOpen(false);
+                    }}
+                  >
+                    <strong>{session.label}</strong>
+                    <small>{session.detail}</small>
+                  </button>
+                ))}
+                {activeSpace === "live" ? (
+                  <>
+                    <div className="session-menu-separator" />
+                    <button
+                      role="menuitem"
+                      type="button"
+                      onClick={() => {
+                        setSessionMenuOpen(false);
+                        onLeaveLive();
+                      }}
+                    >
+                      <DoorOpen size={14} aria-hidden="true" />
+                      <span>
+                        <strong>Leave Live view</strong>
+                        <small>The agent keeps running</small>
+                      </span>
+                    </button>
+                    {canStopSession ? (
+                      <button
+                        className="session-stop-action"
+                        role="menuitem"
+                        type="button"
+                        onClick={() => {
+                          setSessionMenuOpen(false);
+                          onRequestStop();
+                        }}
+                      >
+                        <CircleStop size={14} aria-hidden="true" />
+                        <span>
+                          <strong>Stop session…</strong>
+                          <small>End the agent and game connection</small>
+                        </span>
+                      </button>
+                    ) : null}
+                  </>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         ) : null}
 
         {loadApplies ? (

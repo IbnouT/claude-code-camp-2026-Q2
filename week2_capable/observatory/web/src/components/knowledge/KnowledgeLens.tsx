@@ -12,9 +12,11 @@ import { StateBadge } from "../system/StateBadge";
 import { AssertionList } from "./AssertionList";
 import { KnowledgeEntitiesLens } from "./KnowledgeEntitiesLens";
 import { KnowledgeMapLens } from "./KnowledgeMapLens";
+import { KnowledgeMilestonesLens } from "./KnowledgeMilestonesLens";
 import { KnowledgeProgressionLens } from "./KnowledgeProgressionLens";
 import {
   formatKnowledgeTime,
+  isMilestoneAssertion,
   type KnowledgeLensId,
 } from "./knowledgeModel";
 
@@ -176,10 +178,22 @@ export function KnowledgeLens({
       />
     );
   }
+  if (lens === "milestones") {
+    return (
+      <KnowledgeMilestonesLens
+        assertions={assertions.filter(isMilestoneAssertion)}
+        onSelect={onSelect}
+      />
+    );
+  }
   return (
     <KnowledgeProgressionLens
       assertions={assertions.filter(
-        (item) => !isMapAssertion(item) && !isEntityAssertion(item),
+        (item) => (
+          !isMapAssertion(item)
+          && !isEntityAssertion(item)
+          && !isMilestoneAssertion(item)
+        ),
       )}
       onSelect={onSelect}
     />

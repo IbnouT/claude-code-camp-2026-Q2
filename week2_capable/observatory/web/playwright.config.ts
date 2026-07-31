@@ -29,7 +29,7 @@ export default defineConfig({
   webServer: {
     command: "cd .. && uv run boukensha-observatory --port 8791",
     url: "http://127.0.0.1:8791/api/health",
-    reuseExistingServer: true,
+    reuseExistingServer: false,
     timeout: 30_000,
   },
 });
