@@ -132,6 +132,10 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
 - Frontier marks become trustworthy when they are projected from retained
   exits after room identity is canonicalized. Drawing first and deduplicating
   later can make one learned doorway appear as several unknown paths.
+- A map presentation and its camera answer different questions. Focus decides
+  which evidence deserves emphasis, while Follow, Manual, and Fit decide where
+  the investigator looks. Treating them as one mode makes selection, drag, and
+  snapshot refreshes fight over the same state.
 
 ## Technical Conclusions
 

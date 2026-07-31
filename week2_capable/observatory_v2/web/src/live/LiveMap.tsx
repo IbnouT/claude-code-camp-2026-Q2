@@ -11,18 +11,33 @@ import type { LiveRouteIdentity } from "../routes";
 import {
   buildMapGraph,
   canonicalNodeId,
-  centerMapViewport,
-  initialMapCamera,
   mapDragScale,
   mapRoomHeight,
   mapRoomWidth,
   type MapConnection,
   type MapPoint,
-  type MapViewport,
 } from "./mapModel";
+import {
+  mapContentExtent,
+  resolveMapViewport,
+  viewportCenter,
+} from "./mapCamera";
+import { LiveMapBoundary } from "./LiveMapBoundary";
 import { LiveMapFrontier } from "./LiveMapFrontier";
 import { LiveMapRoom } from "./LiveMapRoom";
+import { LiveMapToolbar } from "./LiveMapToolbar";
 import { projectMapEvidence } from "./markerProjection";
+import {
+  automaticMapMode,
+  changeMapZoom,
+  lanternOpacity,
+  maximumMapZoom,
+  minimumMapZoom,
+  projectMapPresentation,
+  transitionMapCamera,
+  type MapCameraMode,
+  type MapMode,
+} from "./mapPresentation";
 import {
   selectedRoomFromLocation,
   syncSelectedRoomToLocation,
@@ -48,6 +63,12 @@ export function LiveMap({ identity }: Props) {
   );
   const [frame, setFrame] = useState(defaultFrame);
   const [panCenter, setPanCenter] = useState<MapPoint | null>(null);
+  const [cameraMode, setCameraMode] = useState<MapCameraMode>("follow");
+  const [chosenMode, setChosenMode] = useState<MapMode | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [expandedRoomIds, setExpandedRoomIds] = useState<ReadonlySet<string>>(
+    new Set(),
+  );
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(
     selectedRoomFromLocation,
   );
@@ -109,6 +130,53 @@ export function LiveMap({ identity }: Props) {
       graph.rooms,
     );
   }, [graph.rooms, snapshot]);
+  const mode = automaticMapMode(graph.rooms.length, chosenMode);
+  const presentation = useMemo(() => {
+    return projectMapPresentation(
+      graph,
+      mode,
+      selectedRoomId,
+      expandedRoomIds,
+    );
+  }, [expandedRoomIds, graph, mode, selectedRoomId]);
+  const markerPoints = useMemo(() => {
+    return evidenceMarkers.frontiers.map(({ source, end }) => ({
+      source,
+      point: end,
+    }));
+  }, [evidenceMarkers.frontiers]);
+  const completeRoomIds = useMemo(() => {
+    return new Set(graph.rooms.map(({ node }) => node.id));
+  }, [graph.rooms]);
+  const completeExtent = useMemo(() => {
+    return mapContentExtent(graph, completeRoomIds, markerPoints);
+  }, [completeRoomIds, graph, markerPoints]);
+  const activeExtent = useMemo(() => {
+    return mapContentExtent(
+      graph,
+      presentation.visibleRoomIds,
+      markerPoints,
+    );
+  }, [graph, markerPoints, presentation.visibleRoomIds]);
+  const fitExtent = useMemo(() => {
+    if (
+      selectedRoomId === null
+      || presentation.selectionPathRoomIds.length === 0
+    ) {
+      return activeExtent;
+    }
+    return mapContentExtent(
+      graph,
+      new Set(presentation.selectionPathRoomIds),
+      markerPoints,
+    );
+  }, [
+    activeExtent,
+    graph,
+    markerPoints,
+    presentation.selectionPathRoomIds,
+    selectedRoomId,
+  ]);
   const beaconRoomIds = useMemo(() => {
     const rawNodes = new Map(
       (snapshot?.world.nodes ?? []).map((node) => [node.id, node]),
@@ -152,6 +220,10 @@ export function LiveMap({ identity }: Props) {
 
   useEffect(() => {
     setPanCenter(null);
+    setCameraMode("follow");
+    setChosenMode(null);
+    setZoom(1);
+    setExpandedRoomIds(new Set());
     setSelectedRoomId(selectedRoomFromLocation());
   }, [identity.sessionId]);
 
@@ -176,10 +248,31 @@ export function LiveMap({ identity }: Props) {
   const roomById = new Map(
     graph.rooms.map((room) => [room.node.id, room.point]),
   );
-  const camera = initialMapCamera(graph, frame.width, frame.height);
-  const viewport = panCenter === null
-    ? camera.viewport
-    : centerMapViewport(graph, camera.viewport, panCenter);
+  const camera = resolveMapViewport({
+    activeExtent,
+    camera: cameraMode,
+    completeExtent,
+    fitExtent,
+    fitOnFollow: mode === "grow",
+    frame,
+    graph,
+    manualCenter: panCenter,
+    zoom,
+  });
+  const viewport = camera.viewport;
+  const currentPoint = graph.currentRoomId === null
+    ? undefined
+    : roomById.get(graph.currentRoomId);
+  const roomOpacity = (roomId: string): number => {
+    if (
+      mode !== "lantern"
+      || roomId === graph.currentRoomId
+      || roomId === selectedRoomId
+    ) {
+      return 1;
+    }
+    return lanternOpacity(graph, roomId);
+  };
   const handlePointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
     if (!camera.panning) return;
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -203,8 +296,15 @@ export function LiveMap({ identity }: Props) {
     }
     const bounds = svg.getBoundingClientRect();
     if (bounds.width <= 0 || bounds.height <= 0) return;
-    const horizontalScale = mapDragScale(graph.width, viewport.width);
-    const verticalScale = mapDragScale(graph.height, viewport.height);
+    const horizontalScale = mapDragScale(
+      completeExtent.width,
+      viewport.width,
+    );
+    const verticalScale = mapDragScale(
+      completeExtent.height,
+      viewport.height,
+    );
+    setCameraMode((current) => transitionMapCamera(current, "drag"));
     setPanCenter({
       x: drag.center.x
         - (event.clientX - drag.clientX)
@@ -224,8 +324,43 @@ export function LiveMap({ identity }: Props) {
     setDragging(false);
     event.currentTarget.releasePointerCapture(event.pointerId);
   };
+  const handleCameraChange = (next: "follow" | "fit") => {
+    setCameraMode((current) => transitionMapCamera(current, next));
+    if (next === "follow") setPanCenter(null);
+  };
+  const handleModeChange = (next: MapMode) => {
+    setChosenMode(next);
+  };
+  const handleZoom = (direction: "in" | "out") => {
+    setZoom((current) => changeMapZoom(current, direction));
+  };
+  const handleToggleBoundary = (roomId: string) => {
+    setExpandedRoomIds((current) => {
+      const next = new Set(current);
+      if (next.has(roomId)) next.delete(roomId);
+      else next.add(roomId);
+      return next;
+    });
+  };
   return (
-    <section className="live-map-stage" aria-label="Learned world map">
+    <section
+      className={[
+        "live-map-stage",
+        mode === "lantern" ? "is-lantern" : "",
+      ].filter(Boolean).join(" ")}
+      aria-label="Learned world map"
+    >
+      <LiveMapToolbar
+        camera={cameraMode}
+        mode={mode}
+        selectedRoomId={selectedRoomId}
+        zoom={zoom}
+        minimumZoom={minimumMapZoom}
+        maximumZoom={maximumMapZoom}
+        onCameraChange={handleCameraChange}
+        onModeChange={handleModeChange}
+        onZoom={handleZoom}
+      />
       <svg
         className={[
           "live-map",
@@ -250,40 +385,107 @@ export function LiveMap({ identity }: Props) {
             <stop offset="0%" stopColor="#4fd6c9" stopOpacity=".55" />
             <stop offset="100%" stopColor="#4fd6c9" stopOpacity="0" />
           </radialGradient>
+          {mode === "lantern" && currentPoint !== undefined ? (
+            <radialGradient
+              id="live-map-lantern-gradient"
+              cx={currentPoint.x + mapRoomWidth / 2}
+              cy={currentPoint.y + mapRoomHeight / 2}
+              gradientUnits="userSpaceOnUse"
+              r="280"
+            >
+              <stop
+                className="live-map-lantern-center"
+                offset="0%"
+              />
+              <stop
+                className="live-map-lantern-edge"
+                offset="100%"
+              />
+            </radialGradient>
+          ) : null}
         </defs>
+        {mode === "lantern" && currentPoint !== undefined ? (
+          <rect
+            className="live-map-lantern-field"
+            fill="url(#live-map-lantern-gradient)"
+            height={viewport.height}
+            pointerEvents="none"
+            width={viewport.width}
+            x={viewport.x}
+            y={viewport.y}
+          />
+        ) : null}
         <g className="live-map-connections">
-          {graph.connections.map((connection) => (
-            <MapLink
-              key={connection.id}
-              connection={connection}
-              source={roomById.get(connection.source)}
-              target={roomById.get(connection.target)}
-            />
-          ))}
+          {graph.connections.flatMap((connection) => {
+            if (!presentation.visibleConnectionIds.has(connection.id)) {
+              return [];
+            }
+            return [(
+              <MapLink
+                key={connection.id}
+                connection={connection}
+                source={roomById.get(connection.source)}
+                target={roomById.get(connection.target)}
+                opacity={Math.max(
+                  roomOpacity(connection.source),
+                  roomOpacity(connection.target),
+                )}
+              />
+            )];
+          })}
         </g>
         <g className="live-map-frontiers">
-          {evidenceMarkers.frontiers.map((marker) => (
-            <LiveMapFrontier key={marker.id} marker={marker} />
-          ))}
+          {evidenceMarkers.frontiers.flatMap((marker) => {
+            if (!presentation.visibleRoomIds.has(marker.source)) return [];
+            return [(
+              <g key={marker.id} opacity={roomOpacity(marker.source)}>
+                <LiveMapFrontier marker={marker} />
+              </g>
+            )];
+          })}
         </g>
         <g className="live-map-rooms">
-          {graph.rooms.map(({ node, point }) => (
-            <LiveMapRoom
-              key={node.id}
-              node={node}
-              point={point}
-              current={node.id === graph.currentRoomId}
-              selected={node.id === selectedRoomId}
-              combat={Boolean(
-                snapshot.combat && node.id === graph.currentRoomId,
-              )}
-              beacon={beaconRoomIds.has(node.id)}
-              verticalMarkers={
-                evidenceMarkers.verticalByRoom.get(node.id) ?? []
-              }
-              onSelect={handleSelectRoom}
-            />
-          ))}
+          {graph.rooms.flatMap(({ node, point }) => {
+            if (!presentation.visibleRoomIds.has(node.id)) return [];
+            return [(
+              <g key={node.id} opacity={roomOpacity(node.id)}>
+                <LiveMapRoom
+                  node={node}
+                  point={point}
+                  current={node.id === graph.currentRoomId}
+                  selected={node.id === selectedRoomId}
+                  combat={Boolean(
+                    snapshot.combat && node.id === graph.currentRoomId,
+                  )}
+                  beacon={beaconRoomIds.has(node.id)}
+                  verticalMarkers={
+                    evidenceMarkers.verticalByRoom.get(node.id) ?? []
+                  }
+                  onSelect={handleSelectRoom}
+                />
+              </g>
+            )];
+          })}
+        </g>
+        <g className="live-map-boundaries">
+          {mode === "focus" && currentPoint !== undefined
+            ? presentation.boundaries.flatMap((boundary) => {
+              const room = graph.rooms.find(({ node }) => {
+                return node.id === boundary.roomId;
+              });
+              if (room === undefined) return [];
+              return [(
+                <LiveMapBoundary
+                  key={boundary.roomId}
+                  boundary={boundary}
+                  currentPoint={currentPoint}
+                  point={room.point}
+                  roomTitle={room.node.title}
+                  onToggle={handleToggleBoundary}
+                />
+              )];
+            })
+            : null}
         </g>
       </svg>
       {camera.panning ? (
@@ -300,10 +502,12 @@ export function LiveMap({ identity }: Props) {
 
 function MapLink({
   connection,
+  opacity,
   source,
   target,
 }: {
   connection: MapConnection;
+  opacity: number;
   source: MapPoint | undefined;
   target: MapPoint | undefined;
 }) {
@@ -328,7 +532,7 @@ function MapLink({
     connection.vertical ? "is-vertical" : "",
   ].filter(Boolean).join(" ");
   return (
-    <g className={className}>
+    <g className={className} opacity={opacity}>
       <path d={path} />
     </g>
   );
@@ -343,13 +547,6 @@ function bentPath(source: MapPoint, target: MapPoint): string {
   const controlX = middleX - (deltaY / length) * 34;
   const controlY = middleY + (deltaX / length) * 34;
   return `M ${source.x} ${source.y} Q ${controlX} ${controlY} ${target.x} ${target.y}`;
-}
-
-function viewportCenter(viewport: MapViewport): MapPoint {
-  return {
-    x: viewport.x + viewport.width / 2,
-    y: viewport.y + viewport.height / 2,
-  };
 }
 
 function isSnapshot(value: unknown): value is Snapshot {

@@ -192,6 +192,38 @@ describe("Live shell", () => {
     })).toBeInTheDocument();
   });
 
+  it("mounts the map camera and presentation controls", async () => {
+    const user = userEvent.setup();
+    render(<LiveShell identity={identity} />);
+
+    await screen.findByRole("img", {
+      name: "Learned world, 2 rooms",
+    });
+    expect(screen.getByRole("button", {
+      name: "Follow",
+    })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", {
+      name: "Grow",
+    })).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(screen.getByRole("button", {
+      name: "Fit map",
+    }));
+    expect(screen.getByRole("button", {
+      name: "Fit map",
+    })).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(screen.getByRole("button", {
+      name: "Lantern",
+    }));
+    expect(screen.getByRole("button", {
+      name: "Lantern",
+    })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("region", {
+      name: "Learned world map",
+    })).toHaveClass("is-lantern");
+  });
+
   it("offers recent sessions and one destination for each other player", async () => {
     const recorded = runtimeSession({
       id: "poucet-recording",
