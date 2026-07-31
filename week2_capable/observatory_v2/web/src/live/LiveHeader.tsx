@@ -3,6 +3,7 @@ import {
   BookOpen,
   FlaskConical,
   Moon,
+  MessageSquareText,
   Search,
   Sun,
   Telescope,
@@ -22,6 +23,8 @@ type Props = {
   theme: Theme;
   onAsk: () => void;
   onLeave: () => void;
+  onMessage: () => void;
+  messageAvailable: boolean;
   onNavigate: (href: string) => void;
   onRequestStop: () => void;
   onThemeChange: (theme: Theme) => void;
@@ -41,6 +44,8 @@ export function LiveHeader({
   theme,
   onAsk,
   onLeave,
+  onMessage,
+  messageAvailable,
   onNavigate,
   onRequestStop,
   onThemeChange,
@@ -94,6 +99,17 @@ export function LiveHeader({
           <Search size={14} aria-hidden="true" />
           <span>Ask about this session</span>
           <kbd>⌘K</kbd>
+        </button>
+
+        <button
+          className="live-header-action live-message-action"
+          disabled={!messageAvailable}
+          title={messageAvailable ? "Guide the running agent" : "Messaging requires a running, controllable session"}
+          type="button"
+          onClick={onMessage}
+        >
+          <MessageSquareText size={14} aria-hidden="true" />
+          <span>Message agent</span>
         </button>
 
         <button

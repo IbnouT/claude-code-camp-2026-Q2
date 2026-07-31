@@ -9,7 +9,11 @@ import { LiveAskDialog } from "./LiveAskDialog";
 import type { ContextState } from "./LiveContextSwitcher";
 import { LiveHeader } from "./LiveHeader";
 import { LiveMap } from "./LiveMap";
+import { LiveEvidenceRail } from "./LiveEvidenceRail";
+import { LiveObjectiveStrip } from "./LiveObjectiveStrip";
+import { MessageAgentDialog } from "./MessageAgentDialog";
 import { SessionStopDialog } from "./SessionStopDialog";
+import { useLiveSnapshot } from "./useLiveSnapshot";
 
 type Props = {
   identity: LiveRouteIdentity | null;
@@ -31,7 +35,18 @@ export function LiveShell({
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [catalogRevision, setCatalogRevision] = useState(0);
   const [stopOpen, setStopOpen] = useState(false);
+  const [messageOpen, setMessageOpen] = useState(false);
+  const [railOpen, setRailOpen] = useState(() => window.innerWidth > 700);
   const [contextState, setContextState] = useState<ContextState>("checking");
+  const { snapshot, state: snapshotState } = useLiveSnapshot(identity);
+  const selectedSession = identity === null ? undefined : catalog?.sessions.find(
+    (session) => session.id === identity.sessionId
+      && session.player_id === identity.playerId,
+  );
+  const messageAvailable = snapshot !== null
+    && snapshot.following_live
+    && contextState === "running"
+    && selectedSession?.control_available === true;
 
   useEffect(() => {
     if (identity === null) {
@@ -122,17 +137,34 @@ export function LiveShell({
         theme={theme}
         onAsk={() => setAskOpen(true)}
         onLeave={() => navigate("/")}
+        onMessage={() => setMessageOpen(true)}
+        messageAvailable={messageAvailable}
         onNavigate={navigate}
         onRequestStop={() => setStopOpen(true)}
         onThemeChange={onThemeChange}
       />
+      <LiveObjectiveStrip objective={snapshot?.objective_context ?? null} />
       <main className="live-workspace" aria-label="Live workspace">
-        {identity !== null ? <LiveMap identity={identity} /> : null}
+        {identity !== null ? (
+          <LiveMap identity={identity} snapshot={snapshot} state={snapshotState} />
+        ) : null}
         <aside
           aria-label="Live evidence rail"
-          className="live-layout-reserve live-evidence-rail"
+          className={[
+            "live-layout-reserve live-evidence-rail",
+            railOpen ? "is-open" : "is-closed",
+          ].join(" ")}
         >
-          <span>Evidence rail</span>
+          <button
+            aria-expanded={railOpen}
+            aria-label={railOpen ? "Close Live evidence" : "Open Live evidence"}
+            className="live-rail-toggle"
+            type="button"
+            onClick={() => setRailOpen((current) => !current)}
+          >
+            Evidence
+          </button>
+          <LiveEvidenceRail snapshot={snapshot} />
         </aside>
         <section
           aria-label="Causal timeline"
@@ -146,6 +178,13 @@ export function LiveShell({
           identity={identity}
           open
           onClose={() => setAskOpen(false)}
+        />
+      ) : null}
+      {messageOpen && identity !== null && snapshot !== null ? (
+        <MessageAgentDialog
+          expectedSequence={snapshot.latest_sequence}
+          identity={identity}
+          onClose={() => setMessageOpen(false)}
         />
       ) : null}
       {stopOpen && identity !== null ? (

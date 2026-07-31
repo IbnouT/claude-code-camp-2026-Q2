@@ -11,7 +11,6 @@ import type {
   PointerEvent as ReactPointerEvent,
 } from "react";
 import {
-  decodeSnapshot,
   type Snapshot,
 } from "../contracts";
 import type { LiveRouteIdentity } from "../routes";
@@ -46,6 +45,8 @@ import { LiveMapRoom } from "./LiveMapRoom";
 import { LiveMapToolbar } from "./LiveMapToolbar";
 import { LiveRoomInspector } from "./LiveRoomInspector";
 import { LiveThoughtDock } from "./LiveThoughtDock";
+import { LiveCombatPanel } from "./LiveCombatPanel";
+import type { LiveSnapshotState } from "./useLiveSnapshot";
 import { projectMapLegend } from "./mapLegend";
 import { projectMapEvidence } from "./markerProjection";
 import {
@@ -73,6 +74,8 @@ import {
 
 type Props = {
   identity: LiveRouteIdentity;
+  snapshot: Snapshot | null;
+  state: LiveSnapshotState;
 };
 
 const defaultFrame = { width: 1_600, height: 900 };
@@ -94,11 +97,7 @@ type DragState = {
   moved: boolean;
 };
 
-export function LiveMap({ identity }: Props) {
-  const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
-  const [state, setState] = useState<"loading" | "ready" | "reconnecting">(
-    "loading",
-  );
+export function LiveMap({ identity, snapshot, state }: Props) {
   const [frame, setFrame] = useState(defaultFrame);
   const [cameraView, setCameraView] = useState<MapCameraView>({
     center: { x: 0, y: 0 },
@@ -131,44 +130,6 @@ export function LiveMap({ identity }: Props) {
   const cameraViewRef = useRef(cameraView);
   const followInitializedRef = useRef(false);
   const previousCurrentRoomIdRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    let timer = 0;
-    const load = () => {
-      fetch(`/api/sessions/${encodeURIComponent(identity.sessionId)}/snapshot`, {
-        cache: "no-store",
-        signal: controller.signal,
-      })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`Snapshot unavailable (${response.status})`);
-          }
-          return response.json() as Promise<unknown>;
-        })
-        .then((value) => {
-          const nextSnapshot = decodeSnapshot(value);
-          setSnapshot(nextSnapshot);
-          setState("ready");
-        })
-        .catch((reason: unknown) => {
-          if (reason instanceof DOMException && reason.name === "AbortError") {
-            return;
-          }
-          setState("reconnecting");
-        })
-        .finally(() => {
-          if (!controller.signal.aborted) {
-            timer = window.setTimeout(load, 2_000);
-          }
-        });
-    };
-    load();
-    return () => {
-      controller.abort();
-      window.clearTimeout(timer);
-    };
-  }, [identity.sessionId]);
 
   const graph = useMemo(() => {
     return buildMapGraph(
@@ -964,6 +925,7 @@ export function LiveMap({ identity }: Props) {
           onClose={closeSelectedRoom}
         />
       )}
+      <LiveCombatPanel episode={snapshot.combat_episode} />
       {snapshot.agent_thought === null ? null : (
         <LiveThoughtDock
           expanded={thoughtExpanded}

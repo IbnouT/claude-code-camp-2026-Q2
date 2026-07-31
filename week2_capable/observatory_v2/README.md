@@ -14,6 +14,8 @@ flowchart LR
     W --> L["Launcher"]
     W --> V["Live"]
     V --> M["Learned-world map"]
+    V --> E["Live evidence rail"]
+    V --> C["Agent guidance"]
     M --> I["Room inspector"]
 ```
 
@@ -123,7 +125,10 @@ from typed runtime contracts.
 
 The Live shell keeps player, lifecycle state, and session identity in one
 context control. It provides theme, scoped Ask, valid lifecycle actions, and
-navigation without changing the selected evidence source.
+navigation without changing the selected evidence source. The objective strip,
+evidence rail, active-combat panel, and thought age expose retained state
+without claiming that a stale observation is current. Message agent inserts
+guidance at the next iteration boundary for a running, controllable session.
 
 ### Learned-world map
 
@@ -149,7 +154,7 @@ npm test
 npm run build
 ```
 
-The frontend suite contains 127 tests across 17 files. `npm run build` runs
+The frontend suite contains 137 tests across 19 files. `npm run build` runs
 strict TypeScript checking with `tsc --noEmit` before producing the Vite
 production bundle.
 

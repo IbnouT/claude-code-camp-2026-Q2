@@ -168,6 +168,9 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
   invents a journey. Control receipts must be traversal boundaries, otherwise
   an administrator moving a player looks exactly like the player discovering
   a path.
+- Live status is trustworthy only when each value keeps its own observation
+  clock. Prompt vitals, score maxima, tool calls, and response economics can
+  all be true at different moments.
 
 ## Technical Conclusions
 

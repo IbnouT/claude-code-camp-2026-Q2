@@ -3,6 +3,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import type { LiveAgentExcerpt } from "../contracts";
+import { formatAge } from "./liveEvidence";
 
 type Props = {
   expanded: boolean;
@@ -37,7 +38,7 @@ export function LiveThoughtDock({
         type="button"
         onClick={onToggle}
       >
-        <span>Agent · {phase}</span>
+        <span>Agent · {phase} · {formatAge(thought.observed_at)}</span>
         {expanded
           ? <ChevronDown aria-hidden="true" size={14} />
           : <ChevronUp aria-hidden="true" size={14} />}

@@ -61,7 +61,7 @@ describe("live map overlays", () => {
         onToggle={vi.fn()}
       />,
     );
-    expect(screen.getByText(`Agent · ${label}`)).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`Agent · ${label} ·`))).toBeInTheDocument();
   });
 
   it("exposes one labeled collapse control per dock", async () => {

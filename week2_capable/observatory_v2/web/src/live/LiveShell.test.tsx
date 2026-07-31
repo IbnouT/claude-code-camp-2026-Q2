@@ -257,6 +257,163 @@ describe("Live shell", () => {
           : catalogResponse(),
       );
     }));
+    vi.stubGlobal("crypto", {
+      randomUUID: () => "00000000-0000-4000-8000-000000000001",
+    });
+  });
+
+  it("renders the phase-one evidence from its typed sources", async () => {
+    const snapshot = runtimeSnapshot({
+      objective_context: {
+        title: "Find the Massive Minotaur",
+        clue: "Search beyond the temple.",
+        source_kind: "benchmark",
+        revision: 2,
+        evidence: "agent log line 2",
+      },
+      agent_belief: {
+        text: "Attacking a large kobold",
+        phase: "tool_call",
+        observed_at: new Date().toISOString(),
+        line: 724,
+        evidence: "agent log line 724",
+      },
+      vitals: { hit: 30, mana: 22, move: 49 },
+      player_status: {
+        fields: {
+          posture: { value: "standing", sequence: 30, observed_at: 1, confidence: "high", method: "score" },
+          max_hit: { value: 41, sequence: 30, observed_at: 1, confidence: "high", method: "score" },
+          max_mana: { value: 24, sequence: 30, observed_at: 1, confidence: "high", method: "score" },
+          max_move: { value: 50, sequence: 30, observed_at: 1, confidence: "high", method: "score" },
+          level: { value: 7, sequence: 30, observed_at: 1, confidence: "high", method: "score" },
+          gold: { value: 128, sequence: 30, observed_at: 1, confidence: "high", method: "score" },
+          hungry: { value: true, sequence: 30, observed_at: 1, confidence: "high", method: "score" },
+          thirsty: { value: false, sequence: 30, observed_at: 1, confidence: "high", method: "score" },
+        },
+        capture_gaps: ["poisoned"],
+      },
+      cost_usd: 0.18,
+      current_turn_cost_usd: 0.03,
+      spend_cap_usd: 0.2,
+      spend_cap_scope: "turn",
+      economics: [
+        { response: 1, at: "2026-07-31T04:00:00Z", cost_usd: 0.02, cumulative_cost_usd: 0.15, context_tokens: 50_000 },
+        { response: 2, at: "2026-07-31T04:01:00Z", cost_usd: 0.03, cumulative_cost_usd: 0.18, context_tokens: 100_000 },
+      ],
+      usage: { fresh_input: 600, cache_read: 300, cache_write: 100, output: 200 },
+      timeline: [{
+        id: "gateway:41",
+        sequence: 41,
+        at: 1,
+        source: "gateway",
+        kind: "command",
+        label: "Command: kill kobold",
+        cost_usd: 0,
+        tokens: 0,
+        trace_id: "trace-1",
+        quiet_cohort: null,
+      }],
+    });
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      return Promise.resolve(String(input).includes("/snapshot")
+        ? snapshotResponse(snapshot)
+        : catalogResponse());
+    });
+    render(<LiveShell identity={identity} />);
+
+    expect(await screen.findByRole("region", { name: "Current objective" }))
+      .toHaveTextContent("Find the Massive Minotaur");
+    const rail = screen.getByRole("complementary", { name: "Live evidence rail" });
+    expect(rail).toHaveTextContent("Latest tool action · now");
+    expect(rail).toHaveTextContent("Attacking a large kobold");
+    expect(rail).toHaveTextContent("kill kobold");
+    expect(rail).toHaveTextContent("30 / 41");
+    expect(rail).toHaveTextContent("Hungry");
+    expect(rail).toHaveTextContent("Not thirsty");
+    expect(rail).not.toHaveTextContent("poisoned");
+    expect(rail).toHaveTextContent("Turn spend");
+    expect(rail).toHaveTextContent("$0.030 / $0.200");
+    expect(rail).toHaveTextContent("Cost per response: last 20");
+    expect(rail).toHaveTextContent("1,000");
+    expect(rail).toHaveTextContent("30%");
+    expect(rail).toHaveTextContent("Latest response context");
+    expect(rail).toHaveTextContent("50%");
+  });
+
+  it("messages only the latest running agent sequence", async () => {
+    const user = userEvent.setup();
+    let body: unknown = null;
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/control")) {
+        body = JSON.parse(String(init?.body));
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            request_id: "00000000-0000-4000-8000-000000000001",
+            action: "guide",
+            state: "running",
+            insertion: "next iteration boundary",
+          }),
+        } as Response);
+      }
+      return Promise.resolve(url.includes("/snapshot")
+        ? snapshotResponse()
+        : catalogResponse());
+    });
+    render(<LiveShell identity={identity} />);
+
+    await user.click(await screen.findByRole("button", { name: "Message agent" }));
+    await user.type(screen.getByLabelText("Guidance for the next iteration boundary"), "Try the western exit");
+    await user.click(screen.getByRole("button", { name: "Send guidance" }));
+
+    expect(await screen.findByText("Guidance accepted")).toBeInTheDocument();
+    expect(body).toEqual({
+      request_id: "00000000-0000-4000-8000-000000000001",
+      action: "guide",
+      instruction: "Try the western exit",
+      expected_sequence: 42,
+    });
+  });
+
+  it("shows only evidence-backed active combat detail", async () => {
+    const snapshot = runtimeSnapshot({
+      combat: true,
+      combat_episode: {
+        active: true,
+        opponent: "a large kobold",
+        first_observed_turn: 46,
+        observed_exchanges: 4,
+        outcome: null,
+        command_trace: "trace-combat",
+        lines: [],
+        evidence: [40, 42],
+      },
+    });
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      return Promise.resolve(String(input).includes("/snapshot")
+        ? snapshotResponse(snapshot)
+        : catalogResponse());
+    });
+    render(<LiveShell identity={identity} />);
+
+    const combat = await screen.findByRole("complementary", { name: "Active combat" });
+    expect(combat).toHaveTextContent("a large kobold");
+    expect(combat).toHaveTextContent("turn 46");
+    expect(combat).toHaveTextContent("pending");
+    expect(combat).not.toHaveTextContent(/HP|exchange|unresolved/i);
+  });
+
+  it("keeps the evidence rail reachable on a narrow viewport", async () => {
+    vi.stubGlobal("innerWidth", 390);
+    const user = userEvent.setup();
+    render(<LiveShell identity={identity} />);
+
+    const rail = screen.getByRole("complementary", { name: "Live evidence rail" });
+    expect(rail).toHaveClass("is-closed");
+    await user.click(screen.getByRole("button", { name: "Open Live evidence" }));
+    expect(rail).toHaveClass("is-open");
+    expect(rail).toHaveTextContent("Live economics");
   });
 
   it("renders one verified context chip and the learned-world map", async () => {
