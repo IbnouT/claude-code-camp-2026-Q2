@@ -113,6 +113,19 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
   merge: the database is the one authoritative source and the projection is
   demoted to a labelled per-session lens, so a reader cannot mistake one for
   the other.
+- A stable live interface starts with a URL-backed identity and lifecycle
+  boundary. Building that shell before its data regions prevents an empty map
+  from looking authoritative and gives each later layer one explicit contract.
+- Visual continuity depends on carrying the established component treatment,
+  not merely its color tokens. Extra opacity or an eager responsive collapse
+  can change the hierarchy even when every underlying color is identical.
+- A session already owns its player, so presenting both as independent
+  selectors creates impossible combinations. One context switcher makes the
+  viewing identity atomic and gives each lifecycle state one valid action set.
+- A growing map needs separate world and camera coordinates. Re-normalizing
+  the whole drawing around new extrema moves every old room even when the
+  layout itself is deterministic. Fixed world coordinates let the camera
+  follow the agent without rewriting learned geography.
 
 ## Technical Conclusions
 

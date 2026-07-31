@@ -68,11 +68,9 @@
   .combat .lines .mono{display:block}
   .hit{color:var(--ink2)} .crit{color:var(--amber)} .dmgin{color:var(--rose)} .kill{color:var(--good);font-weight:600}
   /* thought callout */
-  .thought{position:absolute;z-index:6;max-width:250px;background:#0f1a24ee;border:1px solid #21384a;border-radius:12px;
-    padding:10px 12px;font-size:12.5px;color:var(--ink);line-height:1.5;box-shadow:0 12px 30px -14px #000}
+  .thought{position:absolute;left:18px;bottom:236px;z-index:6;width:250px;background:#0f1a24ee;border:1px solid #21384a;border-radius:12px;padding:10px 12px;font-size:12.5px;color:var(--ink);line-height:1.5;box-shadow:0 12px 30px -14px #000}
   .thought small{display:block;color:var(--aqua);font-size:10px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:3px}
-  .thought:after{content:"";position:absolute;left:24px;bottom:-7px;width:12px;height:12px;background:#0f1a24;
-    border-right:1px solid #21384a;border-bottom:1px solid #21384a;transform:rotate(45deg)}
+  
   /* toast */
   .toast{position:absolute;top:64px;left:50%;transform:translateX(-50%);z-index:7;display:flex;gap:9px;align-items:center;
     padding:9px 16px;border-radius:999px;background:#12241b;border:1px solid #22462f;color:var(--good);font-size:13px;font-weight:600;
@@ -84,6 +82,31 @@
   .legend .row{display:flex;align-items:center;gap:8px;margin:5px 0}
   .sw{width:14px;height:14px;border-radius:4px;flex:none}
   .hint{position:absolute;left:50%;bottom:96px;transform:translateX(-50%);z-index:5;font-size:11.5px;color:var(--ink3)}
+  
+  /* ---- room inspector: fixed panel, right edge of the stage ---- */
+  .inspector{position:absolute;right:18px;top:64px;z-index:7;width:300px;
+    background:linear-gradient(180deg,#131c2a,#0f1621);border:1px solid #26374b;border-radius:14px;
+    box-shadow:0 24px 60px -22px #000;overflow:hidden}
+  .inspector .ph2{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:8px}
+  .inspector .nm{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .inspector .tagv{font-size:10px;padding:1px 7px;border-radius:6px;background:#163738;color:var(--aqua);border:1px solid #2b3947}
+  .inspector .x{margin-left:auto;color:#596775;cursor:pointer;font-size:14px;line-height:1}
+  .inspector .mt{margin-top:3px;font-size:11.5px;color:#596775;display:flex;gap:10px}
+  .inspector .pb{padding:12px 14px}
+  .inspector .desc{font-size:12px;color:var(--ink2);line-height:1.5;margin-bottom:11px}
+  .inspector h6{margin:0 0 6px;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:#596775}
+  .inspector .exits{display:flex;gap:6px;margin-bottom:11px;flex-wrap:wrap}
+  .inspector .exits span{font-size:11px;padding:3px 9px;border-radius:7px;background:#151d26;border:1px solid var(--line);color:var(--ink)}
+  .inspector .exits .dead{color:#596775}
+  .inspector .li{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink);margin:4px 0}
+  .inspector .li .ct{margin-left:auto;color:#596775;font-size:11px}
+  .inspector .li.dead{color:#596775}
+  .inspector .stats2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+  .inspector .st2{background:#111820;border:1px solid var(--line);border-radius:8px;padding:7px 9px}
+  .inspector .st2 .k{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#596775}
+  .inspector .st2 .v{font-size:13px;margin-top:2px}
+  .inspector .more{display:block;width:100%;text-align:center;font-size:12px;color:var(--aqua);
+    background:#151d26;border:1px solid var(--line);border-radius:8px;padding:7px;cursor:pointer}
   /* ---- right rail ---- */
   aside{width:320px;flex:none;border-left:1px solid var(--line);background:var(--bg2);
     display:flex;flex-direction:column;overflow:auto}
@@ -192,15 +215,18 @@
           <path d="M170,300 L300,300" stroke="#2a3purple" style="stroke:#243449"/>
           <path d="M300,300 L300,190" style="stroke:#243449"/>
           <path d="M300,300 L440,300" style="stroke:#243449"/>
-          <path d="M440,300 L440,430" style="stroke:#243449"/>
+          <!-- bent link: collision-displaced connection -->
+          <path d="M440,318 L440,364 L468,364 L468,412" fill="none" style="stroke:#8a6d3b"/>
           <path d="M440,300 L580,240" style="stroke:#243449"/>
           <path d="M580,240 L700,240" style="stroke:#243449"/>
           <!-- recent path highlight -->
           <path d="M300,300 L440,300 L580,240" style="stroke:#2f6b6f;stroke-dasharray:2 6" stroke-width="2.5"/>
           <!-- frontier edges (ghost) -->
-          <path d="M700,240 L810,240" style="stroke:#1b2636;stroke-dasharray:3 6"/>
-          <path d="M300,190 L300,110" style="stroke:#1b2636;stroke-dasharray:3 6"/>
-          <path d="M440,430 L560,470" style="stroke:#1b2636;stroke-dasharray:3 6"/>
+          <!-- frontier stubs: untried exits, short dash + dot -->
+          <g stroke="#4a5c74" stroke-width="2" stroke-dasharray="3 4">
+            <path d="M720,240 L746,240"/><path d="M300,170 L300,144"/><path d="M453,443 L471,461"/>
+          </g>
+          <g fill="#4a5c74"><circle cx="746" cy="240" r="2.5"/><circle cx="300" cy="144" r="2.5"/><circle cx="471" cy="461" r="2.5"/></g>
         </g>
 
         <!-- rooms: visited (sector colored) -->
@@ -224,6 +250,7 @@
 
           <!-- current room (combat) -->
           <circle cx="598" cy="258" r="46" fill="url(#curglow)"/>
+          <circle cx="598" cy="258" r="30" fill="none" stroke="#5db4ff" stroke-dasharray="3 3" stroke-width="1.5" opacity=".8"/>
           <rect x="580" y="240" width="36" height="36" rx="7" fill="#3a1620" stroke="#ff5d6c" stroke-width="2">
           </rect>
           <text class="rlabel cur" x="598" y="228" text-anchor="middle">A Dark Alley</text>
@@ -232,25 +259,19 @@
           <rect x="682" y="222" width="36" height="36" rx="7" fill="#1c3350" stroke="#2f5680"/>
           <text class="rlabel" x="700" y="212" text-anchor="middle">Back Street</text>
 
-          <!-- frontier ghosts -->
-          <rect x="792" y="222" width="36" height="36" rx="7" fill="none" stroke="#26374b" stroke-dasharray="3 4"/>
-          <text class="rlabel" x="810" y="212" text-anchor="middle" style="fill:#4a5c74">?</text>
-          <rect x="282" y="92" width="36" height="36" rx="7" fill="none" stroke="#26374b" stroke-dasharray="3 4"/>
-          <text class="rlabel" x="300" y="84" text-anchor="middle" style="fill:#4a5c74">?</text>
-          <rect x="542" y="452" width="36" height="36" rx="7" fill="none" stroke="#26374b" stroke-dasharray="3 4"/>
-
-          <!-- ambiguous duplicate-title candidate (dashed ?) -->
-          <rect x="150" y="412" width="36" height="36" rx="7" fill="none" stroke="#6a5a2a" stroke-dasharray="4 3"/>
-          <text class="rlabel" x="168" y="466" text-anchor="middle" style="fill:#b79a4a">Alley? ×2</text>
-
-          <!-- mob sighting badge -->
-          <circle cx="612" cy="246" r="5" fill="#ff5d6c" stroke="#140b10" stroke-width="1.5"/>
-          <circle cx="694" cy="212" r="4" fill="#f5c463" stroke="#0b0f17" stroke-width="1.3"/>
-        </g>
+          <!-- (ghost rooms removed: frontier renders as stubs only) -->
+          <!-- displacement: flee, no compass vector; target in floating cluster -->
+          <path d="M598,240 C640,160 700,132 758,128" fill="none" stroke="#8a7bd8" stroke-dasharray="4 4" stroke-width="1.5"/>
+          <text x="672" y="150" text-anchor="middle" style="fill:#8a7bd8;font-size:10px">flee</text>
+          <rect x="760" y="110" width="36" height="36" rx="7" fill="#1c3350" stroke="#2f5680"/>
+          <text class="rlabel" x="778" y="102" text-anchor="middle">By the Bridge</text>
+          <!-- up exit glyph on the room box -->
+          <text x="312" y="184" style="fill:#8fb4e0;font-size:10px">▲</text>
+          </g>
       </svg>
 
       <!-- agent thought callout near current room -->
-      <div class="thought" style="right:150px;top:150px">
+      <div class="thought"><span style="position:absolute;right:10px;top:8px;color:#596775;cursor:pointer">–</span>
         <small>Agent · thinking</small>
         A kobold blocks the alley east. I'll fight through: the minotaur lair should be past Back Street.
       </div>
@@ -269,14 +290,44 @@
         </div>
       </div>
 
-      <div class="legend">
-        <h5>Legend</h5>
-        <div class="row"><span class="sw" style="background:#1c3350;border:1px solid #2f5680"></span>Visited (sector color)</div>
-        <div class="row"><span class="sw" style="background:#3a1620;border:1px solid #ff5d6c"></span>Current · combat</div>
-        <div class="row"><span class="sw" style="background:none;border:1px dashed #26374b"></span>Frontier (unexplored)</div>
-        <div class="row"><span class="sw" style="background:none;border:1px dashed #6a5a2a"></span>Ambiguous (dup title)</div>
-        <div class="row"><span class="sw" style="background:#ff5d6c;border-radius:50%"></span>Mob sighting</div>
+      
+      <!-- room inspector: opens on room click; X / Esc / click-outside close.
+           Fixed position: never covers the clicked room -->
+      <div class="inspector">
+        <div class="ph2">
+          <div>
+            <div class="nm">A Dark Alley <span class="tagv">City</span></div>
+            <div class="mt"><span>passed ×2</span><span>first s12 · last s47</span></div>
+          </div>
+          <span class="x">✕</span>
+        </div>
+        <div class="pb">
+          <div class="desc">A narrow alley choked with refuse. Something moves in the shadows.</div>
+          <h6>Exits</h6>
+          <div class="exits"><span>west</span><span>east</span><span class="dead">south ?</span></div>
+          <h6>Seen here</h6>
+          <div class="li"><span style="color:#ff8178">☠</span> a large kobold <span class="ct">×2</span></div>
+          <h6>Objects known here</h6>
+          <div class="li dead">none retained</div>
+          <div class="stats2">
+            <div class="st2"><div class="k">Passed</div><div class="v">2×</div></div>
+            <div class="st2"><div class="k">Spent here</div><div class="v">$0.014</div></div>
+          </div>
+          <button class="more">Open full evidence →</button>
+        </div>
       </div>
+      <div class="legend">
+        <h5>Map markers</h5>
+        <div class="row"><span class="sw" style="background:#12333a;border:1px solid #2f6b6f"></span> current room</div>
+        <div class="row"><span class="sw" style="background:#1c3350;border:1px solid #2f5680"></span> visited room</div>
+        <div class="row"><span style="color:#4a5c74">╌•</span> frontier stub (untried exit)</div>
+        <div class="row"><span style="color:#8a6d3b">⌐</span> bent link (non-euclidean)</div>
+        <div class="row"><span style="color:#8a7bd8">╌╌</span> displacement (flee/recall)</div>
+        <div class="row"><span style="color:#8fb4e0">▲</span> up/down exit</div>
+        <div class="row"><span style="color:#5db4ff">◎</span> objective, known location</div>
+        <div class="row"><span class="mono" style="color:#8493a1">×N</span> times passed</div>
+      </div>
+
 
       <div class="hint">Click any room, event, or cost point to open its evidence: summary → wire.</div>
     </div>

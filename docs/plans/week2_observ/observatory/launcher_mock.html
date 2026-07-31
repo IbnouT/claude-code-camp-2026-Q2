@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Observatory — entry launcher FINAL mock (adaptive roster)</title>
+<style>
+/* REPRODUCIBILITY: tokens 1:1 from tokens.css. Backdrop constellation =
+   REAL learned-world graph of the latest session (positions from the
+   stable layout, faded); every stat on screen maps to an API field
+   (noted in comments). Animations: CSS only. */
+:root{
+  --color-bg:#080b0f; --color-surface:#0d1218; --color-raised:#111820;
+  --color-soft:#151d26; --color-line:#1d2833; --color-line-strong:#2b3947;
+  --color-text:#edf4f8; --color-muted:#8493a1; --color-quiet:#596775;
+  --color-cyan:#68e1dc; --color-cyan-soft:#163738; --color-amber:#eac06a;
+  --color-green:#8bdfa9; --color-coral:#ff8178;
+  --font-mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0}
+body{
+  background:var(--color-bg); color:var(--color-text); min-height:100vh;
+  font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:14px; -webkit-font-smoothing:antialiased; overflow:hidden;
+}
+.mono{font-family:var(--font-mono)}
+
+/* ---- lantern scene + living world backdrop (real graph, faded) ---- */
+.scene{position:fixed; inset:0;
+  background:radial-gradient(900px 620px at 62% 40%, #10192a 0%, #0a0f18 45%, var(--color-bg) 100%)}
+.scene svg{position:absolute; inset:0; width:100%; height:100%; opacity:.5}
+.scene .lk{stroke:#1b2940; stroke-width:1.2}
+.scene .rm{fill:#223752}
+.scene .rm.lit{fill:#2f5680}
+.scene .agent{fill:var(--color-cyan); animation:pulse 2.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.9}50%{opacity:.35}}
+
+/* ---- layout ---- */
+.wrap{position:relative; display:flex; min-height:100vh; align-items:center;
+  justify-content:center; gap:54px; padding:40px}
+.left{max-width:360px}
+.brand h1{font-size:26px; letter-spacing:.04em; line-height:1.2}
+.brand h1 b{color:var(--color-cyan); font-weight:600}
+.brand .tag{margin-top:8px; color:var(--color-quiet); font-size:12.5px}
+
+/* Adaptive roster: the launcher is always a roster; the selected tile is
+   always expanded to the full character card. One profile = one
+   auto-selected expanded tile; several = compact tiles + one expanded.
+   The selected tile drives Start/Load; Watch lists any live player. */
+.roster{margin-top:26px;display:flex;flex-direction:column;gap:10px}
+.ct{display:flex;align-items:center;gap:12px;background:var(--color-surface);
+  border:1px solid var(--color-line);border-radius:13px;padding:11px 14px;
+  cursor:pointer;transition:border-color .15s}
+.ct:hover{border-color:var(--color-line-strong)}
+.ct.sel{border-color:var(--color-cyan);
+  background:linear-gradient(180deg,var(--color-raised),var(--color-surface));
+  box-shadow:0 0 0 1px var(--color-cyan-soft)}
+.ct .sigil{width:36px;height:36px;border-radius:10px;background:var(--color-cyan-soft);
+  display:grid;place-items:center;font-size:17px;color:var(--color-cyan);flex:none}
+.ct .nm{font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:8px}
+.ct .lv{font-size:10.5px;color:var(--color-amber)}
+.ct .hpm{margin-top:5px;width:120px;height:4px;border-radius:4px;
+  background:var(--color-soft);overflow:hidden}
+.ct .hpm i{display:block;height:100%;background:linear-gradient(90deg,#2e7d5b,var(--color-green))}
+.ct .seen{margin-left:auto;text-align:right;font-size:10.5px;
+  color:var(--color-quiet);line-height:1.5;white-space:nowrap}
+.ct .ldot{width:7px;height:7px;border-radius:50%;background:var(--color-cyan);
+  box-shadow:0 0 8px var(--color-cyan);animation:pulse 2s infinite;flex:none}
+/* legacy single-card styles kept for the selected-detail block */
+/* character tile — all fields real: milestones.current, player_status
+   (hp/mana/gold), current_room, last session end time */
+.char{margin-top:26px; background:linear-gradient(180deg,var(--color-raised),var(--color-surface));
+  border:1px solid var(--color-line-strong); border-radius:16px; padding:16px 18px;
+  box-shadow:0 24px 60px -30px #000}
+.char .top{display:flex; align-items:center; gap:12px}
+.char .sigil{width:44px;height:44px;border-radius:12px;background:var(--color-cyan-soft);
+  display:grid;place-items:center;font-size:22px;color:var(--color-cyan)}
+.char .nm{font-size:16px;font-weight:600}
+.char .lv{font-size:11.5px;color:var(--color-amber)}
+.char .seen{margin-left:auto;text-align:right;font-size:11px;color:var(--color-quiet);line-height:1.5}
+.bars{margin-top:12px;display:flex;flex-direction:column;gap:7px}
+.bar{display:flex;align-items:center;gap:9px;font-size:11px;color:var(--color-quiet)}
+.bar .k{width:34px}
+.bar .tr{flex:1;height:6px;border-radius:5px;background:var(--color-soft);overflow:hidden}
+.bar .tr i{display:block;height:100%;border-radius:5px}
+.hp i{width:78%;background:linear-gradient(90deg,#2e7d5b,var(--color-green))}
+.mn i{width:54%;background:linear-gradient(90deg,#2b5f8f,#7ec3f0)}
+.bar .v{width:70px;text-align:right;color:var(--color-muted)}
+.gold{margin-top:10px;font-size:12px;color:var(--color-amber)}
+
+/* ---- game-menu verbs ---- */
+.menu{display:flex;flex-direction:column;gap:12px;width:400px}
+.mi{position:relative;background:#0d1218cc;border:1px solid var(--color-line);
+  border-radius:14px;padding:18px 20px 18px 24px;cursor:pointer;
+  transition:border-color .15s, transform .15s; backdrop-filter:blur(4px)}
+.mi:hover{border-color:var(--color-cyan);transform:translateX(4px)}
+.mi::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;
+  border-radius:3px;background:var(--color-line-strong)}
+.mi:hover::before{background:var(--color-cyan)}
+.mi h3{font-size:15px;letter-spacing:.05em;display:flex;align-items:center;gap:10px}
+.mi p{margin-top:5px;font-size:12px;color:var(--color-muted)}
+.mi .dot{width:8px;height:8px;border-radius:50%;background:var(--color-cyan);
+  box-shadow:0 0 10px var(--color-cyan);animation:pulse 2s infinite}
+.mi .k{margin-left:auto;font-size:11px;color:var(--color-quiet)}
+.mi.watch{border-color:rgb(104 225 220 / 35%)}
+.mi.watch h3{color:var(--color-cyan)}
+/* start expands inline (shown expanded here) */
+.mi .form{margin-top:14px;display:flex;flex-direction:column;gap:10px}
+.frow{display:flex;align-items:center;gap:10px}
+.frow label{width:60px;font-size:11.5px;color:var(--color-quiet);flex:none}
+.frow select,.frow input[type=text]{flex:1;background:var(--color-raised);
+  border:1px solid var(--color-line);border-radius:8px;color:var(--color-text);
+  padding:8px 10px;font-size:12.5px;font-family:inherit}
+.checks{display:flex;gap:22px;font-size:12.5px;color:var(--color-muted)}
+.checks label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.hint{font-size:11px;color:var(--color-quiet)}
+.go{align-self:flex-end;background:var(--color-cyan-soft);color:var(--color-cyan);
+  border:1px solid rgb(104 225 220 / 30%);border-radius:9px;padding:8px 16px;
+  font-size:12.5px;font-weight:600;cursor:pointer}
+
+</style>
+</head>
+<body>
+
+<div class="scene">
+  <!-- REAL learned world of the latest session (stable layout coords,
+       scaled), faded. Agent node pulses ONLY when live. -->
+  <svg viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice">
+    <g transform="translate(640,180)">
+      <line class="lk" x1="0" y1="0" x2="90" y2="0"/><line class="lk" x1="90" y1="0" x2="90" y2="80"/>
+      <line class="lk" x1="0" y1="0" x2="0" y2="80"/><line class="lk" x1="0" y1="80" x2="-90" y2="80"/>
+      <line class="lk" x1="0" y1="80" x2="0" y2="160"/><line class="lk" x1="90" y1="80" x2="180" y2="80"/>
+      <line class="lk" x1="0" y1="160" x2="90" y2="160"/><line class="lk" x1="-90" y1="80" x2="-90" y2="160"/>
+      <line class="lk" x1="180" y1="80" x2="180" y2="160"/><line class="lk" x1="0" y1="160" x2="0" y2="240"/>
+      <line class="lk" x1="-90" y1="160" x2="0" y2="240"/><line class="lk" x1="90" y1="160" x2="180" y2="160"/>
+      <circle class="rm" cx="0" cy="0" r="5"/><circle class="rm" cx="90" cy="0" r="4"/>
+      <circle class="rm lit" cx="0" cy="80" r="5"/><circle class="rm" cx="90" cy="80" r="4"/>
+      <circle class="rm" cx="-90" cy="80" r="4"/><circle class="rm" cx="180" cy="80" r="4"/>
+      <circle class="rm lit" cx="0" cy="160" r="5"/><circle class="rm" cx="90" cy="160" r="4"/>
+      <circle class="rm" cx="-90" cy="160" r="4"/><circle class="rm" cx="180" cy="160" r="4"/>
+      <circle class="agent" cx="0" cy="240" r="6"/>
+    </g>
+  </svg>
+</div>
+
+<div class="wrap">
+
+  <div class="left">
+    <div class="brand">
+      <h1>Boukensha<br><b>Observatory</b></h1>
+      <div class="tag">Watch an agent live inside the world of Arcane Loop.</div>
+    </div>
+
+    <!-- character tile: player_status.fields.level.value=4, hp 78/100,
+         mana 54/100, gold 1240, current_room, session end time -->
+    <div class="roster">
+      <!-- selected profile -->
+      <div class="ct sel" style="flex-direction:column;align-items:stretch;padding:14px 16px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="sigil" style="width:44px;height:44px;font-size:21px">◎</div>
+          <div>
+            <div class="nm" style="font-size:15px">poucet</div>
+            <div class="lv">Level 4 adventurer</div>
+          </div>
+          <div class="seen">last session<br>today 22:36</div>
+        </div>
+        <div class="bars" style="margin-top:12px">
+          <div class="bar hp"><span class="k">HP</span><span class="tr"><i></i></span><span class="v">78 / 100</span></div>
+          <div class="bar mn"><span class="k">Mana</span><span class="tr"><i></i></span><span class="v">54 / 100</span></div>
+        </div>
+        <div class="gold" style="margin-top:9px">🪙 1,240 gold</div>
+        <div style="margin-top:7px;font-size:10.5px;color:var(--color-quiet)">stats as observed in the last session</div>
+      </div>
+      <!-- live profile: dot pulses; watching applies to this one -->
+      <div class="ct">
+        <div class="sigil">⚔</div>
+        <div>
+          <div class="nm">J2 <span class="ldot"></span></div>
+          <div class="lv">Level 7</div>
+          <div class="hpm"><i style="width:64%"></i></div>
+        </div>
+        <div class="seen">LIVE now<br>turn 47</div>
+      </div>
+      <div class="ct">
+        <div class="sigil">✦</div>
+        <div>
+          <div class="nm">grommet</div>
+          <div class="lv">Level 2</div>
+          <div class="hpm"><i style="width:91%"></i></div>
+        </div>
+        <div class="seen">last session<br>3 days ago</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="menu">
+    <!-- rendered ONLY when live -->
+    <div class="mi watch">
+      <h3><span class="dot"></span> WATCH LIVE <span class="k">J2 · turn 47 · $0.31</span></h3>
+      <p>J2 is exploring right now — join the run in progress.</p>
+    </div>
+
+    <!-- If the selected player is live, this action renders disabled:
+         "poucet is live — watch or wait" (exclusive character ownership,
+         enforced by the runtime). -->
+    <div class="mi">
+      <h3>⚔ START A NEW SESSION <span style="margin-left:auto;font-size:13px;color:var(--color-cyan);background:var(--color-cyan-soft);border-radius:8px;padding:3px 10px">as poucet</span></h3>
+      <p>Send the selected adventurer back into the world.</p>
+      <div class="form">
+        <div class="checks">
+          <label title="Move the player to the Temple of Midgaard before the session starts. Stats and items are untouched."><input type="checkbox"> Reset to Temple location</label>
+          <label title="Restore the player to the versioned baseline start: Temple location, vitals, level, exp, gold. Inventory untouched."><input type="checkbox"> Reset to baseline</label>
+        </div>
+        <div class="hint">Unchecked: the player resumes where they left the game (handled by the MUD).</div>
+        <button class="go">Start session as poucet →</button>
+      </div>
+    </div>
+
+    <div class="mi">
+      <h3>▤ LOAD A SESSION <span class="k">poucet · 9 of 14</span></h3>
+      <p>Replay any recorded run of the selected player — or all players.</p>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

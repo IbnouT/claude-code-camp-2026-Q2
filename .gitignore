@@ -34,6 +34,7 @@ settings.local.json
 
 # Generated Observatory showcase media and narration
 .boukensha/showcase/
+week2_capable/observatory/web/captures/
 
 # Internal working instructions, not repo content
 CLAUDE.md
