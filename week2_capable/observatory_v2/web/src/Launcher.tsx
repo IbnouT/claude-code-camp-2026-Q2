@@ -8,7 +8,10 @@ import {
   type Snapshot,
 } from "./contracts";
 import { lifecycleApiUrl } from "./lifecycleApi";
-import { liveHref } from "./routes";
+import {
+  liveHref,
+  recordedSessionHref,
+} from "./routes";
 
 type PlayerRow = Player & { sessions: Session[]; latest: Session | null };
 type BackdropNode = { id: string; x: number; y: number; emphasis?: boolean };
@@ -298,6 +301,19 @@ export function Launcher() {
   return (
     <main>
       <Constellation live={liveSessions.length > 0} />
+      {starting ? (
+        <div
+          aria-live="polite"
+          className="launch-transition"
+          role="status"
+        >
+          <div className="launch-transition-card">
+            <span aria-hidden="true" className="launch-transition-pulse" />
+            <p>Starting {selectedRow?.label ?? "the agent"}</p>
+            <small>Connecting the agent and opening Live automatically…</small>
+          </div>
+        </div>
+      ) : null}
       <div className="wrap">
         <section className="left">
           <header className="brand">
@@ -401,7 +417,7 @@ export function Launcher() {
                 {ended.length === 0 && <p className="empty-session">No recorded sessions yet.</p>}
                 {ended.map((session) => (
                   <button className="session-row" key={session.id} onClick={() => {
-                    window.location.href = `http://127.0.0.1:8787/?space=sessions&player=${encodeURIComponent(session.player_id)}&record=${encodeURIComponent(session.id)}&run=${encodeURIComponent(session.id)}`;
+                    window.location.href = recordedSessionHref(session);
                   }}>
                     <span>{allPlayers ? `${session.character} · ` : ""}{when(session.updated_at)}</span>
                     <span>

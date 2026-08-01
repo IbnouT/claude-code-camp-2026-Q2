@@ -11,6 +11,43 @@ button { color: inherit; }
   opacity: .42;
   filter: drop-shadow(0 0 9px rgb(28 55 82 / 22%));
 }
+.launch-transition {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(7 11 16 / 72%);
+  backdrop-filter: blur(7px);
+}
+.launch-transition-card {
+  min-width: min(360px, calc(100vw - 40px));
+  padding: 24px 28px;
+  border: 1px solid rgb(104 225 220 / 36%);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  box-shadow: 0 20px 70px rgb(0 0 0 / 42%);
+  text-align: center;
+}
+.launch-transition-card p {
+  margin: 12px 0 4px;
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 600;
+}
+.launch-transition-card small {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+.launch-transition-pulse {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-cyan);
+  box-shadow: 0 0 16px var(--color-cyan);
+  animation: pulse 1.1s ease-in-out infinite;
+}
 .link { stroke: #203550; stroke-width: 1.15; }
 .node { fill: #294562; }
 .node.current { fill: #3d6386; filter: drop-shadow(0 0 5px rgb(61 99 134 / 45%)); }
