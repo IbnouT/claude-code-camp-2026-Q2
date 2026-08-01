@@ -174,6 +174,8 @@ and how long.
 - Current health, mana, and move come from `vitals`; maxima come from
   `player_status`.
 - An active combat panel never claims an outcome.
+- The active-combat fixture keeps the panel in Focus occluder measurement and
+  keeps the current room in the projected set.
 - `PROGRESS` renders measurements in every state in which it renders numbers,
   and states the lifecycle condition otherwise.
 - The cap bar matches `spend_cap_scope`.

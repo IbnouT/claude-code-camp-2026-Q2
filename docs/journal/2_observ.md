@@ -189,6 +189,9 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
 - An idle runtime has to retain authored intent before its first turn begins.
   Otherwise the exact Goal can drive the agent while the observer can prove
   only an unstructured compatibility prompt.
+- An overlay fixture should test the camera contract as well as its text. A
+  truthful combat panel can still hide the room it explains when its footprint
+  is absent from Focus projection.
 
 ## Technical Conclusions
 

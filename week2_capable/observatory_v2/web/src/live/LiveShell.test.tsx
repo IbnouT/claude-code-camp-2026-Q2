@@ -238,6 +238,22 @@ function runtimeSnapshot(overrides: Partial<Snapshot> = {}): Snapshot {
   };
 }
 
+function activeCombatSnapshot(): Snapshot {
+  return runtimeSnapshot({
+    combat: true,
+    combat_episode: {
+      active: true,
+      opponent: "a large kobold",
+      first_observed_turn: 46,
+      observed_exchanges: 4,
+      outcome: null,
+      command_trace: "trace-combat",
+      lines: [],
+      evidence: [40, 42],
+    },
+  });
+}
+
 function snapshotResponse(snapshot = runtimeSnapshot()): Response {
   return {
     ok: true,
@@ -682,19 +698,8 @@ describe("Live shell", () => {
   });
 
   it("shows only evidence-backed active combat detail", async () => {
-    const snapshot = runtimeSnapshot({
-      combat: true,
-      combat_episode: {
-        active: true,
-        opponent: "a large kobold",
-        first_observed_turn: 46,
-        observed_exchanges: 4,
-        outcome: null,
-        command_trace: "trace-combat",
-        lines: [],
-        evidence: [40, 42],
-      },
-    });
+    const user = userEvent.setup();
+    const snapshot = activeCombatSnapshot();
     vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
       return Promise.resolve(String(input).includes("/snapshot")
         ? snapshotResponse(snapshot)
@@ -707,6 +712,11 @@ describe("Live shell", () => {
     expect(combat).toHaveTextContent("turn 46");
     expect(combat).toHaveTextContent("pending");
     expect(combat).not.toHaveTextContent(/HP|exchange|unresolved/i);
+    expect(combat).toHaveAttribute("data-map-focus-occluder", "true");
+
+    await user.click(screen.getByRole("button", { name: "Focus" }));
+    expect(screen.getByRole("button", { name: /Agent in A Nexus/ }))
+      .toBeInTheDocument();
   });
 
   it("keeps the evidence rail reachable on a narrow viewport", async () => {
