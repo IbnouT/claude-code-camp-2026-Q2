@@ -4,8 +4,8 @@
 
 Observatory v2 is the current Observatory frontend. It rebuilds the product
 surface on the retained Observatory Python data layer, typed evidence
-contracts, and read API. The local supervisor API adds typed start and stop
-actions without changing the evidence boundary.
+contracts, and read API. The local supervisor API adds typed start, stop, and
+agent-message actions without changing the evidence boundary.
 
 ```mermaid
 flowchart LR
@@ -107,6 +107,7 @@ environment variables affect the v2 launch directly:
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `BOUKENSHA_DIR` | repository `.boukensha` | Player profiles, registered sessions, and supervisor state |
+| `BOUKENSHA_OBSERVATORY_IDLE_TIMEOUT_SECONDS` | `1800` | Stop a persistent session after this many idle seconds. `0` disables the timeout. |
 
 The `week2_capable/bin/observatory` command always selects the v2 production
 build for the retained static host. It exits with a build instruction when the
@@ -122,7 +123,11 @@ remain visibly unavailable. Neither API invents replacement evidence.
 
 The launcher lists registered players and sessions, starts a supervised run,
 and opens an existing live session. Session state and available actions come
-from typed runtime contracts.
+from typed runtime contracts. An optional first goal starts turn one through
+the persistent plain REPL. Completing that turn leaves the session available
+for later instructions. The supervisor stops it after the configured idle
+timeout, 30 minutes by default. Starting owns the launcher with a named
+connecting state until Live opens or a typed failure restores the form.
 
 ### Live shell
 
@@ -130,13 +135,17 @@ The Live shell keeps player, lifecycle state, and session identity in one
 context control. It provides theme, scoped Ask, valid lifecycle actions, and
 navigation without changing the selected evidence source. The objective strip,
 evidence rail, active-combat panel, and thought age expose retained state
-without claiming that a stale observation is current. Message agent inserts
-guidance at the next iteration boundary for a running, controllable session.
-The first Goal on an idle session starts turn one and retains structured
-revision-1 objective metadata before that turn begins. A first Nudge starts the
-turn without redefining the objective.
-The active-combat panel participates in Focus camera occlusion, so its retained
-opponent and first-observed turn do not hide the current room.
+without claiming that a stale observation is current. Message agent retains
+one authenticated Goal or Nudge, makes it available at the next active
+iteration boundary, and also queues a persistent wake envelope. An active turn
+consumes the directive and later ignores the wake. An idle agent uses the wake
+to start a turn whose first checkpoint consumes the directive. This removes
+the turn-end race without placing internal wake data in model context.
+The active-combat panel follows the initial Live mock's left-side spotlight,
+streams retained MUD combat lines in sequence order, and follows the newest
+line as the fight grows. Unsolicited combat frames update the stream and prompt
+vitals without a `score` probe. It participates in Focus camera occlusion, so
+the panel does not hide the current room.
 The objective strip always renders: structured current metadata wins, retained
 compatibility text remains visible for older sessions, and an unset objective
 is stated directly. Applied replacements carry their revision count, while
@@ -145,11 +154,13 @@ The rail keeps navigation progress in one stable block, emphasizes retained
 friction rules when they fire, and states lifecycle or capture conditions when
 measurements would be unsafe. The causal timeline keeps a current snapshot
 beside any selected historical prefix, so room and level-up landmarks can step
-backward and forward without losing the route back to live. Its cost curve
-comes only from retained response economics. Quiet room markers establish the
-journey baseline. Emphasized level-up, fired-friction, and applied
-operator-message markers select the first prefix that contains their evidence.
-Combat boundaries remain absent until typed episode history exists.
+backward and forward without losing the route back to live. Pause becomes
+Resume while a prefix is held. Step buttons enable only when an adjacent
+retained event exists, and Jump to live enables only outside the live edge.
+Its cost curve comes only from retained response economics. Quiet room markers
+establish the journey baseline. Emphasized level-up, fired-friction, and
+applied operator-message markers select the first prefix that contains their
+evidence. Combat boundaries remain absent until typed episode history exists.
 
 ### Learned-world map
 
@@ -157,9 +168,14 @@ The map renders the agent's retained room, traversal, frontier, visit, mob,
 object, and thought evidence inside the final Live map pane. Grow, Focus, and
 Lantern change presentation without changing learned coordinates. Follow,
 Manual, Fit, drag, and zoom operate against the map viewport while the thought
-dock and legend remain overlays. Follow holds the camera while the current room
-stays inside its central dead zone, then catches up without overshoot. An
-unconnected position jump snaps instead of imitating observed traversal.
+dock and legend remain overlays. Reflow compares evidence-order and topology
+layouts, swaps rooms and relocates them into free lattice cells to minimize
+connection crossings, keeps compass direction as a soft constraint, and fits
+the result without changing evidence. The soft constraint keeps non-Euclidean
+CircleMUD mazes readable instead of forcing impossible compass geometry.
+Follow holds the camera while the current room stays inside its central dead
+zone, then catches up without overshoot. An unconnected position jump snaps
+instead of imitating observed traversal.
 
 ### Room inspector
 
@@ -177,7 +193,7 @@ npm test
 npm run build
 ```
 
-The frontend suite contains 140 tests across 19 files. `npm run build` runs
+The frontend suite contains 157 tests across 21 files. `npm run build` runs
 strict TypeScript checking with `tsc --noEmit` before producing the Vite
 production bundle.
 

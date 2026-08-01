@@ -32,7 +32,10 @@ Live is connected to registered runtime evidence:
 - Prefix-local loop and spatial-stall diagnostics reuse the recorded-session
   thresholds and retain their triggering gateway sequences.
 - One causal clock reconstructs every panel at a selected sequence.
-- Pause, scrub, bookmark, and return-to-live controls.
+- Explicit replay prefixes remain paused even when they select the latest
+  retained sequence. Only an omitted prefix follows new live evidence.
+- The Live snapshot distinguishes an active agent turn from an idle persistent
+  session so the control surface can choose a delivery path from runtime state.
 - Grow, Focus, and Lantern world modes.
 - One evidence-backed world surface shared by Live and Sessions.
 - Reset, relocation, and reconnect receipts break learned traversal continuity.

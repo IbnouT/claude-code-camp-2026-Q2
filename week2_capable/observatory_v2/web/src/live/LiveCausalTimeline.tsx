@@ -142,10 +142,17 @@ export function LiveCausalTimeline({
     return 2 + Math.min(1, Math.max(0, ratio)) * 94;
   };
   const selectedSequence = snapshot.through_sequence;
-  const previousEventSequence = [...new Set(
-    latestSnapshot.timeline.map((item) => item.sequence),
-  )].sort((left, right) => right - left).find(
+  const eventSequences = [...new Set(
+    [
+      ...latestSnapshot.timeline.map((item) => item.sequence),
+      latestSnapshot.latest_sequence,
+    ],
+  )].sort((left, right) => left - right);
+  const previousEventSequence = [...eventSequences].reverse().find(
     (sequence) => sequence < selectedSequence,
+  );
+  const nextEventSequence = eventSequences.find(
+    (sequence) => sequence > selectedSequence,
   );
   const labelledLandmarks = ([
     "level_up",
@@ -178,12 +185,15 @@ export function LiveCausalTimeline({
         </span>
         <div className="live-timeline-transport" aria-label="Timeline transport">
           <button
-            aria-label="Pause timeline"
-            disabled={!snapshot.following_live}
+            aria-label={snapshot.following_live
+              ? "Pause timeline"
+              : "Resume timeline"}
             type="button"
-            onClick={() => onSelectThrough(snapshot.through_sequence)}
+            onClick={() => onSelectThrough(
+              snapshot.following_live ? snapshot.through_sequence : null,
+            )}
           >
-            ⏸ Pause
+            {snapshot.following_live ? "⏸ Pause" : "▶ Resume"}
           </button>
           <button
             aria-label="Step to previous event"
@@ -194,8 +204,17 @@ export function LiveCausalTimeline({
             ◀ Step
           </button>
           <button
+            aria-label="Step to next event"
+            disabled={snapshot.following_live || nextEventSequence === undefined}
+            type="button"
+            onClick={() => onSelectThrough(nextEventSequence ?? null)}
+          >
+            Step ▶
+          </button>
+          <button
             aria-label="Jump to live"
             className="live-timeline-return"
+            disabled={snapshot.following_live}
             type="button"
             onClick={() => onSelectThrough(null)}
           >

@@ -101,14 +101,21 @@ the numbers would mislead. Active combat shows the numbers and notes combat.
 Rendered over the map only while `combat_episode.active`.
 
 - Opponent and first observed turn from `combat_episode`.
-- `outcome pending` while active. The `unresolved` outcome means capture ended
-  with the episode open, which is a different and inactive state.
-- No parsed combat lines. `LiveCombatLine` carries no actor, direction, or
-  damage value, so the lines cannot be aggregated into a statement a viewer can
-  act on.
+- The initial Live mock's left-side combat spotlight is binding: sword header,
+  rose surface, and a monospaced event stream.
+- `LiveCombatLine.text` renders unchanged in retained sequence order. The feed
+  follows the newest retained line as the episode grows.
+- Combat ticks that arrive between commands are retained as unsolicited wire
+  evidence, then parsed into combat lines and prompt vitals before the next
+  command. The panel and character bars do not require an extra `score` probe.
+- The subtitle reports retained combat-event count, not game rounds or
+  exchanges. The game does not supply either measure.
+- Text-pattern color emphasis follows the Week 0 visualizer without adding
+  actor, direction, or damage claims to the retained line.
 - No health trend until the projection carries typed hit observations at
-  episode start and now, each with provenance. A nearest-earlier observation is
-  not health at the moment combat began.
+  episode start and now, each with provenance. Prompt vitals from combat ticks
+  qualify. A nearest-earlier observation is not health at the moment combat
+  began.
 
 The map keeps its mob badge. The badge answers where; the panel answers whom
 and how long.
@@ -130,11 +137,14 @@ and how long.
   boundaries rather than one selected episode.
 - The cumulative cost curve comes from `economics`, never from timeline item
   costs.
-- Prefix transport: pause, step, and return to live. The API accepts
-  `?through=` on the Live route and returns `through_sequence`,
-  `latest_sequence`, `selected_at`, and `following_live`. Inspecting a prefix
-  continues to learn the latest sequence without replacing the selection until
-  the viewer returns to live.
+- Prefix transport: Pause becomes Resume while a prefix is held. Back and
+  Forward move one retained event while remaining paused. Jump to live resumes
+  following immediately. At live, Forward and Jump to live are disabled. At a
+  paused boundary, each step direction is enabled only when an adjacent
+  retained event exists. The API accepts `?through=` on the Live route and
+  returns `through_sequence`, `latest_sequence`, `selected_at`, and
+  `following_live`. Inspecting a prefix continues to learn the latest sequence
+  without replacing the selection until the viewer resumes or jumps to live.
 - The retained timeline window holds the most recent items only, so the axis is
   labelled for the window it covers rather than the whole session.
 
@@ -143,18 +153,26 @@ and how long.
 - `Message agent` is a separate control from `Ask`. `Ask` is a read-only query
   over retained evidence; `Message agent` writes to a running agent. They never
   share a composer.
-- Nudge maps to the `guide` action and Replace goal to `revise`. A revise
-  replaces the objective, so the objective strip and the directive must agree.
-- The composer states its target and the staleness of `expected_sequence`
-  before sending, because an instruction written against a world state the
-  agent has already left arrives at the next boundary reading as nonsense.
-- Directives insert at the agent's next iteration boundary. They do not issue
-  a MUD command directly.
-- Operator message history requires the operator-exchange projection. Until it
-  exists, agent activity following a directive is labelled as subsequent
-  activity and is never presented as a reply.
-- The start API accepts a player and a reset mode only, so an initial goal
-  cannot be supplied from the launcher until that contract is extended.
+- Nudge maps to the `guide` action and Goal maps to `revise`. Goal always
+  replaces the current objective, including while another goal is active.
+  The replacement instruction is delivered to the agent first. The objective
+  strip updates only from the retained applied control event. A rejected
+  delivery leaves the prior objective visible.
+- A running session always accepts a non-empty Goal or Nudge. Snapshot polling
+  refreshes the current evidence boundary while the drawer is open. Boundary
+  advance never leaves the composer permanently disabled.
+- Delivery chooses the active iteration boundary or the persistent agent input
+  from current runtime state. A turn ending while a message is submitted must
+  not strand the instruction between those paths.
+- Directives do not issue a MUD command directly. A Nudge joins the active
+  objective context. A Goal replaces it.
+- Message history shows accepted instructions immediately and retained
+  application only when the agent consumes them. Agent activity after a
+  directive is subsequent activity, not an invented reply.
+- Opening and closing the drawer repeatedly leaves one mounted backdrop, one
+  focus target, and an interactive Live screen after the closing transition.
+- The launcher may supply an optional initial Goal through the supervised
+  lifecycle contract.
 
 ## Delivery
 
@@ -173,11 +191,17 @@ and how long.
   is absent, never substituted or inferred.
 - Current health, mana, and move come from `vitals`; maxima come from
   `player_status`.
-- An active combat panel never claims an outcome.
+- An active combat panel streams retained MUD lines and never claims an
+  unsupported outcome.
 - The active-combat fixture keeps the panel in Focus occluder measurement and
   keeps the current room in the projected set.
 - `PROGRESS` renders measurements in every state in which it renders numbers,
   and states the lifecycle condition otherwise.
 - The cap bar matches `spend_cap_scope`.
+- Goal and Nudge remain sendable across snapshot advances and repeated drawer
+  opens. The accepted instruction appears in history, the agent consumes it,
+  and an applied Goal updates the objective strip.
+- The drawer opens and closes twice in browser verification without a stale
+  backdrop or blocked page.
 - Locked surfaces are unchanged: header, navigation, `Ask`, camera and map
   toolbars, map, legend, thought dock title, room inspector.

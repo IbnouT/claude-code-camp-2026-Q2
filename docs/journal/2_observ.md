@@ -192,6 +192,31 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
 - An overlay fixture should test the camera contract as well as its text. A
   truthful combat panel can still hide the room it explains when its footprint
   is absent from Focus projection.
+- A combat summary answers that a fight exists, but not what is happening.
+  Keeping literal MUD lines in retained order preserves the fight's tempo and
+  lets visual emphasis improve scanability without inventing damage values.
+- Command replies are not the whole live world. Combat ticks arrive between
+  commands with prompt vitals, so retaining unsolicited bytes without parsing
+  them leaves both the fight stream and character health stale.
+- A completed agent turn is not a completed observed session. Reusing a
+  one-shot launcher made normal model completion look like a lifecycle stop,
+  while a persistent host can wait safely behind an explicit idle timeout.
+- A session catalog can render the right record and still open the wrong
+  product. Reusing the typed Live route builder in every session entry prevents
+  one legacy query from escaping the current Observatory surface.
+- An objective proves what the agent is pursuing, not that a turn is running.
+  One retained delivery path can let a Nudge enter an active iteration while
+  the same composer wakes an idle persistent agent.
+- Durable acceptance is not delivery. An iteration-only message can remain
+  pending forever when a turn ends, so retained control needs a wake path that
+  guarantees another consumption boundary without duplicating the directive.
+- Recalculating a deterministic map with the same placer is not a reflow.
+  Haon-Dor makes compass geometry impossible through self-loop and
+  non-reciprocal exits, so a useful redraw minimizes crossings across derived
+  layouts while preserving the retained evidence underneath.
+- Timeline buttons form a state machine, not a loose action list. Pause needs a
+  visible Resume state, directional steps need adjacent retained events, and
+  returning to live is meaningful only while inspecting history.
 
 ## Technical Conclusions
 

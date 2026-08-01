@@ -70,6 +70,7 @@ function runtimeSnapshot(overrides: Partial<Snapshot> = {}): Snapshot {
     character: identity.playerId,
     lifecycle: "running",
     control_state: "running",
+    agent_turn_active: true,
     following_live: true,
     through_sequence: 42,
     selected_at: null,
@@ -248,7 +249,40 @@ function activeCombatSnapshot(): Snapshot {
       observed_exchanges: 4,
       outcome: null,
       command_trace: "trace-combat",
-      lines: [],
+      lines: [
+        {
+          text: "You hit the large kobold hard.",
+          sequence: 40,
+          observed_at: 100,
+          confidence: "direct",
+          method: "mud_output",
+          evidence: "gateway:40",
+        },
+        {
+          text: "The large kobold's claw rakes you.",
+          sequence: 41,
+          observed_at: 101,
+          confidence: "direct",
+          method: "mud_output",
+          evidence: "gateway:41",
+        },
+        {
+          text: "You land a critical slash!",
+          sequence: 42,
+          observed_at: 102,
+          confidence: "direct",
+          method: "mud_output",
+          evidence: "gateway:42",
+        },
+        {
+          text: "The large kobold is dead!",
+          sequence: 43,
+          observed_at: 103,
+          confidence: "direct",
+          method: "mud_output",
+          evidence: "gateway:43",
+        },
+      ],
       evidence: [40, 42],
     },
   });
@@ -380,12 +414,12 @@ describe("Live shell", () => {
     expect(rail).toHaveTextContent("50%");
   });
 
-  it("messages only the latest running agent sequence", async () => {
+  it("delivers a message through the persistent lifecycle channel", async () => {
     const user = userEvent.setup();
     let body: unknown = null;
     vi.mocked(fetch).mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
-      if (url.endsWith("/control")) {
+      if (url.endsWith("/message")) {
         body = JSON.parse(String(init?.body));
         return Promise.resolve({
           ok: true,
@@ -393,7 +427,7 @@ describe("Live shell", () => {
             request_id: "00000000-0000-4000-8000-000000000001",
             action: "guide",
             state: "running",
-            insertion: "next iteration boundary",
+            insertion: "next_iteration_or_turn",
           }),
         } as Response);
       }
@@ -412,7 +446,6 @@ describe("Live shell", () => {
       request_id: "00000000-0000-4000-8000-000000000001",
       action: "guide",
       instruction: "Try the western exit",
-      expected_sequence: 42,
     });
   });
 
@@ -420,6 +453,7 @@ describe("Live shell", () => {
     const user = userEvent.setup();
     let body: unknown = null;
     const snapshot = runtimeSnapshot({
+      agent_turn_active: false,
       objective: null,
       objective_initial: null,
       objective_context: null,
@@ -434,7 +468,7 @@ describe("Live shell", () => {
             request_id: "00000000-0000-4000-8000-000000000001",
             action: "guide",
             state: "running",
-            insertion: "first_turn",
+            insertion: "next_iteration_or_turn",
           }),
         } as Response);
       }
@@ -461,6 +495,35 @@ describe("Live shell", () => {
       action: "revise",
       instruction: "Go to the warrior guild",
     });
+  });
+
+  it("starts a later turn when a goal-bearing session is idle", async () => {
+    const user = userEvent.setup();
+    let target = "";
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      target = String(input);
+      if (target.endsWith("/message")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            request_id: "00000000-0000-4000-8000-000000000001",
+            action: "guide",
+            state: "running",
+            insertion: "next_turn",
+          }),
+        } as Response);
+      }
+      return Promise.resolve(target.includes("/snapshot")
+        ? snapshotResponse(runtimeSnapshot({ agent_turn_active: false }))
+        : catalogResponse());
+    });
+    render(<LiveShell identity={identity} />);
+
+    await user.click(await screen.findByRole("button", { name: "Message agent" }));
+    await user.type(screen.getByLabelText("Message for the agent"), "Continue west");
+    await user.click(screen.getByRole("button", { name: "Send message" }));
+
+    await waitFor(() => expect(target).toMatch(/:8792\/api\/sessions\/.+\/message$/));
   });
 
   it("shows a retained compatibility objective without structured metadata", async () => {
@@ -660,12 +723,26 @@ describe("Live shell", () => {
     expect(screen.getByRole("img", {
       name: "Cumulative session cost",
     })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pause timeline" }))
+      .toBeEnabled();
+    expect(screen.getByRole("button", { name: "Step to previous event" }))
+      .toBeEnabled();
+    expect(screen.getByRole("button", { name: "Step to next event" }))
+      .toBeDisabled();
+    expect(screen.getByRole("button", { name: "Jump to live" }))
+      .toBeDisabled();
 
     await user.click(screen.getByRole("button", { name: "Pause timeline" }));
     await waitFor(() => {
       expect(timeline).toHaveTextContent("paused");
     });
     expect(new URL(window.location.href).searchParams.get("through")).toBe("42");
+    expect(screen.getByRole("button", { name: "Resume timeline" }))
+      .toBeEnabled();
+    expect(screen.getByRole("button", { name: "Step to next event" }))
+      .toBeDisabled();
+    expect(screen.getByRole("button", { name: "Jump to live" }))
+      .toBeEnabled();
 
     await user.click(screen.getByRole("button", {
       name: "Step to previous event",
@@ -678,6 +755,29 @@ describe("Live shell", () => {
     expect(screen.getByPlaceholderText("Return to live to message the agent"))
       .toBeDisabled();
     await user.click(screen.getByRole("button", { name: "Close messages" }));
+
+    await user.click(screen.getByRole("button", { name: "Step to next event" }));
+    await waitFor(() => {
+      expect(timeline).toHaveTextContent("seq 42");
+      expect(timeline).toHaveTextContent("paused");
+    });
+    expect(screen.getByRole("button", { name: "Step to next event" }))
+      .toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "Resume timeline" }));
+    await waitFor(() => {
+      expect(timeline).toHaveTextContent("following live");
+    });
+    expect(screen.getByRole("button", { name: "Pause timeline" }))
+      .toBeEnabled();
+
+    await user.click(screen.getByRole("button", {
+      name: "Step to previous event",
+    }));
+    await waitFor(() => {
+      expect(timeline).toHaveTextContent("seq 25");
+      expect(timeline).toHaveTextContent("paused");
+    });
 
     await user.click(screen.getByRole("button", { name: "Step to previous event" }));
     await waitFor(() => {
@@ -713,11 +813,21 @@ describe("Live shell", () => {
     render(<LiveShell identity={identity} />);
 
     const combat = await screen.findByRole("complementary", { name: "Active combat" });
-    expect(combat).toHaveTextContent("IN COMBAT");
-    expect(combat).toHaveTextContent("a large kobold");
-    expect(combat).toHaveTextContent("turn 46");
-    expect(combat).toHaveTextContent("pending");
-    expect(combat).not.toHaveTextContent(/HP|exchange|unresolved/i);
+    expect(combat).toHaveTextContent("In combat: a large kobold");
+    expect(combat).toHaveTextContent("4 combat events · since turn 46");
+    const eventLog = screen.getByRole("log", { name: "Combat events" });
+    const lines = Array.from(eventLog.querySelectorAll("span"));
+    expect(lines.map((line) => line.textContent)).toEqual([
+      "You hit the large kobold hard.",
+      "The large kobold's claw rakes you.",
+      "You land a critical slash!",
+      "The large kobold is dead!",
+    ]);
+    expect(lines[0]).toHaveClass("is-outgoing");
+    expect(lines[1]).toHaveClass("is-incoming");
+    expect(lines[2]).toHaveClass("is-critical");
+    expect(lines[3]).toHaveClass("is-kill");
+    expect(combat).not.toHaveTextContent(/HP|pending|unresolved/i);
     expect(combat).toHaveAttribute("data-map-focus-occluder", "true");
     expect(screen.getByText("fighting")).toHaveClass("is-fighting");
 
@@ -1298,6 +1408,20 @@ describe("Live shell", () => {
     );
   });
 
+  it("opens the v2 Sessions archive from the binding header", async () => {
+    const navigate = vi.fn();
+    const user = userEvent.setup();
+    render(<LiveShell identity={identity} navigate={navigate} />);
+
+    await user.click(await screen.findByRole("button", {
+      name: "Sessions",
+    }));
+
+    expect(navigate).toHaveBeenCalledWith(
+      "http://127.0.0.1:8787/?space=sessions&player=poucet",
+    );
+  });
+
   it("offers distinct leave and stop lifecycle actions", async () => {
     const navigate = vi.fn();
     const user = userEvent.setup();
@@ -1360,6 +1484,29 @@ describe("Live shell", () => {
     expect(screen.getByRole("button", {
       name: "View recording",
     })).toBeInTheDocument();
+  });
+
+  it("labels a stopped retained prefix as stopped instead of live", async () => {
+    const ended = runtimeSession({
+      state: "stopped",
+      control_state: null,
+      control_available: false,
+      ended_at: "2026-07-31T01:01:00Z",
+      stop_mode: "cooperative",
+      live: false,
+    });
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      return Promise.resolve(String(input).includes("/snapshot")
+        ? snapshotResponse(runtimeSnapshot({ lifecycle: "stopped" }))
+        : catalogResponse(runtimeCatalog([ended])));
+    });
+    render(<LiveShell identity={identity} />);
+
+    const rail = await screen.findByRole("complementary", {
+      name: "Live evidence rail",
+    });
+    expect(rail).toHaveTextContent("Stopped");
+    expect(rail).not.toHaveTextContent(/NowLive/);
   });
 
   it("keeps identity and removes Stop while reconnecting", async () => {
