@@ -2,9 +2,19 @@
 set -euo pipefail
 
 project_root="$(cd "$(dirname "$0")/../.." && pwd)"
+v2_web_dist="$project_root/week2_capable/observatory_v2/web/dist"
+
+if [[ ! -f "$v2_web_dist/index.html" ]]; then
+  printf '%s\n' \
+    "Observatory v2 is not built." \
+    "Run: cd $project_root/week2_capable/observatory_v2/web && npm run build" >&2
+  exit 1
+fi
+
 export OBSERVATORY_PROJECT_ROOT="$project_root"
 export OBSERVATORY_REVISION="$(
   git -C "$project_root" rev-parse --short=12 HEAD 2>/dev/null || printf unknown
 )"
+export OBSERVATORY_WEB_DIST="$v2_web_dist"
 cd "$project_root/week2_capable/observatory"
 exec uv run boukensha-observatory "$@"

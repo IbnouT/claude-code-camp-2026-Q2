@@ -89,6 +89,7 @@ const snapshot = {
     unknown_positions: 0,
   },
   timeline: [],
+  operator_messages: [],
   capture_gaps: [],
 } satisfies Snapshot;
 

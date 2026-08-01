@@ -148,6 +148,7 @@ function runtimeSnapshot(overrides: Partial<Snapshot> = {}): Snapshot {
     parse_miss_rate: 0,
     rooms: [],
     timeline: [],
+    operator_messages: [],
     capture_gaps: [],
     world: {
       current_title: "A Nexus",
@@ -336,6 +337,8 @@ describe("Live shell", () => {
     expect(await screen.findByRole("region", { name: "Current objective" }))
       .toHaveTextContent("Find the Massive Minotaur");
     const rail = screen.getByRole("complementary", { name: "Live evidence rail" });
+    expect(rail).toHaveTextContent("Now");
+    expect(rail).toHaveTextContent("Live");
     expect(rail).toHaveTextContent("Latest tool action · now");
     expect(rail).toHaveTextContent("Attacking a large kobold");
     expect(rail).toHaveTextContent("kill kobold");
@@ -381,15 +384,58 @@ describe("Live shell", () => {
     render(<LiveShell identity={identity} />);
 
     await user.click(await screen.findByRole("button", { name: "Message agent" }));
-    await user.type(screen.getByLabelText("Guidance for the next iteration boundary"), "Try the western exit");
-    await user.click(screen.getByRole("button", { name: "Send guidance" }));
+    await user.type(screen.getByLabelText("Message for the agent"), "Try the western exit");
+    await user.click(screen.getByRole("button", { name: "Send message" }));
 
-    expect(await screen.findByText("Guidance accepted")).toBeInTheDocument();
+    expect(await screen.findByText(/waiting for the next iteration/)).toBeInTheDocument();
     expect(body).toEqual({
       request_id: "00000000-0000-4000-8000-000000000001",
       action: "guide",
       instruction: "Try the western exit",
       expected_sequence: 42,
+    });
+  });
+
+  it("starts the first turn when an idle session receives a message", async () => {
+    const user = userEvent.setup();
+    let body: unknown = null;
+    const snapshot = runtimeSnapshot({
+      objective: null,
+      objective_initial: null,
+      objective_context: null,
+    });
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/message")) {
+        body = JSON.parse(String(init?.body));
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            request_id: "00000000-0000-4000-8000-000000000001",
+            action: "guide",
+            state: "running",
+            insertion: "first_turn",
+          }),
+        } as Response);
+      }
+      return Promise.resolve(String(input).includes("/snapshot")
+        ? snapshotResponse(snapshot)
+        : catalogResponse());
+    });
+    render(<LiveShell identity={identity} />);
+
+    await user.click(await screen.findByRole("button", { name: "Message agent" }));
+    const composer = screen.getByLabelText("Message for the agent");
+    expect(composer).toBeEnabled();
+    await user.type(composer, "Go to the warrior guild");
+    await user.click(screen.getByRole("button", { name: "Send message" }));
+
+    expect(await screen.findByText(/waiting for the next iteration/))
+      .toBeInTheDocument();
+    expect(body).toEqual({
+      request_id: "00000000-0000-4000-8000-000000000001",
+      action: "revise",
+      instruction: "Go to the warrior guild",
     });
   });
 
@@ -517,9 +563,13 @@ describe("Live shell", () => {
     })).toBeInTheDocument();
     expect(timeline).toHaveTextContent("seq 30 / 42");
     expect(timeline).toHaveTextContent("inspecting history");
+    expect(screen.getByRole("complementary", { name: "Live evidence rail" }))
+      .toHaveTextContent("Historical prefix");
     expect(new URL(window.location.href).searchParams.get("through")).toBe("30");
-    expect(screen.getByRole("button", { name: "Message agent" }))
+    await user.click(screen.getByRole("button", { name: "Message agent" }));
+    expect(screen.getByPlaceholderText("Return to live to message the agent"))
       .toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Close messages" }));
 
     await user.click(screen.getByRole("button", {
       name: "Previous landmark",
@@ -537,6 +587,8 @@ describe("Live shell", () => {
       expect(timeline).toHaveTextContent("following live");
     });
     expect(new URL(window.location.href).searchParams.has("through")).toBe(false);
+    expect(screen.getByRole("complementary", { name: "Live evidence rail" }))
+      .toHaveTextContent("Live");
     expect(screen.getByRole("button", { name: "Message agent" }))
       .toBeEnabled();
   });
@@ -816,9 +868,9 @@ describe("Live shell", () => {
     await screen.findByRole("img", {
       name: "Learned world, 2 rooms",
     });
-    expect(screen.queryByRole("complementary", {
+    expect(screen.getByRole("complementary", {
       name: "Agent thought",
-    })).not.toBeInTheDocument();
+    })).toHaveTextContent("Agent · Planning");
     expect(screen.getByRole("button", {
       name: "Expand map legend",
     })).toBeInTheDocument();

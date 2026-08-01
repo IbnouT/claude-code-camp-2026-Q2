@@ -52,11 +52,6 @@ export function LiveShell({
     (session) => session.id === identity.sessionId
       && session.player_id === identity.playerId,
   );
-  const messageAvailable = snapshot !== null
-    && snapshot.following_live
-    && contextState === "running"
-    && selectedSession?.control_available === true;
-
   useEffect(() => {
     const url = new URL(window.location.href);
     if (throughSequence === null) {
@@ -164,7 +159,9 @@ export function LiveShell({
         onAsk={() => setAskOpen(true)}
         onLeave={() => navigate("/")}
         onMessage={() => setMessageOpen(true)}
-        messageAvailable={messageAvailable}
+        messageAvailable={
+          identity !== null && selectedSession?.control_available === true
+        }
         onNavigate={navigate}
         onRequestStop={() => setStopOpen(true)}
         onThemeChange={onThemeChange}
@@ -172,7 +169,11 @@ export function LiveShell({
       <LiveObjectiveStrip objective={snapshot?.objective_context ?? null} />
       <main className="live-workspace" aria-label="Live workspace">
         {identity !== null ? (
-          <LiveMap identity={identity} snapshot={snapshot} state={snapshotState} />
+          <LiveMap
+            identity={identity}
+            snapshot={snapshot}
+            state={snapshotState}
+          />
         ) : null}
         <aside
           aria-label="Live evidence rail"
@@ -218,7 +219,15 @@ export function LiveShell({
       {messageOpen && identity !== null && snapshot !== null ? (
         <MessageAgentDialog
           expectedSequence={snapshot.latest_sequence}
+          followingLive={snapshot.following_live}
           identity={identity}
+          messages={snapshot.operator_messages}
+          objectiveAvailable={
+            snapshot.objective_context !== null || snapshot.objective !== null
+          }
+          selectedSequence={snapshot.through_sequence}
+          sessionRunning={contextState === "running"}
+          controlAvailable={selectedSession?.control_available === true}
           onClose={() => setMessageOpen(false)}
         />
       ) : null}

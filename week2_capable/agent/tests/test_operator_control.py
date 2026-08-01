@@ -90,6 +90,12 @@ def test_socket_authenticates_identity_and_is_idempotent(tmp_path: Path):
     assert state["state"] == "running"
     assert state["action"] == "guide"
     assert "instruction" not in state
+    history = json.loads(
+        (tmp_path / "operator-messages.json").read_text(encoding="utf-8")
+    )
+    assert len(history["messages"]) == 1
+    assert history["messages"][0]["instruction"] == "Look east"
+    assert history["messages"][0]["applied_iteration"] is None
     assert wrong_player == {
         "ok": False,
         "error": "operator player does not match",
@@ -133,6 +139,11 @@ def test_guidance_enters_context_only_at_the_checkpoint(tmp_path: Path):
     ]
     assert applied[0]["request_id"] == "request-1"
     assert applied[0]["iteration"] == 3
+    history = json.loads(
+        (tmp_path / "operator-messages.json").read_text(encoding="utf-8")
+    )
+    assert history["messages"][0]["applied_iteration"] == 3
+    assert history["messages"][0]["applied_at"] is not None
 
 
 def test_pause_blocks_the_boundary_until_resume(tmp_path: Path):

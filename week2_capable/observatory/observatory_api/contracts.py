@@ -259,6 +259,17 @@ class LiveFrictionDiagnostic(BaseModel):
     evidence: tuple[int, ...]
 
 
+class LiveOperatorMessage(BaseModel):
+    """One retained operator message at the selected Live prefix."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    action: Literal["guide", "revise"]
+    instruction: str
+    sent_at: str
+    applied_iteration: int | None
+
+
 class LiveJourneySnapshot(BaseModel):
     """One deterministic Live projection at an exact gateway sequence."""
 
@@ -308,6 +319,7 @@ class LiveJourneySnapshot(BaseModel):
     rooms: tuple[LiveRoom, ...]
     world: WorldProjection
     timeline: tuple[LiveTimelineItem, ...]
+    operator_messages: tuple[LiveOperatorMessage, ...]
     capture_gaps: tuple[str, ...]
 
 

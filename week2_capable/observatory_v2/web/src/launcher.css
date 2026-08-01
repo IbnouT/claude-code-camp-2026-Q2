@@ -91,6 +91,30 @@ button { color: inherit; }
 .chip { margin-left: auto; padding: 3px 10px; border-radius: 8px; color: var(--color-cyan); background: var(--color-cyan-soft); font-size: 13px; letter-spacing: 0; }
 .disabled { opacity: .66; }
 .form { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+.initial-goal {
+  display: grid;
+  gap: 6px;
+  color: var(--color-muted);
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.initial-goal textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 9px 10px;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  outline: 0;
+  background: color-mix(in srgb, var(--color-surface) 72%, transparent);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0;
+  line-height: 1.45;
+  text-transform: none;
+}
+.initial-goal textarea:focus { border-color: var(--color-cyan); }
 .checks { display: flex; gap: 22px; color: var(--color-muted); font-size: 12.5px; }
 .checks label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
 .checks input, .all-toggle input { accent-color: var(--color-cyan); }

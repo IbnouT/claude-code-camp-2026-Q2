@@ -16,6 +16,7 @@ type StartResponse = {
   session_id: string;
   player_id: string;
   reset: "none" | "temple" | "baseline";
+  objective: string | null;
   state: "running";
 };
 type StartError = {
@@ -189,6 +190,7 @@ export function Launcher() {
   const [baseline, setBaseline] = useState(false);
   const [starting, setStarting] = useState(false);
   const [startMessage, setStartMessage] = useState("");
+  const [objective, setObjective] = useState("");
 
   const loadCatalog = () => {
     setError("");
@@ -256,7 +258,12 @@ export function Launcher() {
   const allEndedCount = (catalog?.sessions ?? []).filter((session) => !session.live).length;
 
   const startSession = async () => {
-    if (!selectedRow || selectedRow.latest?.live || starting) return;
+    const initialGoal = objective.trim();
+    if (
+      !selectedRow
+      || selectedRow.latest?.live
+      || starting
+    ) return;
     setStarting(true);
     setStartMessage("");
     const reset = baseline ? "baseline" : temple ? "temple" : "none";
@@ -267,6 +274,7 @@ export function Launcher() {
         body: JSON.stringify({
           player_id: selectedRow.id,
           reset,
+          ...(initialGoal.length > 0 ? { objective: initialGoal } : {}),
         }),
       });
       const payload = await response.json() as StartResponse | StartError;
@@ -338,6 +346,17 @@ export function Launcher() {
             </button>
             {startOpen && (
               <div className="form">
+                <label className="initial-goal">
+                  <span>Opening instruction <em>optional</em></span>
+                  <textarea
+                    disabled={starting || Boolean(selectedRow?.latest?.live)}
+                    maxLength={4_000}
+                    placeholder="Leave empty to start the agent idle"
+                    rows={3}
+                    value={objective}
+                    onChange={(event) => setObjective(event.target.value)}
+                  />
+                </label>
                 <div className="checks">
                   <label title="Move the player to the Temple of Midgaard before the session starts. Stats and items are untouched.">
                     <input type="checkbox" checked={temple} disabled={starting || Boolean(selectedRow?.latest?.live)} onChange={(event) => {
@@ -355,7 +374,15 @@ export function Launcher() {
                   </label>
                 </div>
                 <p className="hint">Unchecked resumes the game normally.</p>
-                <button className="go" disabled={starting || !selectedRow || Boolean(selectedRow.latest?.live)} onClick={startSession}>
+                <button
+                  className="go"
+                  disabled={
+                    starting
+                    || !selectedRow
+                    || Boolean(selectedRow.latest?.live)
+                  }
+                  onClick={startSession}
+                >
                   {starting ? "Starting…" : `Start session as ${selectedRow?.label ?? "player"} →`}
                 </button>
                 {startMessage && <p className="start-message" role="alert">{startMessage}</p>}

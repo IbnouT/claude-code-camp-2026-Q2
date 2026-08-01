@@ -83,8 +83,7 @@ uv run --project week2_capable/observatory_v2/api \
 ```
 
 ```bash
-OBSERVATORY_WEB_DIST="$PWD/week2_capable/observatory_v2/web/dist" \
-  ./week2_capable/bin/observatory
+./week2_capable/bin/observatory
 ```
 
 Open <http://127.0.0.1:8787>. The launcher is served at `/`. A Live deep link
@@ -108,7 +107,10 @@ environment variables affect the v2 launch directly:
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `BOUKENSHA_DIR` | repository `.boukensha` | Player profiles, registered sessions, and supervisor state |
-| `OBSERVATORY_WEB_DIST` | retained frontend build | Selects the v2 production build for the static host |
+
+The `week2_capable/bin/observatory` command always selects the v2 production
+build for the retained static host. It exits with a build instruction when the
+v2 output is unavailable.
 
 The retained API accepts additional evidence-source settings documented in
 the [Observatory README](../observatory/README.md#configure). Missing sources

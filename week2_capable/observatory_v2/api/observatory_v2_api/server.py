@@ -25,8 +25,10 @@ ResetMode = Literal["none", "temple", "baseline"]
 StopMode = Literal["cooperative", "forced_after_grace"]
 PLAYER_ID = re.compile(r"^[A-Za-z][A-Za-z0-9_-]{0,63}$")
 SESSION_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]{7,127}$")
+MAX_OBJECTIVE_LENGTH = 4_000
 START_PATH = "/api/sessions/start"
 STOP_PATH = re.compile(r"^/api/sessions/([^/]+)/stop$")
+MESSAGE_PATH = re.compile(r"^/api/sessions/([^/]+)/message$")
 START_TIMEOUT_SECONDS = 55.0
 STOP_GRACE_SECONDS = 10.0
 STOP_FORCE_SECONDS = 3.0
@@ -60,12 +62,23 @@ class StopRequestError(ValueError):
         self.status = status
 
 
+class MessageRequestError(ValueError):
+    """A direct message cannot be delivered to an idle agent."""
+
+    def __init__(self, code: str, detail: str, status: HTTPStatus) -> None:
+        super().__init__(detail)
+        self.code = code
+        self.detail = detail
+        self.status = status
+
+
 @dataclass(frozen=True)
 class StartRequest:
     """One public start-session request."""
 
     player_id: str
     reset: ResetMode
+    objective: str | None
 
     @classmethod
     def decode(cls, value: object) -> "StartRequest":
@@ -75,7 +88,7 @@ class StartRequest:
                 "Request body must be a JSON object.",
                 HTTPStatus.UNPROCESSABLE_ENTITY,
             )
-        unknown = set(value) - {"player_id", "reset"}
+        unknown = set(value) - {"player_id", "reset", "objective"}
         if unknown:
             raise StartRequestError(
                 "invalid_request",
@@ -84,6 +97,7 @@ class StartRequest:
             )
         player_id = value.get("player_id")
         reset = value.get("reset")
+        objective = value.get("objective")
         if not isinstance(player_id, str) or not PLAYER_ID.fullmatch(player_id):
             raise StartRequestError(
                 "invalid_player",
@@ -96,7 +110,84 @@ class StartRequest:
                 "reset must be none, temple, or baseline.",
                 HTTPStatus.UNPROCESSABLE_ENTITY,
             )
-        return cls(player_id=player_id, reset=reset)
+        if objective is not None and not isinstance(objective, str):
+            raise StartRequestError(
+                "invalid_objective",
+                "objective must be a string when provided.",
+                HTTPStatus.UNPROCESSABLE_ENTITY,
+            )
+        objective = objective.strip() if isinstance(objective, str) else None
+        if objective == "":
+            objective = None
+        if objective is not None and len(objective) > MAX_OBJECTIVE_LENGTH:
+            raise StartRequestError(
+                "invalid_objective",
+                f"The initial goal must be at most {MAX_OBJECTIVE_LENGTH} characters.",
+                HTTPStatus.UNPROCESSABLE_ENTITY,
+            )
+        return cls(
+            player_id=player_id,
+            reset=reset,
+            objective=objective,
+        )
+
+
+@dataclass(frozen=True)
+class MessageRequest:
+    """One first-turn instruction for an idle supervised agent."""
+
+    request_id: str
+    action: Literal["guide", "revise"]
+    instruction: str
+
+    @classmethod
+    def decode(cls, value: object) -> "MessageRequest":
+        if not isinstance(value, dict):
+            raise MessageRequestError(
+                "invalid_request",
+                "Request body must be a JSON object.",
+                HTTPStatus.UNPROCESSABLE_ENTITY,
+            )
+        unknown = set(value) - {"request_id", "action", "instruction"}
+        if unknown:
+            raise MessageRequestError(
+                "invalid_request",
+                f"Unknown request fields: {', '.join(sorted(unknown))}.",
+                HTTPStatus.UNPROCESSABLE_ENTITY,
+            )
+        request_id = value.get("request_id")
+        action = value.get("action")
+        instruction = value.get("instruction")
+        if not isinstance(request_id, str) or not request_id.strip():
+            raise MessageRequestError(
+                "invalid_request_id",
+                "request_id is required.",
+                HTTPStatus.UNPROCESSABLE_ENTITY,
+            )
+        if not isinstance(instruction, str) or not instruction.strip():
+            raise MessageRequestError(
+                "invalid_instruction",
+                "A non-empty message is required.",
+                HTTPStatus.UNPROCESSABLE_ENTITY,
+            )
+        if action not in {"guide", "revise"}:
+            raise MessageRequestError(
+                "invalid_action",
+                "action must be guide or revise.",
+                HTTPStatus.UNPROCESSABLE_ENTITY,
+            )
+        instruction = instruction.strip()
+        if len(instruction) > MAX_OBJECTIVE_LENGTH:
+            raise MessageRequestError(
+                "invalid_instruction",
+                f"The message must be at most {MAX_OBJECTIVE_LENGTH} characters.",
+                HTTPStatus.UNPROCESSABLE_ENTITY,
+            )
+        return cls(
+            request_id=request_id.strip(),
+            action=action,
+            instruction=instruction,
+        )
 
 
 @dataclass(frozen=True)
@@ -139,6 +230,8 @@ class Supervisor:
                 "--player-profile",
                 request.player_id,
             ]
+            if request.objective is not None:
+                command.append("--task-stdin")
             if request.reset == "baseline":
                 command.extend(("--reset-baseline", "level1-temple@1"))
             elif request.reset == "temple":
@@ -154,6 +247,17 @@ class Supervisor:
                 stderr=subprocess.PIPE,
                 start_new_session=True,
             )
+            if process.stdin is None:
+                process.terminate()
+                process.wait(timeout=5)
+                raise StartRequestError(
+                    "launch_failure",
+                    "The agent launcher did not expose its initial-goal input.",
+                    HTTPStatus.BAD_GATEWAY,
+                )
+            if request.objective is not None:
+                process.stdin.write((request.objective + "\n").encode())
+                process.stdin.close()
             try:
                 session_id = self._wait_for_ready(
                     process,
@@ -168,6 +272,76 @@ class Supervisor:
                 raise
             self.processes[session_id] = process
             return session_id
+
+    def message(
+        self,
+        session_id: str,
+        request: MessageRequest,
+    ) -> dict[str, str]:
+        """Start an idle agent turn through its retained interactive input."""
+
+        if not SESSION_ID.fullmatch(session_id):
+            raise MessageRequestError(
+                "invalid_session",
+                "The session identity is invalid.",
+                HTTPStatus.UNPROCESSABLE_ENTITY,
+            )
+        with self._lock:
+            row = self._session(session_id)
+            if row is None:
+                raise MessageRequestError(
+                    "session_not_found",
+                    "The selected session does not exist.",
+                    HTTPStatus.NOT_FOUND,
+                )
+            if str(row["state"]) not in ACTIVE_STATES:
+                raise MessageRequestError(
+                    "session_not_live",
+                    "The selected session is not running.",
+                    HTTPStatus.CONFLICT,
+                )
+            process = self.processes.get(session_id)
+            if process is None:
+                raise MessageRequestError(
+                    "supervisor_mismatch",
+                    "The selected session is not owned by this supervisor instance.",
+                    HTTPStatus.CONFLICT,
+                )
+            if process.poll() is not None:
+                raise MessageRequestError(
+                    "session_not_live",
+                    "The selected agent process has ended.",
+                    HTTPStatus.CONFLICT,
+                )
+            if process.stdin is None or process.stdin.closed:
+                raise MessageRequestError(
+                    "agent_busy",
+                    "The agent already has an active objective. Send guidance instead.",
+                    HTTPStatus.CONFLICT,
+                )
+            session_dir = self._safe_session_dir(row)
+            retained = self._retain_initial_message(
+                session_dir,
+                request=request,
+            )
+            try:
+                process.stdin.write((request.instruction + "\n").encode())
+                process.stdin.flush()
+            except OSError as error:
+                self._remove_initial_message(
+                    session_dir,
+                    request_id=request.request_id,
+                )
+                raise MessageRequestError(
+                    "delivery_failed",
+                    "The message could not be delivered to the agent.",
+                    HTTPStatus.BAD_GATEWAY,
+                ) from error
+            self._apply_initial_message(
+                session_dir,
+                request_id=request.request_id,
+            )
+            return retained
 
     def stop(self, session_id: str) -> StopResult:
         """Stop one owned runtime without affecting any other process group."""
@@ -451,6 +625,108 @@ class Supervisor:
         return actual
 
     @staticmethod
+    def _retain_initial_message(
+        session_dir: Path,
+        *,
+        request: MessageRequest,
+    ) -> dict[str, str]:
+        value = Supervisor._message_history(session_dir)
+        messages = value["messages"]
+        for message in messages:
+            if message.get("request_id") == request.request_id:
+                return {
+                    "request_id": request.request_id,
+                    "action": request.action,
+                    "state": "running",
+                    "insertion": "first_turn",
+                }
+        messages.append(
+            {
+                "request_id": request.request_id,
+                "action": request.action,
+                "instruction": request.instruction,
+                "sent_at": _now(),
+                "applied_iteration": None,
+                "applied_at": None,
+            }
+        )
+        Supervisor._write_message_history(session_dir, value)
+        return {
+            "request_id": request.request_id,
+            "action": request.action,
+            "state": "running",
+            "insertion": "first_turn",
+        }
+
+    @staticmethod
+    def _apply_initial_message(session_dir: Path, *, request_id: str) -> None:
+        value = Supervisor._message_history(session_dir)
+        for message in value["messages"]:
+            if message.get("request_id") != request_id:
+                continue
+            message["applied_iteration"] = 1
+            message["applied_at"] = _now()
+            Supervisor._write_message_history(session_dir, value)
+            return
+
+    @staticmethod
+    def _remove_initial_message(session_dir: Path, *, request_id: str) -> None:
+        value = Supervisor._message_history(session_dir)
+        value["messages"] = [
+            message
+            for message in value["messages"]
+            if message.get("request_id") != request_id
+        ]
+        Supervisor._write_message_history(session_dir, value)
+
+    @staticmethod
+    def _message_history(session_dir: Path) -> dict[str, object]:
+        path = session_dir / "operator-messages.json"
+        if not path.is_file():
+            return {"version": 1, "messages": []}
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            raise MessageRequestError(
+                "history_unavailable",
+                "The retained message history is unavailable.",
+                HTTPStatus.CONFLICT,
+            ) from error
+        if (
+            not isinstance(value, dict)
+            or value.get("version") != 1
+            or not isinstance(value.get("messages"), list)
+        ):
+            raise MessageRequestError(
+                "history_unavailable",
+                "The retained message history is invalid.",
+                HTTPStatus.CONFLICT,
+            )
+        return value
+
+    @staticmethod
+    def _write_message_history(
+        session_dir: Path,
+        value: dict[str, object],
+    ) -> None:
+        target = session_dir / "operator-messages.json"
+        temporary = session_dir / ".operator-messages.lifecycle.tmp"
+        try:
+            temporary.write_text(
+                json.dumps(value, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            os.chmod(temporary, 0o600)
+            temporary.replace(target)
+        except OSError as error:
+            temporary.unlink(missing_ok=True)
+            raise MessageRequestError(
+                "history_unavailable",
+                "The message could not be retained before delivery.",
+                HTTPStatus.CONFLICT,
+            ) from error
+
+    @staticmethod
     def _latest_sequence(session_dir: Path) -> int:
         try:
             with sqlite3.connect(
@@ -568,6 +844,10 @@ class Handler(BaseHTTPRequestHandler):
         if stop_match is not None:
             self._stop(stop_match.group(1))
             return
+        message_match = MESSAGE_PATH.fullmatch(self.path)
+        if message_match is not None:
+            self._message(message_match.group(1))
+            return
         if self.path == START_PATH:
             self._start()
             return
@@ -623,9 +903,46 @@ class Handler(BaseHTTPRequestHandler):
                 "session_id": session_id,
                 "player_id": request.player_id,
                 "reset": request.reset,
+                "objective": request.objective,
                 "state": "running",
             },
         )
+
+    def _message(self, session_id: str) -> None:
+        try:
+            length = int(self.headers.get("content-length", "0"))
+            if length <= 0 or length > 16_384:
+                raise MessageRequestError(
+                    "invalid_request",
+                    "Request body is missing or too large.",
+                    HTTPStatus.UNPROCESSABLE_ENTITY,
+                )
+            try:
+                body = json.loads(self.rfile.read(length))
+            except (json.JSONDecodeError, UnicodeDecodeError) as error:
+                raise MessageRequestError(
+                    "invalid_json",
+                    "Request body is not valid JSON.",
+                    HTTPStatus.BAD_REQUEST,
+                ) from error
+            request = MessageRequest.decode(body)
+            receipt = self.supervisor.message(session_id, request)
+        except MessageRequestError as error:
+            self._json(
+                error.status,
+                {"error": error.code, "detail": error.detail},
+            )
+            return
+        except Exception:
+            self._json(
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+                {
+                    "error": "delivery_failed",
+                    "detail": "The local message delivery failed unexpectedly.",
+                },
+            )
+            return
+        self._json(HTTPStatus.ACCEPTED, receipt)
 
     def _stop(self, session_id: str) -> None:
         try:

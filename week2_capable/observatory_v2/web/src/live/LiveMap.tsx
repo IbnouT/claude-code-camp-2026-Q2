@@ -97,7 +97,11 @@ type DragState = {
   moved: boolean;
 };
 
-export function LiveMap({ identity, snapshot, state }: Props) {
+export function LiveMap({
+  identity,
+  snapshot,
+  state,
+}: Props) {
   const [frame, setFrame] = useState(defaultFrame);
   const [cameraView, setCameraView] = useState<MapCameraView>({
     center: { x: 0, y: 0 },
@@ -926,13 +930,11 @@ export function LiveMap({ identity, snapshot, state }: Props) {
         />
       )}
       <LiveCombatPanel episode={snapshot.combat_episode} />
-      {snapshot.agent_thought === null ? null : (
-        <LiveThoughtDock
-          expanded={thoughtExpanded}
-          thought={snapshot.agent_thought}
-          onToggle={() => setThoughtExpanded((current) => !current)}
-        />
-      )}
+      <LiveThoughtDock
+        expanded={thoughtExpanded}
+        thought={snapshot.agent_thought}
+        onToggle={() => setThoughtExpanded((current) => !current)}
+      />
       <LiveMapLegend
         entries={legendEntries}
         expanded={legendExpanded}

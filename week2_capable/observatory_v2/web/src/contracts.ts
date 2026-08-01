@@ -259,6 +259,13 @@ export type LiveFrictionDiagnostic = {
   evidence: number[];
 };
 
+export type LiveOperatorMessage = {
+  action: "guide" | "revise";
+  instruction: string;
+  sent_at: string;
+  applied_iteration: number | null;
+};
+
 export type Snapshot = {
   session_id: string;
   gateway_session_id: string;
@@ -307,6 +314,7 @@ export type Snapshot = {
   rooms: LiveRoom[];
   world: WorldProjection;
   timeline: LiveTimelineItem[];
+  operator_messages: LiveOperatorMessage[];
   capture_gaps: string[];
 };
 
@@ -336,6 +344,7 @@ export function decodeSnapshot(value: unknown): Snapshot {
     "milestones",
     "rooms",
     "timeline",
+    "operator_messages",
     "capture_gaps",
   ] as const;
   const valid = requiredStrings.every((key) => typeof value[key] === "string")

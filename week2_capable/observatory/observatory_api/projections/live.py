@@ -18,6 +18,7 @@ from ..contracts import (
     LiveFrictionDiagnostic,
     LiveJourneySnapshot,
     LiveMilestone,
+    LiveOperatorMessage,
     LiveObjectiveContext,
     LiveObservedValue,
     LivePlayerStatus,
@@ -70,6 +71,7 @@ def project_live(
     *,
     through: int | None = None,
     atlas: AtlasSource | None = None,
+    operator_messages: list[dict[str, Any]] | None = None,
 ) -> LiveJourneySnapshot:
     latest = gateway_events[-1].seq if gateway_events else 0
     selected = latest if through is None else max(0, min(through, latest))
@@ -314,8 +316,52 @@ def project_live(
         rooms=_rooms(positions, room_observations),
         world=world,
         timeline=timeline,
+        operator_messages=_operator_messages(
+            operator_messages or [],
+            selected_at=selected_at,
+        ),
         capture_gaps=tuple(capture_gaps),
     )
+
+
+def _operator_messages(
+    messages: list[dict[str, Any]],
+    *,
+    selected_at: float | None,
+) -> tuple[LiveOperatorMessage, ...]:
+    projected: list[LiveOperatorMessage] = []
+    for message in messages:
+        sent_at = _text(message.get("sent_at"))
+        instruction = _text(message.get("instruction"))
+        if sent_at is None or instruction is None:
+            continue
+        if selected_at is not None and _stamp(sent_at) > selected_at:
+            continue
+        applied_at = _text(message.get("applied_at"))
+        applied_iteration = message.get("applied_iteration")
+        applied_in_prefix = (
+            isinstance(applied_iteration, int)
+            and (
+                selected_at is None
+                or applied_at is None
+                or _stamp(applied_at) <= selected_at
+            )
+        )
+        projected.append(
+            LiveOperatorMessage(
+                action=(
+                    "revise"
+                    if message.get("action") == "revise"
+                    else "guide"
+                ),
+                instruction=instruction,
+                sent_at=sent_at,
+                applied_iteration=(
+                    applied_iteration if applied_in_prefix else None
+                ),
+            )
+        )
+    return tuple(projected)
 
 
 def _friction(

@@ -7,7 +7,7 @@ import { formatAge } from "./liveEvidence";
 
 type Props = {
   expanded: boolean;
-  thought: LiveAgentExcerpt;
+  thought: LiveAgentExcerpt | null;
   onToggle: () => void;
 };
 
@@ -16,11 +16,13 @@ export function LiveThoughtDock({
   thought,
   onToggle,
 }: Props) {
-  const phase = thought.phase === "reasoning"
+  const phase = thought?.phase === "reasoning"
     ? "Thinking"
-    : thought.phase === "plan"
+    : thought?.phase === "plan"
       ? "Planning"
-      : "Acting";
+      : thought === null
+        ? "Planning"
+        : "Acting";
   return (
     <aside
       aria-label="Agent thought"
@@ -38,17 +40,26 @@ export function LiveThoughtDock({
         type="button"
         onClick={onToggle}
       >
-        <span>Agent · {phase} · {formatAge(thought.observed_at)}</span>
+        <span>
+          Agent · {phase}
+          {thought === null ? "" : ` · ${formatAge(thought.observed_at)}`}
+        </span>
         {expanded
           ? <ChevronDown aria-hidden="true" size={14} />
           : <ChevronUp aria-hidden="true" size={14} />}
       </button>
       {expanded ? (
         <div className="live-thought-dock-body">
-          <p>{thought.text}</p>
-          <small title={`Observed ${thought.observed_at}`}>
-            {thought.evidence} · line {thought.line}
-          </small>
+          {thought === null ? (
+            <p>Agent thought not observed.</p>
+          ) : (
+            <>
+              <p>{thought.text}</p>
+              <small title={`Observed ${thought.observed_at}`}>
+                {thought.evidence} · line {thought.line}
+              </small>
+            </>
+          )}
         </div>
       ) : null}
     </aside>

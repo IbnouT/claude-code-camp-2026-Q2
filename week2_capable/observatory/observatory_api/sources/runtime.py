@@ -224,6 +224,55 @@ class RuntimeSource:
             records.append({"line": index, **value})
         return records
 
+    def operator_messages(self, session_id: str) -> list[dict[str, Any]]:
+        """Read the agent-owned durable operator message history."""
+        source = self._session_dir(session_id) / "operator-messages.json"
+        if not source.is_file():
+            return []
+        value = self._object(source)
+        messages = value.get("messages")
+        if value.get("version") != 1 or not isinstance(messages, list):
+            raise RuntimeSourceError(
+                f"session {session_id!r} operator message history is invalid"
+            )
+        records: list[dict[str, Any]] = []
+        for message in messages:
+            if not isinstance(message, dict):
+                raise RuntimeSourceError(
+                    f"session {session_id!r} operator message is invalid"
+                )
+            request_id = message.get("request_id")
+            action = message.get("action")
+            instruction = message.get("instruction")
+            sent_at = message.get("sent_at")
+            applied_iteration = message.get("applied_iteration")
+            applied_at = message.get("applied_at")
+            if (
+                not isinstance(request_id, str)
+                or action not in {"guide", "revise"}
+                or not isinstance(instruction, str)
+                or not isinstance(sent_at, str)
+                or (
+                    applied_iteration is not None
+                    and not isinstance(applied_iteration, int)
+                )
+                or (applied_at is not None and not isinstance(applied_at, str))
+            ):
+                raise RuntimeSourceError(
+                    f"session {session_id!r} operator message is invalid"
+                )
+            records.append(
+                {
+                    "request_id": request_id,
+                    "action": action,
+                    "instruction": instruction,
+                    "sent_at": sent_at,
+                    "applied_iteration": applied_iteration,
+                    "applied_at": applied_at,
+                }
+            )
+        return records
+
     def control(
         self,
         session_id: str,

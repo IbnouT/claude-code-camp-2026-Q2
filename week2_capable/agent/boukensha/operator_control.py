@@ -39,14 +39,83 @@ class OperatorDirective:
     accepted_state: str
 
 
+class OperatorMessageJournal:
+    """Durable sent-message history for the read-only Observatory."""
+
+    def __init__(self, session_dir: Path) -> None:
+        self.path = session_dir / "operator-messages.json"
+        self.temporary = session_dir / ".operator-messages.tmp"
+        self._lock = threading.Lock()
+
+    def accept(self, request_id: str, action: str, instruction: str) -> None:
+        with self._lock:
+            value = self._read()
+            messages = value["messages"]
+            if any(message.get("request_id") == request_id for message in messages):
+                return
+            messages.append(
+                {
+                    "request_id": request_id,
+                    "action": action,
+                    "instruction": instruction,
+                    "sent_at": datetime.now(timezone.utc).isoformat(),
+                    "applied_iteration": None,
+                    "applied_at": None,
+                }
+            )
+            self._write(value)
+
+    def apply(self, request_id: str, iteration: int) -> None:
+        with self._lock:
+            value = self._read()
+            for message in value["messages"]:
+                if message.get("request_id") != request_id:
+                    continue
+                message["applied_iteration"] = iteration
+                message["applied_at"] = datetime.now(timezone.utc).isoformat()
+                self._write(value)
+                return
+
+    def _read(self) -> dict[str, Any]:
+        if not self.path.is_file():
+            return {"version": 1, "messages": []}
+        try:
+            value = json.loads(self.path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            raise OperatorControlError(
+                "operator message history is unreadable"
+            ) from error
+        if (
+            not isinstance(value, dict)
+            or value.get("version") != 1
+            or not isinstance(value.get("messages"), list)
+        ):
+            raise OperatorControlError("operator message history is invalid")
+        return value
+
+    def _write(self, value: dict[str, Any]) -> None:
+        self.temporary.write_text(
+            json.dumps(value, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        os.chmod(self.temporary, 0o600)
+        self.temporary.replace(self.path)
+
+
 class OperatorMailbox:
     """Thread-safe control state consumed only by the agent loop."""
 
-    def __init__(self) -> None:
+    def __init__(self, message_journal: OperatorMessageJournal | None = None) -> None:
         self._condition = threading.Condition()
         self._state = "running"
         self._pending: list[OperatorDirective] = []
         self._receipts: dict[str, dict[str, Any]] = {}
+        self._message_journal = message_journal
+
+    def attach_message_journal(self, journal: OperatorMessageJournal) -> None:
+        """Attach the launcher session journal before serving requests."""
+        with self._condition:
+            self._message_journal = journal
 
     def submit(
         self,
@@ -73,6 +142,8 @@ class OperatorMailbox:
                 self._state = "running"
             elif action == "stop":
                 self._state = "stopped"
+            if action in GUIDANCE_ACTIONS and self._message_journal is not None:
+                self._message_journal.accept(request_id, action, clean or "")
             self._pending.append(
                 OperatorDirective(request_id, action, clean, self._state)
             )
@@ -102,6 +173,11 @@ class OperatorMailbox:
                     iteration=iteration,
                     instruction=directive.instruction,
                 )
+                if (
+                    directive.action in GUIDANCE_ACTIONS
+                    and self._message_journal is not None
+                ):
+                    self._message_journal.apply(directive.request_id, iteration)
                 if directive.action == "guide":
                     context.add(
                         Message.user(
@@ -143,6 +219,9 @@ class OperatorControlServer:
         self.player_id = player_id
         self.session_id = session_id
         self.mailbox = mailbox
+        self.mailbox.attach_message_journal(
+            OperatorMessageJournal(self.token_path.parent)
+        )
         self._socket: socket.socket | None = None
         self._thread: threading.Thread | None = None
         self._closing = threading.Event()

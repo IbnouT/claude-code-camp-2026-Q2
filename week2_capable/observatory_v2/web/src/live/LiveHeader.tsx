@@ -2,8 +2,8 @@ import {
   Activity,
   BookOpen,
   FlaskConical,
-  Moon,
   MessageSquareText,
+  Moon,
   Search,
   Sun,
   Telescope,
@@ -91,6 +91,20 @@ export function LiveHeader({
         ) : null}
 
         <button
+          aria-label="Message agent"
+          className="live-header-action live-message-action"
+          disabled={!messageAvailable}
+          title={messageAvailable
+            ? "Guide the running agent"
+            : "Messaging requires a running, controllable session"}
+          type="button"
+          onClick={onMessage}
+        >
+          <MessageSquareText size={14} aria-hidden="true" />
+          <span>Message agent</span>
+        </button>
+
+        <button
           className="live-header-action live-ask-action"
           disabled={identity === null}
           type="button"
@@ -99,17 +113,6 @@ export function LiveHeader({
           <Search size={14} aria-hidden="true" />
           <span>Ask about this session</span>
           <kbd>⌘K</kbd>
-        </button>
-
-        <button
-          className="live-header-action live-message-action"
-          disabled={!messageAvailable}
-          title={messageAvailable ? "Guide the running agent" : "Messaging requires a running, controllable session"}
-          type="button"
-          onClick={onMessage}
-        >
-          <MessageSquareText size={14} aria-hidden="true" />
-          <span>Message agent</span>
         </button>
 
         <button

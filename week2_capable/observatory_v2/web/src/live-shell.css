@@ -134,6 +134,13 @@
   border-bottom: 1px solid var(--color-line);
 }
 
+.live-rail-block-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .live-rail-block h2 {
   margin: 0;
   color: var(--color-quiet);
@@ -141,6 +148,32 @@
   font-weight: 600;
   letter-spacing: .14em;
   text-transform: uppercase;
+}
+
+.live-rail-prefix-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-quiet);
+  font-size: 9px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.live-rail-prefix-state i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-quiet);
+}
+
+.live-rail-prefix-state.is-live {
+  color: var(--color-green);
+}
+
+.live-rail-prefix-state.is-live i {
+  background: var(--color-green);
+  box-shadow: 0 0 9px color-mix(in srgb, var(--color-green) 72%, transparent);
 }
 
 .live-posture-pill,
@@ -1183,9 +1216,9 @@
   border: 1px solid var(--color-line-strong);
   border-radius: 12px;
   background:
-    color-mix(in srgb, var(--color-surface) 50%, transparent);
+    color-mix(in srgb, var(--color-surface) 62%, transparent);
   box-shadow: var(--shadow-popover);
-  backdrop-filter: blur(5px) saturate(95%);
+  backdrop-filter: blur(7px) saturate(105%);
   color: var(--color-text);
 }
 
@@ -1242,12 +1275,17 @@
   font-size: 9px;
 }
 
+.live-thought-dock-body .live-agent-phase {
+  margin: 0 0 6px;
+  color: var(--color-cyan);
+}
+
 .live-map-legend {
   right: 18px;
   width: 190px;
   background:
-    color-mix(in srgb, var(--color-surface) 50%, transparent);
-  backdrop-filter: blur(5px) saturate(95%);
+    color-mix(in srgb, var(--color-surface) 62%, transparent);
+  backdrop-filter: blur(7px) saturate(105%);
   transition: right 160ms ease;
   pointer-events: none;
 }
@@ -2274,19 +2312,105 @@
 }
 
 .live-message-dialog {
-  width: min(620px, 100%);
+  width: min(430px, 100%);
+  height: 100%;
+  overflow-y: auto;
+  border-left: 1px solid var(--color-line-strong);
+  background:
+    color-mix(in srgb, var(--color-surface) 97%, transparent);
+  box-shadow: -18px 0 54px rgb(0 0 0 / 28%);
+  backdrop-filter: none;
+  animation: live-message-slide-in 360ms cubic-bezier(.22, 1, .36, 1) both;
+  will-change: transform, opacity;
+}
+
+.live-message-backdrop {
+  place-items: stretch end;
+  padding: 0;
   overflow: hidden;
-  border: 1px solid var(--color-line-strong);
-  border-radius: 16px;
-  background: var(--color-surface);
-  box-shadow: var(--shadow-popover);
+  background: rgb(4 8 12 / 10%);
+  backdrop-filter: none;
+  animation: live-message-shade-in 360ms ease-out both;
+}
+
+.live-message-backdrop.is-closing {
+  animation: live-message-shade-out 360ms ease-in both;
+}
+
+.live-message-backdrop.is-closing .live-message-dialog {
+  animation: live-message-slide-out 360ms cubic-bezier(.64, 0, .78, 0) both;
+}
+
+@keyframes live-message-slide-in {
+  from {
+    opacity: .35;
+    transform: translate3d(100%, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes live-message-slide-out {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    opacity: .25;
+    transform: translate3d(100%, 0, 0);
+  }
+}
+
+@keyframes live-message-shade-in {
+  from { background: transparent; }
+  to { background: rgb(4 8 12 / 10%); }
+}
+
+@keyframes live-message-shade-out {
+  from { background: rgb(4 8 12 / 10%); }
+  to { background: transparent; }
 }
 
 .live-message-compose,
 .live-message-receipt {
   display: grid;
-  gap: 12px;
-  padding: 20px 24px 24px;
+  gap: 14px;
+  padding: 18px 22px 24px;
+}
+
+.live-message-history {
+  display: grid;
+  gap: 10px;
+  max-height: min(44vh, 420px);
+  overflow-y: auto;
+}
+
+.live-message-history article {
+  display: grid;
+  gap: 6px;
+  padding: 12px 13px;
+  border: 1px solid var(--color-line);
+  border-left: 2px solid var(--color-amber);
+  border-radius: 8px;
+  background: var(--color-raised);
+}
+
+.live-message-history article p {
+  color: var(--color-text);
+  font-size: 12px;
+}
+
+.live-message-history article small {
+  color: var(--color-quiet);
+  font-size: 10px;
+}
+
+.live-message-empty {
+  padding: 14px;
+  border: 1px dashed var(--color-line);
+  border-radius: 8px;
 }
 
 .live-message-compose label {
@@ -2296,8 +2420,8 @@
 }
 
 .live-message-compose textarea {
-  resize: vertical;
-  min-height: 112px;
+  resize: none;
+  min-height: 150px;
   padding: 12px;
   border: 1px solid var(--color-line);
   border-radius: 10px;
@@ -2323,9 +2447,70 @@
   color: var(--color-coral);
 }
 
+.live-message-compose .live-message-accepted {
+  color: var(--color-green);
+}
+
+.live-message-compose .live-message-stale {
+  color: var(--color-amber);
+}
+
+.live-message-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.live-message-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--color-line);
+  border-radius: 9px;
+  background:
+    color-mix(in srgb, var(--color-base) 58%, transparent);
+  color: var(--color-quiet);
+  font-size: 11px;
+}
+
+.live-message-mode button {
+  min-width: 70px;
+  min-height: 32px;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    color 140ms ease;
+}
+
+.live-message-mode button:hover {
+  color: var(--color-text);
+}
+
+.live-message-mode button[aria-pressed="true"] {
+  background:
+    color-mix(in srgb, var(--color-amber) 15%, var(--color-raised));
+  color: var(--color-amber);
+}
+
+.live-message-disabled-mode {
+  color: var(--color-quiet);
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+
 .live-message-submit,
 .live-message-receipt button {
-  width: fit-content;
+  width: auto;
+  justify-content: center;
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -2341,6 +2526,10 @@
   opacity: .5;
 }
 
+.live-message-history article.is-optimistic {
+  border-left-color: var(--color-cyan);
+}
+
 .live-message-receipt strong {
   color: var(--color-green);
 }
@@ -2348,6 +2537,12 @@
 .live-message-receipt small {
   color: var(--color-quiet);
   font-family: var(--font-mono);
+}
+
+@media (max-width: 520px) {
+  .live-message-dialog {
+    width: 100%;
+  }
 }
 
 @media (max-width: 1440px) {

@@ -48,7 +48,10 @@ export function LiveEvidenceRail({
   });
   return (
     <div className="live-rail-content">
-      <RailBlock title="Now">
+      <RailBlock
+        status={snapshot.following_live ? "live" : "history"}
+        title="Now"
+      >
         {typeof posture === "string" ? (
           <span className="live-posture-pill" title={evidenceTitle(fields.posture)}>
             {snapshot.combat ? "fighting" : posture}
@@ -117,14 +120,24 @@ export function LiveEvidenceRail({
 
 function RailBlock({
   children,
+  status,
   title,
 }: {
   children: React.ReactNode;
+  status?: "live" | "history";
   title: string;
 }) {
   return (
     <section className="live-rail-block">
-      <h2>{title}</h2>
+      <header className="live-rail-block-heading">
+        <h2>{title}</h2>
+        {status === undefined ? null : (
+          <span className={`live-rail-prefix-state is-${status}`}>
+            <i aria-hidden="true" />
+            {status === "live" ? "Live" : "Historical prefix"}
+          </span>
+        )}
+      </header>
       {children}
     </section>
   );

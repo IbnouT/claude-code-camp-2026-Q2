@@ -283,6 +283,7 @@ def create_app(
                 runtime.agent_events(session_id),
                 through=through,
                 atlas=atlas,
+                operator_messages=runtime.operator_messages(session_id),
             )
         except (RuntimeSourceError, ValueError) as error:
             return _runtime_error(error)
@@ -347,6 +348,7 @@ def create_app(
                 runtime.agent_events(session_id),
                 through=payload.expected_sequence,
                 atlas=atlas,
+                operator_messages=runtime.operator_messages(session_id),
             )
             if snapshot.agent_thought is None:
                 return JSONResponse(
