@@ -166,7 +166,15 @@ export function LiveShell({
         onRequestStop={() => setStopOpen(true)}
         onThemeChange={onThemeChange}
       />
-      <LiveObjectiveStrip objective={snapshot?.objective_context ?? null} />
+      <LiveObjectiveStrip
+        canSetGoal={
+          identity !== null
+          && selectedSession?.control_available === true
+          && snapshot?.following_live === true
+        }
+        compatibilityObjective={snapshot?.objective ?? null}
+        objective={snapshot?.objective_context ?? null}
+      />
       <main className="live-workspace" aria-label="Live workspace">
         {identity !== null ? (
           <LiveMap

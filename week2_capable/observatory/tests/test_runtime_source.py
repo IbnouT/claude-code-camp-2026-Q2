@@ -14,7 +14,7 @@ from mud_gateway.journal import Journal
 
 from observatory_api.app import create_app
 from observatory_api.contracts import LiveMilestone, LiveTimelineItem
-from observatory_api.projections.live import _quiet_cohorts
+from observatory_api.projections.live import _objective, _quiet_cohorts
 from observatory_api.settings import Settings
 from observatory_api.sources.runtime import RuntimeSource, RuntimeSourceError
 
@@ -41,6 +41,45 @@ CREATE TABLE sessions (
     legacy INTEGER NOT NULL DEFAULT 0
 );
 """
+
+
+def test_compatibility_objective_ignores_operator_guidance():
+    events = [
+        {
+            "phase": "prompt",
+            "messages": [{
+                "role": "user",
+                "content": [{
+                    "type": "text",
+                    "text": "Find the warrior guild",
+                }],
+            }],
+        },
+        {
+            "phase": "prompt",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [{
+                        "type": "text",
+                        "text": "Find the warrior guild",
+                    }],
+                },
+                {
+                    "role": "user",
+                    "content": [{
+                        "type": "text",
+                        "text": (
+                            "Authenticated operator guidance for the active "
+                            "objective:\nTry the western exit"
+                        ),
+                    }],
+                },
+            ],
+        },
+    ]
+
+    assert _objective(events) == "Find the warrior guild"
 
 
 def test_quiet_cohorts_follow_contiguous_activity_runs_between_landmarks():

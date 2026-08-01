@@ -1575,7 +1575,13 @@ def _objective(events: list[dict[str, Any]]) -> str | None:
                 for block in reversed(content):
                     if isinstance(block, dict) and block.get("type") == "text":
                         text = _text(block.get("text"))
-                        if text:
+                        if (
+                            text
+                            and not text.startswith(
+                                "Authenticated operator guidance for the "
+                                "active objective:"
+                            )
+                        ):
                             return text
     return None
 

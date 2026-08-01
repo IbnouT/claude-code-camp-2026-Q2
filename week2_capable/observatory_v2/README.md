@@ -132,6 +132,10 @@ navigation without changing the selected evidence source. The objective strip,
 evidence rail, active-combat panel, and thought age expose retained state
 without claiming that a stale observation is current. Message agent inserts
 guidance at the next iteration boundary for a running, controllable session.
+The objective strip always renders: structured current metadata wins, retained
+compatibility text remains visible for older sessions, and an unset objective
+is stated directly. Applied replacements carry their revision count, while
+Nudge guidance never becomes the displayed goal.
 The rail keeps navigation progress in one stable block, emphasizes retained
 friction rules when they fire, and states lifecycle or capture conditions when
 measurements would be unsafe. The causal timeline keeps a current snapshot

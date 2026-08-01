@@ -336,6 +336,10 @@ describe("Live shell", () => {
 
     expect(await screen.findByRole("region", { name: "Current objective" }))
       .toHaveTextContent("Find the Massive Minotaur");
+    expect(screen.getByRole("region", { name: "Current objective" }))
+      .toHaveTextContent("Objective clue · Search beyond the temple.");
+    expect(screen.getByRole("region", { name: "Current objective" }))
+      .toHaveTextContent("Revision 2");
     const rail = screen.getByRole("complementary", { name: "Live evidence rail" });
     expect(rail).toHaveTextContent("Now");
     expect(rail).toHaveTextContent("Live");
@@ -424,6 +428,10 @@ describe("Live shell", () => {
     });
     render(<LiveShell identity={identity} />);
 
+    expect(await screen.findByRole("region", { name: "Current objective" }))
+      .toHaveTextContent("No goal set");
+    expect(screen.getByRole("region", { name: "Current objective" }))
+      .toHaveTextContent("First message starts the agent");
     await user.click(await screen.findByRole("button", { name: "Message agent" }));
     const composer = screen.getByLabelText("Message for the agent");
     expect(composer).toBeEnabled();
@@ -437,6 +445,27 @@ describe("Live shell", () => {
       action: "revise",
       instruction: "Go to the warrior guild",
     });
+  });
+
+  it("shows a retained compatibility objective without structured metadata", async () => {
+    const snapshot = runtimeSnapshot({
+      objective: "Find the warrior guild",
+      objective_initial: null,
+      objective_context: null,
+    });
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      return Promise.resolve(String(input).includes("/snapshot")
+        ? snapshotResponse(snapshot)
+        : catalogResponse());
+    });
+    render(<LiveShell identity={identity} />);
+
+    const objective = await screen.findByRole("region", {
+      name: "Current objective",
+    });
+    expect(objective).toHaveTextContent("Find the warrior guild");
+    expect(objective).not.toHaveTextContent("No goal set");
+    expect(objective).not.toHaveTextContent("Objective clue");
   });
 
   it("steps through typed causal landmarks and returns to live", async () => {

@@ -177,6 +177,9 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
 - Historical inspection needs two simultaneous truths: the selected prefix and
   the latest retained snapshot. Without the second, stepping backward erases
   the future landmarks needed to step forward or return to live.
+- A compatibility field must preserve its original meaning across new control
+  paths. Operator guidance is user-shaped prompt text, but treating it as the
+  objective would make a Nudge silently rewrite the goal.
 
 ## Technical Conclusions
 

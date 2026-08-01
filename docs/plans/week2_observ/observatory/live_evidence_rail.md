@@ -22,6 +22,21 @@ changed by this plan.
 
 ## Rail blocks
 
+## Objective strip
+
+- The strip stays on one line. The clue truncates before the title, and the
+  title truncates before the revision count.
+- The title resolves from `objective_context.title`, then the compatibility
+  `objective`. An exhausted fallback renders `No goal set`.
+- A controllable session with no goal adds `First message starts the agent`.
+- The optional clue is labelled as an objective clue. It is authored guidance,
+  not current-world position evidence.
+- A revision count above one remains legible. Source provenance stays in the
+  evidence title.
+- Historical inspection uses the objective valid at the selected prefix.
+- Authenticated guidance does not replace the compatibility objective. Only an
+  applied `revise` advances `objective_context`.
+
 ### NOW
 
 - Posture from `player_status.fields.posture`. Active `combat` and
