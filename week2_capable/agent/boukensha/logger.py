@@ -318,6 +318,37 @@ class Logger:
         if self._log_io is not None and not self._log_io.closed:
             self._log_io.close()
 
+    def retain_initial_objective(
+        self,
+        objective: dict[str, str | int | None],
+    ) -> bool:
+        """Add the first operator goal to an otherwise idle session start.
+
+        An interactive runtime writes its session-start record before it can
+        receive a first turn. The local supervisor retains a Goal before
+        delivering that turn, so the logger can complete the still-solitary
+        start record without inferring anything from model or game output.
+        """
+        try:
+            self._log_io.flush()
+            records = self._path.read_text(encoding="utf-8").splitlines()
+            if len(records) != 1:
+                return False
+            start = json.loads(records[0])
+            if not isinstance(start, dict) or start.get("phase") != "session_start":
+                return False
+            start["objective"] = dict(objective)
+            self._log_io.seek(0)
+            self._log_io.truncate()
+            self._log_io.write(
+                json.dumps(start, separators=(",", ":"), default=str) + "\n"
+            )
+            self._log_io.flush()
+            return True
+        except Exception:
+            self._dropped += 1
+            return False
+
     def __enter__(self) -> "Logger":
         return self
 

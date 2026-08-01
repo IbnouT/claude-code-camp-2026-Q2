@@ -167,6 +167,8 @@ Order:
 2. Objective metadata
    - Retain title, optional clue, source kind, revision, and evidence from the
      benchmark or operator input.
+   - Complete `session_start.objective` before turn one when the first Goal
+     starts an idle supervised session. Nudge does not create an objective.
    - Preserve the first valid structured session objective as
      `objective_initial`.
    - Advance only `objective_context` when retained operator revisions arrive.

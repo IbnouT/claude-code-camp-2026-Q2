@@ -109,6 +109,10 @@ an in-flight provider request is never presented as interrupted. Guidance and
 goal revisions enter context as labelled operator messages. The control token
 stays inside the session directory and never reaches the browser.
 
+When a Goal supplies the first turn of an idle supervised session, that exact
+operator text also completes the existing `session_start.objective` record as
+revision 1. Nudge remains guidance and does not become objective metadata.
+
 The gateway's typed result envelopes stay intact in model context and session
 logs. The TUI unwraps their human text into rooms, messages and readable errors.
 

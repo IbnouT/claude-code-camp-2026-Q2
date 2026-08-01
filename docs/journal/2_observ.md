@@ -186,6 +186,9 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
 - A map legend explains the visual grammar, not only the marks present in one
   camera frame. Stable keys for frontier, continuation, visit, mob, and object
   symbols keep a live update from introducing unexplained evidence.
+- An idle runtime has to retain authored intent before its first turn begins.
+  Otherwise the exact Goal can drive the agent while the observer can prove
+  only an unstructured compatibility prompt.
 
 ## Technical Conclusions
 

@@ -20,6 +20,7 @@ session, and any unexpected error in a turn is isolated so the session survives.
 
 from __future__ import annotations
 
+import json
 import sys
 import threading
 from dataclasses import dataclass, field
@@ -31,6 +32,7 @@ from .backends import backend_for
 from .compaction import prefix_tokens
 from .errors import ApiError, ConfigError, LoopError, TurnCancelled
 from .message import Message
+from .objective import ObjectiveContext
 from .operator_control import OperatorMailbox, OperatorStopped
 from .prompt_builder import PromptBuilder
 from .runtime import identity_environment
@@ -362,6 +364,8 @@ class Repl:
         Ctrl-C aborts just this turn and returns to the prompt, and any error is
         isolated to the turn, so the session survives a stuck or bad turn.
         """
+        if self._turn == 0:
+            self._retain_initial_operator_objective(text)
         self._turn += 1
         self._logger.turn(n=self._turn)
         self._context.add(Message.user(text))
@@ -417,6 +421,40 @@ class Repl:
 
         self._writeln("")
         self._writeln(reply)
+
+    def _retain_initial_operator_objective(self, text: str) -> None:
+        """Complete session-start metadata for a supervised first Goal."""
+        session_dir = self._runtime_identity.get("session_dir")
+        if not session_dir:
+            return
+        path = Path(session_dir) / "operator-messages.json"
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return
+        messages = value.get("messages") if isinstance(value, dict) else None
+        if not isinstance(messages, list):
+            return
+        message = next(
+            (
+                item
+                for item in reversed(messages)
+                if isinstance(item, dict)
+                and item.get("action") == "revise"
+                and item.get("instruction") == text
+            ),
+            None,
+        )
+        if message is None:
+            return
+        clue = message.get("clue")
+        objective = ObjectiveContext.create(
+            text,
+            clue=clue if isinstance(clue, str) else None,
+            source_kind="operator",
+            revision=1,
+        )
+        self._logger.retain_initial_objective(objective.as_log())
 
     def cancel_turn(self) -> bool:
         """Ask the in-flight turn to stop. True when a turn was running.

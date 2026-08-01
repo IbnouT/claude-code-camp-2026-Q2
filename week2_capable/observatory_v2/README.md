@@ -132,6 +132,9 @@ navigation without changing the selected evidence source. The objective strip,
 evidence rail, active-combat panel, and thought age expose retained state
 without claiming that a stale observation is current. Message agent inserts
 guidance at the next iteration boundary for a running, controllable session.
+The first Goal on an idle session starts turn one and retains structured
+revision-1 objective metadata before that turn begins. A first Nudge starts the
+turn without redefining the objective.
 The objective strip always renders: structured current metadata wins, retained
 compatibility text remains visible for older sessions, and an unset objective
 is stated directly. Applied replacements carry their revision count, while

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import io
 import json
 from pathlib import Path
 
 import pytest
 
 from boukensha.objective import ObjectiveContext
-from boukensha.run_dsl import run
+from boukensha.run_dsl import repl, run
 from .helper import StubTransport, end_turn, ok
 
 
@@ -90,3 +91,56 @@ def test_run_retains_objective_metadata_beside_the_exact_prompt(
     prompt = next(record for record in records if record["phase"] == "prompt")
     assert session_start["objective"] == objective.as_log()
     assert prompt["messages"][-1]["content"][-1]["text"] == task
+
+
+@pytest.mark.parametrize(("action", "retains_objective"), [
+    ("revise", True),
+    ("guide", False),
+])
+def test_idle_session_first_message_respects_goal_semantics(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    action: str,
+    retains_objective: bool,
+) -> None:
+    task = "Go to the warrior guild."
+    session_dir = tmp_path / "session"
+    session_dir.mkdir()
+    (session_dir / "operator-messages.json").write_text(
+        json.dumps({
+            "version": 1,
+            "messages": [{
+                "request_id": "goal-1",
+                "action": action,
+                "instruction": task,
+                "sent_at": "2026-08-01T00:00:00Z",
+                "applied_iteration": 1,
+                "applied_at": "2026-08-01T00:00:01Z",
+            }],
+        }),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("BOUKENSHA_SESSION_DIR", str(session_dir))
+    log = session_dir / "agent.jsonl"
+
+    repl(
+        log=str(log),
+        transport=StubTransport(ok(end_turn("done"))),
+        sleep=lambda _: None,
+        tui=False,
+        input=io.StringIO(task + "\n"),
+        output=io.StringIO(),
+    )
+
+    records = [json.loads(line) for line in log.read_text().splitlines()]
+    assert records[0]["phase"] == "session_start"
+    if retains_objective:
+        assert records[0]["objective"] == {
+            "title": task,
+            "clue": None,
+            "source_kind": "operator",
+            "revision": 1,
+        }
+    else:
+        assert "objective" not in records[0]
+    assert [record["phase"] for record in records].count("session_start") == 1
