@@ -9,7 +9,10 @@ import {
   Telescope,
 } from "lucide-react";
 import type { Catalog } from "../contracts";
-import type { LiveRouteIdentity } from "../routes";
+import {
+  sessionsHref,
+  type LiveRouteIdentity,
+} from "../routes";
 import type { Theme } from "../theme";
 import {
   type ContextState,
@@ -31,10 +34,15 @@ type Props = {
 };
 
 const spaces = [
-  { label: "Live", icon: Activity, active: true },
-  { label: "Sessions", icon: Telescope, active: false },
-  { label: "Experiments", icon: FlaskConical, active: false },
-  { label: "Knowledge", icon: BookOpen, active: false },
+  { label: "Live", icon: Activity, active: true, available: true },
+  { label: "Sessions", icon: Telescope, active: false, available: true },
+  {
+    label: "Experiments",
+    icon: FlaskConical,
+    active: false,
+    available: false,
+  },
+  { label: "Knowledge", icon: BookOpen, active: false, available: false },
 ];
 
 export function LiveHeader({
@@ -63,14 +71,19 @@ export function LiveHeader({
       </a>
 
       <nav className="live-nav" aria-label="Observatory spaces">
-        {spaces.map(({ active, icon: Icon, label }) => (
+        {spaces.map(({ active, available, icon: Icon, label }) => (
           <button
-            aria-disabled={!active}
+            aria-disabled={!available}
             aria-current={active ? "page" : undefined}
             className="live-nav-link"
             key={label}
-            title={active ? undefined : `${label} will be rebuilt after Live`}
+            title={available
+              ? undefined
+              : `${label} will be rebuilt after Live`}
             type="button"
+            onClick={label === "Sessions"
+              ? () => onNavigate(sessionsHref(identity?.playerId))
+              : undefined}
           >
             <Icon size={15} aria-hidden="true" />
             <span>{label}</span>

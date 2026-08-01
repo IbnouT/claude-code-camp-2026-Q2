@@ -6,6 +6,7 @@ import {
 import {
   liveHref,
   liveIdentity,
+  recordedSessionHref,
 } from "./routes";
 
 describe("Live route identity", () => {
@@ -14,6 +15,13 @@ describe("Live route identity", () => {
       playerId: "poucet",
       sessionId: "session-123",
     })).toBe("/live?player=poucet&session=session-123");
+  });
+
+  it("opens a recorded session on the same v2 Live surface", () => {
+    expect(recordedSessionHref({
+      id: "recorded-123",
+      player_id: "poucet",
+    })).toBe("/live?player=poucet&session=recorded-123");
   });
 
   it("requires both URL-backed identities", () => {

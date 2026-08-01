@@ -11,6 +11,7 @@ const snapshot = {
   character: "Poucet",
   lifecycle: "running",
   control_state: "running",
+  agent_turn_active: true,
   following_live: true,
   through_sequence: 12,
   latest_sequence: 12,

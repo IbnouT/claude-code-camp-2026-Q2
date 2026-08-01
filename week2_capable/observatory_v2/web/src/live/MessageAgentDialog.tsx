@@ -44,7 +44,6 @@ function appliedLine(message: LiveOperatorMessage): string {
 
 export function MessageAgentDialog({
   controlAvailable,
-  expectedSequence,
   followingLive,
   identity,
   messages,
@@ -54,7 +53,6 @@ export function MessageAgentDialog({
   onClose,
 }: {
   controlAvailable: boolean;
-  expectedSequence: number;
   followingLive: boolean;
   identity: LiveRouteIdentity;
   messages: LiveOperatorMessage[];
@@ -67,28 +65,33 @@ export function MessageAgentDialog({
     objectiveAvailable ? "guide" : "revise",
   );
   const [closing, setClosing] = useState(false);
-  const [composerSequence, setComposerSequence] = useState(expectedSequence);
   const [instruction, setInstruction] = useState("");
   const [optimistic, setOptimistic] = useState<OptimisticMessage | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const closeTimerRef = useRef(0);
+  const onCloseRef = useRef(onClose);
 
-  const stale = followingLive && composerSequence < expectedSequence;
   const sending = optimistic?.status === "sending";
   const canSend = followingLive
     && sessionRunning
     && controlAvailable
-    && !stale
     && !sending;
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   const requestClose = useCallback(() => {
     setClosing((current) => {
       if (current) return current;
-      closeTimerRef.current = window.setTimeout(onClose, 360);
+      closeTimerRef.current = window.setTimeout(
+        () => onCloseRef.current(),
+        360,
+      );
       return true;
     });
-  }, [onClose]);
+  }, []);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -109,9 +112,8 @@ export function MessageAgentDialog({
       && messages.length > optimistic.baselineCount
     ) {
       setOptimistic(null);
-      setComposerSequence(expectedSequence);
     }
-  }, [expectedSequence, messages.length, optimistic]);
+  }, [messages.length, optimistic]);
 
   const submit = () => {
     const message = instruction.trim();
@@ -126,28 +128,17 @@ export function MessageAgentDialog({
     };
     setOptimistic(nextOptimistic);
     setError(null);
-    const target = objectiveAvailable
-      ? `/api/sessions/${encodeURIComponent(identity.sessionId)}/control`
-      : lifecycleApiUrl(
-        `/api/sessions/${encodeURIComponent(identity.sessionId)}/message`,
-      );
+    const target = lifecycleApiUrl(
+      `/api/sessions/${encodeURIComponent(identity.sessionId)}/message`,
+    );
     fetch(target, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(
-        objectiveAvailable
-          ? {
-            request_id: crypto.randomUUID(),
-            action,
-            instruction: message,
-            expected_sequence: composerSequence,
-          }
-          : {
-            request_id: crypto.randomUUID(),
-            action,
-            instruction: message,
-          },
-      ),
+      body: JSON.stringify({
+        request_id: crypto.randomUUID(),
+        action,
+        instruction: message,
+      }),
     })
       .then(async (response) => {
         if (!response.ok) {
@@ -234,11 +225,6 @@ export function MessageAgentDialog({
             </p>
           ) : null}
           {!sessionRunning ? <p>The agent is not running.</p> : null}
-          {stale ? (
-            <p className="live-message-stale">
-              The session advanced. Refresh this message boundary before sending.
-            </p>
-          ) : null}
           {error === null ? null : <p className="live-message-error" role="alert">{error}</p>}
           <div className="live-message-controls">
             {followingLive && sessionRunning ? (

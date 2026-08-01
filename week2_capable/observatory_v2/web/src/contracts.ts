@@ -273,6 +273,7 @@ export type Snapshot = {
   character: string;
   lifecycle: string;
   control_state: string | null;
+  agent_turn_active: boolean;
   following_live: boolean;
   through_sequence: number;
   latest_sequence: number;
@@ -350,6 +351,7 @@ export function decodeSnapshot(value: unknown): Snapshot {
   const valid = requiredStrings.every((key) => typeof value[key] === "string")
     && requiredNumbers.every((key) => typeof value[key] === "number")
     && requiredArrays.every((key) => Array.isArray(value[key]))
+    && typeof value.agent_turn_active === "boolean"
     && typeof value.following_live === "boolean"
     && typeof value.combat === "boolean"
     && isNullableNumber(value.selected_at)

@@ -281,6 +281,7 @@ class LiveJourneySnapshot(BaseModel):
     character: str
     lifecycle: str
     control_state: str | None
+    agent_turn_active: bool
     following_live: bool
     through_sequence: int
     latest_sequence: int

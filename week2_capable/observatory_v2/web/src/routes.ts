@@ -18,13 +18,10 @@ export function liveHref(identity: LiveRouteIdentity): string {
 type RecordedSession = Pick<Session, "id" | "player_id">;
 
 export function recordedSessionHref(session: RecordedSession): string {
-  const query = new URLSearchParams({
-    space: "sessions",
-    player: session.player_id,
-    record: session.id,
-    run: session.id,
+  return liveHref({
+    playerId: session.player_id,
+    sessionId: session.id,
   });
-  return `http://127.0.0.1:8787/?${query.toString()}`;
 }
 
 export function sessionsHref(playerId?: string): string {

@@ -227,7 +227,6 @@ export function LiveShell({
       ) : null}
       {messageOpen && identity !== null && snapshot !== null ? (
         <MessageAgentDialog
-          expectedSequence={snapshot.latest_sequence}
           followingLive={snapshot.following_live}
           identity={identity}
           messages={snapshot.operator_messages}

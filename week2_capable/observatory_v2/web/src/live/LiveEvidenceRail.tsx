@@ -25,6 +25,11 @@ const conditionPresentations: Record<string, {
   poisoned: { label: "Poisoned", tone: "bad" },
 };
 
+function lifecycleLabel(value: string): string {
+  const normalized = value.replaceAll("_", " ");
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
 export function LiveEvidenceRail({
   captureStatus,
   connectionState,
@@ -49,7 +54,14 @@ export function LiveEvidenceRail({
   return (
     <div className="live-rail-content">
       <RailBlock
-        status={snapshot.following_live ? "live" : "history"}
+        status={snapshot.following_live
+          ? {
+            label: snapshot.lifecycle === "running"
+              ? "Live"
+              : lifecycleLabel(snapshot.lifecycle),
+            tone: snapshot.lifecycle === "running" ? "live" : "history",
+          }
+          : { label: "Historical prefix", tone: "history" }}
         title="Now"
       >
         {typeof posture === "string" ? (
@@ -129,7 +141,10 @@ function RailBlock({
   title,
 }: {
   children: React.ReactNode;
-  status?: "live" | "history";
+  status?: {
+    label: string;
+    tone: "live" | "history";
+  };
   title: string;
 }) {
   return (
@@ -137,9 +152,9 @@ function RailBlock({
       <header className="live-rail-block-heading">
         <h2>{title}</h2>
         {status === undefined ? null : (
-          <span className={`live-rail-prefix-state is-${status}`}>
+          <span className={`live-rail-prefix-state is-${status.tone}`}>
             <i aria-hidden="true" />
-            {status === "live" ? "Live" : "Historical prefix"}
+            {status.label}
           </span>
         )}
       </header>

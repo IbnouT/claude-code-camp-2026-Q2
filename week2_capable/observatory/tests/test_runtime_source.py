@@ -427,6 +427,11 @@ async def test_historical_snapshot_is_the_exact_selected_prefix(
         latest = (
             await client.get("/api/sessions/session-alpha/snapshot")
         ).json()
+        paused_at_latest = (
+            await client.get(
+                "/api/sessions/session-alpha/snapshot?through=2"
+            )
+        ).json()
 
     assert first["through_sequence"] == 1
     assert first["following_live"] is False
@@ -439,6 +444,8 @@ async def test_historical_snapshot_is_the_exact_selected_prefix(
     assert first["cost_usd"] == 0
     assert latest["through_sequence"] == 2
     assert latest["following_live"] is True
+    assert paused_at_latest["through_sequence"] == 2
+    assert paused_at_latest["following_live"] is False
     assert latest["turn"] == 1
     assert "turn_not_observed" not in latest["capture_gaps"]
     assert "context_limit_not_observed" not in latest["capture_gaps"]
@@ -766,6 +773,12 @@ async def test_live_snapshot_exposes_observed_status_economics_and_frontier(
                 "at": "1970-01-01T00:00:06.500+00:00",
                 **identity,
             },
+            {
+                "phase": "turn_end",
+                "reason": "completed",
+                "at": "1970-01-01T00:00:06.750+00:00",
+                **identity,
+            },
         ):
             handle.write(json.dumps(record, separators=(",", ":")) + "\n")
 
@@ -788,6 +801,7 @@ async def test_live_snapshot_exposes_observed_status_economics_and_frontier(
     assert historical["player_status"]["fields"]["level"]["value"] == 3
     assert historical["milestones"] == []
     assert historical["current_turn_cost_usd"] == 0
+    assert historical["agent_turn_active"] is True
     assert historical["economics"][-1]["cumulative_cost_usd"] == 0.11
     status = snapshot["player_status"]
     assert status["fields"]["hit"]["value"] == 72
@@ -797,6 +811,7 @@ async def test_live_snapshot_exposes_observed_status_economics_and_frontier(
     assert snapshot["spend_cap_usd"] == 0.5
     assert snapshot["spend_cap_scope"] == "session"
     assert snapshot["current_turn_cost_usd"] == 0.05
+    assert snapshot["agent_turn_active"] is False
     assert snapshot["turn"] == 3
     assert snapshot["context_limit"] == 200_000
     assert snapshot["economics"][-1]["context_tokens"] == 100

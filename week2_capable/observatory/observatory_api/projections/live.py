@@ -105,6 +105,7 @@ def project_live(
     response_events = [
         event for event in agent_prefix if event.get("phase") == "response"
     ]
+    agent_turn_active = _agent_turn_active(agent_prefix)
     combat_episode = _combat_episode(
         gateway_prefix,
         response_events,
@@ -266,7 +267,8 @@ def project_live(
         character=session.character,
         lifecycle=session.state,
         control_state=session.control_state,
-        following_live=through is None or selected == latest,
+        agent_turn_active=agent_turn_active,
+        following_live=through is None,
         through_sequence=selected,
         latest_sequence=latest,
         selected_at=selected_at,
@@ -335,6 +337,18 @@ def project_live(
         ),
         capture_gaps=tuple(capture_gaps),
     )
+
+
+def _agent_turn_active(agent_events: list[dict[str, Any]]) -> bool:
+    """Project whether the selected prefix is inside an unfinished turn."""
+    active = False
+    for event in agent_events:
+        phase = event.get("phase")
+        if phase == "turn":
+            active = True
+        elif phase == "turn_end":
+            active = False
+    return active
 
 
 def _operator_messages(
