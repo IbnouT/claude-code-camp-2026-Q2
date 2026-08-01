@@ -75,10 +75,9 @@ this folder is the binding visual reference.
   attributed, and the evidence link. Closes with X, Escape, click outside or
   re-click. Never covers the selected room.
 - Legend: collapsible, with the baseline map grammar always visible for
-  frontier exits, repeat visits, mob sightings, and object sightings.
-  Selection, continuation, vertical-exit, and objective keys remain
-  conditional on the current projection, as does current-room combat
-  labeling.
+  frontier exits, learned-map continuations, repeat visits, mob sightings,
+  and object sightings. Selection, vertical-exit, and objective keys remain
+  conditional on the current projection, as does current-room combat labeling.
 - Every value traces to a typed field. An unavailable value is absent,
   never substituted.
 

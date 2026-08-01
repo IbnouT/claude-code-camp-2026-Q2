@@ -184,8 +184,8 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
   includes it. Correlating operator control to the preceding gateway sequence
   draws a plausible marker that disappears when selected.
 - A map legend explains the visual grammar, not only the marks present in one
-  camera frame. Stable keys for frontier, visit, mob, and object symbols keep
-  a live update from introducing unexplained evidence.
+  camera frame. Stable keys for frontier, continuation, visit, mob, and object
+  symbols keep a live update from introducing unexplained evidence.
 
 ## Technical Conclusions
 

@@ -328,12 +328,10 @@ export function LiveMap({
       combat: Boolean(snapshot?.combat),
       beaconRoomIds,
       evidence: evidenceMarkers,
-      focusContinuationCount: focusContinuations.length,
     });
   }, [
     beaconRoomIds,
     evidenceMarkers,
-    focusContinuations.length,
     graph.currentRoomId,
     graph.rooms,
     presentation.visibleRoomIds,

@@ -42,7 +42,6 @@ describe("map legend projection", () => {
       combat: true,
       beaconRoomIds: new Set(["selected", "hidden"]),
       evidence,
-      focusContinuationCount: 2,
     })).toEqual([
       { kind: "room", label: "Learned room" },
       { kind: "current", label: "Current · combat" },
@@ -82,6 +81,7 @@ describe("map legend projection", () => {
     })).toEqual([
       { kind: "room", label: "Learned room" },
       { kind: "frontier", label: "Frontier exit" },
+      { kind: "continuation", label: "Learned map continues" },
       { kind: "visits", label: "Repeat visit" },
       { kind: "mob", label: "Mob sighting" },
       { kind: "object", label: "Object sighting" },
