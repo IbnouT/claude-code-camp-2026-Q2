@@ -277,7 +277,7 @@ class Session:
         source_after = self.journal.last_seq(self.id)
         pending = await self.transport.drain_pending()
         if pending:
-            self.journal.append(
+            unsolicited = self.journal.append(
                 self.id,
                 "unsolicited",
                 {
@@ -286,6 +286,17 @@ class Session:
                 },
                 trace_id=trace,
             )
+            pending_ref = self._wire_reference(
+                source_after,
+                unsolicited.seq,
+                pending,
+            )
+            self.observations.ingest(
+                pending,
+                pending_ref,
+                trace_id=trace,
+            )
+            source_after = self.journal.last_seq(self.id)
         await self.transport.send(line)
         raw = await self.transport.read_until(PROMPT, quiet=0.6)
         event = self.journal.append(

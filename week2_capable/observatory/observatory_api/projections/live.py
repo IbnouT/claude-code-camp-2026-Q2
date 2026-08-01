@@ -51,6 +51,19 @@ _COMBAT_COMMANDS = frozenset(
         "murder",
     }
 )
+_COMBAT_OBSERVATION_COMMANDS = frozenset(
+    {
+        "condition",
+        "consider",
+        "equipment",
+        "examine",
+        "inventory",
+        "look",
+        "score",
+        "where",
+        "who",
+    }
+)
 _PLAYER_DEFEAT = re.compile(
     r"\byou are dead\b|\byou have been killed\b|\bR\.I\.P\b",
     re.I,
@@ -964,6 +977,7 @@ def _combat_episode(
                 episode is not None
                 and episode["active"]
                 and verb not in _COMBAT_COMMANDS
+                and verb not in _COMBAT_OBSERVATION_COMMANDS
                 and event.trace_id not in combat_traces
             ):
                 episode["active"] = False

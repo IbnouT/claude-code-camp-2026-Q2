@@ -178,6 +178,36 @@ class TestCommands:
         await session.command("look")
         assert any(event.kind == "unsolicited" for event in journal.since(session.id))
 
+    async def test_unsolicited_combat_and_vitals_are_projected_before_next_command(
+        self,
+        journal,
+    ):
+        session = make(journal, [GREETING, PASSWORD, PROMPT_BYTES])
+        await session.open()
+        session.transport.pending = [
+            b"The rabbit hits you hard.\r\n29H 82M 95V > "
+        ]
+        session.transport.script = [PROMPT_BYTES]
+
+        await session.command("look")
+
+        observations = [
+            event.payload
+            for event in journal.since(session.id, kind="observation")
+        ]
+        assert any(
+            observation.get("kind") == "combat"
+            and observation.get("text") == "The rabbit hits you hard."
+            for observation in observations
+        )
+        assert any(
+            observation.get("kind") == "vitals"
+            and observation.get("hit") == 29
+            and observation.get("mana") == 82
+            and observation.get("move") == 95
+            for observation in observations
+        )
+
     async def test_a_trace_id_travels_from_the_session_onto_the_command(self, journal):
         session = make(journal, [GREETING, PASSWORD, PROMPT_BYTES])
         await session.open()

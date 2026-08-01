@@ -1377,6 +1377,27 @@ async def test_combat_episode_uses_correlated_command_and_terminal_evidence(
         at=3.1,
         monotonic=3.1,
     )
+    journal.append(
+        "gateway-alpha",
+        "command",
+        {"line": "look"},
+        trace_id="trace-look",
+        at=3.15,
+        monotonic=3.15,
+    )
+    after_look = journal.append(
+        "gateway-alpha",
+        "observation",
+        {
+            "kind": "room",
+            "text": "The kobold is here, fighting YOU!",
+            "confidence": "high",
+            "method": "ansi-title+room-frame",
+        },
+        trace_id="trace-look",
+        at=3.16,
+        monotonic=3.16,
+    )
     unrelated = journal.append(
         "gateway-alpha",
         "observation",
@@ -1423,6 +1444,8 @@ async def test_combat_episode_uses_correlated_command_and_terminal_evidence(
 
     assert before_terminal["combat"] is True
     assert before_terminal["combat_episode"]["active"] is True
+    assert first.seq in before_terminal["combat_episode"]["evidence"]
+    assert after_look.seq not in before_terminal["combat_episode"]["evidence"]
     assert completed["combat"] is False
     assert completed["combat_episode"] == {
         "active": False,

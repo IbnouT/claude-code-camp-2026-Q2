@@ -258,6 +258,9 @@ boukensha-gateway-api
   length-preserving zeroes for credentials redacted before persistence.
 - ANSI colour and line shape produce typed room, exit, vital, and state
   observations.
+- Unsolicited game output is parsed before the next command. Combat ticks and
+  their prompt vitals therefore update the retained event stream without a
+  `score` probe.
 - Every observation records confidence, method, parser version, and its source
   wire range.
 - Unknown lines remain `unparsed` events and contribute to the parse-miss rate.
