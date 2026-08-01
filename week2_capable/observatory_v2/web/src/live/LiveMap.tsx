@@ -25,13 +25,13 @@ import {
 import {
   fitMapCameraToSafeFrame,
   clampFocusCamera,
-  followMapCameraWithinDeadZone,
   isContinuousMapTransition,
   keepSelectedRoomOutsidePanel,
   mapCameraViewport,
   mapOverlaySafeBand,
   mapContentExtent,
   panMapCamera,
+  resolveFollowMapCameraAnchor,
   roomCenter,
   stepCriticallyDampedMapCenter,
   viewportCenter,
@@ -135,6 +135,7 @@ export function LiveMap({
   const suppressClickRef = useRef(false);
   const cameraViewRef = useRef(cameraView);
   const followVelocityRef = useRef<MapPoint>({ x: 0, y: 0 });
+  const followAnchorRef = useRef<MapPoint | null>(null);
   const followInitializedRef = useRef(false);
   const previousCurrentRoomIdRef = useRef<string | null>(null);
 
@@ -364,6 +365,7 @@ export function LiveMap({
   useEffect(() => {
     if (cameraMode !== "follow" || graph.currentRoomId === null) {
       followVelocityRef.current = { x: 0, y: 0 };
+      followAnchorRef.current = null;
       return;
     }
     const currentRoomId = graph.currentRoomId;
@@ -371,6 +373,11 @@ export function LiveMap({
     if (!followInitializedRef.current) {
       followInitializedRef.current = true;
       followVelocityRef.current = { x: 0, y: 0 };
+      followAnchorRef.current = currentCenter;
+      cameraViewRef.current = {
+        center: currentCenter,
+        scale: cameraViewRef.current.scale,
+      };
       setCameraView((current) => ({
         center: currentCenter,
         scale: current.scale,
@@ -383,13 +390,22 @@ export function LiveMap({
       previousRoomId,
       currentRoomId,
     );
-    const target = connectedMovement
-      ? followMapCameraWithinDeadZone(
-        cameraViewRef.current,
+    const anchor = {
+      center: followAnchorRef.current ?? cameraViewRef.current.center,
+      scale: cameraViewRef.current.scale,
+    };
+    const targetView = connectedMovement
+      ? resolveFollowMapCameraAnchor(
+        anchor,
         currentCenter,
         frame,
-      ).center
-      : currentCenter;
+        mode === "focus"
+          ? { agent: currentCenter, extent: focusRawExtent }
+          : null,
+      )
+      : { center: currentCenter, scale: anchor.scale };
+    const target = targetView.center;
+    followAnchorRef.current = target;
     if (
       Math.abs(start.x - target.x) < 0.01
       && Math.abs(start.y - target.y) < 0.01
@@ -399,6 +415,7 @@ export function LiveMap({
     }
     if (!connectedMovement) {
       followVelocityRef.current = { x: 0, y: 0 };
+      followAnchorRef.current = target;
       cameraViewRef.current = {
         center: target,
         scale: cameraViewRef.current.scale,
@@ -414,6 +431,11 @@ export function LiveMap({
     ).matches ?? false;
     if (reducedMotion || typeof requestAnimationFrame === "undefined") {
       followVelocityRef.current = { x: 0, y: 0 };
+      followAnchorRef.current = target;
+      cameraViewRef.current = {
+        center: target,
+        scale: cameraViewRef.current.scale,
+      };
       setCameraView((current) => ({
         center: target,
         scale: current.scale,
@@ -467,12 +489,18 @@ export function LiveMap({
     return () => cancelAnimationFrame(animationFrame);
   }, [
     cameraMode,
+    cameraView.scale,
     currentCenter.x,
     currentCenter.y,
+    focusRawExtent.height,
+    focusRawExtent.width,
+    focusRawExtent.x,
+    focusRawExtent.y,
     frame.height,
     frame.width,
     graph.connections,
     graph.currentRoomId,
+    mode,
   ]);
 
   useLayoutEffect(() => {
@@ -602,6 +630,7 @@ export function LiveMap({
   useEffect(() => {
     setCameraView({ center: { x: 0, y: 0 }, scale: 1 });
     followVelocityRef.current = { x: 0, y: 0 };
+    followAnchorRef.current = null;
     followInitializedRef.current = false;
     previousCurrentRoomIdRef.current = null;
     setSafeInsets(defaultSafeInsets);
@@ -781,6 +810,10 @@ export function LiveMap({
     event.stopPropagation();
   };
   const handleCameraChange = (next: MapCameraMode) => {
+    followVelocityRef.current = { x: 0, y: 0 };
+    followAnchorRef.current = next === "follow"
+      ? viewportCenter(viewport)
+      : null;
     if (mode === "lantern" && next !== "follow") {
       setChosenMode("grow");
     }
@@ -801,6 +834,8 @@ export function LiveMap({
   const handleModeChange = (next: MapMode) => {
     if (next === "focus") {
       followInitializedRef.current = true;
+      followVelocityRef.current = { x: 0, y: 0 };
+      followAnchorRef.current = currentCenter;
       setCameraView((current) => ({
         center: currentCenter,
         scale: current.scale,
@@ -808,6 +843,8 @@ export function LiveMap({
       setCameraMode("follow");
     } else if (next === "lantern") {
       followInitializedRef.current = true;
+      followVelocityRef.current = { x: 0, y: 0 };
+      followAnchorRef.current = currentCenter;
       setCameraView((current) => ({
         center: currentCenter,
         scale: current.scale,

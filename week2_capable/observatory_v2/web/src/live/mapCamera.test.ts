@@ -21,6 +21,7 @@ import {
   mapContentExtent,
   panMapCamera,
   resolveMapViewport,
+  resolveFollowMapCameraAnchor,
   roomCenter,
   stepCriticallyDampedMapCenter,
   viewportCenter,
@@ -109,6 +110,74 @@ describe("map camera geometry", () => {
       center: { x: 348, y: 232 },
       scale: 1,
     });
+  });
+
+  it("keeps settled Follow targets independent of animation progress", () => {
+    const frame = { width: 600, height: 400 };
+    const rooms = [
+      { x: 420, y: 280 },
+      { x: 568, y: 280 },
+      { x: 716, y: 416 },
+    ];
+    const initial = {
+      center: { x: 300, y: 200 },
+      scale: 1,
+    };
+    let steppedAnchor = initial;
+    let motion = {
+      center: initial.center,
+      velocity: { x: 0, y: 0 },
+    };
+    for (const room of rooms) {
+      steppedAnchor = resolveFollowMapCameraAnchor(
+        steppedAnchor,
+        room,
+        frame,
+      );
+      for (let step = 0; step < 4; step += 1) {
+        motion = stepCriticallyDampedMapCenter(
+          motion,
+          steppedAnchor.center,
+          1 / 60,
+        );
+      }
+    }
+    const midFlightCenter = motion.center;
+
+    let immediateAnchor = initial;
+    for (const room of rooms) {
+      immediateAnchor = resolveFollowMapCameraAnchor(
+        immediateAnchor,
+        room,
+        frame,
+      );
+    }
+
+    expect(midFlightCenter).not.toEqual(immediateAnchor.center);
+    expect(steppedAnchor).toEqual(immediateAnchor);
+  });
+
+  it("lets the Focus clamp override a dead-zone target without changing scale", () => {
+    const anchor = resolveFollowMapCameraAnchor(
+      {
+        center: { x: 300, y: 200 },
+        scale: 1.25,
+      },
+      { x: 596, y: -44 },
+      { width: 800, height: 500 },
+      {
+        agent: { x: 596, y: -44 },
+        extent: { x: 100, y: 100, width: 500, height: 300 },
+      },
+    );
+
+    expect(anchor.scale).toBe(1.25);
+    expect(anchor).toEqual(clampFocusCamera(
+      anchor,
+      { x: 596, y: -44 },
+      { x: 100, y: 100, width: 500, height: 300 },
+      { width: 800, height: 500 },
+    ));
   });
 
   it("critically damps camera motion without crossing its target", () => {

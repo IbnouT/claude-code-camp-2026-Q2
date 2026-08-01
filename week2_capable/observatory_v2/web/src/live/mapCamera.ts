@@ -41,6 +41,11 @@ export type MapCameraMotion = {
   velocity: MapPoint;
 };
 
+export type FollowMapCameraFocus = {
+  agent: MapPoint;
+  extent: MapViewport;
+};
+
 export type MapCameraInput = {
   activeExtent: MapViewport;
   camera: MapCameraMode;
@@ -257,6 +262,27 @@ export function followMapCameraWithinDeadZone(
     },
     scale: view.scale,
   };
+}
+
+export function resolveFollowMapCameraAnchor(
+  anchor: MapCameraView,
+  target: MapPoint,
+  frame: MapFrame,
+  focus: FollowMapCameraFocus | null = null,
+): MapCameraView {
+  const followed = followMapCameraWithinDeadZone(
+    anchor,
+    target,
+    frame,
+  );
+  return focus === null
+    ? followed
+    : clampFocusCamera(
+      followed,
+      focus.agent,
+      focus.extent,
+      frame,
+    );
 }
 
 export function stepCriticallyDampedMapCenter(

@@ -53,8 +53,12 @@ this folder is the binding visual reference.
   Only Fit map and the zoom buttons change scale.
 - Focus panning remains bounded with the agent in frame. Agent movement resumes
   Follow within a central dead zone. Boundary crossings catch up smoothly,
-  while unconnected position jumps snap. Learned rooms outside the projection
-  are announced by fixed-size solid double chevrons on the pane edge.
+  while unconnected position jumps snap. The settled follow anchor advances
+  from prior settled anchors, never from an intermediate animation frame, so a
+  retained room sequence always resolves to the same framing. The Focus clamp
+  wins when its bound and the dead zone disagree, without changing scale.
+  Learned rooms outside the projection are announced by fixed-size solid
+  double chevrons on the pane edge.
 - A dashed frontier stub means an observed exit with an unlearned destination.
   It remains visually distinct from a solid Focus continuation.
 - Lantern does not pan. A drag hands the unchanged view to Grow and Manual.
