@@ -8,7 +8,7 @@
 
 .live-workspace {
   --live-evidence-rail-width: 320px;
-  --live-timeline-height: 88px;
+  --live-timeline-height: 110px;
   position: relative;
   min-height: 0;
   flex: 1;
@@ -555,51 +555,75 @@
   left: 0;
   height: var(--live-timeline-height);
   border-top: 1px solid var(--color-line);
-  padding: 0 16px;
+  padding: 12px 18px;
   background: var(--color-surface);
   pointer-events: auto;
 }
 
 .live-timeline-heading {
-  height: 35px;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 5px 2px 0;
+  gap: 13px;
+  color: var(--color-quiet);
+  font-size: 11.5px;
 }
 
 .live-timeline-heading > small {
   color: var(--color-quiet);
-  font-size: 10.5px;
+  font-size: 9.5px;
   font-weight: 600;
-  letter-spacing: .14em;
+  letter-spacing: .18em;
   text-transform: uppercase;
 }
 
+.live-timeline-heading > small span {
+  letter-spacing: .08em;
+}
+
+.live-timeline-prefix-state {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.live-timeline-prefix-state i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-quiet);
+}
+
+.live-timeline-prefix-state.is-live {
+  color: var(--color-cyan);
+}
+
+.live-timeline-prefix-state.is-live i {
+  background: var(--color-cyan);
+  box-shadow: 0 0 9px var(--color-cyan);
+}
+
 .live-timeline-reading {
-  margin-left: auto;
   color: var(--color-muted);
-  font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 11.5px;
   white-space: nowrap;
 }
 
 .live-timeline-transport {
+  margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
 }
 
 .live-timeline-transport button {
-  height: 24px;
-  min-width: 26px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--color-line);
-  border-radius: 6px;
+  min-height: 28px;
+  padding: 5px 11px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 8px;
   background: var(--color-raised);
-  color: var(--color-text);
-  font: 600 15px/1 var(--font-sans);
+  color: var(--color-muted);
+  font: 500 11.5px/1 var(--font-sans);
+  cursor: pointer;
 }
 
 .live-timeline-transport button:disabled {
@@ -608,77 +632,88 @@
 }
 
 .live-timeline-transport .live-timeline-return {
-  padding: 0 8px;
+  border-color: color-mix(in srgb, var(--color-cyan) 35%, var(--color-line));
   color: var(--color-cyan);
-  font-size: 9px;
-  letter-spacing: .04em;
   white-space: nowrap;
 }
 
 .live-timeline-track {
   position: relative;
-  height: 46px;
+  height: 52px;
+  margin-top: 10px;
+  cursor: pointer;
 }
 
 .live-timeline-axis {
   position: absolute;
-  top: 19px;
+  top: 30px;
   right: 0;
   left: 0;
-  height: 2px;
-  background: color-mix(in srgb, var(--color-line) 78%, var(--color-bg));
+  height: 1px;
+  background: var(--color-line-strong);
+  transition: background 120ms ease;
+}
+
+.live-timeline-track:hover .live-timeline-axis {
+  background: color-mix(in srgb, var(--color-cyan) 34%, var(--color-line-strong));
 }
 
 .live-timeline-cost {
   position: absolute;
-  right: 0;
-  bottom: 2px;
-  left: 0;
+  inset: 0;
   width: 100%;
-  height: 22px;
+  height: 100%;
+  pointer-events: none;
 }
 
 .live-timeline-cost polyline {
   fill: none;
-  stroke: color-mix(in srgb, var(--color-cyan) 32%, var(--color-line));
+  stroke: #1c2836;
   stroke-width: 1.4;
 }
 
 .live-timeline-landmark {
   position: absolute;
-  top: 11px;
-  width: 14px;
-  height: 14px;
+  z-index: 3;
+  top: 24px;
+  width: 9px;
+  height: 9px;
   padding: 0;
-  border: 2px solid var(--color-surface);
+  border: 1px solid var(--color-bg);
   border-radius: 50%;
   transform: translateX(-50%);
+  cursor: pointer;
+  transition: box-shadow 120ms ease, transform 120ms ease;
 }
 
 .live-timeline-landmark.is-room {
-  width: 10px;
-  height: 10px;
-  top: 13px;
-  background: color-mix(in srgb, var(--color-cyan) 58%, var(--color-line));
+  background: #2f5680;
 }
 
 .live-timeline-landmark.is-level_up {
+  top: 22px;
+  width: 12px;
+  height: 12px;
   background: var(--color-amber);
 }
 
 .live-timeline-landmark.is-friction {
-  border-radius: 2px;
-  background: var(--color-amber);
-  transform: translateX(-50%) rotate(45deg);
+  top: 22px;
+  width: 12px;
+  height: 12px;
+  background: #c98f3a;
 }
 
 .live-timeline-landmark.is-operator_message {
+  top: 22px;
+  width: 12px;
+  height: 12px;
   background: var(--color-violet);
-  box-shadow: 0 0 0 2px color-mix(
-    in srgb,
-    var(--color-violet) 18%,
-    transparent
-  );
+}
+
+.live-timeline-landmark:hover {
+  box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 24%, transparent);
+  transform: translateX(-50%) scale(1.25);
 }
 
 .live-timeline-landmark:focus-visible {
@@ -688,11 +723,13 @@
 
 .live-timeline-cursor {
   position: absolute;
-  top: 2px;
+  z-index: 2;
+  top: 14px;
+  bottom: 8px;
   width: 2px;
-  height: 34px;
   background: var(--color-cyan);
   transform: translateX(-50%);
+  pointer-events: none;
 }
 
 .live-timeline-cursor::after {
@@ -715,9 +752,27 @@
 
 .live-timeline-label {
   position: absolute;
-  top: 30px;
+  z-index: 2;
+  top: 40px;
   transform: translateX(-50%);
   white-space: nowrap;
+  pointer-events: none;
+}
+
+.live-timeline-scrubber {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: .001;
+  cursor: pointer;
+}
+
+.live-timeline-track:has(.live-timeline-scrubber:focus-visible) {
+  outline: 1px solid var(--color-cyan);
+  outline-offset: 3px;
 }
 
 .live-timeline-no-landmarks {

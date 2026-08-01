@@ -107,24 +107,10 @@ function costCurve(points: LiveEconomicsPoint[]): string {
   return points
     .map((point, index) => {
       const x = (index / (points.length - 1)) * 900;
-      const y = 18 - (point.cumulative_cost_usd / highest) * 14;
+      const y = 46 - (point.cumulative_cost_usd / highest) * 33;
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     })
     .join(" ");
-}
-
-function formatSelectedTime(seconds: number | null): string {
-  if (seconds === null) return "time not retained";
-  return new Intl.DateTimeFormat(undefined, {
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-  }).format(new Date(seconds * 1_000));
-}
-
-function formatUsd(value: number): string {
-  if (value === 0) return "$0.0000";
-  return value < 0.01 ? `$${value.toFixed(4)}` : `$${value.toFixed(3)}`;
 }
 
 export function LiveCausalTimeline({
@@ -156,14 +142,12 @@ export function LiveCausalTimeline({
     return 2 + Math.min(1, Math.max(0, ratio)) * 94;
   };
   const selectedSequence = snapshot.through_sequence;
-  const previous = [...landmarks].reverse().find(
-    (landmark) => landmark.sequence < selectedSequence,
-  );
-  const next = landmarks.find(
-    (landmark) => landmark.sequence > selectedSequence,
+  const previousEventSequence = [...new Set(
+    latestSnapshot.timeline.map((item) => item.sequence),
+  )].sort((left, right) => right - left).find(
+    (sequence) => sequence < selectedSequence,
   );
   const labelledLandmarks = ([
-    "room",
     "level_up",
     "operator_message",
     "friction",
@@ -177,46 +161,46 @@ export function LiveCausalTimeline({
   return (
     <>
       <div className="live-timeline-heading">
-        <small>Causal timeline</small>
+        <small>
+          Recent journey
+          <span> · last {latestSnapshot.timeline.length} events</span>
+        </small>
+        <span className={[
+          "live-timeline-prefix-state",
+          snapshot.following_live ? "is-live" : "is-paused",
+        ].join(" ")}>
+          <i aria-hidden="true" />
+          {snapshot.following_live ? "following live" : "paused"}
+        </span>
         <span className="live-timeline-reading">
-          <span>seq {selectedSequence} / {latestSnapshot.latest_sequence}</span>
-          <span>
-            {" · "}
-            {snapshot.following_live ? "following live" : "inspecting history"}
-          </span>
-          <span className="live-timeline-reading-secondary">
-            {" · "}
-            {formatSelectedTime(snapshot.selected_at)}
-            {" · "}
-            {formatUsd(snapshot.cost_usd)} at prefix
-          </span>
+          {snapshot.turn === null ? null : <span>turn {snapshot.turn} · </span>}
+          <span>seq {selectedSequence}</span>
         </span>
         <div className="live-timeline-transport" aria-label="Timeline transport">
           <button
-            aria-label="Previous landmark"
-            disabled={previous === undefined}
+            aria-label="Pause timeline"
+            disabled={!snapshot.following_live}
             type="button"
-            onClick={() => onSelectThrough(previous?.sequence ?? null)}
+            onClick={() => onSelectThrough(snapshot.through_sequence)}
           >
-            ‹
+            ⏸ Pause
           </button>
           <button
-            aria-label="Next landmark"
-            disabled={next === undefined}
+            aria-label="Step to previous event"
+            disabled={previousEventSequence === undefined}
             type="button"
-            onClick={() => onSelectThrough(next?.sequence ?? null)}
+            onClick={() => onSelectThrough(previousEventSequence ?? null)}
           >
-            ›
+            ◀ Step
           </button>
-          {!snapshot.following_live ? (
-            <button
-              className="live-timeline-return"
-              type="button"
-              onClick={() => onSelectThrough(null)}
-            >
-              Return to live
-            </button>
-          ) : null}
+          <button
+            aria-label="Jump to live"
+            className="live-timeline-return"
+            type="button"
+            onClick={() => onSelectThrough(null)}
+          >
+            ⏭ Jump to live
+          </button>
         </div>
       </div>
       <div className="live-timeline-track">
@@ -227,7 +211,7 @@ export function LiveCausalTimeline({
             className="live-timeline-cost"
             preserveAspectRatio="none"
             role="img"
-            viewBox="0 0 900 22"
+            viewBox="0 0 900 52"
           >
             <polyline points={curve} />
           </svg>
@@ -260,6 +244,15 @@ export function LiveCausalTimeline({
           aria-hidden="true"
           className="live-timeline-cursor"
           style={{ left: `${position(selectedSequence)}%` }}
+        />
+        <input
+          aria-label="Observed prefix"
+          className="live-timeline-scrubber"
+          max={lastSequence}
+          min={firstSequence}
+          type="range"
+          value={Math.min(lastSequence, Math.max(firstSequence, selectedSequence))}
+          onChange={(event) => onSelectThrough(Number(event.currentTarget.value))}
         />
         {landmarks.length === 0 ? (
           <span className="live-timeline-no-landmarks">

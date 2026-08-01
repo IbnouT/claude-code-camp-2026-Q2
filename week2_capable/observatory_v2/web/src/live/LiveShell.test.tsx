@@ -637,7 +637,9 @@ describe("Live shell", () => {
     const timeline = await screen.findByRole("region", {
       name: "Causal timeline",
     });
+    expect(timeline).toHaveTextContent("Recent journey · last 3 events");
     expect(timeline).toHaveTextContent("following live");
+    expect(timeline).toHaveTextContent("seq 42");
     expect(screen.getByRole("button", {
       name: "Room: The Temple, sequence 10",
     })).toBeInTheDocument();
@@ -659,34 +661,37 @@ describe("Live shell", () => {
       name: "Cumulative session cost",
     })).toBeInTheDocument();
 
+    await user.click(screen.getByRole("button", { name: "Pause timeline" }));
+    await waitFor(() => {
+      expect(timeline).toHaveTextContent("paused");
+    });
+    expect(new URL(window.location.href).searchParams.get("through")).toBe("42");
+
     await user.click(screen.getByRole("button", {
-      name: "Previous landmark",
+      name: "Step to previous event",
     }));
-    expect(await screen.findByRole("button", {
-      name: "Return to live",
-    })).toBeInTheDocument();
-    expect(timeline).toHaveTextContent("seq 30 / 42");
-    expect(timeline).toHaveTextContent("inspecting history");
+    expect(timeline).toHaveTextContent("seq 25");
     expect(screen.getByRole("complementary", { name: "Live evidence rail" }))
       .toHaveTextContent("Historical prefix");
-    expect(new URL(window.location.href).searchParams.get("through")).toBe("30");
+    expect(new URL(window.location.href).searchParams.get("through")).toBe("25");
     await user.click(screen.getByRole("button", { name: "Message agent" }));
     expect(screen.getByPlaceholderText("Return to live to message the agent"))
       .toBeDisabled();
     await user.click(screen.getByRole("button", { name: "Close messages" }));
 
-    await user.click(screen.getByRole("button", {
-      name: "Previous landmark",
-    }));
+    await user.click(screen.getByRole("button", { name: "Step to previous event" }));
     await waitFor(() => {
-      expect(timeline).toHaveTextContent("seq 28 / 42");
-    });
-    await user.click(screen.getByRole("button", { name: "Next landmark" }));
-    await waitFor(() => {
-      expect(timeline).toHaveTextContent("seq 30 / 42");
+      expect(timeline).toHaveTextContent("seq 20");
     });
 
-    await user.click(screen.getByRole("button", { name: "Return to live" }));
+    fireEvent.change(screen.getByRole("slider", { name: "Observed prefix" }), {
+      target: { value: "15" },
+    });
+    await waitFor(() => {
+      expect(timeline).toHaveTextContent("seq 15");
+    });
+
+    await user.click(screen.getByRole("button", { name: "Jump to live" }));
     await waitFor(() => {
       expect(timeline).toHaveTextContent("following live");
     });
