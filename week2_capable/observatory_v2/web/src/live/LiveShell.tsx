@@ -174,6 +174,7 @@ export function LiveShell({
         }
         compatibilityObjective={snapshot?.objective ?? null}
         objective={snapshot?.objective_context ?? null}
+        objectiveInitial={snapshot?.objective_initial ?? null}
       />
       <main className="live-workspace" aria-label="Live workspace">
         {identity !== null ? (

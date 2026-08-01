@@ -180,6 +180,9 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
 - A compatibility field must preserve its original meaning across new control
   paths. Operator guidance is user-shaped prompt text, but treating it as the
   objective would make a Nudge silently rewrite the goal.
+- A timestamped event belongs to the first replay prefix whose retained time
+  includes it. Correlating operator control to the preceding gateway sequence
+  draws a plausible marker that disappears when selected.
 
 ## Technical Conclusions
 

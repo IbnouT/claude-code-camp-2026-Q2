@@ -31,8 +31,10 @@ changed by this plan.
 - A controllable session with no goal adds `First message starts the agent`.
 - The optional clue is labelled as an objective clue. It is authored guidance,
   not current-world position evidence.
-- A revision count above one remains legible. Source provenance stays in the
-  evidence title.
+- A revision count above one remains legible only when `objective_initial`
+  proves the ordinal. An operator replacement without a structured initial
+  objective says `Goal replaced` without inventing a count. Source provenance
+  stays in the evidence title.
 - Historical inspection uses the objective valid at the selected prefix.
 - Authenticated guidance does not replace the compatibility objective. Only an
   applied `revise` advances `objective_context`.
@@ -115,6 +117,17 @@ and how long.
 
 - Landmarks only: room changes from position items, level-ups from
   `milestones`, operator messages, friction, and combat boundaries.
+- Room changes are the quiet baseline. Level-up, operator-message, and
+  friction markers are emphasized and state their kind on hover and focus.
+- A friction marker selects the last retained gateway sequence in the fired
+  diagnostic's evidence. Its plain label is `repeated “command”` from
+  `repeated_command`, or `no new place` for a progress stall. The diagnostic
+  kind remains in hover and accessible text.
+- An operator-control marker selects the first gateway sequence at or after
+  its timestamp. That is the first prefix whose retained time includes the
+  control event, not proof that the agent has applied it yet.
+- Combat boundaries remain absent until the snapshot retains typed episode
+  boundaries rather than one selected episode.
 - The cumulative cost curve comes from `economics`, never from timeline item
   costs.
 - Prefix transport: pause, step, and return to live. The API accepts

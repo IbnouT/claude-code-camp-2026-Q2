@@ -468,6 +468,33 @@ describe("Live shell", () => {
     expect(objective).not.toHaveTextContent("Objective clue");
   });
 
+  it("states an unnumbered replacement when the structured initial goal is absent", async () => {
+    const snapshot = runtimeSnapshot({
+      objective: "Find the warrior guild",
+      objective_initial: null,
+      objective_context: {
+        title: "Return to the bakery",
+        clue: null,
+        source_kind: "operator",
+        revision: 2,
+        evidence: "agent log line 50",
+      },
+    });
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      return Promise.resolve(String(input).includes("/snapshot")
+        ? snapshotResponse(snapshot)
+        : catalogResponse());
+    });
+    render(<LiveShell identity={identity} />);
+
+    const objective = await screen.findByRole("region", {
+      name: "Current objective",
+    });
+    expect(objective).toHaveTextContent("Return to the bakery");
+    expect(objective).toHaveTextContent("Goal replaced");
+    expect(objective).not.toHaveTextContent(/Revision \d/);
+  });
+
   it("steps through typed causal landmarks and returns to live", async () => {
     const user = userEvent.setup();
     const latest = runtimeSnapshot({
@@ -545,7 +572,31 @@ describe("Live shell", () => {
           trace_id: "trace-20",
           quiet_cohort: null,
         },
+        {
+          id: "agent:25",
+          sequence: 25,
+          at: 1_753_937_325,
+          source: "agent",
+          kind: "operator_control",
+          label: "Operator guide: Try the western exit",
+          cost_usd: 0,
+          tokens: 0,
+          trace_id: null,
+          quiet_cohort: null,
+        },
       ],
+      friction: {
+        kind: "confusion_loop",
+        repeated_command: "east",
+        repeated_count: 5,
+        distinct_places: 4,
+        iterations: 8,
+        new_places: 1,
+        window_iterations: 8,
+        iterations_since_new_place: 6,
+        threshold: "same command recorded at least five times",
+        evidence: [22, 24, 26, 27, 28],
+      },
     });
     const historical = (through: number) => runtimeSnapshot({
       ...latest,
@@ -580,6 +631,14 @@ describe("Live shell", () => {
     expect(screen.getByRole("button", {
       name: "Level up: Level 2, sequence 30",
     })).toBeInTheDocument();
+    expect(screen.getByRole("button", {
+      name: "Operator message: Operator guide: Try the western exit, retained at sequence 25",
+    })).toBeInTheDocument();
+    expect(screen.getByRole("button", {
+      name: "Friction: repeated “east”, sequence 28",
+    })).toBeInTheDocument();
+    expect(screen.getByText("your message")).toBeInTheDocument();
+    expect(screen.getByText("repeated “east”")).toBeInTheDocument();
     expect(screen.getByRole("img", {
       name: "Cumulative session cost",
     })).toBeInTheDocument();
@@ -604,7 +663,7 @@ describe("Live shell", () => {
       name: "Previous landmark",
     }));
     await waitFor(() => {
-      expect(timeline).toHaveTextContent("seq 20 / 42");
+      expect(timeline).toHaveTextContent("seq 28 / 42");
     });
     await user.click(screen.getByRole("button", { name: "Next landmark" }));
     await waitFor(() => {

@@ -1181,10 +1181,12 @@ async def test_operator_guidance_and_revised_goal_are_visible_evidence(
         ).json()
 
     assert snapshot["objective"] == "Find and fight Fido"
-    assert any(
-        item["label"] == "Operator revise: Find and fight Fido"
+    operator_item = next(
+        item
         for item in snapshot["timeline"]
+        if item["label"] == "Operator revise: Find and fight Fido"
     )
+    assert operator_item["sequence"] == 2
 
 
 async def test_running_session_stream_observes_a_new_journal_event(

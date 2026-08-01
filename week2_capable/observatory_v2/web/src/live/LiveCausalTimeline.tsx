@@ -7,8 +7,16 @@ import type { LiveSnapshotState } from "./useLiveSnapshot";
 type TimelineLandmark = {
   id: string;
   sequence: number;
-  kind: "room" | "level_up";
+  kind: "room" | "level_up" | "friction" | "operator_message";
   label: string;
+  shortLabel: string;
+};
+
+const landmarkKindLabel: Record<TimelineLandmark["kind"], string> = {
+  room: "Room",
+  level_up: "Level up",
+  friction: "Friction",
+  operator_message: "Operator message",
 };
 
 type Props = {
@@ -34,6 +42,7 @@ function recentLandmarks(snapshot: Snapshot): TimelineLandmark[] {
       sequence: item.sequence,
       kind: "room",
       label: item.label,
+      shortLabel: "room",
     });
   }
   const milestones = snapshot.milestones
@@ -43,8 +52,51 @@ function recentLandmarks(snapshot: Snapshot): TimelineLandmark[] {
       sequence: milestone.sequence,
       kind: "level_up",
       label: `Level ${milestone.current}`,
+      shortLabel: `level ${milestone.current}`,
     }));
-  return [...rooms, ...milestones].sort(
+  const operatorMessages = snapshot.timeline
+    .filter((item) => (
+      item.source === "agent"
+      && item.kind === "operator_control"
+      && item.sequence >= firstRetainedSequence
+    ))
+    .map((item): TimelineLandmark => ({
+      id: `operator-${item.id}`,
+      sequence: item.sequence,
+      kind: "operator_message",
+      label: item.label,
+      shortLabel: "your message",
+    }));
+  const frictionSequence = snapshot.friction.evidence.length === 0
+    ? null
+    : Math.max(...snapshot.friction.evidence);
+  const friction = (
+    snapshot.friction.kind === null
+    || frictionSequence === null
+    || frictionSequence < firstRetainedSequence
+    || (
+      snapshot.friction.kind === "confusion_loop"
+      && snapshot.friction.repeated_command === null
+    )
+  )
+    ? []
+    : [{
+      id: `friction-${snapshot.friction.kind}-${frictionSequence}`,
+      sequence: frictionSequence,
+      kind: "friction" as const,
+      label: snapshot.friction.kind === "confusion_loop"
+        ? `repeated “${snapshot.friction.repeated_command}”`
+        : "no new place",
+      shortLabel: snapshot.friction.kind === "confusion_loop"
+        ? `repeated “${snapshot.friction.repeated_command}”`
+        : "no new place",
+    }];
+  return [
+    ...rooms,
+    ...milestones,
+    ...operatorMessages,
+    ...friction,
+  ].sort(
     (left, right) => left.sequence - right.sequence,
   );
 }
@@ -110,7 +162,12 @@ export function LiveCausalTimeline({
   const next = landmarks.find(
     (landmark) => landmark.sequence > selectedSequence,
   );
-  const labelledLandmarks = (["room", "level_up"] as const)
+  const labelledLandmarks = ([
+    "room",
+    "level_up",
+    "operator_message",
+    "friction",
+  ] as const)
     .map((kind) => [...landmarks].reverse().find(
       (landmark) => landmark.kind === kind,
     ))
@@ -177,11 +234,11 @@ export function LiveCausalTimeline({
         )}
         {landmarks.map((landmark) => (
           <button
-            aria-label={`${landmark.kind === "room" ? "Room" : "Level up"}: ${landmark.label}, sequence ${landmark.sequence}`}
+            aria-label={`${landmarkKindLabel[landmark.kind]}: ${landmark.label}, ${landmark.kind === "operator_message" ? "retained at " : ""}sequence ${landmark.sequence}`}
             className={`live-timeline-landmark is-${landmark.kind}`}
             key={landmark.id}
             style={{ left: `${position(landmark.sequence)}%` }}
-            title={landmark.label}
+            title={`${landmarkKindLabel[landmark.kind]}: ${landmark.label} · ${landmark.kind === "operator_message" ? "retained at " : ""}seq ${landmark.sequence}`}
             type="button"
             onClick={() => onSelectThrough(
               landmark.sequence === latestSnapshot.latest_sequence
@@ -196,7 +253,7 @@ export function LiveCausalTimeline({
             key={`label-${landmark.id}`}
             style={{ left: `${position(landmark.sequence)}%` }}
           >
-            {landmark.kind === "room" ? "room" : "level up"}
+            {landmark.shortLabel}
           </span>
         ))}
         <div
@@ -206,7 +263,7 @@ export function LiveCausalTimeline({
         />
         {landmarks.length === 0 ? (
           <span className="live-timeline-no-landmarks">
-            No room or level landmarks in the recent retained window
+            No causal landmarks in the recent retained window
           </span>
         ) : null}
       </div>

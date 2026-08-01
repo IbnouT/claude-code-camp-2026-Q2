@@ -141,7 +141,10 @@ friction rules when they fire, and states lifecycle or capture conditions when
 measurements would be unsafe. The causal timeline keeps a current snapshot
 beside any selected historical prefix, so room and level-up landmarks can step
 backward and forward without losing the route back to live. Its cost curve
-comes only from retained response economics.
+comes only from retained response economics. Quiet room markers establish the
+journey baseline. Emphasized level-up, fired-friction, and applied
+operator-message markers select the first prefix that contains their evidence.
+Combat boundaries remain absent until typed episode history exists.
 
 ### Learned-world map
 

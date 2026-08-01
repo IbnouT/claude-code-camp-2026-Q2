@@ -78,13 +78,12 @@
   white-space: nowrap;
 }
 
-.live-objective-strip span,
-.live-objective-strip em {
-  color: var(--color-cyan);
-  font-size: 9px;
+.live-objective-strip span {
+  color: var(--color-quiet);
+  font-size: 9.5px;
   font-style: normal;
   font-weight: 600;
-  letter-spacing: .12em;
+  letter-spacing: .16em;
   text-transform: uppercase;
 }
 
@@ -113,9 +112,12 @@
 .live-objective-strip em {
   margin-left: auto;
   flex: none;
+  color: var(--color-cyan);
   font-size: 10.5px;
+  font-style: normal;
   font-weight: 700;
   letter-spacing: .06em;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
@@ -649,11 +651,34 @@
 }
 
 .live-timeline-landmark.is-room {
-  background: var(--color-cyan);
+  width: 10px;
+  height: 10px;
+  top: 13px;
+  background: color-mix(in srgb, var(--color-cyan) 58%, var(--color-line));
 }
 
 .live-timeline-landmark.is-level_up {
   background: var(--color-amber);
+}
+
+.live-timeline-landmark.is-friction {
+  border-radius: 2px;
+  background: var(--color-amber);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.live-timeline-landmark.is-operator_message {
+  background: var(--color-violet);
+  box-shadow: 0 0 0 2px color-mix(
+    in srgb,
+    var(--color-violet) 18%,
+    transparent
+  );
+}
+
+.live-timeline-landmark:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
 }
 
 .live-timeline-cursor {

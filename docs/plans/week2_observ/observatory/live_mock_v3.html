@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Observatory — Live, proposed additions only</title>
+<style>
+/* BASELINE = the built Live screen, reproduced as-is.
+   Anything NEW is marked with a dashed cyan outline and a small tag.
+   Every value names its retained source in a comment. */
+:root{
+  --bg:#070b10; --surface:#0b1119; --raised:#111820; --soft:#151d26;
+  --line:#1a2430; --line2:#26333f; --text:#e6eef5; --muted:#8493a1;
+  --quiet:#5b6875; --cyan:#5eead4; --cyan-soft:#10312f; --amber:#eac06a;
+  --green:#8bdfa9; --red:#ff5d6c; --violet:#b7a7ff;
+  --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--text);font-size:13px;
+  font-family:Inter,ui-sans-serif,-apple-system,"Segoe UI",sans-serif;
+  -webkit-font-smoothing:antialiased}
+.mono{font-family:var(--mono)}
+/* marker for everything that does not exist today */
+.new{position:relative;outline:1px dashed rgb(94 234 212 / 45%);outline-offset:2px}
+.new::after{content:attr(data-tag);position:absolute;top:-9px;left:8px;
+  background:var(--cyan-soft);color:var(--cyan);font-size:8.5px;
+  letter-spacing:.12em;padding:1px 6px;border-radius:4px;z-index:9}
+
+/* ============ HEADER — built, unchanged ============ */
+.hdr{height:62px;display:flex;align-items:center;gap:6px;padding:0 16px;
+  border-bottom:1px solid var(--line);background:var(--bg)}
+.logo{width:34px;height:34px;border-radius:9px;background:var(--cyan-soft);
+  display:grid;place-items:center;color:var(--cyan);font-size:16px}
+.brand{line-height:1.1;margin:0 16px 0 10px}
+.brand b{display:block;font-size:15px;font-weight:600}
+.brand span{font-size:8.5px;letter-spacing:.2em;color:var(--quiet)}
+.nav{display:flex;gap:2px}
+.nav a{display:flex;align-items:center;gap:7px;padding:8px 14px;border-radius:9px;
+  color:var(--muted);text-decoration:none;font-size:13px}
+.nav a.on{background:var(--cyan-soft);color:var(--cyan)}
+.hdr .r{margin-left:auto;display:flex;gap:10px;align-items:center}
+.ctx{display:flex;align-items:center;gap:7px;background:var(--raised);
+  border:1px solid var(--line2);border-radius:10px;padding:8px 13px;font-size:13px}
+.ctx b{font-weight:600}
+.ctx i{width:6px;height:6px;border-radius:50%;background:var(--quiet)}
+.ask{display:flex;align-items:center;gap:9px;background:var(--raised);
+  border:1px solid var(--line2);border-radius:10px;padding:8px 13px;
+  color:var(--muted);font-size:13px}
+.kbd{font-size:9px;border:1px solid var(--line2);border-radius:4px;padding:1px 5px;
+  color:var(--quiet)}
+.msgbtn{background:var(--raised);border:1px solid rgb(234 192 106 / 45%);
+  color:var(--amber);border-radius:10px;padding:8px 13px;font-size:13px;
+  cursor:pointer;font-family:inherit}
+.theme{width:36px;height:36px;border-radius:10px;border:1px solid var(--line2);
+  display:grid;place-items:center;color:var(--muted)}
+
+/* ============ BODY ============ */
+.objbar{height:34px;display:flex;align-items:center;gap:11px;padding:0 18px;
+  border-bottom:1px solid var(--line);font-size:12.5px}
+.objbar .ol{font-size:9.5px;letter-spacing:.16em;color:var(--quiet)}
+.objbar .oc{color:var(--quiet);font-size:11.5px}
+.body{display:flex;height:700px}
+.stage{position:relative;flex:1;overflow:hidden}
+.rail{width:320px;flex:none;border-left:1px solid var(--line);
+  display:flex;flex-direction:column;overflow-y:auto}
+.railhead{font-size:9.5px;letter-spacing:.18em;color:var(--quiet);padding:14px 16px 0}
+
+/* map furniture — built, unchanged */
+.tools{position:absolute;top:14px;left:52%;display:flex;gap:12px;z-index:6}
+.grp{display:flex;align-items:center;gap:2px;background:#0b1119e6;
+  border:1px solid var(--line2);border-radius:11px;padding:5px 7px}
+.grp .lb{font-size:9.5px;letter-spacing:.14em;color:var(--quiet);padding:0 7px}
+.grp button{background:none;border:0;color:var(--muted);font-size:13px;
+  padding:6px 13px;border-radius:8px;font-family:inherit;cursor:pointer}
+.grp button.on{background:var(--cyan-soft);color:var(--cyan)}
+.dock{position:absolute;left:16px;bottom:16px;width:300px;background:#0b1119e6;
+  border:1px solid var(--line2);border-radius:12px;padding:13px 15px;z-index:5}
+.dock h6{font-size:9.5px;letter-spacing:.16em;color:var(--cyan);margin-bottom:7px;
+  display:flex;align-items:center}
+.dock h6 .ago{margin-left:6px;color:var(--quiet);letter-spacing:.06em}
+.dock h6 .cv{margin-left:auto;color:var(--quiet)}
+.dock{width:330px}
+.tabs{display:flex;align-items:center;gap:4px;margin-bottom:9px}
+.tabs button{background:none;border:0;color:var(--quiet);font-size:11px;
+  letter-spacing:.06em;padding:4px 8px;border-radius:7px;cursor:pointer;
+  font-family:inherit}
+.tabs button.on{background:var(--soft);color:var(--cyan)}
+.tabs .n{background:var(--cyan-soft);color:var(--cyan);border-radius:5px;
+  padding:0 5px;font-size:10px;margin-left:4px}
+.tabs .cv{margin-left:auto;color:var(--quiet);font-size:11px}
+.hist{max-height:150px;overflow-y:auto;display:flex;flex-direction:column;
+  gap:10px;padding-right:4px}
+.hist .m{border-left:2px solid var(--amber);padding-left:10px}
+.hist .m.pend{border-left-color:var(--quiet)}
+.hist .m p{font-size:12.5px;line-height:1.45}
+.hist .m .s{margin-top:3px;font-size:10px;color:var(--quiet);
+  font-family:var(--mono)}
+.comp{margin-top:11px;border-top:1px solid var(--line);padding-top:11px}
+.comp textarea{width:100%;height:52px;resize:none;background:var(--raised);
+  border:1px solid var(--line2);border-radius:9px;color:var(--text);
+  padding:8px 10px;font-size:12.5px;font-family:inherit}
+.crow{display:flex;align-items:center;gap:10px;margin-top:8px}
+.crow .mode{flex:1;font-size:11px;color:var(--quiet)}
+.crow .mode b{color:var(--amber)}
+.snd{background:var(--amber-soft,#241c10);border:1px solid rgb(234 192 106 / 50%);
+  color:var(--amber);border-radius:8px;padding:6px 16px;font-size:12.5px;
+  font-weight:600;cursor:pointer;font-family:inherit}
+.warn{margin-top:7px;font-size:10.5px;color:var(--amber)}
+.dock p{font-size:13px;line-height:1.5}
+.dock .src{margin-top:8px;font-size:10.5px;color:var(--quiet)}
+.legend{position:absolute;right:16px;bottom:16px;width:210px;background:#0b1119e6;
+  border:1px solid var(--line2);border-radius:12px;padding:11px 13px;z-index:5}
+.legend h6{font-size:9.5px;letter-spacing:.16em;color:var(--quiet);
+  margin-bottom:8px;display:flex}
+.legend h6 span{margin-left:auto}
+.legend div.r{display:flex;align-items:center;gap:9px;font-size:12px;
+  color:var(--muted);padding:2px 0}
+.sw{width:13px;height:13px;border-radius:4px;flex:none}
+.hint{position:absolute;left:50%;transform:translateX(-50%);bottom:22px;
+  background:#0b1119e6;border:1px solid var(--line2);border-radius:9px;
+  padding:8px 15px;color:var(--muted);font-size:12.5px}
+
+/* NEW: combat panel */
+.combat{position:absolute;right:16px;top:70px;width:236px;background:#170e12f2;
+  border:1px solid #56262e;border-radius:12px;padding:12px 14px;z-index:5}
+.combat h6{font-size:9.5px;letter-spacing:.16em;color:var(--red);margin-bottom:8px}
+.combat .who{font-size:14px;font-weight:600}
+.combat .g{display:flex;gap:14px;margin-top:9px}
+.combat .g div{flex:1}
+.combat .k{font-size:9.5px;letter-spacing:.1em;color:var(--quiet)}
+.combat .v{font-size:15px;font-family:var(--mono);margin-top:2px}
+.combat .v.bad{color:var(--red)}
+.combat .foot{margin-top:9px;font-size:11px;color:var(--muted)}
+
+/* ============ RAIL BLOCKS (all new) ============ */
+.blk{padding:11px 16px;border-top:1px solid var(--line)}
+.blk h5{font-size:9.5px;letter-spacing:.16em;color:var(--quiet);margin-bottom:10px}
+.obj b{font-size:13.5px;display:block;line-height:1.35}
+.obj span{font-size:11.5px;color:var(--quiet)}
+.alert{background:#1c1410;border-left:2px solid var(--amber);padding:12px 16px}
+.alert .t{color:var(--amber);font-size:12.5px;font-weight:600}
+.alert .d{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.45}
+.alert .a{margin-top:8px;font-size:11.5px;color:var(--cyan)}
+.pill{border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:600}
+.pill.fight{background:#3a1620;color:var(--red)}
+.now .l{font-size:9.5px;letter-spacing:.1em;color:var(--quiet);margin-top:11px}
+.now .v{font-size:13px;margin-top:3px}
+.bar{display:flex;align-items:center;gap:9px;font-size:11.5px;color:var(--quiet);
+  margin-bottom:7px}
+.bar .k{width:34px}
+.bar .tr{flex:1;height:6px;border-radius:4px;background:var(--soft);overflow:hidden}
+.bar .tr i{display:block;height:100%}
+.bar .v{width:58px;text-align:right;color:var(--text);font-family:var(--mono);
+  font-size:11.5px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.chip{background:var(--soft);border:1px solid var(--line2);border-radius:6px;
+  padding:3px 9px;font-size:11.5px;color:var(--muted)}
+.chip b{color:var(--text);font-family:var(--mono)}
+.chip.warn{border-color:#4a3a1c;color:var(--amber)}
+.chip.unk{border-style:dashed;color:var(--quiet)}
+.msg .q{font-size:12.5px;line-height:1.45;border-left:2px solid var(--amber);
+  padding-left:10px}
+.msg .m{font-size:10.5px;color:var(--quiet);margin-top:6px}
+.msg button{margin-top:10px;width:100%;background:var(--raised);
+  border:1px solid rgb(234 192 106 / 45%);color:var(--amber);border-radius:9px;
+  padding:8px;font-size:12.5px;cursor:pointer;font-family:inherit}
+.two{display:flex;gap:8px;margin-bottom:8px}
+.st{flex:1;background:var(--raised);border:1px solid var(--line);border-radius:9px;
+  padding:9px 11px}
+.st.wide{margin-bottom:8px}
+.st .k{font-size:9px;letter-spacing:.13em;color:var(--quiet)}
+.st .v{font-size:17px;font-family:var(--mono);margin-top:3px}
+.st .v.s{font-size:15px}
+.st .v small{font-size:11px;color:var(--quiet);font-family:var(--mono)}
+.st .v small.up{color:var(--muted)}
+.spark{width:100%;height:30px;margin-top:6px}
+.ctxrow{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted)}
+.ctxrow b{color:var(--text);font-family:var(--mono)}
+.ctxbar{height:5px;border-radius:4px;background:var(--soft);margin-top:6px;overflow:hidden}
+.ctxbar i{display:block;height:100%;width:6.5%;background:linear-gradient(90deg,#5db4ff,#9a8cff)}
+.cost .top{display:flex;align-items:baseline;gap:9px}
+.cost .big{font-size:21px;font-family:var(--mono)}
+.cost .cap{font-size:11.5px;color:var(--quiet)}
+.cost .track{height:5px;border-radius:4px;background:var(--soft);margin-top:9px;
+  overflow:hidden}
+.cost .track i{display:block;height:100%;width:8%;
+  background:linear-gradient(90deg,#2f6b6f,var(--cyan))}
+.cost .row{display:flex;justify-content:space-between;margin-top:9px;
+  font-size:11.5px;color:var(--muted)}
+.cost .row b{color:var(--text);font-family:var(--mono)}
+
+/* ============ TIMELINE ============ */
+.tl{height:110px;border-top:1px solid var(--line);padding:12px 18px}
+.tlh{display:flex;align-items:center;gap:13px;font-size:11.5px;color:var(--quiet)}
+.tlh .lbl{letter-spacing:.18em;font-size:9.5px}
+.tlh .live{display:flex;align-items:center;gap:6px;color:var(--cyan)}
+.tlh .live i{width:7px;height:7px;border-radius:50%;background:var(--cyan);
+  box-shadow:0 0 9px var(--cyan)}
+.tlh .r{margin-left:auto;display:flex;gap:8px}
+.tlh button{background:var(--raised);border:1px solid var(--line2);
+  color:var(--muted);border-radius:8px;padding:5px 11px;font-size:11.5px;
+  cursor:pointer;font-family:inherit}
+.tlh button.go{border-color:rgb(94 234 212 / 35%);color:var(--cyan)}
+.track{position:relative;height:52px;margin-top:10px}
+.track .axis{position:absolute;left:0;right:0;top:30px;height:1px;background:var(--line2)}
+.track svg{position:absolute;inset:0;width:100%;height:100%}
+.mk{position:absolute;top:24px;width:9px;height:9px;border-radius:50%;
+  transform:translateX(-50%);border:1px solid var(--bg)}
+.mk.room{background:#2f5680}.mk.lvl{background:var(--amber)}
+.mk.fight{background:var(--red)}.mk.fric{background:#c98f3a}
+.mk.op{background:var(--violet)}.mk.big{width:12px;height:12px;top:22px}
+.cur{position:absolute;top:14px;bottom:8px;width:2px;background:var(--cyan);
+  transform:translateX(-50%)}
+.lab{position:absolute;top:40px;font-size:9.5px;color:var(--quiet);
+  transform:translateX(-50%);white-space:nowrap}
+</style>
+</head>
+<body>
+
+<!-- ===================== HEADER — built, unchanged ===================== -->
+<div class="hdr">
+  <div class="logo">&#128301;</div>
+  <div class="brand"><b>Boukensha</b><span>OBSERVATORY</span></div>
+  <nav class="nav">
+    <a class="on" href="#">&#9889; Live</a><a href="#">&#128225; Sessions</a>
+    <a href="#">&#9879; Experiments</a><a href="#">&#128214; Knowledge</a>
+  </nav>
+  <div class="r">
+    <div class="ctx"><b>poucet</b> <span style="color:var(--quiet)">·</span> <i></i> stopped
+      <span style="color:var(--quiet)">·</span> <span class="mono">b3ad92c1</span> &#9662;</div>
+    <div class="ask">&#128269; Ask about this session <span class="kbd">&#8984;K</span></div>
+    <button class="msgbtn new" data-tag="NEW">&#9998; Message agent</button>
+    <div class="theme">&#9728;</div>
+  </div>
+</div>
+
+<!-- objective moved out of the rail: static value, needs full width, rail is full -->
+<div class="objbar new" data-tag="NEW">
+  <span class="ol">OBJECTIVE</span>
+  <b>Find and kill the Massive Minotaur</b>
+  <span class="oc">north of the Temple · newbie area</span>
+</div>
+
+<div class="body">
+  <!-- ===================== MAP — built, unchanged ===================== -->
+  <div class="stage">
+    <div class="tools">
+      <div class="grp"><span class="lb">CAMERA</span><button class="on">Follow</button>
+        <button>Manual</button><button>Fit map</button></div>
+      <div class="grp"><span class="lb">MAP</span><button>Grow</button>
+        <button class="on">Focus</button><button>Lantern</button></div>
+      <div class="grp"><button>+</button><button>&minus;</button></div>
+    </div>
+
+    <svg viewBox="0 0 1000 640" style="position:absolute;inset:0;width:100%;height:100%">
+      <g stroke="#2f5680" stroke-width="1.5" fill="none">
+        <line x1="200" y1="230" x2="330" y2="230"/><line x1="330" y1="230" x2="470" y2="230"/>
+        <line x1="330" y1="120" x2="330" y2="230"/><line x1="470" y1="120" x2="470" y2="230"/>
+        <line x1="330" y1="230" x2="330" y2="350"/><line x1="470" y1="230" x2="470" y2="350"/>
+        <line x1="470" y1="350" x2="600" y2="350"/>
+      </g>
+      <g stroke="#4a5c74" stroke-width="1.3" stroke-dasharray="4 4" fill="none">
+        <line x1="200" y1="185" x2="200" y2="230"/><line x1="200" y1="230" x2="150" y2="230"/>
+        <line x1="470" y1="230" x2="530" y2="230"/><line x1="600" y1="350" x2="600" y2="405"/>
+      </g>
+      <g font-family="ui-monospace,monospace" font-size="13" text-anchor="middle">
+        <rect x="296" y="86" width="68" height="68" rx="11" fill="#6b5a1f" stroke="#a08a33"/>
+        <text x="330" y="126" fill="#f0e9d8" font-weight="700">#3010</text>
+        <text x="330" y="176" fill="#8493a1" font-size="12">The General Store</text>
+        <rect x="436" y="86" width="68" height="68" rx="11" fill="#6b5a1f" stroke="#a08a33"/>
+        <text x="470" y="126" fill="#f0e9d8" font-weight="700">#3011</text>
+        <text x="470" y="176" fill="#8493a1" font-size="12">The Weapon Shop</text>
+        <rect x="166" y="196" width="68" height="68" rx="11" fill="#2f6d86" stroke="#4d93ad"/>
+        <text x="200" y="236" fill="#e9f4f8" font-weight="700">#3014</text>
+        <text x="200" y="286" fill="#8493a1" font-size="12">Market Square</text>
+        <rect x="296" y="196" width="68" height="68" rx="11" fill="#28536b" stroke="#3f7794"/>
+        <text x="330" y="236" fill="#e9f4f8" font-weight="700">#3015</text>
+        <text x="330" y="286" fill="#8493a1" font-size="12">Main Street</text>
+        <rect x="436" y="196" width="68" height="68" rx="11" fill="#28536b" stroke="#3f7794"/>
+        <text x="470" y="236" fill="#e9f4f8" font-weight="700">#3016</text>
+        <text x="470" y="286" fill="#8493a1" font-size="12">Main Street</text>
+        <rect x="296" y="316" width="68" height="68" rx="11" fill="#6b5a1f" stroke="#a08a33"/>
+        <text x="330" y="356" fill="#f0e9d8" font-weight="700">#3031</text>
+        <text x="330" y="406" fill="#8493a1" font-size="12">The Pet Shop</text>
+        <rect x="436" y="316" width="68" height="68" rx="11" fill="#3b2d7a" stroke="#5b49a8"/>
+        <text x="470" y="356" fill="#ece8fb" font-weight="700">#3021</text>
+        <text x="470" y="406" fill="#8493a1" font-size="12">The Entrance Hall…</text>
+        <circle cx="600" cy="350" r="52" fill="#ff5d6c12"/>
+        <rect x="566" y="316" width="68" height="68" rx="11" fill="#3a1620" stroke="#ff5d6c" stroke-width="2"/>
+        <text x="600" y="356" fill="#fff" font-weight="700">#3022</text>
+        <text x="600" y="300" fill="#e6eef5" font-size="12" font-weight="600">The Bar Of Swords…</text>
+        <circle cx="628" cy="322" r="9" fill="#3a1620" stroke="#ff5d6c"/>
+        <text x="628" y="326" fill="#ff5d6c" font-size="10">&#9760;</text>
+        <circle cx="358" cy="218" r="10" fill="#1b2b3b" stroke="#3f7794"/>
+        <text x="358" y="222" fill="#8fb4e0" font-size="9">x3</text>
+      </g>
+      <text x="130" y="112" fill="#b7a7ff" font-size="19">&#187;</text>
+    </svg>
+
+    <!-- NEW: combat panel. opponent / duration / HP trend / outcome. No raw lines. -->
+    <div class="combat new" data-tag="NEW">
+      <h6>IN COMBAT</h6>
+      <div class="who">a large kobold</div>
+      <div class="g">
+        <div><div class="k">SINCE</div><div class="v">turn 46</div></div>
+        <div><div class="k">HP</div><div class="v bad">41 &#8595;30</div></div>
+      </div>
+      <div class="foot">outcome unresolved · 3 turns</div>
+    </div>
+
+    <!-- CONVERSATION: the agent's voice and yours, one panel, two tabs.
+         Compact by default; grows only while Messages is open. -->
+    <div class="dock new" data-tag="MESSAGES TAB IS NEW">
+      <div class="tabs">
+        <button>Agent thinking</button>
+        <button class="on">Your messages <span class="n">3</span></button>
+        <span class="cv">&#9662;</span>
+      </div>
+
+      <div class="hist">
+        <div class="m">
+          <p>Stop circling the temple — head north past Back Street.</p>
+          <div class="s">21:12 · applied at iteration 44</div>
+        </div>
+        <div class="m">
+          <p>Forget the Minotaur. Map the whole newbie zone instead.</p>
+          <div class="s">21:26 · replaced the goal at iteration 61</div>
+        </div>
+        <div class="m pend">
+          <p>Try the door east before you fight.</p>
+          <div class="s">23:04 · waiting for the next iteration</div>
+        </div>
+      </div>
+
+      <div class="comp">
+        <textarea placeholder="Tell the agent what to do next…"></textarea>
+        <div class="crow">
+          <span class="mode"><b>Nudge</b> · Replace goal</span>
+          <button class="snd">Send</button>
+        </div>
+        <div class="warn">&#9888; it moved 2 turns while you typed</div>
+      </div>
+    </div>
+
+    <div class="hint">Drag to explore the learned world.</div>
+
+    <div class="legend">
+      <h6>LEGEND <span>&#9662;</span></h6>
+      <div class="r"><span class="sw" style="background:#28536b;border:1px solid #3f7794"></span>Learned room</div>
+      <div class="r"><span class="sw" style="background:#12333a;border:1px solid #2f6b6f"></span>Current room</div>
+      <div class="r"><span style="color:#4a5c74">---</span> Frontier exit</div>
+      <div class="r"><span style="color:#b7a7ff">&#187;</span> Learned map continues</div>
+      <div class="r"><span style="color:#8fb4e0">&#9450;</span> Repeat visit</div>
+      <div class="r"><span style="color:#ff5d6c">&#9737;</span> Mob sighting</div>
+      <div class="r"><span style="color:#eac06a">&#9671;</span> Object sighting</div>
+    </div>
+  </div>
+
+  <!-- ===================== RAIL — empty today ===================== -->
+  <div class="rail new" data-tag="NEW — RAIL IS EMPTY TODAY">
+    <div class="railhead">EVIDENCE RAIL</div>
+
+    <div class="blk now">
+      <h5>NOW</h5>
+      <span class="pill fight">fighting</span>
+      <div class="l">DOING · 4s ago</div>
+      <!-- agent_belief: generated from the last tool_call, bounded text -->
+      <div class="v">Attacking a large kobold</div>
+      <div class="l">LAST COMMAND</div>
+      <div class="v mono" style="font-size:12.5px">kill kobold</div>
+    </div>
+
+    <!-- player_status.fields + vitals; maxima from score -->
+    <div class="blk">
+      <h5>CHARACTER</h5>
+      <div class="bar"><span class="k">HP</span><span class="tr"><i style="width:42%;background:linear-gradient(90deg,#ff5d6c,#f5c463)"></i></span><span class="v">30/71</span></div>
+      <div class="bar"><span class="k">Mana</span><span class="tr"><i style="width:82%;background:linear-gradient(90deg,#2b5f8f,#7ec3f0)"></i></span><span class="v">96/117</span></div>
+      <div class="bar"><span class="k">Move</span><span class="tr"><i style="width:70%;background:linear-gradient(90deg,#2e7d5b,#8bdfa9)"></i></span><span class="v">58/83</span></div>
+      <div class="chips">
+        <span class="chip">level <b>4</b></span>
+        <span class="chip">gold <b>1,240</b></span>
+        <span class="chip warn">hungry</span>
+      </div>
+    </div>
+
+    <!-- last applied directive + the action, where the decision is made -->
+
+    <div class="blk cost">
+      <h5>LIVE ECONOMICS</h5>
+      <div class="two">
+        <div class="st"><div class="k">SPEND SO FAR</div><div class="v">$0.118 <small>/ $1.50 cap</small></div></div>
+        <div class="st"><div class="k">COST / TURN</div><div class="v">$0.0025 <small>&#9650; 22%</small></div></div>
+      </div>
+      <div class="st wide"><div class="k">COST PER RESPONSE: LAST 20</div>
+        <svg class="spark" viewBox="0 0 250 30" preserveAspectRatio="none">
+          <polyline fill="none" stroke="#5eead4" stroke-width="1.6" points="0,24 13,23 26,21 39,20 52,20 65,17 78,19 91,15 104,16 117,12 130,14 143,10 156,12 169,9 182,11 195,7 208,11 221,6 234,8 247,5"/>
+          <polygon fill="#5eead41f" points="0,30 0,24 13,23 26,21 39,20 52,20 65,17 78,19 91,15 104,16 117,12 130,14 143,10 156,12 169,9 182,11 195,7 208,11 221,6 234,8 247,5 247,30"/>
+        </svg>
+      </div>
+      <div class="two">
+        <div class="st"><div class="k">TOKENS &#183; IN/OUT</div><div class="v s">12.4k <small>/ 480</small></div></div>
+        <div class="st"><div class="k">CACHE HIT</div><div class="v s">73%</div></div>
+      </div>
+      <div class="st wide">
+        <div class="ctxrow"><span>Context window</span><b>12.9k / 200k</b></div>
+        <div class="ctxbar"><i></i></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== TIMELINE — empty today ===================== -->
+<div class="tl new" data-tag="NEW — TIMELINE IS EMPTY TODAY">
+  <div class="tlh">
+    <span class="lbl">CAUSAL TIMELINE</span>
+    <span class="live"><i></i> following live</span>
+    <span>turn <b style="color:var(--text)">47</b> · last 80 events</span>
+    <div class="r">
+      <button>&#9208; Pause</button><button>&#9664; Step</button>
+      <button class="go">&#9197; Jump to live</button>
+    </div>
+  </div>
+  <div class="track">
+    <div class="axis"></div>
+    <svg viewBox="0 0 1000 52" preserveAspectRatio="none">
+      <polyline fill="none" stroke="#1c2836" stroke-width="1.4"
+        points="8,46 100,45 190,43 280,42 370,39 460,38 550,34 640,32 730,26 820,23 900,17 970,13"/>
+    </svg>
+    <div class="mk room" style="left:6%"></div><div class="mk room" style="left:14%"></div>
+    <div class="mk room" style="left:23%"></div><div class="mk lvl big" style="left:34%"></div>
+    <div class="mk room" style="left:42%"></div><div class="mk op big" style="left:52%"></div>
+    <div class="mk room" style="left:59%"></div><div class="mk fric big" style="left:68%"></div>
+    <div class="mk room" style="left:78%"></div><div class="mk fight big" style="left:91%"></div>
+    <div class="cur" style="left:96%"></div>
+    <div class="lab" style="left:34%">level 4</div>
+    <div class="lab" style="left:52%">your message</div>
+    <div class="lab" style="left:68%">repeated “east”</div>
+    <div class="lab" style="left:91%">combat</div>
+  </div>
+</div>
+
+</body>
+</html>

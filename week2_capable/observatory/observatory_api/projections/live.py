@@ -1478,8 +1478,15 @@ def _timeline(
         }:
             continue
         at = _stamp(event.get("at"))
-        index = bisect.bisect_right(gateway_times, at)
-        sequence = gateway_events[index - 1].seq if index else 0
+        if phase == "operator_control" and gateway_events:
+            index = min(
+                bisect.bisect_left(gateway_times, at),
+                len(gateway_events) - 1,
+            )
+            sequence = gateway_events[index].seq
+        else:
+            index = bisect.bisect_right(gateway_times, at)
+            sequence = gateway_events[index - 1].seq if index else 0
         items.append(
             LiveTimelineItem(
                 id=f"agent-{_integer(event.get('line'))}",

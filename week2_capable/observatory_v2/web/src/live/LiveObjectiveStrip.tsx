@@ -4,10 +4,12 @@ export function LiveObjectiveStrip({
   compatibilityObjective,
   canSetGoal,
   objective,
+  objectiveInitial,
 }: {
   compatibilityObjective: string | null;
   canSetGoal: boolean;
   objective: LiveObjectiveContext | null;
+  objectiveInitial: LiveObjectiveContext | null;
 }) {
   const title = objective?.title ?? compatibilityObjective ?? "No goal set";
   const clue = objective?.clue ?? (
@@ -17,6 +19,19 @@ export function LiveObjectiveStrip({
       ? "First message starts the agent"
       : null
   );
+  const revisionLabel = (
+    objective !== null
+    && objectiveInitial !== null
+    && objective.revision > 1
+  )
+    ? `Revision ${objective.revision}`
+    : (
+      objective !== null
+      && objectiveInitial === null
+      && objective.source_kind === "operator"
+    )
+      ? "Goal replaced"
+      : null;
   return (
     <section
       aria-label="Current objective"
@@ -32,9 +47,7 @@ export function LiveObjectiveStrip({
             : `Objective clue · ${clue}`}
         </small>
       )}
-      {objective !== null && objective.revision > 1 ? (
-        <em>Revision {objective.revision}</em>
-      ) : null}
+      {revisionLabel === null ? null : <em>{revisionLabel}</em>}
     </section>
   );
 }
