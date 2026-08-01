@@ -47,7 +47,7 @@ export function LiveMapToolbar({
         <small>Camera</small>
         <button
           aria-pressed={camera === "follow"}
-          title="Keep the current room centered"
+          title="Keep the current room within the central follow zone"
           type="button"
           onClick={() => onCameraChange("follow")}
         >

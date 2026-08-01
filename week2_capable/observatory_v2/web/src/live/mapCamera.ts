@@ -1,6 +1,8 @@
 import {
+  mapColumnGap,
   mapRoomHeight,
   mapRoomWidth,
+  mapRowGap,
   type MapGraph,
   type MapPoint,
   type MapViewport,
@@ -32,6 +34,11 @@ export type MapCameraResolution = {
 export type MapCameraView = {
   center: MapPoint;
   scale: number;
+};
+
+export type MapCameraMotion = {
+  center: MapPoint;
+  velocity: MapPoint;
 };
 
 export type MapCameraInput = {
@@ -221,16 +228,74 @@ export function panMapCamera(
   };
 }
 
-export function interpolateMapCenter(
-  start: MapPoint,
+export function followMapCameraWithinDeadZone(
+  view: MapCameraView,
   target: MapPoint,
-  progress: number,
-): MapPoint {
-  const bounded = clamp(progress, 0, 1);
-  const eased = 1 - Math.pow(1 - bounded, 3);
+  frame: MapFrame,
+): MapCameraView {
+  const scale = clamp(
+    Number.isFinite(view.scale) && view.scale > 0 ? view.scale : 1,
+    minimumCameraScale,
+    maximumCameraScale,
+  );
+  const halfWidth = Math.min(
+    mapColumnGap,
+    Math.max(frame.width, 0) * 0.12 / scale,
+  );
+  const halfHeight = Math.min(
+    mapRowGap,
+    Math.max(frame.height, 0) * 0.12 / scale,
+  );
+  const offset = {
+    x: target.x - view.center.x,
+    y: target.y - view.center.y,
+  };
   return {
-    x: start.x + (target.x - start.x) * eased,
-    y: start.y + (target.y - start.y) * eased,
+    center: {
+      x: view.center.x + overflowOutsideRange(offset.x, halfWidth),
+      y: view.center.y + overflowOutsideRange(offset.y, halfHeight),
+    },
+    scale: view.scale,
+  };
+}
+
+export function stepCriticallyDampedMapCenter(
+  motion: MapCameraMotion,
+  target: MapPoint,
+  deltaSeconds: number,
+  responseSeconds = 0.28,
+): MapCameraMotion {
+  const safeDelta = Math.max(
+    Number.isFinite(deltaSeconds) ? deltaSeconds : 0,
+    0,
+  );
+  const safeResponse = Math.max(
+    Number.isFinite(responseSeconds) ? responseSeconds : 0.28,
+    0.01,
+  );
+  const x = dampAxis(
+    motion.center.x,
+    motion.velocity.x,
+    target.x,
+    safeDelta,
+    safeResponse,
+  );
+  const y = dampAxis(
+    motion.center.y,
+    motion.velocity.y,
+    target.y,
+    safeDelta,
+    safeResponse,
+  );
+  return {
+    center: {
+      x: x.position,
+      y: y.position,
+    },
+    velocity: {
+      x: x.velocity,
+      y: y.velocity,
+    },
   };
 }
 
@@ -382,6 +447,24 @@ export function roomCenter(
     };
 }
 
+export function isContinuousMapTransition(
+  graph: MapGraph,
+  previousRoomId: string | null,
+  currentRoomId: string,
+): boolean {
+  if (previousRoomId === null || previousRoomId === currentRoomId) return true;
+  return graph.connections.some((connection) => {
+    if (connection.displacement) return false;
+    return (
+      connection.source === previousRoomId
+      && connection.target === currentRoomId
+    ) || (
+      connection.target === previousRoomId
+      && connection.source === currentRoomId
+    );
+  });
+}
+
 export function resolveMapViewport({
   activeExtent,
   camera,
@@ -500,4 +583,40 @@ export function mapOverlaySafeBand({
 
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(Math.max(value, minimum), maximum);
+}
+
+function overflowOutsideRange(value: number, halfRange: number): number {
+  if (value < -halfRange) return value + halfRange;
+  if (value > halfRange) return value - halfRange;
+  return 0;
+}
+
+function dampAxis(
+  position: number,
+  velocity: number,
+  target: number,
+  deltaSeconds: number,
+  responseSeconds: number,
+): { position: number; velocity: number } {
+  if (deltaSeconds === 0 || position === target) {
+    return {
+      position,
+      velocity: position === target ? 0 : velocity,
+    };
+  }
+  const omega = 2 / responseSeconds;
+  const displacement = position - target;
+  const exponential = Math.exp(-omega * deltaSeconds);
+  const timeScaled = (velocity + omega * displacement) * deltaSeconds;
+  const nextDisplacement = (displacement + timeScaled) * exponential;
+  const nextVelocity = (velocity - omega * timeScaled) * exponential;
+  const nextPosition = target + nextDisplacement;
+  const crossedTarget = (
+    target - position > 0 && nextPosition > target
+  ) || (
+    target - position < 0 && nextPosition < target
+  );
+  return crossedTarget
+    ? { position: target, velocity: 0 }
+    : { position: nextPosition, velocity: nextVelocity };
 }

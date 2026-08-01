@@ -25,13 +25,15 @@ import {
 import {
   fitMapCameraToSafeFrame,
   clampFocusCamera,
-  interpolateMapCenter,
+  followMapCameraWithinDeadZone,
+  isContinuousMapTransition,
   keepSelectedRoomOutsidePanel,
   mapCameraViewport,
   mapOverlaySafeBand,
   mapContentExtent,
   panMapCamera,
   roomCenter,
+  stepCriticallyDampedMapCenter,
   viewportCenter,
   zoomMapCamera,
   type MapCameraView,
@@ -132,6 +134,7 @@ export function LiveMap({
   const dragRef = useRef<DragState | null>(null);
   const suppressClickRef = useRef(false);
   const cameraViewRef = useRef(cameraView);
+  const followVelocityRef = useRef<MapPoint>({ x: 0, y: 0 });
   const followInitializedRef = useRef(false);
   const previousCurrentRoomIdRef = useRef<string | null>(null);
 
@@ -359,42 +362,104 @@ export function LiveMap({
   }, [cameraView]);
 
   useEffect(() => {
-    if (cameraMode !== "follow" || graph.currentRoomId === null) return;
-    const target = currentCenter;
+    if (cameraMode !== "follow" || graph.currentRoomId === null) {
+      followVelocityRef.current = { x: 0, y: 0 };
+      return;
+    }
+    const currentRoomId = graph.currentRoomId;
+    const previousRoomId = previousCurrentRoomIdRef.current;
     if (!followInitializedRef.current) {
       followInitializedRef.current = true;
+      followVelocityRef.current = { x: 0, y: 0 };
       setCameraView((current) => ({
-        center: target,
+        center: currentCenter,
         scale: current.scale,
       }));
       return;
     }
     const start = cameraViewRef.current.center;
+    const connectedMovement = isContinuousMapTransition(
+      graph,
+      previousRoomId,
+      currentRoomId,
+    );
+    const target = connectedMovement
+      ? followMapCameraWithinDeadZone(
+        cameraViewRef.current,
+        currentCenter,
+        frame,
+      ).center
+      : currentCenter;
     if (
       Math.abs(start.x - target.x) < 0.01
       && Math.abs(start.y - target.y) < 0.01
     ) {
+      followVelocityRef.current = { x: 0, y: 0 };
+      return;
+    }
+    if (!connectedMovement) {
+      followVelocityRef.current = { x: 0, y: 0 };
+      cameraViewRef.current = {
+        center: target,
+        scale: cameraViewRef.current.scale,
+      };
+      setCameraView((current) => ({
+        center: target,
+        scale: current.scale,
+      }));
       return;
     }
     const reducedMotion = window.matchMedia?.(
       "(prefers-reduced-motion: reduce)",
     ).matches ?? false;
     if (reducedMotion || typeof requestAnimationFrame === "undefined") {
+      followVelocityRef.current = { x: 0, y: 0 };
       setCameraView((current) => ({
         center: target,
         scale: current.scale,
       }));
       return;
     }
-    const startedAt = performance.now();
+    followVelocityRef.current = {
+      x: (target.x - start.x) * followVelocityRef.current.x < 0
+        ? 0
+        : followVelocityRef.current.x,
+      y: (target.y - start.y) * followVelocityRef.current.y < 0
+        ? 0
+        : followVelocityRef.current.y,
+    };
+    let previousFrameAt = performance.now();
     let animationFrame = 0;
     const update = (now: number) => {
-      const progress = Math.min((now - startedAt) / 800, 1);
+      const deltaSeconds = Math.min(
+        Math.max((now - previousFrameAt) / 1_000, 0),
+        0.1,
+      );
+      previousFrameAt = now;
+      const motion = stepCriticallyDampedMapCenter({
+        center: cameraViewRef.current.center,
+        velocity: followVelocityRef.current,
+      }, target, deltaSeconds);
+      const settled = (
+        Math.hypot(
+          motion.center.x - target.x,
+          motion.center.y - target.y,
+        ) < 0.05
+        && Math.hypot(motion.velocity.x, motion.velocity.y) < 0.05
+      );
+      const nextCenter = settled ? target : motion.center;
+      followVelocityRef.current = settled
+        ? { x: 0, y: 0 }
+        : motion.velocity;
+      cameraViewRef.current = {
+        center: nextCenter,
+        scale: cameraViewRef.current.scale,
+      };
       setCameraView((current) => ({
-        center: interpolateMapCenter(start, target, progress),
+        center: nextCenter,
         scale: current.scale,
       }));
-      if (progress < 1) {
+      if (!settled) {
         animationFrame = requestAnimationFrame(update);
       }
     };
@@ -404,6 +469,9 @@ export function LiveMap({
     cameraMode,
     currentCenter.x,
     currentCenter.y,
+    frame.height,
+    frame.width,
+    graph.connections,
     graph.currentRoomId,
   ]);
 
@@ -533,6 +601,7 @@ export function LiveMap({
 
   useEffect(() => {
     setCameraView({ center: { x: 0, y: 0 }, scale: 1 });
+    followVelocityRef.current = { x: 0, y: 0 };
     followInitializedRef.current = false;
     previousCurrentRoomIdRef.current = null;
     setSafeInsets(defaultSafeInsets);

@@ -212,12 +212,15 @@ The journey map has three focus modes:
 
 Focus remains agent-relative while permitting bounded local inspection. It
 never writes camera scale. A drag keeps Focus active and enters Manual at the
-exact center and scale where the gesture starts. Agent movement recenters and
-resumes Follow without changing scale. Learned connections crossing the Focus
-set render as fixed-size solid chevrons on the pane edge. Their cross-axis
-position follows hidden-room geometry and slides along the edge only to avoid
-complete room footprints. Frontier evidence remains a dashed room stub ending
-in a dot.
+exact center and scale where the gesture starts. Agent movement resumes Follow
+without changing scale. The current room may move within a central dead zone.
+Crossing that boundary moves the camera only by the excess distance with
+damped, non-overshooting motion. An unconnected position jump snaps instead of
+presenting control movement as traversal. Learned connections crossing the
+Focus set render as fixed-size solid chevrons on the pane edge. Their
+cross-axis position follows hidden-room geometry and slides along the edge only
+to avoid complete room footprints. Frontier evidence remains a dashed room
+stub ending in a dot.
 
 Lantern recenters on the current room without changing scale and resumes
 Follow. A Lantern drag hands the same framing to Grow and Manual. Grow can also

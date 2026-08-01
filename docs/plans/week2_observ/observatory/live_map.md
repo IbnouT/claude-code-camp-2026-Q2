@@ -51,9 +51,10 @@ this folder is the binding visual reference.
   chevrons name the learned context outside it.
 - Focus never changes zoom. Entry recenters on the agent and resumes Follow.
   Only Fit map and the zoom buttons change scale.
-- Focus panning remains bounded with the agent in frame. Agent movement
-  recenters and resumes Follow. Learned rooms outside the projection are
-  announced by fixed-size solid double chevrons on the pane edge.
+- Focus panning remains bounded with the agent in frame. Agent movement resumes
+  Follow within a central dead zone. Boundary crossings catch up smoothly,
+  while unconnected position jumps snap. Learned rooms outside the projection
+  are announced by fixed-size solid double chevrons on the pane edge.
 - A dashed frontier stub means an observed exit with an unlearned destination.
   It remains visually distinct from a solid Focus continuation.
 - Lantern does not pan. A drag hands the unchanged view to Grow and Manual.

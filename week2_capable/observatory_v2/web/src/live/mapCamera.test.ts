@@ -12,8 +12,9 @@ import {
   fitMapCamera,
   fitMapCameraToSafeFrame,
   fitMapViewport,
+  followMapCameraWithinDeadZone,
+  isContinuousMapTransition,
   keepSelectedRoomOutsidePanel,
-  interpolateMapCenter,
   mapCameraViewport,
   mapOverlaySafeBand,
   mapSafeViewport,
@@ -21,6 +22,7 @@ import {
   panMapCamera,
   resolveMapViewport,
   roomCenter,
+  stepCriticallyDampedMapCenter,
   viewportCenter,
   zoomMapCamera,
   zoomMapViewport,
@@ -68,17 +70,89 @@ describe("map camera geometry", () => {
     });
   });
 
-  it("uses the Week 0 cubic-out center glide without changing scale", () => {
-    expect(interpolateMapCenter(
-      { x: 0, y: 100 },
-      { x: 80, y: 20 },
-      0.5,
-    )).toEqual({ x: 70, y: 30 });
-    expect(interpolateMapCenter(
-      { x: 0, y: 100 },
-      { x: 80, y: 20 },
-      1,
-    )).toEqual({ x: 80, y: 20 });
+  it("holds Follow while the agent remains inside one room-step dead zone", () => {
+    const view = {
+      center: { x: 300, y: 200 },
+      scale: 1,
+    };
+
+    expect(followMapCameraWithinDeadZone(
+      view,
+      { x: 448, y: 308 },
+      { width: 1_600, height: 900 },
+    )).toEqual(view);
+  });
+
+  it("moves Follow only by the distance beyond the dead-zone boundary", () => {
+    expect(followMapCameraWithinDeadZone(
+      {
+        center: { x: 300, y: 200 },
+        scale: 1,
+      },
+      { x: 596, y: -44 },
+      { width: 1_600, height: 900 },
+    )).toEqual({
+      center: { x: 448, y: 64 },
+      scale: 1,
+    });
+  });
+
+  it("caps the dead zone at 24 percent of the pane when space is narrow", () => {
+    expect(followMapCameraWithinDeadZone(
+      {
+        center: { x: 300, y: 200 },
+        scale: 1,
+      },
+      { x: 420, y: 280 },
+      { width: 600, height: 400 },
+    )).toEqual({
+      center: { x: 348, y: 232 },
+      scale: 1,
+    });
+  });
+
+  it("critically damps camera motion without crossing its target", () => {
+    let motion = {
+      center: { x: 0, y: 100 },
+      velocity: { x: 0, y: 0 },
+    };
+    for (let frame = 0; frame < 120; frame += 1) {
+      motion = stepCriticallyDampedMapCenter(
+        motion,
+        { x: 80, y: 20 },
+        1 / 60,
+      );
+      expect(motion.center.x).toBeLessThanOrEqual(80);
+      expect(motion.center.y).toBeGreaterThanOrEqual(20);
+    }
+
+    expect(motion.center.x).toBeCloseTo(80, 2);
+    expect(motion.center.y).toBeCloseTo(20, 2);
+  });
+
+  it("smooths observed crossings but snaps displacement and unconnected jumps", () => {
+    const graph = fixtureGraph();
+    graph.connections = [{
+      id: "current-east-hidden",
+      source: "current",
+      target: "hidden",
+      direction: "east",
+      firstSequence: 2,
+      displacement: false,
+      vertical: false,
+      bent: false,
+      oneWay: false,
+    }];
+
+    expect(isContinuousMapTransition(graph, "current", "hidden")).toBe(true);
+    graph.connections[0] = {
+      ...graph.connections[0],
+      displacement: true,
+    };
+    expect(isContinuousMapTransition(graph, "current", "hidden")).toBe(false);
+    graph.connections = [];
+    expect(isContinuousMapTransition(graph, "current", "hidden")).toBe(false);
+    expect(isContinuousMapTransition(graph, null, "hidden")).toBe(true);
   });
 
   it("fits once by writing both center and scale", () => {

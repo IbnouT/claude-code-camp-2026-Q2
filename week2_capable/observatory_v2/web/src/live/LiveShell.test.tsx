@@ -1051,7 +1051,7 @@ describe("Live shell", () => {
     );
   });
 
-  it("re-centers panned Focus on agent movement without changing size", async () => {
+  it("returns panned Focus to the follow zone without changing size", async () => {
     const initial = runtimeSnapshot();
     const moved: Snapshot = {
       ...initial,
@@ -1133,10 +1133,18 @@ describe("Live shell", () => {
     const movedPoint = translatedPoint(movedRoom);
     await waitFor(() => {
       const followed = viewBox(map);
+      const followedCenter = {
+        x: followed.x + followed.width / 2,
+        y: followed.y + followed.height / 2,
+      };
       expect(followed.width).toBe(panned.width);
       expect(followed.height).toBe(panned.height);
-      expect(followed.x + followed.width / 2).toBeCloseTo(movedPoint.x + 32);
-      expect(followed.y + followed.height / 2).toBeCloseTo(movedPoint.y + 32);
+      expect(Math.abs(movedPoint.x + 32 - followedCenter.x)).toBeLessThanOrEqual(
+        Math.min(148, followed.width * 0.12) + 0.1,
+      );
+      expect(Math.abs(movedPoint.y + 32 - followedCenter.y)).toBeLessThanOrEqual(
+        Math.min(122, followed.height * 0.12) + 0.1,
+      );
     }, { timeout: 4_000 });
   }, 5_000);
 

@@ -145,7 +145,9 @@ The map renders the agent's retained room, traversal, frontier, visit, mob,
 object, and thought evidence inside the final Live map pane. Grow, Focus, and
 Lantern change presentation without changing learned coordinates. Follow,
 Manual, Fit, drag, and zoom operate against the map viewport while the thought
-dock and legend remain overlays.
+dock and legend remain overlays. Follow holds the camera while the current room
+stays inside its central dead zone, then catches up without overshoot. An
+unconnected position jump snaps instead of imitating observed traversal.
 
 ### Room inspector
 
