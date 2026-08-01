@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import re
 import signal
@@ -23,6 +24,7 @@ from typing import Literal
 
 ResetMode = Literal["none", "temple", "baseline"]
 StopMode = Literal["cooperative", "forced_after_grace"]
+StopReason = Literal["operator_stop_requested", "idle_timeout"]
 PLAYER_ID = re.compile(r"^[A-Za-z][A-Za-z0-9_-]{0,63}$")
 SESSION_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]{7,127}$")
 MAX_OBJECTIVE_LENGTH = 4_000
@@ -32,6 +34,8 @@ MESSAGE_PATH = re.compile(r"^/api/sessions/([^/]+)/message$")
 START_TIMEOUT_SECONDS = 55.0
 STOP_GRACE_SECONDS = 10.0
 STOP_FORCE_SECONDS = 3.0
+DEFAULT_IDLE_TIMEOUT_SECONDS = 30 * 60
+IDLE_TIMEOUT_ENV = "BOUKENSHA_OBSERVATORY_IDLE_TIMEOUT_SECONDS"
 ACTIVE_STATES = frozenset({"starting", "running", "draining", "quarantined"})
 TERMINAL_STATES = frozenset({"stopped", "crashed"})
 ALLOWED_ORIGINS = frozenset({
@@ -63,7 +67,7 @@ class StopRequestError(ValueError):
 
 
 class MessageRequestError(ValueError):
-    """A direct message cannot be delivered to an idle agent."""
+    """A direct message cannot be delivered to a supervised agent."""
 
     def __init__(self, code: str, detail: str, status: HTTPStatus) -> None:
         super().__init__(detail)
@@ -211,10 +215,31 @@ class StopResult:
 class Supervisor:
     """Own background launcher processes and return their runtime identities."""
 
-    def __init__(self, repository_root: Path, config_root: Path) -> None:
+    def __init__(
+        self,
+        repository_root: Path,
+        config_root: Path,
+        *,
+        idle_timeout_seconds: float | None = None,
+        idle_poll_seconds: float | None = None,
+    ) -> None:
         self.repository_root = repository_root.resolve()
         self.config_root = config_root.resolve()
         self.processes: dict[str, subprocess.Popen[bytes]] = {}
+        self.idle_timeout_seconds = (
+            _configured_idle_timeout()
+            if idle_timeout_seconds is None
+            else _validate_idle_timeout(idle_timeout_seconds)
+        )
+        if idle_poll_seconds is not None and idle_poll_seconds <= 0:
+            raise ValueError("idle_poll_seconds must be positive")
+        self.idle_poll_seconds = (
+            max(0.05, min(5.0, self.idle_timeout_seconds / 10))
+            if idle_poll_seconds is None and self.idle_timeout_seconds > 0
+            else (idle_poll_seconds or 0.05)
+        )
+        self._operator_activity: dict[str, float] = {}
+        self._idle_watchers: dict[str, threading.Thread] = {}
         self._lock = threading.Lock()
 
     def start(self, request: StartRequest) -> str:
@@ -231,7 +256,7 @@ class Supervisor:
                 request.player_id,
             ]
             if request.objective is not None:
-                command.append("--task-stdin")
+                command.append("--initial-task-stdin")
             if request.reset == "baseline":
                 command.extend(("--reset-baseline", "level1-temple@1"))
             elif request.reset == "temple":
@@ -257,7 +282,7 @@ class Supervisor:
                 )
             if request.objective is not None:
                 process.stdin.write((request.objective + "\n").encode())
-                process.stdin.close()
+                process.stdin.flush()
             try:
                 session_id = self._wait_for_ready(
                     process,
@@ -271,6 +296,8 @@ class Supervisor:
                 process.wait(timeout=5)
                 raise
             self.processes[session_id] = process
+            self._operator_activity[session_id] = time.time()
+            self._start_idle_watch(session_id)
             return session_id
 
     def message(
@@ -278,7 +305,7 @@ class Supervisor:
         session_id: str,
         request: MessageRequest,
     ) -> dict[str, str]:
-        """Start an idle agent turn through its retained interactive input."""
+        """Deliver one retained Goal or Nudge to a supervised agent."""
 
         if not SESSION_ID.fullmatch(session_id):
             raise MessageRequestError(
@@ -315,35 +342,39 @@ class Supervisor:
                 )
             if process.stdin is None or process.stdin.closed:
                 raise MessageRequestError(
-                    "agent_busy",
-                    "The agent already has an active objective. Send guidance instead.",
+                    "delivery_unavailable",
+                    "The agent input channel is unavailable.",
                     HTTPStatus.CONFLICT,
                 )
             session_dir = self._safe_session_dir(row)
-            retained = self._retain_initial_message(
-                session_dir,
+            retained = self._request_operator_message(
+                row,
                 request=request,
             )
+            wake = {
+                "type": "operator_message",
+                "request_id": request.request_id,
+            }
             try:
-                process.stdin.write((request.instruction + "\n").encode())
+                process.stdin.write(
+                    (json.dumps(wake, sort_keys=True) + "\n").encode()
+                )
                 process.stdin.flush()
             except OSError as error:
-                self._remove_initial_message(
-                    session_dir,
-                    request_id=request.request_id,
-                )
                 raise MessageRequestError(
                     "delivery_failed",
-                    "The message could not be delivered to the agent.",
+                    "The accepted message could not wake the agent.",
                     HTTPStatus.BAD_GATEWAY,
                 ) from error
-            self._apply_initial_message(
-                session_dir,
-                request_id=request.request_id,
-            )
+            self._operator_activity[session_id] = time.time()
             return retained
 
-    def stop(self, session_id: str) -> StopResult:
+    def stop(
+        self,
+        session_id: str,
+        *,
+        reason: StopReason = "operator_stop_requested",
+    ) -> StopResult:
         """Stop one owned runtime without affecting any other process group."""
 
         if not SESSION_ID.fullmatch(session_id):
@@ -391,7 +422,7 @@ class Supervisor:
             self._transition(
                 session_id,
                 "draining",
-                {"reason": "operator_stop_requested"},
+                {"reason": reason},
             )
             if process.stdin is not None and not process.stdin.closed:
                 process.stdin.close()
@@ -416,14 +447,58 @@ class Supervisor:
                             HTTPStatus.GATEWAY_TIMEOUT,
                         )
 
-            self._terminal(session_id, mode)
+            self._terminal(session_id, mode, reason)
             self.processes.pop(session_id, None)
+            self._operator_activity.pop(session_id, None)
             return StopResult(
                 session_id=session_id,
                 player_id=player_id,
                 state="stopped",
                 mode=mode,
             )
+
+    def _start_idle_watch(self, session_id: str) -> None:
+        if self.idle_timeout_seconds == 0:
+            return
+        watcher = threading.Thread(
+            target=self._watch_idle,
+            args=(session_id,),
+            name=f"observatory-idle-{session_id[:8]}",
+            daemon=True,
+        )
+        self._idle_watchers[session_id] = watcher
+        watcher.start()
+
+    def _watch_idle(self, session_id: str) -> None:
+        try:
+            while True:
+                time.sleep(self.idle_poll_seconds)
+                with self._lock:
+                    process = self.processes.get(session_id)
+                    if process is None or process.poll() is not None:
+                        return
+                    row = self._session(session_id)
+                    if row is None or str(row["state"]) not in ACTIVE_STATES:
+                        return
+                    session_dir = self._safe_session_dir(row)
+                    operator_at = self._operator_activity.get(session_id, 0.0)
+                if not self._idle_expired(session_dir, operator_at=operator_at):
+                    continue
+                try:
+                    self.stop(session_id, reason="idle_timeout")
+                except StopRequestError:
+                    return
+                return
+        finally:
+            with self._lock:
+                self._idle_watchers.pop(session_id, None)
+
+    def _idle_expired(self, session_dir: Path, *, operator_at: float) -> bool:
+        record, modified_at = _latest_agent_record(session_dir / "agent.jsonl")
+        if record is None:
+            return False
+        last_activity = max(modified_at, operator_at)
+        return time.time() - last_activity >= self.idle_timeout_seconds
 
     def _wait_for_ready(
         self,
@@ -535,6 +610,43 @@ class Supervisor:
             )
 
     def _request_operator_stop(self, row: sqlite3.Row) -> None:
+        self._request_operator(
+            row,
+            request_id=f"stop-{uuid.uuid4()}",
+            action="stop",
+            instruction=None,
+            error_type=StopRequestError,
+        )
+
+    def _request_operator_message(
+        self,
+        row: sqlite3.Row,
+        *,
+        request: MessageRequest,
+    ) -> dict[str, str]:
+        receipt = self._request_operator(
+            row,
+            request_id=request.request_id,
+            action=request.action,
+            instruction=request.instruction,
+            error_type=MessageRequestError,
+        )
+        return {
+            "request_id": request.request_id,
+            "action": request.action,
+            "state": str(receipt["state"]),
+            "insertion": "next_iteration_or_turn",
+        }
+
+    def _request_operator(
+        self,
+        row: sqlite3.Row,
+        *,
+        request_id: str,
+        action: str,
+        instruction: str | None,
+        error_type: type[StopRequestError] | type[MessageRequestError],
+    ) -> dict[str, object]:
         session_id = str(row["session_id"])
         player_id = str(row["player_id"])
         session_dir = self._safe_session_dir(row)
@@ -551,9 +663,9 @@ class Supervisor:
                 session_dir / "control.token"
             ).read_text(encoding="utf-8").strip()
         except (OSError, json.JSONDecodeError) as error:
-            raise StopRequestError(
+            raise error_type(
                 "control_unavailable",
-                "The authenticated stop endpoint is unavailable.",
+                "The authenticated agent endpoint is unavailable.",
                 HTTPStatus.CONFLICT,
             ) from error
         if (
@@ -563,16 +675,16 @@ class Supervisor:
             or manifest.get("operator_socket") != str(operator_socket)
             or not operator_socket.is_socket()
         ):
-            raise StopRequestError(
+            raise error_type(
                 "runtime_identity_mismatch",
                 "The selected runtime identity could not be verified.",
                 HTTPStatus.CONFLICT,
             )
         request = {
             "protocol_version": 1,
-            "request_id": f"stop-{uuid.uuid4()}",
-            "action": "stop",
-            "instruction": None,
+            "request_id": request_id,
+            "action": action,
+            "instruction": instruction,
             "expected_sequence": self._latest_sequence(session_dir),
             "player_id": player_id,
             "session_id": session_id,
@@ -588,9 +700,9 @@ class Supervisor:
                 response = client.recv(65_536)
             receipt = json.loads(response)
         except (OSError, json.JSONDecodeError, UnicodeDecodeError) as error:
-            raise StopRequestError(
+            raise error_type(
                 "control_unavailable",
-                "The authenticated stop request did not return a receipt.",
+                "The authenticated agent request did not return a receipt.",
                 HTTPStatus.CONFLICT,
             ) from error
         if not isinstance(receipt, dict) or receipt.get("ok") is not True:
@@ -599,11 +711,12 @@ class Supervisor:
                 if isinstance(receipt, dict)
                 else "invalid control receipt"
             )
-            raise StopRequestError(
+            raise error_type(
                 "control_rejected",
                 str(detail),
                 HTTPStatus.CONFLICT,
             )
+        return receipt
 
     def _safe_session_dir(self, row: sqlite3.Row) -> Path:
         session_id = str(row["session_id"])
@@ -657,17 +770,6 @@ class Supervisor:
             "state": "running",
             "insertion": "first_turn",
         }
-
-    @staticmethod
-    def _apply_initial_message(session_dir: Path, *, request_id: str) -> None:
-        value = Supervisor._message_history(session_dir)
-        for message in value["messages"]:
-            if message.get("request_id") != request_id:
-                continue
-            message["applied_iteration"] = 1
-            message["applied_at"] = _now()
-            Supervisor._write_message_history(session_dir, value)
-            return
 
     @staticmethod
     def _remove_initial_message(session_dir: Path, *, request_id: str) -> None:
@@ -760,9 +862,17 @@ class Supervisor:
                 (session_id, now, state, json.dumps(detail, sort_keys=True)),
             )
 
-    def _terminal(self, session_id: str, mode: StopMode) -> None:
+    def _terminal(
+        self,
+        session_id: str,
+        mode: StopMode,
+        reason: StopReason,
+    ) -> None:
         now = _now()
-        detail = json.dumps({"stop_mode": mode}, sort_keys=True)
+        detail = json.dumps(
+            {"reason": reason, "stop_mode": mode},
+            sort_keys=True,
+        )
         with sqlite3.connect(self.config_root / "registry.db") as database:
             self._ensure_stop_mode(database)
             database.execute(
@@ -785,6 +895,59 @@ class Supervisor:
         }
         if "stop_mode" not in columns:
             database.execute("ALTER TABLE sessions ADD COLUMN stop_mode TEXT")
+
+
+def _validate_idle_timeout(value: object) -> float:
+    try:
+        timeout = float(value)
+    except (TypeError, ValueError) as error:
+        raise ValueError(
+            f"{IDLE_TIMEOUT_ENV} must be a non-negative number"
+        ) from error
+    if not math.isfinite(timeout) or timeout < 0:
+        raise ValueError(
+            f"{IDLE_TIMEOUT_ENV} must be a non-negative number"
+        )
+    return timeout
+
+
+def _configured_idle_timeout() -> float:
+    raw = os.environ.get(IDLE_TIMEOUT_ENV)
+    return (
+        float(DEFAULT_IDLE_TIMEOUT_SECONDS)
+        if raw is None
+        else _validate_idle_timeout(raw)
+    )
+
+
+def _latest_agent_record(path: Path) -> tuple[dict[str, object] | None, float]:
+    try:
+        modified_at = path.stat().st_mtime
+        with path.open("rb") as stream:
+            stream.seek(0, os.SEEK_END)
+            position = stream.tell()
+            buffer = b""
+            while position > 0:
+                amount = min(8_192, position)
+                position -= amount
+                stream.seek(position)
+                buffer = stream.read(amount) + buffer
+                lines = buffer.splitlines()
+                complete = lines if position == 0 else lines[1:]
+                for line in reversed(complete):
+                    if not line.strip():
+                        continue
+                    try:
+                        value = json.loads(line)
+                    except (json.JSONDecodeError, UnicodeDecodeError):
+                        continue
+                    return (
+                        value if isinstance(value, dict) else None,
+                        modified_at,
+                    )
+    except OSError:
+        return None, 0.0
+    return None, modified_at
 
 
 def _now() -> str:

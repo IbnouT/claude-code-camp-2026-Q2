@@ -51,6 +51,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="run one task read from stdin instead of opening the interactive UI",
     )
     parser.add_argument(
+        "--initial-task-stdin",
+        action="store_true",
+        help=(
+            "read the first REPL task from stdin, then keep the plain REPL open"
+        ),
+    )
+    parser.add_argument(
         "--reset-baseline",
         metavar="NAME@VERSION",
         help="reset the selected authenticated session before the first model call",
@@ -81,6 +88,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="positive authored objective revision",
     )
     arguments = parser.parse_args(argv)
+    if arguments.task_stdin and arguments.initial_task_stdin:
+        parser.error("--task-stdin and --initial-task-stdin are mutually exclusive")
+    if arguments.initial_task_stdin and not arguments.no_tui:
+        parser.error("--initial-task-stdin requires --no-tui")
     task = sys.stdin.read().strip() if arguments.task_stdin else None
     if arguments.task_stdin and not task:
         parser.error("--task-stdin received an empty task")
@@ -130,6 +141,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     child_args = [sys.executable, "-m", "boukensha.runtime_child"]
     if arguments.no_tui:
         child_args.append("--no-tui")
+    if arguments.initial_task_stdin:
+        child_args.append("--initial-task-stdin")
     secrets = _child_secrets(config, player_id, profile)
     child_env = runtime.child_environment(
         parent=os.environ,

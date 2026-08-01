@@ -387,7 +387,9 @@ def repl(*,
          sleep: Callable[[float], None] | None = None,
          tui: bool = True,
          input: TextIO | None = None,
-         output: TextIO | None = None) -> None:
+         output: TextIO | None = None,
+         initial_task: str | None = None,
+         objective_context: ObjectiveContext | None = None) -> None:
     """Wire every primitive, then run the interactive session loop.
 
     Options are identical to :func:`run` minus ``task`` (the user supplies
@@ -399,7 +401,14 @@ def repl(*,
     ``tui`` (default true) launches the full-screen Textual front-end wrapping
     the :class:`Repl`. ``tui=False`` runs the plain line-oriented REPL over the
     ``input``/``output`` streams. The loader sets ``tui=False`` for ``--no-tui``.
+    ``initial_task`` runs turn one before the plain REPL reads another line.
+    Its optional ``objective_context`` is retained beside session-start
+    evidence.
     """
+    if initial_task is not None and tui:
+        raise ValueError("initial_task is supported only by the plain REPL")
+    if objective_context is not None and initial_task is None:
+        raise ValueError("objective_context requires initial_task")
     logger: Logger | None = None
     operator_server: Any = None
     try:
@@ -409,7 +418,7 @@ def repl(*,
             max_iterations=max_iterations,
             max_output_tokens=max_output_tokens, context_window=context_window,
             setup=setup, transport=transport, sleep=sleep,
-            objective_context=None,
+            objective_context=objective_context,
         )
         logger = assembled.logger
         operator_pair = start_operator_control()
@@ -446,7 +455,7 @@ def repl(*,
 
                 Tui(session).run()
             else:
-                session.start()
+                session.start(initial_task=initial_task)
         except KeyboardInterrupt:
             print("\nInterrupted.", file=session.output)
     finally:

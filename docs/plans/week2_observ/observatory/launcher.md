@@ -63,6 +63,10 @@ Enabled only when the selected player is not live and the supervised
 launcher is ready. A running gateway is not a prerequisite: the launcher
 starts the gateway child. Failures surface inline as typed errors.
 
+An optional opening instruction becomes the first Goal. Leaving it empty
+starts the agent idle so the operator can set a Goal or send a Nudge from
+Live later.
+
 Two checkboxes, both unchecked by default. Unchecked means the player
 resumes where they left the game, handled by the MUD itself.
 
@@ -79,11 +83,17 @@ resumes where they left the game, handled by the MUD itself.
   either deselects the other. Neither is ever disabled, so switching
   choice is always a single click.
 
-Submitting posts the player and reset choice to the typed start endpoint,
-which delegates to the existing supervised launcher lifecycle (locking,
-child startup, cleanup) and returns the new session id. The form locks
-while starting; success navigates to the session's Live view. The browser
-never receives credentials or spawn commands.
+Submitting posts the player, reset choice, and optional opening instruction
+to the typed start endpoint. The endpoint delegates to the existing supervised
+launcher lifecycle for locking, child startup, and cleanup, then returns the
+new session id.
+
+The entire launch action enters one visible pending state immediately. It
+names the selected player, states that the agent and evidence stream are
+starting, and keeps the launch controls locked. Catalog polling must not make
+the new live row look like a separate action while this transition owns the
+screen. Success navigates to the new Live view. Failure restores the form with
+the typed error. The browser never receives credentials or spawn commands.
 
 ## Load a session
 
@@ -111,6 +121,8 @@ elements are tabbable with a visible focus ring.
 - Rendered comparison against `launcher_mock.html` at 1440x900.
 - Watch is absent, not disabled, when nothing is live.
 - Start is disabled with an explanation when the selected player is live.
+- Starting shows one visible, named transition until Live opens or startup
+  fails.
 - Selecting either reset deselects the other, in both directions.
 - A zero-session profile renders without invented values.
 - Deep links bypass the launcher.

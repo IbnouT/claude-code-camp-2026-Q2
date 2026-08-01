@@ -24,6 +24,7 @@ import json
 import sys
 import threading
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, TextIO
 
@@ -186,9 +187,13 @@ class Repl:
 
     # -- the loop ----------------------------------------------------------
 
-    def start(self) -> None:
-        """Print the banner, then read and act on lines until input ends."""
+    def start(self, initial_task: str | None = None) -> None:
+        """Print the banner, run an optional first task, then read until EOF."""
         self._write(self.banner())
+        if initial_task is not None:
+            self.run_turn(initial_task)
+            if self._operator_stopped:
+                return
 
         while True:
             self._write(self.PROMPT)
@@ -200,6 +205,10 @@ class Repl:
 
             line = logical.strip()
             if not line:
+                continue
+            if self._handle_operator_wakeup(line):
+                if self._operator_stopped:
+                    return
                 continue
 
             kind, payload = self.classify_input(line)
@@ -366,9 +375,16 @@ class Repl:
         """
         if self._turn == 0:
             self._retain_initial_operator_objective(text)
+        self._run_turn(text)
+
+    def _run_turn(self, text: str | None) -> None:
+        """Run a normal turn or an operator-only wake turn."""
         self._turn += 1
+        if text is not None:
+            self._apply_stdin_operator_message(text)
         self._logger.turn(n=self._turn)
-        self._context.add(Message.user(text))
+        if text is not None:
+            self._context.add(Message.user(text))
 
         # A fresh cancel event per turn: the TUI's Esc sets it from another
         # thread and the agent raises TurnCancelled at its next iteration.
@@ -422,6 +438,53 @@ class Repl:
         self._writeln("")
         self._writeln(reply)
 
+    def _handle_operator_wakeup(self, text: str) -> bool:
+        """Consume a verified lifecycle wake envelope without user transcript."""
+        try:
+            value = json.loads(text)
+        except json.JSONDecodeError:
+            return False
+        if not isinstance(value, dict) or value.get("type") != "operator_message":
+            return False
+        request_id = value.get("request_id")
+        if not isinstance(request_id, str) or not request_id:
+            return False
+        retained = self._retained_operator_message(request_id)
+        if retained is None:
+            return False
+        if retained.get("applied_iteration") is not None:
+            return True
+        if self._operator is None:
+            self._writeln("[error] retained operator message has no control channel")
+            return True
+        self._run_turn(None)
+        return True
+
+    def _retained_operator_message(
+        self,
+        request_id: str,
+    ) -> dict[str, Any] | None:
+        session_dir = self._runtime_identity.get("session_dir")
+        if not session_dir:
+            return None
+        path = Path(session_dir) / "operator-messages.json"
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+        messages = value.get("messages") if isinstance(value, dict) else None
+        if not isinstance(messages, list):
+            return None
+        return next(
+            (
+                item
+                for item in messages
+                if isinstance(item, dict)
+                and item.get("request_id") == request_id
+            ),
+            None,
+        )
+
     def _retain_initial_operator_objective(self, text: str) -> None:
         """Complete session-start metadata for a supervised first Goal."""
         session_dir = self._runtime_identity.get("session_dir")
@@ -455,6 +518,44 @@ class Repl:
             revision=1,
         )
         self._logger.retain_initial_objective(objective.as_log())
+
+    def _apply_stdin_operator_message(self, text: str) -> None:
+        """Mark an idle-turn instruction only when the REPL consumes it."""
+        session_dir = self._runtime_identity.get("session_dir")
+        if not session_dir:
+            return
+        path = Path(session_dir) / "operator-messages.json"
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return
+        messages = value.get("messages") if isinstance(value, dict) else None
+        if not isinstance(messages, list):
+            return
+        message = next(
+            (
+                item
+                for item in reversed(messages)
+                if isinstance(item, dict)
+                and item.get("instruction") == text
+                and item.get("applied_iteration") is None
+            ),
+            None,
+        )
+        if message is None:
+            return
+        message["applied_iteration"] = self._turn
+        message["applied_at"] = datetime.now(timezone.utc).isoformat()
+        temporary = path.with_name(".operator-messages.repl.tmp")
+        try:
+            temporary.write_text(
+                json.dumps(value, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            temporary.chmod(0o600)
+            temporary.replace(path)
+        except OSError:
+            temporary.unlink(missing_ok=True)
 
     def cancel_turn(self) -> bool:
         """Ask the in-flight turn to stop. True when a turn was running.

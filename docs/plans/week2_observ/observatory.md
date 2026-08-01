@@ -670,6 +670,12 @@ The control plane exposes only three operations:
 - stop a selected run through the launcher lifecycle
 - propose a goal revision to the selected agent's goal channel
 
+An Observatory launch is a persistent session, not one-turn automation. Its
+optional first goal enters turn one through a dedicated persistent stdin mode.
+The existing one-shot `--task-stdin` contract remains unchanged for automation.
+After a completed turn, the agent waits for later instructions. The supervisor
+stops an idle session after a configurable timeout, 30 minutes by default.
+
 Launch presents the exact effective configuration and maximum spend before
 confirmation. Goal revisions show the active goal, proposed replacement, and
 delivery state. They require confirmation and become immutable session events.
