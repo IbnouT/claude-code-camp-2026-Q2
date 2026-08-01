@@ -19,6 +19,7 @@ import {
   canonicalNodeId,
   mapRoomHeight,
   mapRoomWidth,
+  reflowMapGraph,
   type MapConnection,
   type MapPoint,
 } from "./mapModel";
@@ -129,6 +130,7 @@ export function LiveMap({
   const [markerOverlayRects, setMarkerOverlayRects] = useState<MapOverlayRect[]>(
     [],
   );
+  const [reflowRevision, setReflowRevision] = useState(0);
   const stageRef = useRef<HTMLElement | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -140,11 +142,12 @@ export function LiveMap({
   const previousCurrentRoomIdRef = useRef<string | null>(null);
 
   const graph = useMemo(() => {
-    return buildMapGraph(
-      snapshot?.world.nodes ?? [],
-      snapshot?.world.edges ?? [],
-    );
-  }, [snapshot]);
+    const nodes = snapshot?.world.nodes ?? [];
+    const edges = snapshot?.world.edges ?? [];
+    return reflowRevision === 0
+      ? buildMapGraph(nodes, edges)
+      : reflowMapGraph(nodes, edges);
+  }, [reflowRevision, snapshot]);
   const evidenceMarkers = useMemo(() => {
     return projectMapEvidence(
       snapshot?.world.nodes ?? [],
@@ -640,6 +643,7 @@ export function LiveMap({
     setThoughtExpanded(overlayExpandedByDefault());
     setLegendExpanded(false);
     setPanHintVisible(true);
+    setReflowRevision(0);
   }, [identity.sessionId]);
 
   useEffect(() => {
@@ -859,6 +863,49 @@ export function LiveMap({
       }, direction);
     });
   };
+  const handleReflow = () => {
+    const nextGraph = reflowMapGraph(
+      snapshot.world.nodes,
+      snapshot.world.edges,
+    );
+    const nextCenter = roomCenter(
+      nextGraph,
+      nextGraph.currentRoomId,
+    ) ?? {
+      x: nextGraph.x + nextGraph.width / 2,
+      y: nextGraph.y + nextGraph.height / 2,
+    };
+    const nextPresentation = projectMapPresentation(
+      nextGraph,
+      mode,
+      selectedRoomId,
+      {
+        frame,
+        overlayRects: focusOverlayRects,
+        viewport: mapCameraViewport({
+          center: nextCenter,
+          scale: cameraView.scale,
+        }, frame),
+      },
+    );
+    const nextRoomIds = selectedRoomId === null
+      || nextPresentation.selectionPathRoomIds.length === 0
+      ? nextPresentation.visibleRoomIds
+      : new Set(nextPresentation.selectionPathRoomIds);
+    const nextExtent = mapContentExtent(
+      nextGraph,
+      nextRoomIds,
+      [],
+    );
+    setReflowRevision((current) => current + 1);
+    setCameraView(fitMapCameraToSafeFrame(
+      nextExtent,
+      frame,
+      safeInsets,
+    ));
+    setCameraMode("fit");
+    setPanHintVisible(false);
+  };
   return (
     <section
       ref={stageRef}
@@ -898,6 +945,7 @@ export function LiveMap({
         maximumZoom={maximumMapZoom}
         onCameraChange={handleCameraChange}
         onModeChange={handleModeChange}
+        onReflow={handleReflow}
         onZoom={handleZoom}
       />
       <svg

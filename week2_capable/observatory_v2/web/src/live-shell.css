@@ -900,6 +900,12 @@
   font-size: 16px;
 }
 
+.live-map-toolbar-tool.live-map-reflow {
+  width: auto;
+  padding: 0 10px;
+  font-size: 11px;
+}
+
 .live-map-toolbar button:focus-visible,
 .live-map-dock-toggle:focus-visible {
   outline: 2px solid var(--color-cyan);

@@ -93,6 +93,21 @@ export function buildMapGraph(
   nodes: WorldNode[],
   edges: WorldEdge[],
 ): MapGraph {
+  return buildMapGraphWithLayout(nodes, edges, "evidence");
+}
+
+export function reflowMapGraph(
+  nodes: WorldNode[],
+  edges: WorldEdge[],
+): MapGraph {
+  return buildMapGraphWithLayout(nodes, edges, "topology");
+}
+
+function buildMapGraphWithLayout(
+  nodes: WorldNode[],
+  edges: WorldEdge[],
+  layout: "evidence" | "topology",
+): MapGraph {
   const canonical = canonicalizeAtlasRooms(nodes, edges);
   const orderedNodes = [...canonical.nodes].sort(compareNodes);
   if (orderedNodes.length === 0) {
@@ -109,7 +124,9 @@ export function buildMapGraph(
 
   const nodeIds = new Set(orderedNodes.map(({ id }) => id));
   const evidence = aggregateConnections(canonical.edges, nodeIds);
-  const points = placeRooms(orderedNodes, evidence);
+  const points = layout === "topology"
+    ? reflowRooms(orderedNodes, evidence)
+    : placeRooms(orderedNodes, evidence);
   const gridPoints = [...points.values()];
   const minimumX = Math.min(...gridPoints.map(({ x }) => x));
   const minimumY = Math.min(...gridPoints.map(({ y }) => y));
@@ -184,6 +201,320 @@ export function buildMapGraph(
     width: inset * 2 + (maximumX - minimumX) * mapColumnGap + mapRoomWidth,
     height: inset * 2 + (maximumY - minimumY) * mapRowGap + mapRoomHeight,
   };
+}
+
+function reflowRooms(
+  nodes: WorldNode[],
+  connections: ConnectionEvidence[],
+): Map<string, MapPoint> {
+  const candidates = [
+    improveLayout(placeRooms(nodes, connections), connections),
+    improveLayout(
+      directionalReflowRooms(nodes, connections),
+      connections,
+    ),
+  ];
+  candidates.sort((left, right) => {
+    return layoutPenalty(left, connections)
+      - layoutPenalty(right, connections);
+  });
+  return candidates[0] ?? new Map();
+}
+
+function improveLayout(
+  initial: Map<string, MapPoint>,
+  connections: ConnectionEvidence[],
+): Map<string, MapPoint> {
+  let current = new Map(initial);
+  let currentPenalty = layoutPenalty(current, connections);
+  const nodeIds = [...current.keys()].sort();
+  for (let pass = 0; pass < nodeIds.length; pass += 1) {
+    let best = current;
+    let bestPenalty = currentPenalty;
+    for (let leftIndex = 0; leftIndex < nodeIds.length; leftIndex += 1) {
+      const leftId = nodeIds[leftIndex];
+      if (leftId === undefined) continue;
+      for (
+        let rightIndex = leftIndex + 1;
+        rightIndex < nodeIds.length;
+        rightIndex += 1
+      ) {
+        const rightId = nodeIds[rightIndex];
+        if (rightId === undefined) continue;
+        const leftPoint = current.get(leftId);
+        const rightPoint = current.get(rightId);
+        if (leftPoint === undefined || rightPoint === undefined) continue;
+        const candidate = new Map(current);
+        candidate.set(leftId, rightPoint);
+        candidate.set(rightId, leftPoint);
+        const penalty = layoutPenalty(candidate, connections);
+        if (penalty < bestPenalty) {
+          best = candidate;
+          bestPenalty = penalty;
+        }
+      }
+    }
+    if (nodeIds.length <= 40) {
+      const occupied = new Set(
+        [...current.values()].map(({ x, y }) => `${x}:${y}`),
+      );
+      for (const nodeId of nodeIds) {
+        const point = current.get(nodeId);
+        if (point === undefined) continue;
+        for (const candidatePoint of relocationPoints(current)) {
+          if (occupied.has(`${candidatePoint.x}:${candidatePoint.y}`)) {
+            continue;
+          }
+          const candidate = new Map(current);
+          candidate.set(nodeId, candidatePoint);
+          const penalty = layoutPenalty(candidate, connections);
+          if (penalty < bestPenalty) {
+            best = candidate;
+            bestPenalty = penalty;
+          }
+        }
+      }
+    }
+    if (bestPenalty >= currentPenalty) break;
+    current = best;
+    currentPenalty = bestPenalty;
+  }
+  return current;
+}
+
+function relocationPoints(
+  points: Map<string, MapPoint>,
+): MapPoint[] {
+  const occupied = [...points.values()];
+  const minimumX = Math.min(...occupied.map(({ x }) => x)) - 1;
+  const maximumX = Math.max(...occupied.map(({ x }) => x)) + 1;
+  const minimumY = Math.min(...occupied.map(({ y }) => y)) - 1;
+  const maximumY = Math.max(...occupied.map(({ y }) => y)) + 1;
+  const candidates: MapPoint[] = [];
+  for (let y = minimumY; y <= maximumY; y += 1) {
+    for (let x = minimumX; x <= maximumX; x += 1) {
+      candidates.push({ x, y });
+    }
+  }
+  return candidates;
+}
+
+function directionalReflowRooms(
+  nodes: WorldNode[],
+  connections: ConnectionEvidence[],
+): Map<string, MapPoint> {
+  const points = new Map<string, MapPoint>();
+  const adjacency = new Map<string, ConnectionEvidence[]>();
+  for (const connection of connections) {
+    adjacency.set(connection.source, [
+      ...(adjacency.get(connection.source) ?? []),
+      connection,
+    ]);
+    adjacency.set(connection.target, [
+      ...(adjacency.get(connection.target) ?? []),
+      connection,
+    ]);
+  }
+  for (const grouped of adjacency.values()) {
+    grouped.sort((left, right) => {
+      return left.firstSequence - right.firstSequence
+        || left.id.localeCompare(right.id);
+    });
+  }
+
+  for (const root of nodes) {
+    if (points.has(root.id)) continue;
+    const rootPoint = points.size === 0
+      ? { x: 0, y: 0 }
+      : {
+        x: Math.max(...[...points.values()].map(({ x }) => x)) + 3,
+        y: 0,
+      };
+    points.set(root.id, rootPoint);
+    const queue = [root.id];
+    while (queue.length > 0) {
+      const sourceId = queue.shift();
+      if (sourceId === undefined) break;
+      const source = points.get(sourceId);
+      if (source === undefined) continue;
+      for (const connection of adjacency.get(sourceId) ?? []) {
+        const targetId = connection.source === sourceId
+          ? connection.target
+          : connection.source;
+        if (points.has(targetId)) continue;
+        const vector = connectionVector(connection, sourceId, targetId);
+        const target = vector === null
+          ? nearestFree(source, [...points.values()])
+          : nearestDirectionalFree(source, vector, [...points.values()]);
+        points.set(targetId, target);
+        queue.push(targetId);
+      }
+    }
+  }
+  return points;
+}
+
+function layoutPenalty(
+  points: Map<string, MapPoint>,
+  connections: ConnectionEvidence[],
+): number {
+  let crossings = 0;
+  for (
+    let leftIndex = 0;
+    leftIndex < connections.length;
+    leftIndex += 1
+  ) {
+    const left = connections[leftIndex];
+    if (left === undefined) continue;
+    for (
+      let rightIndex = leftIndex + 1;
+      rightIndex < connections.length;
+      rightIndex += 1
+    ) {
+      const right = connections[rightIndex];
+      if (
+        right === undefined
+        || left.source === right.source
+        || left.source === right.target
+        || left.target === right.source
+        || left.target === right.target
+      ) {
+        continue;
+      }
+      const leftSource = points.get(left.source);
+      const leftTarget = points.get(left.target);
+      const rightSource = points.get(right.source);
+      const rightTarget = points.get(right.target);
+      if (
+        leftSource !== undefined
+        && leftTarget !== undefined
+        && rightSource !== undefined
+        && rightTarget !== undefined
+        && segmentsCross(
+          leftSource,
+          leftTarget,
+          rightSource,
+          rightTarget,
+        )
+      ) {
+        crossings += 1;
+      }
+    }
+  }
+  const edgeSpan = connections.reduce((total, connection) => {
+    const source = points.get(connection.source);
+    const target = points.get(connection.target);
+    if (source === undefined || target === undefined) return total;
+    return total
+      + (target.x - source.x) ** 2
+      + (target.y - source.y) ** 2;
+  }, 0);
+  const directionViolations = connections.reduce((total, connection) => {
+    const source = points.get(connection.source);
+    const target = points.get(connection.target);
+    if (source === undefined || target === undefined) return total;
+    return total + connection.edges.filter((edge) => {
+      const vector = vectorFor(edge.direction);
+      if (vector === null) return false;
+      const followsAggregate = edge.source === connection.source;
+      return !preservesDirection({
+        x: (target.x - source.x) * (followsAggregate ? 1 : -1),
+        y: (target.y - source.y) * (followsAggregate ? 1 : -1),
+      }, vector);
+    }).length;
+  }, 0);
+  const occupied = [...points.values()];
+  const minimumX = Math.min(...occupied.map(({ x }) => x));
+  const maximumX = Math.max(...occupied.map(({ x }) => x));
+  const minimumY = Math.min(...occupied.map(({ y }) => y));
+  const maximumY = Math.max(...occupied.map(({ y }) => y));
+  const area = (maximumX - minimumX + 1) * (maximumY - minimumY + 1);
+  return crossings * 1_000_000
+    + directionViolations * 10_000
+    + edgeSpan * 10
+    + area;
+}
+
+function segmentsCross(
+  a: MapPoint,
+  b: MapPoint,
+  c: MapPoint,
+  d: MapPoint,
+): boolean {
+  const orientation = (
+    first: MapPoint,
+    second: MapPoint,
+    third: MapPoint,
+  ) => Math.sign(
+    (second.x - first.x) * (third.y - first.y)
+      - (second.y - first.y) * (third.x - first.x),
+  );
+  return orientation(a, b, c) !== orientation(a, b, d)
+    && orientation(c, d, a) !== orientation(c, d, b);
+}
+
+function connectionVector(
+  connection: ConnectionEvidence,
+  sourceId: string,
+  targetId: string,
+): MapPoint | null {
+  for (const edge of connection.edges) {
+    const vector = vectorFor(edge.direction);
+    if (vector === null) continue;
+    const followsTraversal = edge.source === sourceId
+      && edge.target === targetId;
+    return {
+      x: vector.x * (followsTraversal ? 1 : -1),
+      y: vector.y * (followsTraversal ? 1 : -1),
+    };
+  }
+  const vertical = connection.edges.find(({ direction }) => {
+    return isVerticalDirection(direction);
+  });
+  if (vertical === undefined) return null;
+  return verticalPlacementVectors(vertical, targetId)[0];
+}
+
+function nearestDirectionalFree(
+  anchor: MapPoint,
+  vector: MapPoint,
+  occupied: MapPoint[],
+): MapPoint {
+  const wanted = {
+    x: anchor.x + vector.x,
+    y: anchor.y + vector.y,
+  };
+  if (isFree(wanted, occupied)) return wanted;
+  for (let radius = 1; radius < 80; radius += 1) {
+    const candidates: MapPoint[] = [];
+    for (let y = -radius; y <= radius; y += 1) {
+      for (let x = -radius; x <= radius; x += 1) {
+        if (Math.max(Math.abs(x), Math.abs(y)) !== radius) continue;
+        candidates.push({ x: wanted.x + x, y: wanted.y + y });
+      }
+    }
+    candidates.sort((left, right) => {
+      const leftDistance = Math.hypot(
+        left.x - anchor.x,
+        left.y - anchor.y,
+      );
+      const rightDistance = Math.hypot(
+        right.x - anchor.x,
+        right.y - anchor.y,
+      );
+      return leftDistance - rightDistance
+        || left.y - right.y
+        || left.x - right.x;
+    });
+    const candidate = candidates.find((point) => {
+      return preservesDirection({
+        x: point.x - anchor.x,
+        y: point.y - anchor.y,
+      }, vector) && isFree(point, occupied);
+    });
+    if (candidate !== undefined) return candidate;
+  }
+  return nearestFree(wanted, occupied);
 }
 
 export function canonicalNodeId(node: WorldNode): string {

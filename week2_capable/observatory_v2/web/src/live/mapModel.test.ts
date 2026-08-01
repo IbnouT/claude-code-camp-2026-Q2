@@ -14,6 +14,7 @@ import {
   mapColumnGap,
   mapDragScale,
   mapRowGap,
+  reflowMapGraph,
 } from "./mapModel";
 
 describe("structural map model", () => {
@@ -38,6 +39,83 @@ describe("structural map model", () => {
       expect(Math.abs(point.x % mapColumnGap)).toBe(0);
       expect(Math.abs(point.y % mapRowGap)).toBe(0);
     }
+  });
+
+  it("reflows repeated directions into a compact deterministic fan", () => {
+    const nodes = [
+      room("anchor", 10),
+      room("first", 20),
+      room("second", 30),
+      room("third", 40),
+    ];
+    const edges = [
+      link("anchor", "first", "east", 20),
+      link("anchor", "second", "east", 30),
+      link("anchor", "third", "east", 40),
+    ];
+
+    const graph = reflowMapGraph(nodes, edges);
+    const replay = reflowMapGraph(nodes, edges);
+    const points = graph.rooms.map(({ point }) => `${point.x}:${point.y}`);
+
+    expect(replay.rooms).toEqual(graph.rooms);
+    expect(new Set(points).size).toBe(4);
+    expect(Math.max(...graph.rooms.map(({ point }) => point.x)))
+      .toBe(mapColumnGap);
+    expect(graph.connections.every(({ bent }) => !bent)).toBe(true);
+  });
+
+  it("does not make a non-Euclidean atlas maze more tangled", () => {
+    const vnums = [
+      6061,
+      6062,
+      6063,
+      6067,
+      6068,
+      6069,
+      6070,
+      6071,
+      6072,
+      6073,
+      6074,
+      6075,
+      6076,
+      6077,
+      6078,
+      6081,
+    ];
+    const nodes = vnums.map((vnum, index) => ({
+      ...room(String(vnum), index + 1),
+      atlas: atlasIdentity(vnum, "forest"),
+    }));
+    const edges = [
+      link("6070", "6078", "north", 1),
+      link("6078", "6075", "south", 2),
+      link("6075", "6072", "south", 3),
+      link("6072", "6067", "south", 4),
+      link("6067", "6062", "south", 5),
+      link("6062", "6063", "west", 6),
+      link("6063", "6068", "north", 7),
+      link("6068", "6069", "west", 8),
+      link("6069", "6068", "east", 9),
+      link("6068", "6073", "north", 10),
+      link("6073", "6076", "north", 11),
+      link("6076", "6077", "east", 12),
+      link("6077", "6076", "east", 13),
+      link("6076", "6081", "north", 14),
+      link("6081", "6078", "north", 15),
+      link("6075", "6074", "east", 16),
+      link("6074", "6070", "east", 17),
+      link("6070", "6061", "south", 18),
+      link("6061", "6062", "west", 19),
+      link("6072", "6071", "east", 20),
+      link("6071", "6070", "east", 21),
+    ];
+
+    const retained = buildMapGraph(nodes, edges);
+    const reflowed = reflowMapGraph(nodes, edges);
+
+    expect(connectionCrossings(reflowed)).toBe(0);
   });
 
   it("collapses reverse evidence into one two-way connection", () => {
@@ -388,4 +466,70 @@ function atlasIdentity(
     confidence: "medium",
     evidence: ["fixture"],
   };
+}
+
+function connectionCrossings(
+  graph: ReturnType<typeof buildMapGraph>,
+): number {
+  const points = new Map(
+    graph.rooms.map(({ node, point }) => [node.id, point]),
+  );
+  let crossings = 0;
+  for (let leftIndex = 0; leftIndex < graph.connections.length; leftIndex += 1) {
+    const left = graph.connections[leftIndex];
+    if (left === undefined) continue;
+    for (
+      let rightIndex = leftIndex + 1;
+      rightIndex < graph.connections.length;
+      rightIndex += 1
+    ) {
+      const right = graph.connections[rightIndex];
+      if (
+        right === undefined
+        || left.source === right.source
+        || left.source === right.target
+        || left.target === right.source
+        || left.target === right.target
+      ) {
+        continue;
+      }
+      const leftSource = points.get(left.source);
+      const leftTarget = points.get(left.target);
+      const rightSource = points.get(right.source);
+      const rightTarget = points.get(right.target);
+      if (
+        leftSource !== undefined
+        && leftTarget !== undefined
+        && rightSource !== undefined
+        && rightTarget !== undefined
+        && segmentsCross(
+          leftSource,
+          leftTarget,
+          rightSource,
+          rightTarget,
+        )
+      ) {
+        crossings += 1;
+      }
+    }
+  }
+  return crossings;
+}
+
+function segmentsCross(
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+  c: { x: number; y: number },
+  d: { x: number; y: number },
+): boolean {
+  const orientation = (
+    first: { x: number; y: number },
+    second: { x: number; y: number },
+    third: { x: number; y: number },
+  ) => Math.sign(
+    (second.x - first.x) * (third.y - first.y)
+      - (second.y - first.y) * (third.x - first.x),
+  );
+  return orientation(a, b, c) !== orientation(a, b, d)
+    && orientation(c, d, a) !== orientation(c, d, b);
 }

@@ -12,6 +12,7 @@ type Props = {
   maximumZoom: number;
   onCameraChange: (camera: MapCameraMode) => void;
   onModeChange: (mode: MapMode) => void;
+  onReflow: () => void;
   onZoom: (direction: "in" | "out") => void;
 };
 
@@ -30,6 +31,7 @@ export function LiveMapToolbar({
   maximumZoom,
   onCameraChange,
   onModeChange,
+  onReflow,
   onZoom,
 }: Props) {
   const fitLabel = selectedRoomId === null ? "Fit map" : "Fit selection";
@@ -91,6 +93,15 @@ export function LiveMapToolbar({
           </button>
         ))}
       </div>
+      <button
+        aria-label="Reflow map"
+        className="live-map-toolbar-tool live-map-reflow"
+        title="Recalculate room positions from retained evidence"
+        type="button"
+        onClick={onReflow}
+      >
+        Reflow
+      </button>
       <button
         aria-label="Zoom in"
         className="live-map-toolbar-tool"

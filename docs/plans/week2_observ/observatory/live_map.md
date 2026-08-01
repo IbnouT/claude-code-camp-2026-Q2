@@ -29,6 +29,14 @@ this folder is the binding visual reference.
 - Placement is deterministic and replayable. Existing rooms move only through
   an evidence-named insertion shift. Camera follow, centering and fit remain
   transforms only.
+- Reflow discards only the current derived coordinates, then compares the
+  evidence-order layout with a deterministic topology layout. A local
+  crossing-minimization pass swaps rooms and relocates them into free lattice
+  cells before selecting the lower-penalty result. Compass direction remains a
+  soft visual constraint because CircleMUD contains non-Euclidean mazes with
+  self-loop and non-reciprocal exits. Reflow never increases connection
+  crossings, changes evidence, room identity, visit counts, edge semantics, or
+  the selected session. The result is deterministic for the same prefix.
 - A connection is marked bent only when the evidence itself is contradictory.
 - One visual connection per room pair: two-way plain, one-way arrowhead,
   contradictory bent. Traversal counts live in the inspector.
@@ -41,6 +49,9 @@ this folder is the binding visual reference.
 - Header chips: turn/iteration, zone, learned-world count with frontier,
   capture gaps when present.
 - Camera group: Follow, Manual, Fit map, zoom in and zoom out.
+- Map group: Grow, Focus, Lantern, and Reflow. Reflow is the one explained
+  addition to the binding toolbar. It recalculates derived room placement from
+  retained evidence and then fits the active projection.
 - Mode group: Grow shows the complete learned graph. Focus shows complete
   breadth-first shells around the agent while every room's full drawn
   footprint fits the pane and clears the toolbar and legend. The translucent
@@ -129,6 +140,11 @@ evidence order owns production coordinates.
   in-browser observation of two consecutive live transitions was not performed.
 - Lantern: graph-distance tiers preserve the complete learned graph. Dragging
   hands the unchanged framing to Grow and Manual.
+- Reflow: activating it after arbitrary panning and map growth rebuilds one
+  deterministic compact layout for the same retained prefix, preserves
+  selection semantics, never increases connection crossings, and fits the
+  active projection without writing data. A retained Haon-Dor replay reduces
+  its canonical layout from seven crossings to zero.
 - Semantic color: all 1,878 rooms receive one category, the frozen file
   contains only reviewed disagreements, representative corrected rooms pass
   API tests, and dark and light rendered captures preserve state precedence.
