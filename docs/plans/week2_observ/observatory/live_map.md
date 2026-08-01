@@ -74,8 +74,11 @@ this folder is the binding visual reference.
   mob and object sighting counts, passed count, per-room spend when
   attributed, and the evidence link. Closes with X, Escape, click outside or
   re-click. Never covers the selected room.
-- Legend: generated from the marker kinds actually drawn in the current
-  mode and is collapsible.
+- Legend: collapsible, with the baseline map grammar always visible for
+  frontier exits, repeat visits, mob sightings, and object sightings.
+  Selection, continuation, vertical-exit, and objective keys remain
+  conditional on the current projection, as does current-room combat
+  labeling.
 - Every value traces to a typed field. An unavailable value is absent,
   never substituted.
 

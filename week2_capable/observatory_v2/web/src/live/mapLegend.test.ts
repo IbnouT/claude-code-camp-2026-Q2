@@ -8,7 +8,7 @@ import type { MapEvidenceProjection } from "./markerProjection";
 import { projectMapLegend } from "./mapLegend";
 
 describe("map legend projection", () => {
-  it("lists only marker kinds drawn for visible rooms", () => {
+  it("keeps the map grammar beside contextual visible-room keys", () => {
     const evidence: MapEvidenceProjection = {
       frontiers: [{
         id: "frontier:current:east",
@@ -57,7 +57,7 @@ describe("map legend projection", () => {
     ]);
   });
 
-  it("excludes hidden markers and unsupported rows", () => {
+  it("keeps baseline grammar while excluding hidden contextual rows", () => {
     expect(projectMapLegend({
       rooms: [room("visible", 1), room("hidden", 3)],
       visibleRoomIds: new Set(["visible"]),
@@ -79,7 +79,13 @@ describe("map legend projection", () => {
         ]),
         markerKinds: new Set(["frontier", "vertical", "visits"]),
       },
-    })).toEqual([{ kind: "room", label: "Learned room" }]);
+    })).toEqual([
+      { kind: "room", label: "Learned room" },
+      { kind: "frontier", label: "Frontier exit" },
+      { kind: "visits", label: "Repeat visit" },
+      { kind: "mob", label: "Mob sighting" },
+      { kind: "object", label: "Object sighting" },
+    ]);
   });
 
   it("returns no legend rows without visible rooms", () => {

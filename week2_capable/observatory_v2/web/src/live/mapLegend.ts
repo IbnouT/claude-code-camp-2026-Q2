@@ -55,9 +55,7 @@ export function projectMapLegend({
   if (selectedRoomId !== null && visibleRoomIds.has(selectedRoomId)) {
     entries.push({ kind: "selected", label: "Selected room" });
   }
-  if (evidence.frontiers.some(({ source }) => visibleRoomIds.has(source))) {
-    entries.push({ kind: "frontier", label: "Frontier exit" });
-  }
+  entries.push({ kind: "frontier", label: "Frontier exit" });
   if (focusContinuationCount > 0) {
     entries.push({
       kind: "continuation",
@@ -69,19 +67,13 @@ export function projectMapLegend({
   })) {
     entries.push({ kind: "vertical", label: "Up or down exit" });
   }
-  if (visibleRooms.some(({ visits }) => visits > 1)) {
-    entries.push({ kind: "visits", label: "Repeat visit" });
-  }
+  entries.push({ kind: "visits", label: "Repeat visit" });
   if (visibleRooms.some(({ id }) => beaconRoomIds.has(id))) {
     entries.push({ kind: "beacon", label: "Objective beacon" });
   }
-  if (visibleRooms.some(({ mob_sightings }) => mob_sightings.length > 0)) {
-    entries.push({ kind: "mob", label: "Mob sighting" });
-  }
-  if (visibleRooms.some(({ object_sightings }) => {
-    return object_sightings.length > 0;
-  })) {
-    entries.push({ kind: "object", label: "Object sighting" });
-  }
+  entries.push(
+    { kind: "mob", label: "Mob sighting" },
+    { kind: "object", label: "Object sighting" },
+  );
   return entries;
 }
