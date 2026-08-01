@@ -208,6 +208,11 @@
   font-size: 11px;
 }
 
+.live-posture-pill.is-fighting {
+  background: #3a1620;
+  color: var(--color-coral);
+}
+
 .live-evidence-text {
   display: grid;
   gap: 3px;

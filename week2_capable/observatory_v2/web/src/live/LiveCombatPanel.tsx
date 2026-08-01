@@ -12,7 +12,7 @@ export function LiveCombatPanel({
       className="live-combat-panel"
       data-map-focus-occluder="true"
     >
-      <span>Combat</span>
+      <span>IN COMBAT</span>
       <strong>{episode.opponent ?? "Opponent not observed"}</strong>
       <dl>
         <div>

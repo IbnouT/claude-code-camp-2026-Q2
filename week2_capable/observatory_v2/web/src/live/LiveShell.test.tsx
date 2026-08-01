@@ -708,11 +708,13 @@ describe("Live shell", () => {
     render(<LiveShell identity={identity} />);
 
     const combat = await screen.findByRole("complementary", { name: "Active combat" });
+    expect(combat).toHaveTextContent("IN COMBAT");
     expect(combat).toHaveTextContent("a large kobold");
     expect(combat).toHaveTextContent("turn 46");
     expect(combat).toHaveTextContent("pending");
     expect(combat).not.toHaveTextContent(/HP|exchange|unresolved/i);
     expect(combat).toHaveAttribute("data-map-focus-occluder", "true");
+    expect(screen.getByText("fighting")).toHaveClass("is-fighting");
 
     await user.click(screen.getByRole("button", { name: "Focus" }));
     expect(screen.getByRole("button", { name: /Agent in A Nexus/ }))

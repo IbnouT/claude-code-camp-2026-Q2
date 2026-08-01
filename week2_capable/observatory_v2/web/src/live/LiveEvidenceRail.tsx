@@ -53,10 +53,15 @@ export function LiveEvidenceRail({
         title="Now"
       >
         {typeof posture === "string" ? (
-          <span className="live-posture-pill" title={evidenceTitle(fields.posture)}>
+          <span
+            className={`live-posture-pill${snapshot.combat ? " is-fighting" : ""}`}
+            title={evidenceTitle(fields.posture)}
+          >
             {snapshot.combat ? "fighting" : posture}
           </span>
-        ) : snapshot.combat ? <span className="live-posture-pill">fighting</span> : null}
+        ) : snapshot.combat ? (
+          <span className="live-posture-pill is-fighting">fighting</span>
+        ) : null}
         <EvidenceText
           label="Latest tool action"
           value={snapshot.agent_belief?.text ?? "No tool action retained"}
