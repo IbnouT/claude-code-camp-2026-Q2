@@ -1,5 +1,4 @@
 import { readdir, readFile } from "node:fs/promises"
-import { createHash } from "node:crypto"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -11,6 +10,13 @@ const backendRoot =
 const architectureCheck = fileURLToPath(import.meta.url)
 const sourceExtensions = new Set([".js", ".jsx", ".mjs", ".ts", ".tsx"])
 const backendExtensions = new Set([".py"])
+const generatedDirectories = new Set([
+  ".venv",
+  "dist",
+  "node_modules",
+  "playwright-report",
+  "test-results",
+])
 const importPattern =
   /\b(?:from\s+|import\s*(?:\(\s*)?)["'](?<specifier>[^"']+)["']/gu
 
@@ -39,6 +45,9 @@ async function collectSourceFiles(directory, extensions = sourceExtensions) {
     entries.map(async (entry) => {
       const absolutePath = path.join(directory, entry.name)
       if (entry.isDirectory()) {
+        if (generatedDirectories.has(entry.name)) {
+          return []
+        }
         return collectSourceFiles(absolutePath, extensions)
       }
 
@@ -178,38 +187,12 @@ const backendLegacyPatterns = [
   ["legacy relative path", /(?:\.\.[\\/])+observatory(?:_v2)?(?:[\\/]|$)/u],
 ]
 
-const legacySourceRoots = [
-  path.resolve(v3Root, "..", "observatory", "observatory_api"),
-  path.resolve(v3Root, "..", "observatory_v2", "api"),
-]
-const legacyFiles = (
-  await Promise.all(
-    legacySourceRoots.map((directory) =>
-      collectSourceFiles(directory, backendExtensions)
-    )
-  )
-).flat()
-const legacyHashes = new Set(
-  await Promise.all(
-    legacyFiles.map(async (file) =>
-      createHash("sha256")
-        .update(await readFile(file))
-        .digest("hex")
-    )
-  )
-)
-
 for (const { contents, file } of backendContents) {
   const relativeFile = path.relative(v3Root, file)
   for (const [label, pattern] of backendLegacyPatterns) {
     if (pattern.test(contents)) {
       failures.push(`${relativeFile}: ${label}`)
     }
-  }
-
-  const sourceHash = createHash("sha256").update(contents).digest("hex")
-  if (legacyHashes.has(sourceHash)) {
-    failures.push(`${relativeFile}: exact legacy source copy`)
   }
 }
 

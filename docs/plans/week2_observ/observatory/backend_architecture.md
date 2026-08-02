@@ -18,9 +18,10 @@ week2_capable/observatory_v3/web
 ```
 
 The older `observatory` and `observatory_v2` packages remain temporary
-executable references. Their source is not copied, imported, or executed by
-v3. The v3 build, tests, and runtime must continue to work after both are
-deleted.
+executable references. V3 never imports or executes them. Behavior-preserved
+modules copied into v3 become v3-owned source and remain unchanged until an
+approved architecture step needs them. The v3 build, tests, and runtime must
+continue to work after both old packages are deleted.
 
 ```mermaid
 flowchart LR

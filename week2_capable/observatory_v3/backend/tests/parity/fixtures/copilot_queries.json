@@ -1,0 +1,87 @@
+[
+  {
+    "question": "Why did the agent stop?",
+    "scope": {"space": "sessions", "run_id": "run-1"},
+    "operation": "diagnose_stop"
+  },
+  {
+    "question": "Why did it believe the journey was complete?",
+    "scope": {"space": "sessions", "run_id": "run-1"},
+    "operation": "diagnose_stop"
+  },
+  {
+    "question": "Which position candidates remain ambiguous?",
+    "scope": {"space": "sessions", "run_id": "run-1"},
+    "operation": "list_position_candidates"
+  },
+  {
+    "question": "Show the low confidence position.",
+    "scope": {"space": "sessions", "run_id": "run-1"},
+    "operation": "list_position_candidates"
+  },
+  {
+    "question": "Find every record for trace 19.",
+    "scope": {"space": "sessions", "run_id": "run-1"},
+    "operation": "search_evidence"
+  },
+  {
+    "question": "What is happening right now?",
+    "scope": {"space": "live", "live_session_id": "session-1"},
+    "operation": "summarize_live"
+  },
+  {
+    "question": "Show the current agent status.",
+    "scope": {"space": "live", "live_session_id": "session-1"},
+    "operation": "summarize_live"
+  },
+  {
+    "question": "Find the selected live trace.",
+    "scope": {"space": "live", "live_session_id": "session-1"},
+    "operation": "search_evidence"
+  },
+  {
+    "question": "Compare raw, minimal, and full rendering.",
+    "scope": {"space": "experiments", "comparison_id": "comparison-1"},
+    "operation": "compare_rendering"
+  },
+  {
+    "question": "Which arm cost more?",
+    "scope": {"space": "experiments", "comparison_id": "comparison-1"},
+    "operation": "compare_rendering"
+  },
+  {
+    "question": "Where did the representative paths diverge?",
+    "scope": {"space": "experiments", "comparison_id": "comparison-1"},
+    "operation": "compare_rendering"
+  },
+  {
+    "question": "Show every sample in this cohort.",
+    "scope": {"space": "experiments", "comparison_id": "comparison-1"},
+    "operation": "list_experiment_samples"
+  },
+  {
+    "question": "Find experiment evidence for this arm.",
+    "scope": {"space": "experiments", "comparison_id": "comparison-1"},
+    "operation": "search_evidence"
+  },
+  {
+    "question": "What did this player learn?",
+    "scope": {"space": "knowledge", "player_id": "player-1"},
+    "operation": "search_knowledge"
+  },
+  {
+    "question": "Find the learned place named Bakery.",
+    "scope": {"space": "knowledge", "player_id": "player-1"},
+    "operation": "search_knowledge"
+  },
+  {
+    "question": "What color is the dragon?",
+    "scope": {"space": "sessions", "run_id": "run-1"},
+    "operation": null
+  },
+  {
+    "question": "Use an unrelated benchmark to judge this live session.",
+    "scope": {"space": "live", "live_session_id": "session-1"},
+    "operation": null
+  }
+]

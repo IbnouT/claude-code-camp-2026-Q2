@@ -28,6 +28,8 @@ RUNTIME_ENV = {
     "operator_socket": "BOUKENSHA_OPERATOR_SOCKET",
 }
 
+REGISTRY_SCHEMA_VERSION = 1
+
 SAFE_ENV_NAMES = frozenset({
     "COLORTERM",
     "HOME",
@@ -262,9 +264,20 @@ class SessionRegistry:
         os.chmod(self.path.parent, 0o700)
         self._db = sqlite3.connect(self.path)
         self._db.row_factory = sqlite3.Row
+        version = int(self._db.execute("PRAGMA user_version").fetchone()[0])
+        if version not in (0, REGISTRY_SCHEMA_VERSION):
+            self._db.close()
+            raise RuntimeIdentityError(
+                f"registry schema version {version} is unsupported, "
+                f"expected {REGISTRY_SCHEMA_VERSION}"
+            )
         self._db.execute("PRAGMA journal_mode=WAL")
         self._db.execute("PRAGMA foreign_keys=ON")
         self._db.executescript(REGISTRY_SCHEMA)
+        if version == 0:
+            self._db.execute(
+                f"PRAGMA user_version={REGISTRY_SCHEMA_VERSION}"
+            )
         self._db.commit()
 
     def register(

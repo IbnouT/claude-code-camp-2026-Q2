@@ -1,0 +1,424 @@
+"""Build a semantic, attention-aware comparison from benchmark evidence."""
+
+from __future__ import annotations
+
+import json
+import statistics
+from collections import Counter
+from pathlib import Path
+from typing import Any, Literal
+
+from ..contracts import (
+    AttentionEconomics,
+    ComparisonCohort,
+    ComparisonLane,
+    ComparisonMilestone,
+    ComparisonSample,
+    CounterfactualProjection,
+    ExperimentArmDefinition,
+    ExperimentDefinition,
+    ExperimentStopCriteria,
+    ExperimentValidation,
+    FirstDivergence,
+    RunComparison,
+)
+from ..experiment_catalog import experiment_registry
+from ..projections.parser_replay import replay_parser
+from .benchmark import stable_run_id
+
+Mode = Literal["raw", "minimal", "full"]
+MODES: tuple[Mode, ...] = ("raw", "minimal", "full")
+
+
+def rendering_comparison(root: Path) -> RunComparison | None:
+    """Compare the complete reset-verified J1 rendering cohorts."""
+
+    records = {mode: _cohort(root, mode) for mode in MODES}
+    if any(not records[mode] for mode in MODES):
+        return None
+    cohorts = tuple(_aggregate(mode, records[mode]) for mode in MODES)
+    representatives = {mode: _representative(records[mode]) for mode in MODES}
+    lanes = tuple(_lane(root, mode, representatives[mode]) for mode in MODES)
+    divergence = _first_divergence(lanes)
+    counterfactuals = _counterfactuals(root, representatives["full"])
+    raw = cohorts[0]
+    minimal = cohorts[1]
+    full = cohorts[2]
+    return RunComparison(
+        id="j1-rendering-n10",
+        title="J1 model-facing result rendering",
+        journey="J1",
+        definition=rendering_definition(),
+        registry=experiment_registry(),
+        validation=_validation(records),
+        cohorts=cohorts,
+        samples=tuple(_sample(mode, row) for mode in MODES for row in records[mode]),
+        lanes=lanes,
+        divergence=divergence,
+        counterfactuals=counterfactuals,
+        parser_counterfactuals=tuple(
+            replay_parser(
+                root
+                / f"e1-{mode}-n10"
+                / "attempts"
+                / str(representatives[mode]["attempt_id"])
+                / "gateway.db",
+                mode,
+            )
+            for mode in MODES
+        ),
+        findings=(
+            "All three policies completed every reset-verified journey.",
+            (
+                "Minimal used "
+                f"{_percentage(minimal.calls_mean, raw.calls_mean):.1f}% more "
+                "model calls than raw."
+            ),
+            (
+                "Raw and full mean journey cost differed by "
+                f"{abs(full.cost_mean - raw.cost_mean):.4f} dollars, "
+                "less than either cohort standard deviation."
+            ),
+            (
+                "The deterministic replay isolates payload size while the "
+                "cohort comparison measures total journey cost."
+            ),
+        ),
+    )
+
+
+def rendering_definition() -> ExperimentDefinition:
+    shared: dict[str, bool | int | float | str] = {
+        "tools.profile": "direct-full",
+        "model.id": "claude-haiku-4-5",
+        "context.compaction_threshold": 0.85,
+        "memory.enabled": True,
+        "policy.max_iterations": 60,
+    }
+    return ExperimentDefinition(
+        id="j1-rendering-n10-definition",
+        version=1,
+        title="Model-facing result rendering",
+        objective="Find the bakery and read the menu.",
+        success_predicate=(
+            "Gateway observations prove the bakery was seen and retain a "
+            "numbered menu row naming bread, danish, cake, or pastry."
+        ),
+        journey="J1",
+        starting_state="level1-temple@1",
+        reset_strategy="verified snapshot before every sample",
+        reset_identity="level1-temple@1",
+        arms=tuple(
+            ExperimentArmDefinition(
+                id=mode,
+                label={
+                    "raw": "Raw text",
+                    "minimal": "Minimal envelope",
+                    "full": "Full structure",
+                }[mode],
+                values={**shared, "render.mode": mode},
+            )
+            for mode in MODES
+        ),
+        repetitions_per_arm=10,
+        per_sample_spend_ceiling_usd=0.60,
+        stop=ExperimentStopCriteria(
+            success_target=30,
+            verified_predicate_required=True,
+            max_iterations_per_sample=60,
+            max_wall_seconds_per_sample=900,
+            max_total_cost_usd=18.00,
+            operator_stop_enabled=True,
+        ),
+        effective_max_spend_usd=18.00,
+        source="imported_evidence",
+    )
+
+
+def _validation(
+    records: dict[Mode, list[dict[str, Any]]],
+) -> ExperimentValidation:
+    resets = {
+        str(row.get("reset_id") or "") for rows in records.values() for row in rows
+    }
+    capabilities = {
+        str(row.get("capability_digest") or "")
+        for rows in records.values()
+        for row in rows
+    }
+    priced = all(
+        row.get("cost_usd") is not None for rows in records.values() for row in rows
+    )
+    issues = tuple(
+        issue
+        for condition, issue in (
+            (not all(resets), "One or more samples lack a verified reset receipt."),
+            (
+                len(capabilities) != 1 or not all(capabilities),
+                "Gateway capability digests differ or are missing.",
+            ),
+            (not priced, "One or more samples have incomplete cost evidence."),
+        )
+        if condition
+    )
+    return ExperimentValidation(
+        valid=not issues,
+        comparable=not issues,
+        execution_available=False,
+        issues=issues,
+        checks=(
+            "Every sample belongs to journey J1.",
+            "Each arm contains ten retained samples.",
+            "Reset receipts are retained and non-empty.",
+            "Gateway capability digests match across arms.",
+            "Every included sample has priced usage.",
+            "Setup failures remain separate from agent outcomes.",
+        ),
+    )
+
+
+def _sample(mode: Mode, row: dict[str, Any]) -> ComparisonSample:
+    attempt = str(row["attempt_id"])
+    setup_failure = bool(row.get("setup_failure"))
+    eligible = bool(row.get("aggregate_eligible", not setup_failure))
+    return ComparisonSample(
+        run_id=stable_run_id(f"e1-{mode}-n10", attempt),
+        mode=mode,
+        attempt=attempt,
+        success=bool(row.get("success")),
+        setup_failure=setup_failure,
+        excluded=not eligible,
+        exclusion_reason=(
+            str(row.get("error") or "Not aggregate eligible") if not eligible else None
+        ),
+        cost_usd=_number(row, "cost_usd"),
+        turns=int(row.get("iterations") or 0),
+        calls=int(row.get("tool_calls") or 0),
+    )
+
+
+def _cohort(root: Path, mode: Mode) -> list[dict[str, Any]]:
+    path = root / f"e1-{mode}-n10" / "attempts.jsonl"
+    if not path.is_file():
+        return []
+    rows: list[dict[str, Any]] = []
+    for line in path.read_text(errors="replace").splitlines():
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if (
+            isinstance(row, dict)
+            and row.get("journey_id") == "J1"
+            and row.get("result_mode") == mode
+        ):
+            rows.append(row)
+    return rows
+
+
+def _aggregate(
+    mode: Mode,
+    rows: list[dict[str, Any]],
+) -> ComparisonCohort:
+    costs = [_number(row, "cost_usd") for row in rows]
+    calls = [_number(row, "tool_calls") for row in rows]
+    tools: Counter[str] = Counter()
+    for row in rows:
+        for name, count in dict(row.get("tools") or {}).items():
+            tools[str(name)] += int(count)
+    moves = tools["move"]
+    total_tools = sum(tools.values())
+    return ComparisonCohort(
+        mode=mode,
+        samples=len(rows),
+        successes=sum(bool(row.get("success")) for row in rows),
+        cost_mean=statistics.mean(costs),
+        cost_median=statistics.median(costs),
+        cost_stdev=statistics.stdev(costs) if len(costs) > 1 else 0,
+        calls_mean=statistics.mean(calls),
+        calls_stdev=statistics.stdev(calls) if len(calls) > 1 else 0,
+        invalid_calls=sum(int(row.get("invalid_calls") or 0) for row in rows),
+        corrective_calls=sum(int(row.get("corrective_calls") or 0) for row in rows),
+        tools=dict(sorted(tools.items())),
+        attention=AttentionEconomics(
+            fresh_tokens=_mean(rows, "fresh_input_tokens"),
+            cache_read_tokens=_mean(rows, "cache_read_tokens"),
+            cache_write_tokens=_mean(rows, "cache_write_tokens"),
+            output_tokens=_mean(rows, "output_tokens"),
+            result_chars=_mean(rows, "tool_result_chars"),
+            schema_tokens=_mean(rows, "schema_token_estimate"),
+            movement_share=moves / total_tools if total_tools else 0,
+        ),
+    )
+
+
+def _representative(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    median = statistics.median(_number(row, "cost_usd") for row in rows)
+    return min(rows, key=lambda row: abs(_number(row, "cost_usd") - median))
+
+
+def _lane(root: Path, mode: Mode, record: dict[str, Any]) -> ComparisonLane:
+    attempt = str(record["attempt_id"])
+    path = root / f"e1-{mode}-n10" / "attempts" / attempt / "agent.jsonl"
+    milestones: list[ComparisonMilestone] = []
+    if path.is_file():
+        for row in _json_lines(path):
+            if row.get("phase") != "tool_call":
+                continue
+            tool = str(row.get("name", "unknown")).split("__")[-1]
+            arguments = dict(row.get("args") or {})
+            argument = _primary_argument(arguments)
+            milestones.append(
+                ComparisonMilestone(
+                    index=len(milestones) + 1,
+                    kind=_milestone_kind(tool),
+                    label=f"{tool} {argument}".strip(),
+                    tool=tool,
+                    argument=argument or None,
+                )
+            )
+    milestones.append(
+        ComparisonMilestone(
+            index=len(milestones) + 1,
+            kind="outcome",
+            label="objective verified" if record.get("success") else "objective unmet",
+            tool=None,
+            argument=None,
+        )
+    )
+    return ComparisonLane(
+        mode=mode,
+        attempt=attempt,
+        success=bool(record.get("success")),
+        cost_usd=_number(record, "cost_usd"),
+        calls=int(record.get("tool_calls") or 0),
+        milestones=tuple(milestones),
+    )
+
+
+def _first_divergence(lanes: tuple[ComparisonLane, ...]) -> FirstDivergence:
+    longest = max(len(lane.milestones) for lane in lanes)
+    for offset in range(longest):
+        actions: dict[str, str] = {
+            lane.mode: (
+                lane.milestones[offset].label
+                if offset < len(lane.milestones)
+                else "run ended"
+            )
+            for lane in lanes
+        }
+        if len(set(actions.values())) > 1:
+            return FirstDivergence(
+                index=offset + 1,
+                summary=(
+                    "Representative paths first disagree at semantic action "
+                    f"{offset + 1}."
+                ),
+                actions=actions,
+            )
+    return FirstDivergence(
+        index=None,
+        summary="Representative semantic paths do not diverge.",
+        actions={str(lane.mode): "aligned" for lane in lanes},
+    )
+
+
+def _counterfactuals(
+    root: Path,
+    record: dict[str, Any],
+) -> tuple[CounterfactualProjection, ...]:
+    attempt = str(record["attempt_id"])
+    path = root / "e1-full-n10" / "attempts" / attempt / "agent.jsonl"
+    results = [
+        row.get("result", "")
+        for row in _json_lines(path)
+        if row.get("phase") == "tool_result"
+    ]
+    sizes = {
+        mode: sum(len(_render(result, mode).encode()) for result in results)
+        for mode in MODES
+    }
+    raw = max(1, sizes["raw"])
+    return tuple(
+        CounterfactualProjection(
+            mode=mode,
+            observations=len(results),
+            bytes=sizes[mode],
+            estimated_tokens=(sizes[mode] + 3) // 4,
+            delta_from_raw=(sizes[mode] - raw) / raw,
+        )
+        for mode in MODES
+    )
+
+
+def _render(value: Any, mode: Mode) -> str:
+    original = str(value or "")
+    if mode == "full":
+        return original
+    try:
+        payload = json.loads(original)
+    except (json.JSONDecodeError, TypeError):
+        return original
+    if not isinstance(payload, dict):
+        return original
+    kind = payload.get("type")
+    text = payload.get("text")
+    if kind == "observation" and isinstance(text, str):
+        if mode == "raw":
+            return text
+        compact: dict[str, Any] = {"text": text}
+        if isinstance(payload.get("complete"), bool):
+            compact["complete"] = payload["complete"]
+        return json.dumps(compact, ensure_ascii=False, separators=(",", ":"))
+    if kind == "error" and isinstance(payload.get("message"), str):
+        label = str(payload.get("code") or "error").replace("_", " ")
+        rendered = f"{label}: {payload['message']}"
+        if mode == "raw":
+            return rendered
+        return json.dumps(
+            {"text": rendered, "complete": False},
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
+    return original
+
+
+def _json_lines(path: Path) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for line in path.read_text(errors="replace").splitlines():
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(row, dict):
+            rows.append(row)
+    return rows
+
+
+def _primary_argument(arguments: dict[str, Any]) -> str:
+    for name in ("direction", "target", "action", "kind"):
+        if name in arguments:
+            return str(arguments[name])
+    return ""
+
+
+def _milestone_kind(tool: str) -> Literal["observe", "move", "inspect", "other"]:
+    if tool == "move":
+        return "move"
+    if tool in {"look", "check", "poll"}:
+        return "observe"
+    if tool in {"examine", "shop", "consider"}:
+        return "inspect"
+    return "other"
+
+
+def _number(row: dict[str, Any], name: str) -> float:
+    return float(row.get(name) or 0)
+
+
+def _mean(rows: list[dict[str, Any]], name: str) -> float:
+    return statistics.mean(_number(row, name) for row in rows)
+
+
+def _percentage(value: float, baseline: float) -> float:
+    return (value - baseline) / baseline * 100 if baseline else 0

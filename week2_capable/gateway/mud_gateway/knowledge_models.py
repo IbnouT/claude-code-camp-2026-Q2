@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 SCHEMA_VERSION = 1
-LAYERS = frozenset({"belief", "parsed", "learned", "observer_truth"})
+KnowledgeLayer = Literal["belief", "parsed", "learned", "observer_truth"]
+LAYERS: frozenset[KnowledgeLayer] = frozenset(
+    {"belief", "parsed", "learned", "observer_truth"}
+)
 CONFIDENCES = frozenset(
     {"high", "medium", "low", "confirmed", "tracked", "ambiguous", "unknown"}
 )
@@ -37,7 +40,7 @@ class Assertion:
     subject: str
     predicate: str
     value: Any
-    layer: str
+    layer: KnowledgeLayer
     status: str
     confidence: str
     evidence: EvidenceRef

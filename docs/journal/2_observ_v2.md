@@ -282,6 +282,12 @@ millisecond at p95. Direct lookup, bounded hierarchy, and incremental
 materialization became measurable requirements rather than general performance
 preferences.
 
+Moving schema authority to source owners and replacing the scan with indexed
+lookup reduced the same selected-session path from 89.18 ms to 7.69 ms median
+without opening an unrelated session. A bounded worker pool held event-loop
+delay to 10.27 ms p95 across 16 concurrent reads, while complete records before
+a partial JSONL tail remained readable.
+
 ## Technical Conclusions
 
 - The gateway hypothesis held. Owning the wire made raw evidence, typed

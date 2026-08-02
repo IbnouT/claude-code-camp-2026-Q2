@@ -20,7 +20,7 @@ from .knowledge_models import (
     Assertion,
     Change,
     EvidenceRef,
-    KnowledgeError,
+    KnowledgeError as KnowledgeError,
     KnowledgeInput,
     Recovery,
     Snapshot,

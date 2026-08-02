@@ -15,7 +15,9 @@ import pytest
 
 from boukensha.runtime import (
     CharacterAlreadyRunning,
+    REGISTRY_SCHEMA_VERSION,
     RuntimeIdentity,
+    RuntimeIdentityError,
     RuntimeSession,
     SessionRegistry,
     import_legacy_session,
@@ -82,6 +84,33 @@ def _stop(process: subprocess.Popen[str]) -> None:
     process.stdin.write("\n")
     process.stdin.flush()
     assert process.wait(timeout=5) == 0
+
+
+def test_registry_owner_versions_a_new_schema() -> None:
+    with tempfile.TemporaryDirectory() as temporary:
+        config = _config(Path(temporary))
+        registry = SessionRegistry(config)
+        registry.close()
+
+        with sqlite3.connect(config / "registry.db") as database:
+            version = int(database.execute("PRAGMA user_version").fetchone()[0])
+
+        assert version == REGISTRY_SCHEMA_VERSION
+
+
+def test_registry_owner_rejects_unknown_schema_without_mutation() -> None:
+    with tempfile.TemporaryDirectory() as temporary:
+        config = _config(Path(temporary))
+        source = config / "registry.db"
+        with sqlite3.connect(source) as database:
+            database.execute("PRAGMA user_version=99")
+            database.execute("CREATE TABLE canary (value TEXT)")
+        before = source.read_bytes()
+
+        with pytest.raises(RuntimeIdentityError, match="version 99"):
+            SessionRegistry(config)
+
+        assert source.read_bytes() == before
 
 
 def test_runtime_manifest_is_immutable_and_protected() -> None:
