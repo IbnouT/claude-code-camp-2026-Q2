@@ -1,0 +1,242 @@
+.session-cost-view {
+  width: min(1100px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 30px 0 90px;
+}
+
+.story-eyebrow {
+  color: var(--session-cyan);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+
+.session-cost-heading h2 {
+  margin: 0 0 4px;
+  font-size: 24px;
+}
+
+.session-cost-heading > p {
+  margin: 0 0 22px;
+  color: var(--session-muted);
+}
+
+.session-cost-grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 18px;
+}
+
+.session-cost-panel {
+  min-width: 0;
+  padding: 19px;
+  border: 1px solid var(--session-line);
+  border-radius: 14px;
+  background: var(--session-surface);
+}
+
+.session-cost-panel.is-expensive {
+  grid-column: 1 / -1;
+}
+
+.session-cost-panel > header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.session-cost-panel h3 {
+  margin: 0 0 15px;
+  font-size: 16px;
+}
+
+.session-cost-panel header p {
+  margin: -10px 0 15px;
+  color: var(--session-muted);
+  font-size: 13px;
+}
+
+.session-cost-panel header > span {
+  color: #8cdda7;
+  font-size: 12px;
+}
+
+.session-cost-panel header > strong {
+  color: var(--session-text);
+  white-space: nowrap;
+}
+
+.session-cost-chart {
+  height: 250px;
+  display: flex;
+  align-items: end;
+  gap: 2px;
+  padding-top: 20px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--session-line-strong);
+}
+
+.session-cost-chart button {
+  height: var(--cost-height);
+  min-width: 1px;
+  flex: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 4px 4px 0 0;
+  background: linear-gradient(var(--session-amber), #866526);
+  cursor: pointer;
+}
+
+.session-cost-chart button[aria-pressed="true"] {
+  background: linear-gradient(var(--session-cyan), #276b6b);
+}
+
+.session-cost-axis {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 8px;
+  color: var(--session-quiet);
+  font-size: 11px;
+}
+
+.session-cost-empty {
+  height: 250px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--session-line-strong);
+  color: var(--session-muted);
+}
+
+.session-token-row {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--session-line);
+}
+
+.session-token-row > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 7px;
+}
+
+.session-token-row span {
+  color: var(--session-muted);
+}
+
+.session-token-row strong {
+  color: var(--session-amber);
+}
+
+.session-token-track {
+  height: 7px;
+  display: block;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #1c2934;
+}
+
+.session-token-track > span {
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+}
+
+.session-token-track .is-fresh {
+  background: #73b9ff;
+}
+
+.session-token-track .is-read {
+  background: var(--session-cyan);
+}
+
+.session-token-track .is-write {
+  background: #b9a8ff;
+}
+
+.session-token-track .is-output {
+  background: var(--session-amber);
+}
+
+.session-cost-reconciliation {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 0;
+}
+
+.session-cost-reconciliation > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.session-cost-reconciliation dt {
+  color: var(--session-muted);
+}
+
+.session-cost-reconciliation dd {
+  margin: 0;
+}
+
+.session-expensive-list > button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border: 0;
+  border-bottom: 1px solid var(--session-line);
+  background: none;
+  color: var(--session-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.session-expensive-list > button:last-child {
+  border: 0;
+}
+
+.session-expensive-list > button[aria-pressed="true"] {
+  color: var(--session-cyan);
+}
+
+.session-expensive-list small {
+  display: block;
+  color: var(--session-muted);
+}
+
+.session-expensive-list b {
+  color: var(--session-amber);
+}
+
+.session-cost-rank {
+  color: var(--session-cyan);
+  font-weight: 800;
+  text-align: center;
+}
+
+.session-cost-footnote {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-left: 3px solid var(--session-cyan);
+  border-radius: 0 9px 9px 0;
+  background: #0f1c22;
+  color: var(--session-muted);
+}
+
+.session-cost-footnote strong {
+  margin-right: 8px;
+  color: var(--session-text);
+}
+
+@media (max-width: 900px) {
+  .session-cost-view {
+    width: calc(100% - 28px);
+  }
+
+  .session-cost-grid {
+    grid-template-columns: 1fr;
+  }
+}

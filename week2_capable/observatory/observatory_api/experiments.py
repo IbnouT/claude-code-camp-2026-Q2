@@ -11,6 +11,7 @@ from .contracts import (
     ExperimentFeature,
     ExperimentValidation,
 )
+from .experiment_catalog import experiment_scenarios
 
 
 def validate_definition(
@@ -36,6 +37,8 @@ def validate_definition(
         issues.append("A controlled experiment needs at least two arms.")
     if len({arm.id for arm in definition.arms}) != len(definition.arms):
         issues.append("Arm identifiers must be unique.")
+    if len({tuple(sorted(arm.values.items())) for arm in definition.arms}) < 2:
+        issues.append("At least one registered field must differ between arms.")
     for arm in definition.arms:
         unknown = sorted(set(arm.values) - set(features))
         missing = sorted(set(features) - set(arm.values))
@@ -57,18 +60,35 @@ def validate_definition(
             if (
                 execution_available
                 and feature is not None
-                and feature_id != "render.mode"
+                and not feature.execution_supported
                 and value != feature.default
             ):
                 issues.append(
                     f"Arm {arm.id}, {feature.label}: the installed runner "
-                    "cannot overlay this field yet."
+                    "cannot vary this field with the installed runner."
                 )
-    if execution_available and definition.journey != "J1":
-        issues.append("The installed runner currently supports journey J1.")
-    if execution_available and definition.reset_identity != "level1-temple@1":
+    scenario = next(
+        (
+            candidate
+            for candidate in experiment_scenarios()
+            if candidate.id == definition.journey
+        ),
+        None,
+    )
+    if scenario is None:
         issues.append(
-            "The installed runner currently supports reset level1-temple@1."
+            f"Journey {definition.journey} is not in the scenario registry."
+        )
+    elif execution_available and not scenario.execution_supported:
+        issues.append(
+            f"Journey {definition.journey} is not wired to the installed runner."
+        )
+    if (
+        scenario is not None
+        and definition.reset_identity != scenario.reset_identity
+    ):
+        issues.append(
+            "The definition reset identity does not match the scenario registry."
         )
     if definition.repetitions_per_arm < 1:
         issues.append("Every arm needs at least one repetition.")

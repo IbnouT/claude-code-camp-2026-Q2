@@ -52,20 +52,43 @@ Live is connected to registered runtime evidence:
 - Keyboard focus returns to the invoking control after dialogs close.
 - Forced colors, reduced motion, and 200 percent layout remain operable.
 
-Sessions turns an explicitly selected experiment sample into an investigation:
+Sessions turns any registered launcher run into an investigation:
 
-- Agent, gateway, Telnet wire, parsed state, and verified outcome stay distinct.
-- Story, sequence, evidence, cost, and diagnostic lenses share one selection.
-- Event, turn, and milestone replay expose only the selected evidence prefix.
-- Every retained record opens exact sanitized fields, ancestry, and correlations.
-- Structured filters and saved views narrow evidence without hiding its source.
+- Story, Map, Cost, and Ask share one selection.
+- Applied Goals form collapsible objective chapters. Nudges form collapsible
+  guidance subchapters inside the active objective.
+- Goal selection updates the shared title and starts at that Goal's first
+  retained iteration. Chapters begin collapsed.
+- Turn and iteration form one composite identity, so restarted iteration
+  numbers never merge separate turns.
+- Agent, gateway, Telnet wire, parsed state, and optional observer truth stay distinct.
+- Goal epochs, turns, iterations, model responses, tools, and gateway events form one execution spine.
+- Exact model requests, provider responses, and normalized content remain separate stages.
+- Tool results retain the original MCP text, display mode result, truncation, and exact model input.
+- Original MUD bytes remain linked to ANSI-preserving decoded text, normalized
+  parser input, parsed observations, and projected state.
+- Replay provides first, previous, play, pause, next, and last controls with valid boundary states.
+- Every retained record exposes its timestamp, measurement ownership, fields, ancestry, and correlations.
+- Story expands model, tool, gateway, wire, parsing, and delivered-result
+  evidence inline without hiding its owning iteration.
+- Exact integrity-checked wire bytes load only after an explicit drill-down.
+- REPL, TUI, Live, and Sessions display choices do not change retained evidence.
 - Wire, Parsed, Rendered, Believed, and Truth expose missing forms as gaps.
-- Ten deterministic diagnostics show rules, thresholds, alternatives, and evidence.
-- Cache-aware per-response costs reconcile to the retained attempt cost curve.
-- Raw response cost fields remain visible beside the reconciled ledger.
-- Ask uses local typed operations, the selected run, and the replay moment.
-- Benchmark outcome enters only through the selected experiment-sample link.
-- Stable URLs restore the player, run, lens, room, and selected record.
+- Deterministic diagnostics show rules, thresholds, alternatives, and evidence.
+- Response-owned costs, context growth, and token classes reconcile to the run total.
+- Ask uses local typed operations and defaults to the whole selected run.
+  Limiting it through a selected record requires an explicit choice.
+- Story filtering searches readable labels and previews, reports its result
+  count, and is absent from Map and Cost where it has no filtering role.
+- The latest five sessions show their applied goals. A searchable dialog opens
+  the complete player history.
+- Opening or returning to Sessions refreshes the selected recording, while a
+  live recording polls without resetting its current view.
+- Map replay stays spatially continuous across goals and labels objective
+  epochs in its iteration rail.
+- Benchmark outcome remains an Experiments concern and never becomes lifecycle state.
+- Stable URLs restore player, session, view, turn, iteration, and selected
+  record.
 
 Experiments turns retained cohorts into a controlled comparison:
 
@@ -112,9 +135,10 @@ Incidents preserve a reviewable moment without flattening the investigation:
 
 The browser tests use deterministic representative evidence. The launched
 product reads the local runtime registry and selected session journals.
-Sessions and Experiments read explicitly correlated benchmark evidence.
-Knowledge reads each selected player's owned `profiles/<player>/knowledge.db`
-through the gateway's read-only `KnowledgeStore` contract.
+Sessions reads universal runtime evidence. Experiments reads cohorts and keeps
+their session identities for navigation. Knowledge reads each selected
+player's owned `profiles/<player>/knowledge.db` through the gateway's read-only
+`KnowledgeStore` contract.
 
 ### Reset boundary
 

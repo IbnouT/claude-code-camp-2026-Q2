@@ -98,6 +98,16 @@ class Agent:
         # merges with this step's own context token accounting when step 12 is
         # opened; the retry hook is safe and useful now.
         self._client.on_retry = self._client.on_retry or self._logger.retry
+        self._client.on_request = (
+            self._client.on_request
+            or (
+                lambda *, request: self._logger.model_request(
+                    request=request,
+                    provider=self._builder.backend.provider_name,
+                    model=self._builder.backend.model,
+                )
+            )
+        )
 
     def run(self) -> str:
         """Run the turn and return the final text."""
@@ -163,6 +173,7 @@ class Agent:
             )
 
             response, duration_ms = self._call_model(**self._call_opts())
+            self._log_provider_response(response)
             self._logger.raw(data=response)
             parsed = self._builder.parse_response(response)
             self._record_usage(response)
@@ -174,6 +185,7 @@ class Agent:
             else:
                 text = self._extract_text(parsed.content)
                 self._log_response(text=text, response=response,
+                                   content=parsed.content,
                                    stop_reason=parsed.stop_reason,
                                    duration_ms=duration_ms)
                 self._logger.turn_end(
@@ -418,10 +430,12 @@ class Agent:
         # tokens still count toward the turn total reported to turn_end, but it
         # is sent with tools disabled, so it must not set window pressure.
         self._record_usage(response, window_pressure=False)
+        self._log_provider_response(response)
         wrap_parsed = wrap_builder.parse_response(response)
         text = self._extract_text(wrap_parsed.content)
         text = text if text.strip() else self._fallback_message(reason)
         self._log_response(text=text, response=response,
+                           content=wrap_parsed.content,
                            stop_reason=wrap_parsed.stop_reason,
                            duration_ms=duration_ms)
         self._logger.turn_end(
@@ -464,7 +478,7 @@ class Agent:
         # stop reason for this call is known without re-deriving it.
         self._log_response(
             text=f"(tool use: {len(tool_calls)} call{plural})", response=response,
-            stop_reason="tool_use", duration_ms=duration_ms,
+            content=content, stop_reason="tool_use", duration_ms=duration_ms,
         )
 
         # The assistant message carrying the tool_use must land before its
@@ -509,6 +523,7 @@ class Agent:
             self._logger.reasoning(text=block.text, redacted=block.redacted)
 
     def _log_response(self, text: str, response: dict[str, Any],
+                      content: tuple[Any, ...] = (),
                       stop_reason: str | None = None,
                       duration_ms: float | None = None) -> None:
         # The normalized stop reason is passed in, never re-read from the raw
@@ -522,6 +537,14 @@ class Agent:
             duration_ms=duration_ms,
             task=self._task,
             backend=self._builder.backend,
+            content=content,
+        )
+
+    def _log_provider_response(self, response: dict[str, Any]) -> None:
+        self._logger.provider_response(
+            response=response,
+            provider=self._builder.backend.provider_name,
+            model=self._builder.backend.model,
         )
 
     #: Provider key families for input and output token counts, first-present

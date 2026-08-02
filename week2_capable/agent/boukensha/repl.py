@@ -382,7 +382,7 @@ class Repl:
         self._turn += 1
         if text is not None:
             self._apply_stdin_operator_message(text)
-        self._logger.turn(n=self._turn)
+        self._logger.turn(n=self._turn, instruction=text)
         if text is not None:
             self._context.add(Message.user(text))
 

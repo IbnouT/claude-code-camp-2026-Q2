@@ -4,6 +4,7 @@ import { App } from "./App";
 import "./tokens.css";
 import "./launcher.css";
 import "./live-shell.css";
+import "./experiments.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

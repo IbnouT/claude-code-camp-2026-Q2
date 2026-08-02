@@ -1,0 +1,1098 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Boukensha Observatory: session story</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #080c11;
+      --surface: #0d131a;
+      --raised: #111a23;
+      --soft: #16212c;
+      --line: #22303d;
+      --line-strong: #334657;
+      --text: #eef5f7;
+      --muted: #9aabb8;
+      --quiet: #647685;
+      --cyan: #68e1dc;
+      --cyan-soft: #173837;
+      --blue: #73b9ff;
+      --violet: #b9a8ff;
+      --amber: #efc46c;
+      --green: #8cdda7;
+      --rose: #ff8a82;
+      --terminal: #05080b;
+      --shadow: 0 18px 50px rgb(0 0 0 / 24%);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font: 15px/1.55 Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input { font: inherit; }
+    button { color: inherit; }
+    .mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
+    .hidden { display: none !important; }
+
+    .app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      min-height: 64px;
+      display: flex;
+      align-items: center;
+      gap: 26px;
+      padding: 0 26px;
+      border-bottom: 1px solid var(--line);
+      background: rgb(9 14 20 / 96%);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      letter-spacing: -.02em;
+    }
+
+    .brand-mark {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border: 1px solid #2d4e56;
+      border-radius: 10px;
+      color: var(--cyan);
+      background: #102128;
+      font-size: 19px;
+    }
+
+    .brand small {
+      display: block;
+      color: var(--quiet);
+      font-size: 10px;
+      font-weight: 650;
+      letter-spacing: .12em;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    .nav { display: flex; gap: 5px; }
+
+    .nav button,
+    .view-switch button,
+    .subtle-button,
+    .ask {
+      border: 1px solid transparent;
+      border-radius: 9px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .nav button { padding: 8px 13px; }
+    .nav .active { color: var(--cyan); background: var(--cyan-soft); }
+    .header-spacer { flex: 1; }
+
+    .context {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--surface);
+      color: var(--muted);
+    }
+
+    .context strong { color: var(--text); }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--quiet); }
+
+    .ask {
+      padding: 9px 13px;
+      border-color: #31515a;
+      color: var(--cyan);
+      background: #102127;
+    }
+
+    .run-header {
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, #0d151d, #0a1016);
+    }
+
+    .run-header-inner {
+      width: min(1180px, calc(100% - 48px));
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(360px, 1fr) auto;
+      gap: 28px;
+      padding: 24px 0 20px;
+    }
+
+    .eyebrow {
+      color: var(--cyan);
+      font-size: 12px;
+      font-weight: 750;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 5px 0 7px;
+      font-size: clamp(24px, 3vw, 34px);
+      line-height: 1.2;
+      letter-spacing: -.03em;
+    }
+
+    .run-subtitle { margin: 0; color: var(--muted); font-size: 14px; }
+
+    .run-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(104px, 1fr));
+      align-self: center;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: var(--surface);
+      overflow: hidden;
+    }
+
+    .run-metric {
+      min-width: 115px;
+      padding: 13px 15px;
+      border-right: 1px solid var(--line);
+    }
+
+    .run-metric:last-child { border: 0; }
+    .run-metric span { display: block; color: var(--quiet); font-size: 12px; }
+    .run-metric strong { font-size: 17px; }
+    .run-metric.cost strong { color: var(--amber); }
+
+    .view-bar {
+      min-height: 58px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 0 max(24px, calc((100% - 1180px) / 2));
+      border-bottom: 1px solid var(--line);
+      background: var(--bg);
+      position: sticky;
+      top: 64px;
+      z-index: 18;
+    }
+
+    .view-switch {
+      display: flex;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: var(--surface);
+    }
+
+    .view-switch button { min-width: 92px; padding: 7px 13px; }
+    .view-switch .active { color: var(--text); background: var(--soft); border-color: var(--line-strong); }
+
+    .view-description { color: var(--muted); }
+    .view-description strong { color: var(--text); }
+    .view-spacer { flex: 1; }
+
+    .search {
+      width: 260px;
+      padding: 9px 12px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      outline: none;
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .story-view {
+      width: min(1060px, calc(100% - 48px));
+      margin: 0 auto;
+      padding: 30px 0 100px;
+    }
+
+    .story-intro {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 18px;
+      margin-bottom: 26px;
+    }
+
+    .start-card,
+    .cost-card {
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .start-card { padding: 20px 22px; }
+    .start-card h2 { margin: 4px 0 9px; font-size: 20px; }
+    .start-card p { margin: 0; color: var(--muted); }
+
+    .cost-card {
+      padding: 17px 19px;
+      cursor: pointer;
+    }
+
+    .cost-card strong { display: block; color: var(--amber); font-size: 25px; }
+    .cost-card span { color: var(--muted); }
+    .cost-card small { display: block; margin-top: 8px; color: var(--cyan); font-size: 13px; }
+
+    .turn {
+      position: relative;
+      padding-left: 36px;
+    }
+
+    .turn::before {
+      content: "";
+      position: absolute;
+      left: 12px;
+      top: 20px;
+      bottom: -25px;
+      width: 2px;
+      background: linear-gradient(var(--line-strong), var(--line));
+    }
+
+    .turn-heading {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 0 0 12px;
+    }
+
+    .turn-heading::before {
+      content: "";
+      position: absolute;
+      left: -30px;
+      width: 14px;
+      height: 14px;
+      border: 3px solid var(--bg);
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 0 1px #2c6968;
+    }
+
+    .turn-heading h2 { margin: 0; font-size: 18px; }
+    .turn-heading span { color: var(--muted); font-size: 13px; }
+    .turn-heading .turn-cost { margin-left: auto; color: var(--amber); font-weight: 700; }
+
+    .iteration {
+      margin-bottom: 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface);
+      overflow: clip;
+      transition: border-color .16s, box-shadow .16s;
+    }
+
+    .iteration.selected {
+      border-color: #39716f;
+      box-shadow: 0 0 0 1px rgb(104 225 220 / 14%), var(--shadow);
+    }
+
+    .iteration-toggle {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 40px minmax(0, 1fr) auto;
+      gap: 13px;
+      align-items: center;
+      padding: 15px 17px;
+      border: 0;
+      text-align: left;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .iteration-number {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
+      color: var(--cyan);
+      background: var(--cyan-soft);
+      font-weight: 800;
+    }
+
+    .iteration-title strong { display: block; font-size: 16px; }
+    .iteration-title span { color: var(--muted); font-size: 13px; }
+
+    .iteration-metrics {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .iteration-metrics .cost { color: var(--amber); font-weight: 700; }
+    .caret { color: var(--quiet); font-size: 17px; }
+
+    .iteration-body {
+      display: none;
+      padding: 4px 18px 22px 70px;
+      border-top: 1px solid var(--line);
+      background: #0b1117;
+    }
+
+    .iteration.open .iteration-body { display: block; }
+    .iteration.open .caret { transform: rotate(90deg); }
+
+    .causal-step {
+      position: relative;
+      padding: 16px 0 0 32px;
+    }
+
+    .causal-step::before {
+      content: "";
+      position: absolute;
+      left: 8px;
+      top: 0;
+      bottom: -16px;
+      width: 1px;
+      background: var(--line-strong);
+    }
+
+    .causal-step:last-child::before { bottom: 24px; }
+
+    .step-dot {
+      position: absolute;
+      left: 2px;
+      top: 22px;
+      width: 13px;
+      height: 13px;
+      border: 3px solid #0b1117;
+      border-radius: 50%;
+      background: var(--blue);
+      box-shadow: 0 0 0 1px var(--line-strong);
+    }
+
+    .step-dot.plan { background: var(--violet); }
+    .step-dot.tool { background: var(--cyan); }
+    .step-dot.world { background: var(--green); }
+    .step-dot.model { background: var(--amber); }
+
+    .step-head {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 7px;
+    }
+
+    .step-head strong { font-size: 15px; }
+    .step-head span { color: var(--muted); font-size: 13px; }
+    .step-head .step-time { margin-left: auto; color: var(--quiet); }
+
+    .content-card {
+      padding: 13px 15px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: var(--raised);
+      color: #dce7eb;
+      white-space: pre-wrap;
+    }
+
+    .content-card p { margin: 0; }
+
+    .model-economics {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 1px;
+      margin-top: 9px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--line);
+      overflow: hidden;
+    }
+
+    .model-economics div { padding: 10px 11px; background: var(--surface); }
+    .model-economics span { display: block; color: var(--quiet); font-size: 11px; text-transform: uppercase; }
+    .model-economics strong { font-size: 13px; }
+    .model-economics .money strong { color: var(--amber); }
+
+    details {
+      margin-top: 9px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--surface);
+    }
+
+    summary {
+      padding: 10px 12px;
+      color: var(--cyan);
+      cursor: pointer;
+      font-weight: 650;
+      list-style-position: inside;
+    }
+
+    details .details-body {
+      padding: 0 13px 13px;
+      color: var(--muted);
+    }
+
+    .terminal {
+      margin: 0;
+      padding: 14px 15px;
+      border: 1px solid #1b2933;
+      border-radius: 10px;
+      background: var(--terminal);
+      color: #d7e3e8;
+      font: 13px/1.65 "SFMono-Regular", Consolas, monospace;
+      white-space: pre-wrap;
+    }
+
+    .terminal .room { color: var(--cyan); }
+    .terminal .exits { color: var(--blue); }
+    .terminal .mob { color: var(--rose); }
+
+    .transform {
+      display: grid;
+      grid-template-columns: 1fr 38px 1fr;
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .transform-panel {
+      min-width: 0;
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--surface);
+    }
+
+    .transform-panel h4 { margin: 0 0 8px; font-size: 13px; }
+    .transform-panel pre { margin: 0; color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; }
+    .transform-arrow { display: grid; place-items: center; color: var(--cyan); font-size: 22px; }
+
+    .scope-note {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-left: 3px solid var(--cyan);
+      border-radius: 0 9px 9px 0;
+      background: #0f1c22;
+      color: var(--muted);
+    }
+
+    .scope-note strong { color: var(--text); }
+
+    .map-view {
+      height: calc(100vh - 264px);
+      min-height: 420px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 410px;
+      overflow: hidden;
+      background: #071017;
+    }
+
+    .map-stage {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 52% 48%, rgb(38 74 98 / 25%), transparent 38%),
+        linear-gradient(#0a151e 1px, transparent 1px),
+        linear-gradient(90deg, #0a151e 1px, transparent 1px),
+        #071017;
+      background-size: auto, 40px 40px, 40px 40px, auto;
+    }
+
+    .map-tools {
+      position: absolute;
+      z-index: 4;
+      top: 18px;
+      left: 18px;
+      display: flex;
+      gap: 7px;
+    }
+
+    .map-tools button,
+    .replay button {
+      min-width: 40px;
+      height: 40px;
+      border: 1px solid var(--line-strong);
+      border-radius: 9px;
+      background: var(--surface);
+      cursor: pointer;
+    }
+
+    .map-tools button:first-child { min-width: 88px; }
+
+    .map-canvas {
+      width: 100%;
+      height: 100%;
+      padding-bottom: 76px;
+    }
+
+    .edge { fill: none; stroke: #2a3c4c; stroke-width: 4; }
+    .trail { fill: none; stroke: var(--cyan); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 10 9; opacity: .8; }
+    .room-node rect { fill: #162b3e; stroke: #355b76; stroke-width: 2; rx: 8; }
+    .room-node text { fill: var(--muted); font: 14px Inter, sans-serif; }
+    .room-node.current rect { fill: #193f3c; stroke: var(--cyan); stroke-width: 3; filter: drop-shadow(0 0 11px rgb(104 225 220 / 40%)); }
+    .room-node.current text { fill: var(--text); font-weight: 700; }
+
+    .replay {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      z-index: 5;
+      height: 76px;
+      display: grid;
+      grid-template-columns: auto minmax(140px, 1fr) auto;
+      align-items: center;
+      gap: 16px;
+      padding: 0 18px;
+      border-top: 1px solid var(--line);
+      background: var(--surface);
+    }
+
+    .replay-controls { display: flex; gap: 7px; }
+    .replay .play { color: #06201f; border-color: var(--cyan); background: var(--cyan); }
+
+    .scrub {
+      position: relative;
+      height: 7px;
+      border-radius: 6px;
+      background: #1c2934;
+    }
+
+    .scrub::before {
+      content: "";
+      position: absolute;
+      width: 18%;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--cyan);
+    }
+
+    .scrub::after {
+      content: "";
+      position: absolute;
+      left: calc(18% - 7px);
+      top: -4px;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: var(--text);
+      box-shadow: 0 0 0 3px rgb(104 225 220 / 20%);
+    }
+
+    .replay-meta { text-align: right; }
+    .replay-meta strong { display: block; }
+    .replay-meta span { color: var(--muted); font-size: 13px; }
+
+    .iteration-rail {
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-left: 1px solid var(--line);
+      background: var(--bg);
+    }
+
+    .rail-head { padding: 18px 18px 14px; border-bottom: 1px solid var(--line); }
+    .rail-head h2 { margin: 2px 0 4px; font-size: 20px; }
+    .rail-head p { margin: 0; color: var(--muted); }
+
+    .rail-list { flex: 1; overflow: auto; padding: 12px; }
+
+    .rail-iteration {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 38px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 8px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: var(--surface);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .rail-iteration.active { border-color: #39716f; background: #102020; }
+    .rail-iteration .n { color: var(--cyan); font-size: 18px; font-weight: 800; }
+    .rail-iteration strong { display: block; }
+    .rail-iteration small { display: block; color: var(--muted); font-size: 12px; }
+    .rail-iteration .money { color: var(--amber); font-size: 12px; }
+
+    .rail-selected {
+      margin: 4px 12px 12px;
+      padding: 16px;
+      border: 1px solid var(--line-strong);
+      border-radius: 12px;
+      background: var(--raised);
+    }
+
+    .rail-selected h3 { margin: 0 0 7px; font-size: 17px; }
+    .rail-selected p { margin: 0 0 12px; color: var(--muted); }
+    .rail-selected button { width: 100%; padding: 9px; border: 1px solid #31515a; border-radius: 8px; color: var(--cyan); background: #102127; cursor: pointer; }
+
+    .cost-view {
+      width: min(1100px, calc(100% - 48px));
+      margin: 0 auto;
+      padding: 30px 0 90px;
+    }
+
+    .cost-view h2 { margin: 0 0 4px; font-size: 24px; }
+    .cost-view > p { margin: 0 0 22px; color: var(--muted); }
+
+    .cost-grid {
+      display: grid;
+      grid-template-columns: 1.6fr 1fr;
+      gap: 18px;
+    }
+
+    .cost-panel {
+      padding: 19px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface);
+    }
+
+    .cost-panel h3 { margin: 0 0 15px; font-size: 16px; }
+    .chart { height: 250px; display: flex; align-items: end; gap: 5px; padding-top: 20px; border-bottom: 1px solid var(--line-strong); }
+    .bar { flex: 1; min-width: 4px; border-radius: 4px 4px 0 0; background: linear-gradient(var(--amber), #866526); cursor: pointer; }
+    .bar.active { background: linear-gradient(var(--cyan), #276b6b); }
+
+    .cost-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 18px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .cost-row:last-child { border: 0; }
+    .cost-row span { color: var(--muted); }
+    .cost-row strong { color: var(--amber); }
+    .cost-row button { border: 0; color: var(--cyan); background: none; cursor: pointer; }
+
+    @media (max-width: 900px) {
+      .header { gap: 10px; padding: 0 14px; }
+      .nav { display: none; }
+      .run-header-inner { grid-template-columns: 1fr; width: calc(100% - 28px); }
+      .view-bar { padding: 8px 14px; flex-wrap: wrap; }
+      .view-description { display: none; }
+      .search { flex: 1; width: auto; }
+      .story-intro, .cost-grid { grid-template-columns: 1fr; }
+      .story-view, .cost-view { width: calc(100% - 28px); }
+      .iteration-toggle { grid-template-columns: 40px 1fr; }
+      .iteration-metrics { grid-column: 2; flex-wrap: wrap; }
+      .iteration-body { padding-left: 18px; }
+      .model-economics { grid-template-columns: repeat(2, 1fr); }
+      .transform { grid-template-columns: 1fr; }
+      .transform-arrow { transform: rotate(90deg); }
+      .map-view { height: auto; grid-template-columns: 1fr; }
+      .map-stage { height: 58vh; }
+      .iteration-rail { border: 0; border-top: 1px solid var(--line); }
+      .rail-list { max-height: 360px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="brand">
+        <span class="brand-mark">⌁</span>
+        <span>Boukensha<small>Observatory</small></span>
+      </div>
+      <nav class="nav" aria-label="Observatory spaces">
+        <button>Live</button>
+        <button class="active">Sessions</button>
+        <button>Experiments</button>
+        <button>Knowledge</button>
+      </nav>
+      <div class="header-spacer"></div>
+      <div class="context"><strong>poucet</strong><span class="status-dot"></span><span>stopped</span><span class="mono">2f44f016</span></div>
+      <button class="ask">Ask about this session&nbsp; ⌘K</button>
+    </header>
+
+    <section class="run-header">
+      <div class="run-header-inner">
+        <div>
+          <span class="eyebrow">Recorded session</span>
+          <h1>Find and fight Fido in the city</h1>
+          <p class="run-subtitle">Aug 1, 2026 at 3:16:48 AM · stopped cooperatively at 3:50:51 AM · capture complete</p>
+        </div>
+        <div class="run-metrics">
+          <div class="run-metric"><span>Duration</span><strong>34m 03s</strong></div>
+          <div class="run-metric"><span>Iterations</span><strong>125</strong></div>
+          <div class="run-metric cost"><span>Total cost</span><strong>$0.063915</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="view-bar">
+      <div class="view-switch" aria-label="Session view">
+        <button class="active" data-view-button="story">Story</button>
+        <button data-view-button="map">Map</button>
+        <button data-view-button="cost">Cost</button>
+      </div>
+      <div class="view-description"><strong>Story</strong> is the complete chronological record. Expand only as deep as needed.</div>
+      <div class="view-spacer"></div>
+      <input class="search" aria-label="Search session" placeholder="Search this session">
+    </div>
+
+    <main>
+      <section class="story-view" data-view="story">
+        <div class="story-intro">
+          <article class="start-card">
+            <span class="eyebrow">Session start · 03:16:48.141</span>
+            <h2>The agent received one goal</h2>
+            <p>Find and fight Fido in the city. The run used claude-haiku-4-5 with 25 available tools and a 200k context window.</p>
+          </article>
+          <article class="cost-card" data-open-view="cost">
+            <span>Model activity</span>
+            <strong>126 responses</strong>
+            <span>2,162,448 retained tokens</span>
+            <small>Explore the $0.063915 cost →</small>
+          </article>
+        </div>
+
+        <section class="turn">
+          <div class="turn-heading">
+            <h2>Turn 1</h2>
+            <span>03:16:53.710 to 03:50:51.403 · 125 iterations</span>
+            <span class="turn-cost">$0.063915</span>
+          </div>
+
+          <article class="iteration selected open">
+            <button class="iteration-toggle" aria-expanded="true">
+              <span class="iteration-number">1</span>
+              <span class="iteration-title">
+                <strong>Orient in the world</strong>
+                <span>The Pet Shop · look, then check current location</span>
+              </span>
+              <span class="iteration-metrics">
+                <span>03:16:53.710</span>
+                <span>1.59s</span>
+                <span>2 tool calls</span>
+                <span class="cost">$0.003690</span>
+                <span class="caret">›</span>
+              </span>
+            </button>
+            <div class="iteration-body">
+              <div class="causal-step">
+                <span class="step-dot"></span>
+                <div class="step-head">
+                  <strong>Input available to the model</strong>
+                  <span>1 message · 25 tools</span>
+                  <span class="step-time">03:16:53.710</span>
+                </div>
+                <div class="content-card"><p><strong>User</strong><br>find and fight fido in the city</p></div>
+                <details>
+                  <summary>Exact model request, system prompt, messages, and tool schemas</summary>
+                  <div class="details-body">The exact retained request opens here in message order. Tool schemas remain collapsed by default because they are large, but none are omitted.</div>
+                </details>
+              </div>
+
+              <div class="causal-step">
+                <span class="step-dot plan"></span>
+                <div class="step-head">
+                  <strong>Agent plan</strong>
+                  <span>retained text</span>
+                  <span class="step-time">03:16:54.881</span>
+                </div>
+                <div class="content-card">I'll help you find and fight Fido in the city. Let me start by checking my current location and surroundings.</div>
+              </div>
+
+              <div class="causal-step">
+                <span class="step-dot model"></span>
+                <div class="step-head">
+                  <strong>Model response</strong>
+                  <span>claude-haiku-4-5 · tool use</span>
+                  <span class="step-time">03:16:54.881</span>
+                </div>
+                <div class="content-card">Requested two calls: <span class="mono">tbamud__look({})</span> and <span class="mono">tbamud__check({"kind":"where"})</span>.</div>
+                <div class="model-economics">
+                  <div><span>Duration</span><strong>1.170s</strong></div>
+                  <div><span>Input</span><strong>3,170 tok</strong></div>
+                  <div><span>Output</span><strong>104 tok</strong></div>
+                  <div><span>Context</span><strong>3,170 tok</strong></div>
+                  <div class="money"><span>Cost</span><strong>$0.003690</strong></div>
+                </div>
+              </div>
+
+              <div class="causal-step">
+                <span class="step-dot tool"></span>
+                <div class="step-head">
+                  <strong>Tool call · look</strong>
+                  <span>agent → gateway → Telnet → MUD</span>
+                  <span class="step-time">03:16:54.881</span>
+                </div>
+                <div class="content-card mono">tbamud__look({})</div>
+                <details>
+                  <summary>Transport path and timing</summary>
+                  <div class="details-body">
+                    <div class="transform">
+                      <div class="transform-panel">
+                        <h4>Gateway command</h4>
+                        <pre>look
+trace and tool-use correlation
+command sequence 60</pre>
+                      </div>
+                      <div class="transform-arrow">→</div>
+                      <div class="transform-panel">
+                        <h4>Telnet exchange</h4>
+                        <pre>outbound command bytes
+inbound frames 59 to 59
+byte digest retained</pre>
+                      </div>
+                    </div>
+                    <details>
+                      <summary>Exact wire frames and ANSI text</summary>
+                      <div class="details-body">Negotiation frames, command bytes, received bytes, decoded ANSI-preserving text, and integrity digests appear in sequence. Login credentials remain redacted by capture policy and are labelled as such.</div>
+                    </details>
+                  </div>
+                </details>
+              </div>
+
+              <div class="causal-step">
+                <span class="step-dot world"></span>
+                <div class="step-head">
+                  <strong>MUD response</strong>
+                  <span>original decoded text before parsing</span>
+                  <span class="step-time">03:16:55.092</span>
+                </div>
+                <pre class="terminal"><span class="room">The Pet Shop</span>
+The Pet Shop is a small crowded store, full of cages and animals of
+various sizes. There is a sign on the wall.
+<span class="exits">[ Exits: n ]</span>
+<span class="mob">There is a Pet Shop Boy standing here cuddling something furry in his hands.</span>
+
+32H 100M 83V (news) (motd) &gt;</pre>
+              </div>
+
+              <div class="causal-step">
+                <span class="step-dot world"></span>
+                <div class="step-head">
+                  <strong>Transformation and structured observation</strong>
+                  <span>before and after are both retained</span>
+                  <span class="step-time">03:16:55.092</span>
+                </div>
+                <div class="transform">
+                  <div class="transform-panel">
+                    <h4>Parser input</h4>
+                    <pre>ANSI-normalized MUD text
+source frame 59
+digest 93199d…4a25</pre>
+                  </div>
+                  <div class="transform-arrow">→</div>
+                  <div class="transform-panel">
+                    <h4>Typed observations</h4>
+                    <pre>room: The Pet Shop
+exits: [n]
+mobs: [Pet Shop Boy]
+vitals: 32H · 100M · 83V
+confidence: high
+parser: rules-2</pre>
+                  </div>
+                </div>
+              </div>
+
+              <div class="causal-step">
+                <span class="step-dot tool"></span>
+                <div class="step-head">
+                  <strong>Result delivered upstream</strong>
+                  <span>exact structured text retained in agent log</span>
+                  <span class="step-time">03:16:55.102</span>
+                </div>
+                <details open>
+                  <summary>What the model received on the next iteration</summary>
+                  <div class="details-body">
+                    <pre class="terminal">{"type":"observation","tool":"look","capability":"look",
+"command":"look","text":"The Pet Shop\n ... [ Exits: n ] ...",
+"complete":true,"sequence":60,"trace_id":"[REDACTED]"}</pre>
+                  </div>
+                </details>
+              </div>
+
+              <div class="scope-note"><strong>The reading rule:</strong> this single chain answers what the agent knew, what it decided, what it called, what the MUD returned, how the gateway transformed it, and what reached the next model request. Nothing elsewhere must be reconciled manually.</div>
+            </div>
+          </article>
+
+          <article class="iteration">
+            <button class="iteration-toggle" aria-expanded="false">
+              <span class="iteration-number">2</span>
+              <span class="iteration-title"><strong>Begin navigating north</strong><span>The Pet Shop → Grunting Boar Inn</span></span>
+              <span class="iteration-metrics"><span>03:16:55.686</span><span>1.39s</span><span>1 tool call</span><span class="cost">$0.003983</span><span class="caret">›</span></span>
+            </button>
+            <div class="iteration-body"><div class="scope-note">The same causal chain appears here with this iteration's retained evidence.</div></div>
+          </article>
+
+          <article class="iteration">
+            <button class="iteration-toggle" aria-expanded="false">
+              <span class="iteration-number">3</span>
+              <span class="iteration-title"><strong>Continue toward the city center</strong><span>Movement, room observation, and position update</span></span>
+              <span class="iteration-metrics"><span>03:16:57.990</span><span>1.10s</span><span>1 tool call</span><span class="cost">$0.004200</span><span class="caret">›</span></span>
+            </button>
+            <div class="iteration-body"><div class="scope-note">The same causal chain appears here with this iteration's retained evidence.</div></div>
+          </article>
+
+          <article class="iteration">
+            <button class="iteration-toggle" aria-expanded="false">
+              <span class="iteration-number">4</span>
+              <span class="iteration-title"><strong>Inspect the next route decision</strong><span>Context grows to 4,035 input tokens</span></span>
+              <span class="iteration-metrics"><span>03:16:59.420</span><span>2.81s</span><span>1 tool call</span><span class="cost">$0.004525</span><span class="caret">›</span></span>
+            </button>
+            <div class="iteration-body"><div class="scope-note">The same causal chain appears here with this iteration's retained evidence.</div></div>
+          </article>
+        </section>
+      </section>
+
+      <section class="map-view hidden" data-view="map">
+        <div class="map-stage">
+          <div class="map-tools">
+            <button>Fit route</button>
+            <button aria-label="Zoom in">+</button>
+            <button aria-label="Zoom out">−</button>
+            <button aria-label="Center selected room">⌖</button>
+          </div>
+          <svg class="map-canvas" viewBox="0 0 900 650" role="img" aria-label="Session replay map">
+            <path class="edge" d="M120 480 L280 480 L280 350 L430 350 L430 210 L610 210 L720 330"/>
+            <path class="edge" d="M430 350 L590 450 L760 450"/>
+            <path class="trail" d="M120 480 L280 480 L280 350 L430 350"/>
+            <g class="room-node"><rect x="92" y="452" width="56" height="56"/><text x="120" y="528" text-anchor="middle">Pet Shop</text></g>
+            <g class="room-node"><rect x="252" y="452" width="56" height="56"/><text x="280" y="528" text-anchor="middle">Grunting Boar</text></g>
+            <g class="room-node"><rect x="252" y="322" width="56" height="56"/><text x="280" y="310" text-anchor="middle">Market Square</text></g>
+            <g class="room-node current"><rect x="402" y="322" width="56" height="56"/><text x="430" y="400" text-anchor="middle">Temple Square</text></g>
+            <g class="room-node"><rect x="402" y="182" width="56" height="56"/><text x="430" y="170" text-anchor="middle">Main Street</text></g>
+            <g class="room-node"><rect x="582" y="182" width="56" height="56"/><text x="610" y="170" text-anchor="middle">Bakery</text></g>
+            <g class="room-node"><rect x="692" y="302" width="56" height="56"/><text x="720" y="382" text-anchor="middle">Dark Alley</text></g>
+            <g class="room-node"><rect x="562" y="422" width="56" height="56"/><text x="590" y="502" text-anchor="middle">Nexus</text></g>
+            <g class="room-node"><rect x="732" y="422" width="56" height="56"/><text x="760" y="502" text-anchor="middle">City Gate</text></g>
+          </svg>
+          <div class="replay">
+            <div class="replay-controls">
+              <button title="First iteration">|◀</button>
+              <button title="Previous iteration">◀</button>
+              <button class="play" title="Play">▶</button>
+              <button title="Next iteration">▶</button>
+              <button title="Last iteration">▶|</button>
+            </div>
+            <div class="scrub"></div>
+            <div class="replay-meta"><strong>Iteration 4 of 125</strong><span>03:16:59.420 · Temple Square</span></div>
+          </div>
+        </div>
+        <aside class="iteration-rail">
+          <div class="rail-head">
+            <span class="eyebrow">Map replay</span>
+            <h2>Follow the run in space</h2>
+            <p>The selected iteration, current room, traveled path, and room detail move together.</p>
+          </div>
+          <div class="rail-list">
+            <button class="rail-iteration"><span class="n">1</span><span><strong>Orient in the world</strong><small>The Pet Shop · look + where</small></span><span class="money">$0.003690</span></button>
+            <button class="rail-iteration"><span class="n">2</span><span><strong>Move north</strong><small>Grunting Boar Inn</small></span><span class="money">$0.003983</span></button>
+            <button class="rail-iteration"><span class="n">3</span><span><strong>Continue to the square</strong><small>Market Square</small></span><span class="money">$0.004200</span></button>
+            <button class="rail-iteration active"><span class="n">4</span><span><strong>Inspect next route</strong><small>Temple Square · current</small></span><span class="money">$0.004525</span></button>
+            <button class="rail-iteration"><span class="n">5</span><span><strong>Move along Main Street</strong><small>New room observed</small></span><span class="money">$0.000405</span></button>
+            <button class="rail-iteration"><span class="n">6</span><span><strong>Search for Fido</strong><small>One movement call</small></span><span class="money">$0.000415</span></button>
+          </div>
+          <div class="rail-selected">
+            <h3>Iteration 4 · Temple Square</h3>
+            <p>At 03:16:59.420 the agent used the latest room observation to choose its next movement. Click the room for its visits and retained observations.</p>
+            <button data-open-story="4">Open the complete iteration story →</button>
+          </div>
+        </aside>
+      </section>
+
+      <section class="cost-view hidden" data-view="cost">
+        <span class="eyebrow">Session cost</span>
+        <h2>$0.063915 across 126 model responses</h2>
+        <p>Every amount is attributed once. Select a bar or row to return to the response in its iteration story.</p>
+        <div class="cost-grid">
+          <article class="cost-panel">
+            <h3>Cost by response over time</h3>
+            <div class="chart" aria-label="Cost by response">
+              <span class="bar active" style="height:82%"></span><span class="bar" style="height:88%"></span><span class="bar" style="height:93%"></span><span class="bar" style="height:100%"></span>
+              <span class="bar" style="height:9%"></span><span class="bar" style="height:10%"></span><span class="bar" style="height:11%"></span><span class="bar" style="height:10%"></span>
+              <span class="bar" style="height:8%"></span><span class="bar" style="height:10%"></span><span class="bar" style="height:8%"></span><span class="bar" style="height:11%"></span>
+              <span class="bar" style="height:7%"></span><span class="bar" style="height:7%"></span><span class="bar" style="height:8%"></span><span class="bar" style="height:8%"></span>
+              <span class="bar" style="height:7%"></span><span class="bar" style="height:7%"></span><span class="bar" style="height:8%"></span><span class="bar" style="height:8%"></span>
+              <span class="bar" style="height:9%"></span><span class="bar" style="height:8%"></span><span class="bar" style="height:7%"></span><span class="bar" style="height:7%"></span>
+              <span class="bar" style="height:8%"></span><span class="bar" style="height:7%"></span><span class="bar" style="height:7%"></span><span class="bar" style="height:8%"></span>
+              <span class="bar" style="height:7%"></span><span class="bar" style="height:8%"></span><span class="bar" style="height:9%"></span><span class="bar" style="height:8%"></span>
+            </div>
+          </article>
+          <article class="cost-panel">
+            <h3>Token composition</h3>
+            <div class="cost-row"><span>Cache reads</span><strong>2,078,800</strong><span>96.1%</span></div>
+            <div class="cost-row"><span>Cache writes</span><strong>58,733</strong><span>2.7%</span></div>
+            <div class="cost-row"><span>Fresh input</span><strong>15,165</strong><span>0.7%</span></div>
+            <div class="cost-row"><span>Output</span><strong>9,750</strong><span>0.5%</span></div>
+          </article>
+          <article class="cost-panel" style="grid-column: 1 / -1">
+            <h3>Most expensive responses</h3>
+            <div class="cost-row"><span>Iteration 4 · response · 4,133 tokens · 2.81s</span><strong>$0.004525</strong><button data-open-story="4">Open in story →</button></div>
+            <div class="cost-row"><span>Iteration 3 · response · 3,848 tokens · 1.10s</span><strong>$0.004200</strong><button data-open-story="3">Open in story →</button></div>
+            <div class="cost-row"><span>Iteration 2 · response · 3,667 tokens · 1.39s</span><strong>$0.003983</strong><button data-open-story="2">Open in story →</button></div>
+            <div class="cost-row"><span>Iteration 1 · response · 3,274 tokens · 1.17s</span><strong>$0.003690</strong><button data-open-story="1">Open in story →</button></div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const views = Array.from(document.querySelectorAll("[data-view]"));
+    const viewButtons = Array.from(document.querySelectorAll("[data-view-button]"));
+    const description = document.querySelector(".view-description");
+
+    function showView(name) {
+      views.forEach((view) => view.classList.toggle("hidden", view.dataset.view !== name));
+      viewButtons.forEach((button) => button.classList.toggle("active", button.dataset.viewButton === name));
+      const copy = {
+        story: "<strong>Story</strong> is the complete chronological record. Expand only as deep as needed.",
+        map: "<strong>Map</strong> replays the Live spatial view with the iteration that produced each state.",
+        cost: "<strong>Cost</strong> attributes every amount and returns to the exact response that produced it."
+      };
+      description.innerHTML = copy[name];
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    viewButtons.forEach((button) => button.addEventListener("click", () => showView(button.dataset.viewButton)));
+    document.querySelectorAll("[data-open-view]").forEach((button) => button.addEventListener("click", () => showView(button.dataset.openView)));
+
+    document.querySelectorAll(".iteration-toggle").forEach((button) => {
+      button.addEventListener("click", () => {
+        const iteration = button.closest(".iteration");
+        iteration.classList.toggle("open");
+        button.setAttribute("aria-expanded", String(iteration.classList.contains("open")));
+      });
+    });
+
+    document.querySelectorAll("[data-open-story]").forEach((button) => {
+      button.addEventListener("click", () => {
+        showView("story");
+        const target = Array.from(document.querySelectorAll(".iteration")).find((item) => item.querySelector(".iteration-number")?.textContent === button.dataset.openStory);
+        if (target) {
+          target.classList.add("open", "selected");
+          target.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      });
+    });
+  </script>
+</body>
+</html>

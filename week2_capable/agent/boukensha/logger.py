@@ -37,14 +37,15 @@ class Logger:
     #: Log schema version, written into session_start so a later consumer (a log
     #: viewer, the Visualizer) can detect the vocabulary it is reading and adapt
     #: or refuse rather than guess.
-    SCHEMA_VERSION = 1
+    SCHEMA_VERSION = 2
 
     #: Every phase name this logger can emit. A consumer (the log viewer) reads
     #: this to validate or route events without hard-coding the vocabulary, and
     #: bumping it alongside SCHEMA_VERSION keeps the two in step.
     PHASES = (
         "session_start", "turn", "iteration", "limit_reached", "prompt",
-        "response", "tool_call", "tool_result", "reasoning", "plan",
+        "model_request", "provider_response", "response", "tool_call",
+        "tool_result", "reasoning", "plan",
         "compaction", "retry", "turn_end", "raw", "log_error",
         "operator_control",
     )
@@ -191,7 +192,7 @@ class Logger:
             }
         )
 
-    def turn(self, n: int) -> None:
+    def turn(self, n: int, instruction: str | None = None) -> None:
         """Mark the start of an interactive turn, one per user input in a REPL session.
 
         ``n`` is the USER-FACING turn number and is deliberately not unique: `/retry`
@@ -204,7 +205,11 @@ class Logger:
         labelled 3 and no way to tell they were four, which cost three turns and both
         compaction records their place on screen.
         """
-        event: dict[str, Any] = {"phase": "turn", "n": n}
+        event: dict[str, Any] = {
+            "phase": "turn",
+            "n": n,
+            "instruction": instruction,
+        }
         self._turn_attempts[n] = self._turn_attempts.get(n, 0) + 1
         if self._turn_attempts[n] > 1:
             event["attempt"] = self._turn_attempts[n]
@@ -258,6 +263,34 @@ class Logger:
         self._write_log({"phase": "reasoning", "text": self._safe_text(text),
                          "redacted": redacted})
 
+    def model_request(
+        self,
+        request: dict[str, Any],
+        provider: str,
+        model: str,
+    ) -> None:
+        """Record the exact credential-free JSON body sent to the provider."""
+        self._write_log({
+            "phase": "model_request",
+            "provider": provider,
+            "model": model,
+            "request": request,
+        })
+
+    def provider_response(
+        self,
+        response: dict[str, Any],
+        provider: str,
+        model: str,
+    ) -> None:
+        """Record the exact provider JSON before normalization."""
+        self._write_log({
+            "phase": "provider_response",
+            "provider": provider,
+            "model": model,
+            "response": response,
+        })
+
     def plan(self, text: str) -> None:
         """Record the text preamble the model wrote alongside its tool calls.
         Consumed by context management (step 12)."""
@@ -279,6 +312,9 @@ class Logger:
             "ok": ok,
             "error": error,
         }
+        stages = getattr(result, "evidence_stages", None)
+        if isinstance(stages, dict):
+            event["stages"] = stages
         if tool_use_id is not None:
             event["tool_use_id"] = tool_use_id
         self._write_log(event)
@@ -287,10 +323,12 @@ class Logger:
                  stop_reason: str | None = None,
                  task: type[Task] | None = None,
                  backend: Backend | None = None,
-                 duration_ms: float | None = None) -> None:
+                 duration_ms: float | None = None,
+                 content: tuple[Any, ...] = ()) -> None:
         event: dict[str, Any] = {
             "phase": "response",
             "text": self._safe_text(text).strip(),
+            "content": [self._serialize_block(block) for block in content],
             "usage": usage,
             "stop_reason": stop_reason,
         }

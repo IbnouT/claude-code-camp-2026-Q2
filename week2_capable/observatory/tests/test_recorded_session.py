@@ -184,6 +184,9 @@ def test_recorded_session_projection_is_correlated_navigable_and_sanitized(
     assert result.cost.raw_response_total_usd == 0.05
     assert result.cost.points[0].cost_usd == 0.21
     assert result.cost.points[0].pricing_source == "attempt_cost_curve"
+    assert "MUD text transformation stages are missing" in result.capture_gaps
+    assert "Exact model request body is missing" in result.capture_gaps
+    assert "Exact provider response body is missing" in result.capture_gaps
     assert set(result.diagnostic_coverage) == {
         "false_completion",
         "belief_divergence",

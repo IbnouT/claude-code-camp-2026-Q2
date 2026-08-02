@@ -47,6 +47,52 @@ def test_typed_registry_rejects_unknown_fields_and_spend_mismatch():
     assert any("Effective maximum spend" in issue for issue in result.issues)
 
 
+def test_validator_allows_runner_supported_overlays_and_blocks_observe_only():
+    definition = rendering_definition()
+    first = definition.arms[0]
+    supported = first.model_copy(
+        update={
+            "values": {
+                **first.values,
+                "tools.profile": "hybrid-core",
+                "policy.max_iterations": 41,
+            }
+        }
+    )
+    supported_definition = definition.model_copy(
+        update={"arms": (supported, *definition.arms[1:])}
+    )
+
+    supported_result = validate_definition(
+        supported_definition,
+        experiment_registry(),
+        execution_available=True,
+        local_spend_cap=100,
+    )
+
+    assert not any(
+        "installed runner" in issue for issue in supported_result.issues
+    )
+
+    blocked = supported.model_copy(
+        update={"values": {**supported.values, "memory.enabled": False}}
+    )
+    blocked_definition = definition.model_copy(
+        update={"arms": (blocked, *definition.arms[1:])}
+    )
+    blocked_result = validate_definition(
+        blocked_definition,
+        experiment_registry(),
+        execution_available=True,
+        local_spend_cap=100,
+    )
+
+    assert any(
+        "Persistent knowledge" in issue and "installed runner" in issue
+        for issue in blocked_result.issues
+    )
+
+
 def test_one_variable_fork_preserves_parent_and_only_changes_selected_value():
     definition = rendering_definition()
     fork = fork_one_variable(
@@ -167,7 +213,10 @@ def test_executor_command_is_direct_argv_and_routes_evidence_to_sessions(
         job=job,
         output=output,
         result_mode="raw",
-        effective_config=definition.arms[0].values,
+        effective_config={
+            **definition.arms[0].values,
+            "policy.max_iterations": 41,
+        },
     )
 
     assert command[:2] == ("uv", "run")
@@ -177,7 +226,7 @@ def test_executor_command_is_direct_argv_and_routes_evidence_to_sessions(
     assert command[command.index("--profile") + 1] == "direct-full"
     assert command[command.index("--model") + 1] == "claude-haiku-4-5"
     assert command[command.index("--compaction-threshold") + 1] == "0.85"
-    assert command[command.index("--max-iterations") + 1] == "60"
+    assert command[command.index("--max-iterations") + 1] == "41"
     assert command[command.index("--max-sample-cost") + 1] == "0.6"
     assert command[command.index("--output-dir") + 1] == str(output)
     assert not any("|" in argument or ";" in argument for argument in command)

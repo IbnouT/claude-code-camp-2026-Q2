@@ -1,18 +1,13 @@
 import {
-  Activity,
-  BookOpen,
-  FlaskConical,
   MessageSquareText,
-  Moon,
   Search,
-  Sun,
-  Telescope,
 } from "lucide-react";
 import type { Catalog } from "../contracts";
 import {
   sessionsHref,
   type LiveRouteIdentity,
 } from "../routes";
+import { ObservatoryHeader } from "../shell/ObservatoryHeader";
 import type { Theme } from "../theme";
 import {
   type ContextState,
@@ -33,18 +28,6 @@ type Props = {
   onThemeChange: (theme: Theme) => void;
 };
 
-const spaces = [
-  { label: "Live", icon: Activity, active: true, available: true },
-  { label: "Sessions", icon: Telescope, active: false, available: true },
-  {
-    label: "Experiments",
-    icon: FlaskConical,
-    active: false,
-    available: false,
-  },
-  { label: "Knowledge", icon: BookOpen, active: false, available: false },
-];
-
 export function LiveHeader({
   identity,
   catalog,
@@ -59,39 +42,17 @@ export function LiveHeader({
   onThemeChange,
 }: Props) {
   return (
-    <header className="live-header">
-      <a className="live-brand" href="/" aria-label="Boukensha Observatory launcher">
-        <span className="live-brand-mark" aria-hidden="true">
-          <Telescope size={19} />
-        </span>
-        <span className="live-brand-name">
-          <strong>Boukensha</strong>
-          <small>Observatory</small>
-        </span>
-      </a>
-
-      <nav className="live-nav" aria-label="Observatory spaces">
-        {spaces.map(({ active, available, icon: Icon, label }) => (
-          <button
-            aria-disabled={!available}
-            aria-current={active ? "page" : undefined}
-            className="live-nav-link"
-            key={label}
-            title={available
-              ? undefined
-              : `${label} will be rebuilt after Live`}
-            type="button"
-            onClick={label === "Sessions"
-              ? () => onNavigate(sessionsHref(identity?.playerId))
-              : undefined}
-          >
-            <Icon size={15} aria-hidden="true" />
-            <span>{label}</span>
-          </button>
-        ))}
-      </nav>
-
-      <div className="live-header-context">
+    <ObservatoryHeader
+      activeSpace="live"
+      destinations={{
+        sessions: { href: sessionsHref(identity?.playerId) },
+        experiments: { title: "Experiments will be rebuilt after Live" },
+        knowledge: { title: "Knowledge will be rebuilt after Live" },
+      }}
+      theme={theme}
+      onNavigate={onNavigate}
+      onThemeChange={onThemeChange}
+    >
         {identity !== null ? (
           <LiveContextSwitcher
             catalog={catalog}
@@ -127,18 +88,6 @@ export function LiveHeader({
           <span>Ask about this session</span>
           <kbd>⌘K</kbd>
         </button>
-
-        <button
-          aria-label={`Use ${theme === "dark" ? "light" : "dark"} theme`}
-          className="live-icon-button"
-          type="button"
-          onClick={() => onThemeChange(theme === "dark" ? "light" : "dark")}
-        >
-          {theme === "dark"
-            ? <Sun size={16} aria-hidden="true" />
-            : <Moon size={16} aria-hidden="true" />}
-        </button>
-      </div>
-    </header>
+    </ObservatoryHeader>
   );
 }

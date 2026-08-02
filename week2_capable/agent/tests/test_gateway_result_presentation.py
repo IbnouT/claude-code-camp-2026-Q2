@@ -91,7 +91,16 @@ def test_mcp_tool_returns_the_selected_model_shape() -> None:
         "look",
         result_mode="raw",
     )
-    assert tool.handler() == ROOM_TEXT
+    result = tool.handler()
+    assert result == ROOM_TEXT
+    assert result.evidence_stages == {
+        "mcp_result": observation(),
+        "result_mode": "raw",
+        "rendered_result": ROOM_TEXT,
+        "truncated_chars": 0,
+        "model_input": ROOM_TEXT,
+        "error": False,
+    }
 
 
 def test_config_rejects_an_unknown_result_mode(tmp_path, monkeypatch) -> None:

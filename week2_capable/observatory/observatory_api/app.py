@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import base64
 import os
 from pathlib import Path
 
@@ -31,10 +32,12 @@ from .contracts import (
     LiveControlRequest,
     LiveVoiceRequest,
     ObservatoryQuery,
+    RuntimeSessionWireEvidence,
 )
 from .incidents import build_capsule
 from .knowledge_contracts import KnowledgeRecoveryRequest
 from .experiments import fork_one_variable, sample_queue, validate_definition
+from .experiment_catalog import experiment_registry, experiment_scenarios
 from .execution import ExperimentExecutor, ExperimentRequestConflict
 from .projections.history import diagnostic_history
 from .projections.knowledge import project_knowledge
@@ -43,6 +46,7 @@ from .projections.session import (
     project_recorded_session,
     project_recorded_session_prefix,
 )
+from .projections.runtime_session import project_runtime_session
 from .queries import answer
 from .queries.model import ModelTranslator
 from .settings import Settings
@@ -287,6 +291,65 @@ def create_app(
             )
         except (RuntimeSourceError, ValueError) as error:
             return _runtime_error(error)
+        return JSONResponse(result.model_dump(mode="json"))
+
+    async def session_investigation(request: Request) -> JSONResponse:
+        if runtime is None or not runtime.available:
+            return JSONResponse(
+                {
+                    "error": "runtime_unavailable",
+                    "detail": "No launcher runtime registry is available",
+                },
+                status_code=503,
+            )
+        session_id = request.path_params["session"]
+        try:
+            selected = runtime.session(session_id)
+            if selected is None:
+                return JSONResponse({"error": "not_found"}, status_code=404)
+            result = project_runtime_session(
+                selected,
+                runtime.events(session_id),
+                runtime.agent_events(session_id),
+                atlas=atlas,
+                operator_messages=runtime.operator_messages(session_id),
+            )
+        except RuntimeSourceError as error:
+            return _runtime_error(error)
+        return JSONResponse(result.model_dump(mode="json"))
+
+    async def session_wire_evidence(request: Request) -> JSONResponse:
+        if runtime is None or not runtime.available:
+            return JSONResponse(
+                {
+                    "error": "runtime_unavailable",
+                    "detail": "No launcher runtime registry is available",
+                },
+                status_code=503,
+            )
+        session_id = request.path_params["session"]
+        try:
+            sequence = int(request.path_params["sequence"])
+            selected = runtime.session(session_id)
+            if selected is None:
+                return JSONResponse({"error": "not_found"}, status_code=404)
+            result = runtime.wire_blob(session_id, sequence)
+            if result is None:
+                return JSONResponse({"error": "not_found"}, status_code=404)
+            event, body = result
+        except (RuntimeSourceError, ValueError) as error:
+            return _runtime_error(error)
+        result = RuntimeSessionWireEvidence(
+            record_id=f"gateway:{event.seq}",
+            source_ref=f"gateway.db event {event.seq}",
+            timestamp=event.at,
+            direction=str(event.payload.get("direction") or "unknown"),
+            digest=str(event.payload.get("digest") or ""),
+            bytes=len(body),
+            redacted=event.payload.get("redacted") is True,
+            content_base64=base64.b64encode(body).decode("ascii"),
+            content_text=body.decode("utf-8", errors="replace"),
+        )
         return JSONResponse(result.model_dump(mode="json"))
 
     async def live_control(request: Request) -> JSONResponse:
@@ -622,6 +685,26 @@ def create_app(
                         "journey": result.journey,
                     }
                 ]
+            }
+        )
+
+    async def experiments_catalog(_request: Request) -> JSONResponse:
+        return JSONResponse(
+            {
+                "registry": [
+                    feature.model_dump(mode="json")
+                    for feature in experiment_registry()
+                ],
+                "scenarios": [
+                    scenario.model_dump(mode="json")
+                    for scenario in experiment_scenarios()
+                ],
+                "execution": {
+                    "available": active.experiment_execution_enabled,
+                    "state_store_available": experiment_executor is not None,
+                    "max_spend_usd": active.experiment_max_spend_cap,
+                    "paid_confirmation_required": True,
+                },
             }
         )
 
@@ -1032,6 +1115,14 @@ def create_app(
             Route("/api/sessions", sessions),
             Route("/api/sessions/{session:str}/snapshot", live_snapshot),
             Route(
+                "/api/sessions/{session:str}/investigation",
+                session_investigation,
+            ),
+            Route(
+                "/api/sessions/{session:str}/wire/{sequence:int}",
+                session_wire_evidence,
+            ),
+            Route(
                 "/api/sessions/{session:str}/control",
                 live_control,
                 methods=["POST"],
@@ -1068,6 +1159,7 @@ def create_app(
             Route("/api/diagnostic-history", history),
             Route("/api/incidents/export", export_incident, methods=["POST"]),
             Route("/api/comparisons", comparisons),
+            Route("/api/experiments/catalog", experiments_catalog),
             Route("/api/experiments/run", run_experiment, methods=["POST"]),
             Route("/api/experiments/jobs", experiment_jobs),
             Route(

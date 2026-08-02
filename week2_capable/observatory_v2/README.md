@@ -162,6 +162,61 @@ establish the journey baseline. Emphasized level-up, fired-friction, and
 applied operator-message markers select the first prefix that contains their
 evidence. Combat boundaries remain absent until typed episode history exists.
 
+### Sessions
+
+Sessions opens any registered run, including stopped, crashed, empty, and
+ordinary non-experiment runs. Story, Map, Cost, and Ask share one selection.
+
+- Story reads from session start through objective epochs, turns, iterations,
+  model exchanges, tool cycles, gateway work, MUD text, parsing, and the exact
+  result delivered upstream.
+- Applied Goals form collapsible chapters. Applied Nudges form collapsible
+  subchapters containing the iterations influenced by that guidance.
+- Goal chapters start collapsed. Selecting a Goal updates the shared title and
+  selection, jumps to its first iteration, and toggles the Story or Map group.
+- Turn and iteration form the replay identity, so iteration numbering may
+  restart without merging evidence from different turns.
+- Map reuses the Live map, camera, presentation controls, pan, zoom, room
+  detail, and current-room treatment.
+- The map remains spatially continuous across goals. Goal headers divide its
+  collapsible iteration rail without resetting learned world state.
+- Replay has first, previous, play, pause, next, last, and scrub actions with
+  valid boundary states.
+- Cost shows reconciled response cost, context growth, token classes, and exact
+  response contributors that return to Story.
+- Wire and raw detail links original bytes, ANSI-preserving decoded text,
+  normalized parser input, typed observations, and delivered model input.
+- Missing historical bodies stay explicit as capture gaps.
+- Ask defaults to the complete session and cites retained lifecycle or record
+  evidence. A selected-record boundary is explicit and optional.
+- Story filtering reports matching iterations from readable evidence text. It
+  does not search accumulated raw request bodies or appear in other views.
+- The header shows the five latest sessions with their goals. Show all opens a
+  searchable complete history.
+- The route bypasses browser caching, refreshes on return, and polls a selected
+  live session without resetting the reader's view.
+- Launcher load links route terminal sessions here. Running sessions retain the
+  valid path back to Live.
+
+### Experiments
+
+Experiments opens retained controlled comparisons without turning them into a
+winner dashboard. Compare, Paths, Samples, Definition, and Replay keep one
+question and one immutable definition in context.
+
+- Changed registered values stay visible on every arm.
+- Success, cost, cost deviation, calls, token classes, payload, schema, and
+  corrective-call evidence remain cohort measurements.
+- Representative paths expose the first semantic divergence and stay labelled
+  as examples.
+- Every sample preserves its outcome, timestamp, cost, turns, calls, and route
+  into the standard Sessions workspace.
+- The Definition lens identifies runner-supported and observe-only
+  configuration dimensions.
+- Rendering and parser counterfactuals use retained evidence without a model
+  call.
+- Paid execution remains absent while local policy is disabled.
+
 ### Learned-world map
 
 The map renders the agent's retained room, traversal, frontier, visit, mob,
@@ -193,7 +248,7 @@ npm test
 npm run build
 ```
 
-The frontend suite contains 157 tests across 21 files. `npm run build` runs
+The frontend suite contains 173 tests across 25 files. `npm run build` runs
 strict TypeScript checking with `tsc --noEmit` before producing the Vite
 production bundle.
 

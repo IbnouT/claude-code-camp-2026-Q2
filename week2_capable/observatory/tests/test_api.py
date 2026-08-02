@@ -44,7 +44,7 @@ def test_copilot_query_corpus_routes_only_supported_operations():
         "operation_accuracy": correct / len(rows),
         "cases": len(rows),
     }
-    assert report == {"operation_accuracy": 1.0, "cases": 15}
+    assert report == {"operation_accuracy": 1.0, "cases": 17}
 
 
 def test_model_boundary_redacts_secret_shaped_question_text():

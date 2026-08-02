@@ -794,6 +794,84 @@ class RecordedSessionCatalogItem(BaseModel):
     result_mode: str
 
 
+class RuntimeSessionSummary(BaseModel):
+    """One launcher run summarized without experiment semantics."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    label: str
+    journey: str = "Session"
+    attempt: str
+    success: bool
+    stop_reason: str
+    iterations: int
+    cost_usd: float
+    result_mode: str = "runtime"
+    lifecycle: str
+    capture_status: str
+    created_at: str
+    ended_at: str | None
+    duration_ms: float | None
+    turns: int
+    responses: int
+    goal_epochs: int
+
+
+class RuntimeSessionInvestigation(BaseModel):
+    """One universal launcher session projected into navigable evidence."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    version: int = 2
+    source_kind: Literal["runtime_session"] = "runtime_session"
+    correlation: str
+    run: RuntimeSessionSummary
+    player_id: str
+    agent_session_id: str
+    gateway_session_id: str
+    objective: str | None
+    model: str | None
+    records: tuple[SessionEvidenceRecord, ...]
+    diagnostics: tuple[SessionDiagnostic, ...]
+    diagnostic_coverage: tuple[
+        Literal[
+            "false_completion",
+            "belief_divergence",
+            "position_ambiguity",
+            "confusion_loop",
+            "progress_stall",
+            "parse_degradation",
+            "corrective_call_cluster",
+            "stale_action",
+            "context_churn",
+            "instrumentation_gap",
+        ],
+        ...,
+    ]
+    lens: EvidenceLens
+    world: WorldProjection
+    cost: SessionCostLedger
+    capture_gaps: tuple[str, ...]
+
+
+class RuntimeSessionWireEvidence(BaseModel):
+    """One exact integrity-checked wire body loaded by explicit drill-down."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    version: int = 1
+    record_id: str
+    source_ref: str
+    timestamp: float
+    direction: str
+    digest: str
+    bytes: int
+    redacted: bool
+    content_base64: str
+    content_text: str
+
+
 class KnowledgeMetric(BaseModel):
     """One evidence-backed measure in the current knowledge view."""
 
@@ -1045,6 +1123,22 @@ class ExperimentFeature(BaseModel):
     minimum: float | None = None
     maximum: float | None = None
     source: str
+    execution_supported: bool
+
+
+class ExperimentScenario(BaseModel):
+    """One resettable, independently judged experiment scenario."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    label: str
+    objective: str
+    success_predicate: str
+    starting_state: str
+    reset_strategy: str
+    reset_identity: str
+    execution_supported: bool
 
 
 class ExperimentArmDefinition(BaseModel):

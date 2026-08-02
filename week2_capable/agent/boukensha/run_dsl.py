@@ -357,6 +357,7 @@ def run(task: str, *,
             logger=logger,
             operator=operator,
         )
+        logger.turn(n=1, instruction=task)
         assembled.context.add(Message.user(task))
         try:
             return agent.run()

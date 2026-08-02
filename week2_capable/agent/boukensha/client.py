@@ -66,7 +66,8 @@ class Client:
     def __init__(self, builder: PromptBuilder,
                  transport: Transport | None = None,
                  sleep: Callable[[float], None] | None = None,
-                 on_retry: Callable[..., None] | None = None) -> None:
+                 on_retry: Callable[..., None] | None = None,
+                 on_request: Callable[..., None] | None = None) -> None:
         self.builder = builder
         self._transport = transport or default_transport
         self._sleep = sleep or time.sleep
@@ -75,6 +76,9 @@ class Client:
         #: in the session log. A settable attribute, so the wiring never touches
         #: the call surface or the construction sites.
         self.on_retry = on_retry
+        #: Called once with the exact JSON object serialized for the provider.
+        #: Headers are deliberately excluded because they carry credentials.
+        self.on_request = on_request
 
     def for_builder(self, builder: PromptBuilder) -> Client:
         """A new client bound to a different builder, sharing this one's
@@ -85,17 +89,24 @@ class Client:
         ``call`` signature, and the shared transport keeps the offline stub in
         place.
         """
-        return Client(builder, transport=self._transport, sleep=self._sleep,
-                      on_retry=self.on_retry)
+        return Client(
+            builder,
+            transport=self._transport,
+            sleep=self._sleep,
+            on_retry=self.on_retry,
+            on_request=self.on_request,
+        )
 
     def call(self, max_output_tokens: int = 1024,
              thinking: str | None = None) -> dict[str, Any]:
         """POST the built request, retry transient failures, parse the JSON."""
         url = self.builder.url()
         headers = self.builder.headers()
-        body = json.dumps(self.builder.build_request(
+        request_body = self.builder.build_request(
             max_output_tokens=max_output_tokens, thinking=thinking
-        ))
+        )
+        self._emit_request(request_body)
+        body = json.dumps(request_body)
 
         attempts = 0
         while True:
@@ -147,6 +158,15 @@ class Client:
             return
         try:
             self.on_retry(attempt=attempt, wait=wait, status=status, error=error)
+        except Exception:
+            pass
+
+    def _emit_request(self, request: dict[str, Any]) -> None:
+        """Notify the recorder without allowing observability to break a call."""
+        if self.on_request is None:
+            return
+        try:
+            self.on_request(request=request)
         except Exception:
             pass
 

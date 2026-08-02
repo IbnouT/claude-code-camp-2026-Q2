@@ -76,12 +76,14 @@ import {
 } from "./selectionUrl";
 
 type Props = {
+  controls?: "full" | "session";
   identity: LiveRouteIdentity;
   snapshot: Snapshot | null;
   state: LiveSnapshotState;
 };
 
 const defaultFrame = { width: 1_600, height: 900 };
+const sessionInitialMapScale = 0.8;
 const defaultSafeInsets: MapSafeInsets = {
   top: 8,
   right: 8,
@@ -101,17 +103,23 @@ type DragState = {
 };
 
 export function LiveMap({
+  controls = "full",
   identity,
   snapshot,
   state,
 }: Props) {
+  const initialMapScale = controls === "session"
+    ? sessionInitialMapScale
+    : 1;
   const [frame, setFrame] = useState(defaultFrame);
   const [cameraView, setCameraView] = useState<MapCameraView>({
     center: { x: 0, y: 0 },
-    scale: 1,
+    scale: initialMapScale,
   });
   const [cameraMode, setCameraMode] = useState<MapCameraMode>("follow");
-  const [chosenMode, setChosenMode] = useState<MapMode | null>(null);
+  const [chosenMode, setChosenMode] = useState<MapMode | null>(
+    controls === "session" ? "grow" : null,
+  );
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(
     selectedRoomFromLocation,
   );
@@ -119,7 +127,7 @@ export function LiveMap({
     overlayExpandedByDefault,
   );
   const [legendExpanded, setLegendExpanded] = useState(
-    false,
+    controls === "session",
   );
   const [panHintVisible, setPanHintVisible] = useState(true);
   const [dragging, setDragging] = useState(false);
@@ -629,7 +637,10 @@ export function LiveMap({
   }, [cameraMode, graph.currentRoomId, mode]);
 
   useEffect(() => {
-    setCameraView({ center: { x: 0, y: 0 }, scale: 1 });
+    setCameraView({
+      center: { x: 0, y: 0 },
+      scale: initialMapScale,
+    });
     followVelocityRef.current = { x: 0, y: 0 };
     followAnchorRef.current = null;
     followInitializedRef.current = false;
@@ -638,13 +649,13 @@ export function LiveMap({
     setFocusOverlayRects([]);
     setMarkerOverlayRects([]);
     setCameraMode("follow");
-    setChosenMode(null);
+    setChosenMode(controls === "session" ? "grow" : null);
     setSelectedRoomId(selectedRoomFromLocation());
     setThoughtExpanded(overlayExpandedByDefault());
-    setLegendExpanded(false);
+    setLegendExpanded(controls === "session");
     setPanHintVisible(true);
     setReflowRevision(0);
-  }, [identity.sessionId]);
+  }, [controls, identity.sessionId, initialMapScale]);
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -939,6 +950,7 @@ export function LiveMap({
       <LiveMapToolbar
         camera={cameraMode}
         mode={mode}
+        variant={controls}
         selectedRoomId={selectedRoomId}
         zoom={effectiveCameraView.scale}
         minimumZoom={minimumMapZoom}
@@ -1084,6 +1096,7 @@ export function LiveMap({
       <LiveCombatPanel episode={snapshot.combat_episode} />
       <LiveThoughtDock
         expanded={thoughtExpanded}
+        historical={controls === "session"}
         thought={snapshot.agent_thought}
         onToggle={() => setThoughtExpanded((current) => !current)}
       />

@@ -202,6 +202,10 @@ def add_session(
                 {
                     "phase": "session_start",
                     "model": "test-model",
+                    "provider": "test-provider",
+                    "system": "Observe every retained interaction.",
+                    "max_iterations": 25,
+                    "max_output_tokens": 1_024,
                     "context_window": 200_000,
                     "objective": {
                         "title": f"Explore as {character}",
@@ -229,8 +233,41 @@ def add_session(
                     **identity,
                 },
                 {
+                    "phase": "model_request",
+                    "model": "test-model",
+                    "provider": "test-provider",
+                    "request": {
+                        "model": "test-model",
+                        "messages": [{
+                            "role": "user",
+                            "content": f"Explore as {character}",
+                        }],
+                        "api_key": "must-not-cross-read-boundary",
+                    },
+                    "at": "1970-01-01T00:00:01.250+00:00",
+                    **identity,
+                },
+                {
+                    "phase": "provider_response",
+                    "model": "test-model",
+                    "provider": "test-provider",
+                    "response": {
+                        "content": [{
+                            "type": "text",
+                            "text": f"I will explore as {character}.",
+                        }],
+                    },
+                    "at": "1970-01-01T00:00:01.375+00:00",
+                    **identity,
+                },
+                {
                     "phase": "response",
                     "model": "test-model",
+                    "text": f"I will explore as {character}.",
+                    "content": [{
+                        "type": "text",
+                        "text": f"I will explore as {character}.",
+                    }],
                     "cost_usd": cost,
                     "usage": {
                         "input_tokens": int(cost * 1_000),
@@ -330,12 +367,352 @@ async def test_catalog_discovers_all_players_and_session_states(tmp_path: Path):
     assert payload["sessions"][0]["live"] is True
     assert payload["sessions"][0]["control_state"] == "paused"
     assert payload["sessions"][0]["event_count"] == 2
+    assert payload["sessions"][0]["objective"] == "Explore as Alpha"
+    assert payload["sessions"][0]["goal_count"] == 1
+    assert payload["sessions"][0]["nudge_count"] == 0
     assert payload["sessions"][1]["live"] is False
     sources = {
         source["id"]: source
         for source in capabilities.json()["sources"]
     }
     assert sources["agent"]["state"] == "ready"
+
+
+async def test_runtime_session_investigation_opens_any_launcher_run(
+    tmp_path: Path,
+):
+    root = runtime_root(tmp_path)
+    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        response = await client.get(
+            "/api/sessions/session-beta/investigation"
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["source_kind"] == "runtime_session"
+    assert payload["run"]["lifecycle"] == "stopped"
+    assert payload["run"]["capture_status"] == "complete"
+    assert payload["run"]["cost_usd"] == 0.22
+    assert payload["player_id"] == "beta"
+    assert payload["objective"] == "Explore as Beta"
+    assert payload["cost"]["total_usd"] == 0.22
+    assert payload["cost"]["fresh_input_tokens"] == 220
+    assert {
+        (record["source"], record["kind"])
+        for record in payload["records"]
+    } >= {
+        ("agent", "session_start"),
+        ("agent", "model_request"),
+        ("agent", "response"),
+        ("gateway", "session_open"),
+        ("gateway", "model_response"),
+    }
+
+
+async def test_objective_revisions_and_nudges_remain_distinct_everywhere(
+    tmp_path: Path,
+):
+    root = runtime_root(tmp_path)
+    session_dir = (
+        root / "profiles" / "alpha" / "sessions" / "session-alpha"
+    )
+    (session_dir / "operator-messages.json").write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "messages": [
+                    {
+                        "request_id": "goal-1",
+                        "action": "revise",
+                        "instruction": "Find the temple",
+                        "sent_at": "1970-01-01T00:00:00.600+00:00",
+                        "applied_iteration": 0,
+                        "applied_at": "1970-01-01T00:00:00.700+00:00",
+                    },
+                    {
+                        "request_id": "goal-2",
+                        "action": "revise",
+                        "instruction": "Practice at the warrior guild",
+                        "sent_at": "1970-01-01T00:00:02.600+00:00",
+                        "applied_iteration": 1,
+                        "applied_at": "1970-01-01T00:00:02.700+00:00",
+                    },
+                    {
+                        "request_id": "guide-1",
+                        "action": "guide",
+                        "instruction": "Return through the western gate",
+                        "sent_at": "1970-01-01T00:00:02.800+00:00",
+                        "applied_iteration": 1,
+                        "applied_at": "1970-01-01T00:00:02.900+00:00",
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        catalog = (await client.get("/api/sessions")).json()
+        investigation = (
+            await client.get("/api/sessions/session-alpha/investigation")
+        ).json()
+
+    session = catalog["sessions"][0]
+    assert session["objective"] == "Practice at the warrior guild"
+    assert session["goal_count"] == 3
+    assert session["nudge_count"] == 1
+    assert investigation["objective"] == "Practice at the warrior guild"
+    assert investigation["run"]["goal_epochs"] == 3
+    controls = {
+        record["kind"]: record
+        for record in investigation["records"]
+        if record["kind"] in {"goal_revision", "guidance"}
+    }
+    assert controls["goal_revision"]["fields"]["action"] == "revise"
+    assert controls["guidance"]["fields"]["action"] == "guide"
+    assert controls["guidance"]["preview"] == (
+        "Return through the western gate"
+    )
+
+
+async def test_runtime_investigation_exposes_complete_model_exchange(
+    tmp_path: Path,
+):
+    root = runtime_root(tmp_path)
+    agent_log = (
+        root
+        / "profiles"
+        / "beta"
+        / "sessions"
+        / "session-beta"
+        / "agent.jsonl"
+    )
+    identity = {
+        "player_id": "beta",
+        "agent_id": "agent-beta",
+        "session_id": "session-beta",
+        "gateway_session_id": "gateway-beta",
+    }
+    with agent_log.open("a", encoding="utf-8") as handle:
+        for event in (
+            {
+                "phase": "tool_call",
+                "id": "tool-use-1",
+                "name": "tbamud__look",
+                "input": {},
+                "at": "1970-01-01T00:00:01.625+00:00",
+                **identity,
+            },
+            {
+                "phase": "tool_result",
+                "tool_use_id": "tool-use-1",
+                "name": "tbamud__look",
+                "result": "The Pet Shop",
+                "ok": True,
+                "error": False,
+                "stages": {
+                    "mcp_result": json.dumps({
+                        "trace_id": "trace-look-1",
+                        "text": "The Pet Shop",
+                    }),
+                    "result_mode": "minimal",
+                    "rendered_result": "The Pet Shop",
+                    "truncated_chars": 0,
+                    "model_input": "The Pet Shop",
+                    "error": False,
+                },
+                "at": "1970-01-01T00:00:01.750+00:00",
+                **identity,
+            },
+        ):
+            handle.write(json.dumps(event) + "\n")
+    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        payload = (
+            await client.get("/api/sessions/session-beta/investigation")
+        ).json()
+
+    by_kind = {
+        record["kind"]: record
+        for record in payload["records"]
+        if record["source"] == "agent"
+    }
+    assert by_kind["session_start"]["fields"]["system"] == (
+        "Observe every retained interaction."
+    )
+    assert by_kind["model_request"]["fields"]["request"]["messages"][0] == {
+        "role": "user",
+        "content": "Explore as Beta",
+    }
+    assert by_kind["model_request"]["fields"]["request"]["api_key"] == "[REDACTED]"
+    assert by_kind["response"]["fields"]["content"][0]["text"] == (
+        "I will explore as Beta."
+    )
+    assert by_kind["provider_response"]["fields"]["response"]["content"][0][
+        "text"
+    ] == "I will explore as Beta."
+    stages = by_kind["tool_result"]["fields"]["stages"]
+    assert json.loads(stages["mcp_result"])["trace_id"] == "trace-look-1"
+    assert stages["result_mode"] == "minimal"
+    assert stages["rendered_result"] == "The Pet Shop"
+    assert stages["model_input"] == "The Pet Shop"
+
+
+async def test_wire_evidence_drills_to_integrity_checked_bytes(tmp_path: Path):
+    root = runtime_root(tmp_path)
+    session_dir = (
+        root / "profiles" / "beta" / "sessions" / "session-beta"
+    )
+    journal = Journal(session_dir / "gateway.db")
+    body = b"\x1b[32mAvailable pets are:\x1b[0m\r\n  300 - the puppy\r\n"
+    digest = journal.put_blob(body)
+    wire = journal.append(
+        "gateway-beta",
+        "wire",
+        {
+            "direction": "in",
+            "bytes": len(body),
+            "redacted": False,
+            "digest": digest,
+        },
+        trace_id="trace-pets",
+        at=3,
+        monotonic=3,
+    )
+    journal.append(
+        "gateway-beta",
+        "wire_text",
+        {
+            "direction": "in",
+            "wire_seq": wire.seq,
+            "bytes": len(body),
+            "redacted": False,
+            "encoding": "latin-1",
+            "ansi": "preserved",
+            "text": body.decode("latin-1"),
+        },
+        trace_id="trace-pets",
+        at=3,
+        monotonic=3,
+    )
+    journal.append(
+        "gateway-beta",
+        "parser_input",
+        {
+            "text": "Available pets are:\n300 - the puppy",
+            "bytes": len(body),
+            "encoding": "latin-1",
+            "transformations": [
+                "normalize_newlines",
+                "remove_ansi_sgr",
+                "remove_blank_lines",
+                "trim_lines",
+            ],
+            "wire_ref": {
+                "source": "gateway-beta",
+                "first_seq": wire.seq,
+                "last_seq": wire.seq,
+                "digest": digest,
+            },
+            "parser_version": "rules-2",
+        },
+        trace_id="trace-pets",
+        at=3.5,
+        monotonic=3.5,
+    )
+    journal.append(
+        "gateway-beta",
+        "observation",
+        {
+            "kind": "text",
+            "text": "Available pets are:\n  300 - the puppy",
+            "method": "ansi-stripped-lines",
+        },
+        trace_id="trace-pets",
+        at=4,
+        monotonic=4,
+    )
+    journal.close()
+    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        response = await client.get(
+            f"/api/sessions/session-beta/wire/{wire.seq}"
+        )
+        investigation = await client.get(
+            "/api/sessions/session-beta/investigation"
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["record_id"] == f"gateway:{wire.seq}"
+    assert payload["digest"] == digest
+    assert payload["bytes"] == len(body)
+    assert payload["content_text"] == body.decode()
+    records = investigation.json()["records"]
+    raw_record = next(record for record in records if record["id"] == f"gateway:{wire.seq}")
+    parsed_record = next(
+        record
+        for record in records
+        if record["source"] == "gateway"
+        and record["kind"] == "observation"
+        and record["trace_id"] == "trace-pets"
+    )
+    assert raw_record["parent_id"] is None
+    assert parsed_record["fields"]["text"] == (
+        "Available pets are:\n  300 - the puppy"
+    )
+    decoded_record = next(
+        record
+        for record in records
+        if record["source"] == "gateway"
+        and record["kind"] == "wire_text"
+    )
+    parser_input_record = next(
+        record
+        for record in records
+        if record["source"] == "gateway"
+        and record["kind"] == "parser_input"
+    )
+    assert "\u001b[32m" in decoded_record["fields"]["text"]
+    assert parser_input_record["fields"]["text"] == (
+        "Available pets are:\n300 - the puppy"
+    )
+    assert payload["content_base64"] != ""
+
+
+def test_empty_gateway_database_is_a_valid_zero_event_capture(
+    tmp_path: Path,
+):
+    root = runtime_root(tmp_path)
+    journal = (
+        root
+        / "profiles"
+        / "beta"
+        / "sessions"
+        / "session-beta"
+        / "gateway.db"
+    )
+    journal.unlink()
+    journal.touch()
+
+    assert RuntimeSource(root).events("session-beta") == []
 
 
 async def test_each_selected_runtime_session_replays_only_its_own_evidence(
@@ -528,15 +905,15 @@ async def test_live_snapshot_separates_agent_thought_from_concise_belief(
         ),
         "phase": "reasoning",
         "observed_at": "1970-01-01T00:00:01.600+00:00",
-        "line": 4,
-        "evidence": "agent log line 4",
+            "line": 6,
+            "evidence": "agent log line 6",
     }
     assert latest["agent_belief"] == {
         "text": "Moving east",
         "phase": "tool_call",
         "observed_at": "1970-01-01T00:00:01.700+00:00",
-        "line": 5,
-        "evidence": "agent log line 5",
+            "line": 7,
+            "evidence": "agent log line 7",
     }
     assert latest["objective"] == "Explore as Alpha"
     assert latest["objective_initial"] == {
@@ -551,7 +928,7 @@ async def test_live_snapshot_separates_agent_thought_from_concise_belief(
         "clue": None,
         "source_kind": "operator",
         "revision": 2,
-        "evidence": "agent log line 6",
+        "evidence": "agent log line 8",
     }
     assert "agent_thought_not_observed" not in latest["capture_gaps"]
     assert "agent_belief_not_observed" not in latest["capture_gaps"]
@@ -822,7 +1199,7 @@ async def test_live_snapshot_exposes_observed_status_economics_and_frontier(
         "first_response": 3,
         "last_response": 3,
         "evidence": [
-            "agent log line 7; gateway position seq 6",
+            "agent log line 9; gateway position seq 6",
         ],
     }]
     assert snapshot["unattributed_room_economics"]["response_count"] == 2
@@ -880,6 +1257,71 @@ async def test_live_ask_uses_only_selected_runtime_scope(tmp_path: Path):
     assert [step["source"] for step in result["plan"]] == ["runtime"]
     assert all(citation["source"] != "benchmark" for citation in result["citations"])
     assert "has not stopped" in result["answer"]
+
+
+async def test_sessions_ask_diagnoses_a_launcher_runtime_by_run_id(
+    tmp_path: Path,
+):
+    root = runtime_root(tmp_path)
+    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        response = await client.post(
+            "/api/ask",
+            json={
+                "question": "Why did the session stop?",
+                "scope": {
+                    "space": "sessions",
+                    "player_id": "beta",
+                    "run_id": "session-beta",
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result["tier"] == "deterministic"
+    assert result["query"]["scope"]["run_id"] == "session-beta"
+    assert result["plan"][0]["source"] == "runtime"
+    assert "lifecycle state stopped" in result["answer"]
+    assert result["citations"][0]["id"] == "runtime:session:session-beta"
+    assert result["missing"] == ["specific stop mode"]
+
+
+async def test_sessions_ask_searches_runtime_agent_and_gateway_records(
+    tmp_path: Path,
+):
+    root = runtime_root(tmp_path)
+    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        response = await client.post(
+            "/api/ask",
+            json={
+                "question": "Find Explore as Alpha",
+                "scope": {
+                    "space": "sessions",
+                    "player_id": "alpha",
+                    "run_id": "session-alpha",
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result["tier"] == "deterministic"
+    assert result["plan"][0]["source"] == "runtime"
+    assert result["citations"]
+    assert all(
+        citation["source"] in {"agent", "gateway"}
+        for citation in result["citations"]
+    )
 
 
 async def test_live_ask_rejects_player_and_session_mismatch(tmp_path: Path):

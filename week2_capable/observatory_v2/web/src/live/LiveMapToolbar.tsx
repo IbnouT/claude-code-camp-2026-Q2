@@ -6,6 +6,7 @@ import type {
 type Props = {
   camera: MapCameraMode;
   mode: MapMode;
+  variant?: "full" | "session";
   selectedRoomId: string | null;
   zoom: number;
   minimumZoom: number;
@@ -25,6 +26,7 @@ const mapModes: { id: MapMode; label: string }[] = [
 export function LiveMapToolbar({
   camera,
   mode,
+  variant = "full",
   selectedRoomId,
   zoom,
   minimumZoom,
@@ -37,7 +39,10 @@ export function LiveMapToolbar({
   const fitLabel = selectedRoomId === null ? "Fit map" : "Fit selection";
   return (
     <div
-      className="live-map-toolbar"
+      className={[
+        "live-map-toolbar",
+        variant === "session" ? "is-session" : "",
+      ].filter(Boolean).join(" ")}
       data-map-overlay-edge="top"
       data-map-focus-occluder="true"
     >
@@ -93,15 +98,17 @@ export function LiveMapToolbar({
           </button>
         ))}
       </div>
-      <button
-        aria-label="Reflow map"
-        className="live-map-toolbar-tool live-map-reflow"
-        title="Recalculate room positions from retained evidence"
-        type="button"
-        onClick={onReflow}
-      >
-        Reflow
-      </button>
+      {variant === "full" ? (
+        <button
+          aria-label="Reflow map"
+          className="live-map-toolbar-tool live-map-reflow"
+          title="Recalculate room positions from retained evidence"
+          type="button"
+          onClick={onReflow}
+        >
+          Reflow
+        </button>
+      ) : null}
       <button
         aria-label="Zoom in"
         className="live-map-toolbar-tool"

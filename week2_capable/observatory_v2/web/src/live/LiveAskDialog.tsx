@@ -12,7 +12,11 @@ import type { LiveRouteIdentity } from "../routes";
 
 type AskResponse = {
   answer: string;
-  citations: Array<{ id?: string; label?: string }>;
+  citations: Array<{
+    id?: string;
+    label?: string;
+    excerpt?: string;
+  }>;
   missing: string[];
   tier: string;
 };
@@ -20,12 +24,16 @@ type AskResponse = {
 type Props = {
   identity: LiveRouteIdentity;
   open: boolean;
+  selectedRecordId?: string | null;
+  space?: "live" | "sessions";
   onClose: () => void;
 };
 
 export function LiveAskDialog({
   identity,
   open,
+  selectedRecordId = null,
+  space = "live",
   onClose,
 }: Props) {
   const input = useRef<HTMLInputElement>(null);
@@ -33,9 +41,12 @@ export function LiveAskDialog({
   const [answer, setAnswer] = useState<AskResponse | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [limitToSelection, setLimitToSelection] = useState(false);
 
   useEffect(() => {
-    if (open) input.current?.focus();
+    if (!open) return;
+    setLimitToSelection(false);
+    input.current?.focus();
   }, [open]);
 
   if (!open) return null;
@@ -53,9 +64,14 @@ export function LiveAskDialog({
         body: JSON.stringify({
           question: question.trim(),
           scope: {
-            space: "live",
+            space,
             player_id: identity.playerId,
-            live_session_id: identity.sessionId,
+            ...(space === "sessions"
+              ? { run_id: identity.sessionId }
+              : { live_session_id: identity.sessionId }),
+            ...(selectedRecordId && limitToSelection
+              ? { selected_record_id: selectedRecordId }
+              : {}),
           },
           allow_model: false,
           allow_summary: false,
@@ -114,7 +130,26 @@ export function LiveAskDialog({
         <div className="live-ask-scope">
           <span>Scope</span>
           <strong>{identity.playerId} · {identity.sessionId}</strong>
-          <small>Deterministic evidence query. Model use is off.</small>
+          <small>
+            {limitToSelection && selectedRecordId
+              ? `Evidence through ${selectedRecordId}.`
+              : "Whole session evidence."}
+            {" "}Answers cite retained records. Model use is off.
+          </small>
+          <small>
+            Try: “Why did it stop?”, “Find the north gate”, or
+            “Which positions were ambiguous?”
+          </small>
+          {selectedRecordId ? (
+            <label className="live-ask-boundary">
+              <input
+                checked={limitToSelection}
+                type="checkbox"
+                onChange={(event) => setLimitToSelection(event.target.checked)}
+              />
+              Limit the answer to evidence through {selectedRecordId}
+            </label>
+          ) : null}
         </div>
         {error ? <p className="live-ask-error" role="alert">{error}</p> : null}
         {answer ? (
@@ -127,6 +162,16 @@ export function LiveAskDialog({
               </p>
             ) : null}
             <small>{answer.citations.length} evidence citations</small>
+            {answer.citations.length > 0 ? (
+              <ul className="live-ask-citations">
+                {answer.citations.map((citation, index) => (
+                  <li key={citation.id ?? `${citation.label ?? "evidence"}-${index}`}>
+                    <strong>{citation.label ?? citation.id ?? "Evidence"}</strong>
+                    {citation.excerpt ? <span>{citation.excerpt}</span> : null}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
         ) : null}
       </section>

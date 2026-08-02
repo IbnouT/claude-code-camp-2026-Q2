@@ -17,11 +17,11 @@ describe("Live route identity", () => {
     })).toBe("/live?player=poucet&session=session-123");
   });
 
-  it("opens a recorded session on the same v2 Live surface", () => {
+  it("opens a recorded session on the v2 Sessions surface", () => {
     expect(recordedSessionHref({
       id: "recorded-123",
       player_id: "poucet",
-    })).toBe("/live?player=poucet&session=recorded-123");
+    })).toBe("/sessions?player=poucet&session=recorded-123");
   });
 
   it("requires both URL-backed identities", () => {

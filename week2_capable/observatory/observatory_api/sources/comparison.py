@@ -17,17 +17,17 @@ from ..contracts import (
     CounterfactualProjection,
     ExperimentArmDefinition,
     ExperimentDefinition,
-    ExperimentFeature,
     ExperimentStopCriteria,
     ExperimentValidation,
     FirstDivergence,
     RunComparison,
 )
+from ..experiment_catalog import RENDER_MODES, experiment_registry
 from .benchmark import stable_run_id
 from ..projections.parser_replay import replay_parser
 
 Mode = Literal["raw", "minimal", "full"]
-MODES: tuple[Mode, ...] = ("raw", "minimal", "full")
+MODES: tuple[Mode, ...] = RENDER_MODES
 
 
 def rendering_comparison(root: Path) -> RunComparison | None:
@@ -96,78 +96,6 @@ def rendering_comparison(root: Path) -> RunComparison | None:
     )
 
 
-def experiment_registry() -> tuple[ExperimentFeature, ...]:
-    return (
-        ExperimentFeature(
-            id="render.mode",
-            label="Model-facing result",
-            group="rendering",
-            kind="enum",
-            description=(
-                "Shapes the same typed gateway result as raw text, a minimal "
-                "envelope, or full structured evidence."
-            ),
-            default="full",
-            options=MODES,
-            source="gateway result-mode contract",
-        ),
-        ExperimentFeature(
-            id="tools.profile",
-            label="Gateway tool surface",
-            group="tools",
-            kind="enum",
-            description="Selects one versioned gateway capability projection.",
-            default="direct-full",
-            options=(
-                "direct-full",
-                "direct-core",
-                "hybrid-full",
-                "hybrid-core",
-            ),
-            source="gateway surface registry",
-        ),
-        ExperimentFeature(
-            id="model.id",
-            label="Agent model",
-            group="model",
-            kind="text",
-            description="Uses a priced model from the agent model catalog.",
-            default="claude-haiku-4-5",
-            source="agent model catalog",
-        ),
-        ExperimentFeature(
-            id="context.compaction_threshold",
-            label="Compaction threshold",
-            group="context",
-            kind="number",
-            description="Context-window fraction that triggers compaction.",
-            default=0.85,
-            minimum=0.01,
-            maximum=1,
-            source="agent task settings",
-        ),
-        ExperimentFeature(
-            id="memory.enabled",
-            label="Persistent knowledge",
-            group="memory",
-            kind="boolean",
-            description="Makes per-player learned state available to the agent.",
-            default=True,
-            source="agent knowledge contract",
-        ),
-        ExperimentFeature(
-            id="policy.max_iterations",
-            label="Maximum turns",
-            group="policy",
-            kind="integer",
-            description="Stops one sample before an unbounded agent loop.",
-            default=60,
-            minimum=1,
-            source="agent task limits",
-        ),
-    )
-
-
 def rendering_definition() -> ExperimentDefinition:
     shared: dict[str, bool | int | float | str] = {
         "tools.profile": "direct-full",
@@ -180,8 +108,11 @@ def rendering_definition() -> ExperimentDefinition:
         id="j1-rendering-n10-definition",
         version=1,
         title="Model-facing result rendering",
-        objective="Reach the bakery from the temple and buy a danish.",
-        success_predicate="A danish is present in the verified inventory.",
+        objective="Find the bakery and read the menu.",
+        success_predicate=(
+            "Gateway observations prove the bakery was seen and retain a "
+            "numbered menu row naming bread, danish, cake, or pastry."
+        ),
         journey="J1",
         starting_state="level1-temple@1",
         reset_strategy="verified snapshot before every sample",

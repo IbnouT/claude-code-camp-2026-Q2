@@ -172,33 +172,35 @@ class Session:
         self._assert_commands_allowed()
         async with self._command_lock:
             self._assert_commands_allowed()
-            source_after = self.journal.last_seq(self.id)
-            pending = await self.transport.drain_pending()
-            event = self.journal.append(
-                self.id,
-                "poll",
-                {
-                    "bytes": len(pending),
-                    "text": strip_ansi(pending).decode("latin-1"),
-                },
-                trace_id=trace_id,
-            )
-            wire_ref = self._wire_reference(source_after, event.seq, pending)
-            observations, position = self.observations.ingest(
-                pending,
-                wire_ref,
-                trace_id=trace_id,
-            )
-            return Reply(
-                command="poll",
-                raw=pending,
-                unsolicited=b"",
-                complete=True,
-                seq=event.seq,
-                wire_ref=wire_ref,
-                observations=observations,
-                position=position,
-            )
+            trace = trace_id or self.trace_id
+            async with self._capture_trace(trace):
+                source_after = self.journal.last_seq(self.id)
+                pending = await self.transport.drain_pending()
+                event = self.journal.append(
+                    self.id,
+                    "poll",
+                    {
+                        "bytes": len(pending),
+                        "text": strip_ansi(pending).decode("latin-1"),
+                    },
+                    trace_id=trace,
+                )
+                wire_ref = self._wire_reference(source_after, event.seq, pending)
+                observations, position = self.observations.ingest(
+                    pending,
+                    wire_ref,
+                    trace_id=trace,
+                )
+                return Reply(
+                    command="poll",
+                    raw=pending,
+                    unsolicited=b"",
+                    complete=True,
+                    seq=event.seq,
+                    wire_ref=wire_ref,
+                    observations=observations,
+                    position=position,
+                )
 
     @asynccontextmanager
     async def pause(self, *, timeout: float) -> AsyncIterator[None]:
@@ -274,6 +276,14 @@ class Session:
         trace_id: str | None = None,
     ) -> Reply:
         trace = trace_id or self.trace_id
+        async with self._capture_trace(trace):
+            return await self._captured_command(line, trace)
+
+    async def _captured_command(
+        self,
+        line: str,
+        trace: str | None,
+    ) -> Reply:
         source_after = self.journal.last_seq(self.id)
         pending = await self.transport.drain_pending()
         if pending:
@@ -332,9 +342,22 @@ class Session:
             position=position,
         )
 
+    @asynccontextmanager
+    async def _capture_trace(
+        self,
+        trace: str | None,
+    ) -> AsyncIterator[None]:
+        """Attach one capability trace to every wire callback in its window."""
+        previous = self.trace_id
+        self.trace_id = trace
+        try:
+            yield
+        finally:
+            self.trace_id = previous
+
     def _journal_wire(self, event: WireEvent) -> None:
         """Every byte, both directions, with credentials recorded as a length only."""
-        self.journal.append(
+        wire = self.journal.append(
             self.id, "wire",
             {"direction": event.direction.value,
              "bytes": len(event.payload),
@@ -342,6 +365,26 @@ class Session:
              "digest": None if event.redacted
                        else self.journal.put_blob(event.payload)},
             trace_id=self.trace_id, at=event.at, monotonic=event.monotonic)
+        self.journal.append(
+            self.id,
+            "wire_text",
+            {
+                "direction": event.direction.value,
+                "wire_seq": wire.seq,
+                "bytes": len(event.payload),
+                "redacted": event.redacted,
+                "encoding": "latin-1",
+                "ansi": "preserved",
+                "text": (
+                    None
+                    if event.redacted
+                    else event.payload.decode("latin-1")
+                ),
+            },
+            trace_id=self.trace_id,
+            at=event.at,
+            monotonic=event.monotonic,
+        )
 
     def _wire_reference(
         self, after: int, fallback_seq: int, raw: bytes

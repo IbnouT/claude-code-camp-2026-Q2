@@ -12,6 +12,33 @@ ResultMode = Literal["raw", "minimal", "full"]
 RESULT_MODES: tuple[ResultMode, ...] = ("raw", "minimal", "full")
 
 
+class TransformedToolResult(str):
+    """Model-facing text carrying the complete transformation evidence."""
+
+    evidence_stages: dict[str, Any]
+
+    def __new__(
+        cls,
+        value: str,
+        *,
+        source: str,
+        rendered: str,
+        mode: ResultMode,
+        error: bool,
+        truncated_chars: int,
+    ) -> "TransformedToolResult":
+        instance = super().__new__(cls, value)
+        instance.evidence_stages = {
+            "mcp_result": source,
+            "result_mode": mode,
+            "rendered_result": rendered,
+            "truncated_chars": truncated_chars,
+            "model_input": value,
+            "error": error,
+        }
+        return instance
+
+
 @dataclass(frozen=True)
 class ToolResultView:
     """Human text plus the recognized envelope kind, when present."""

@@ -13,6 +13,7 @@ from .observe import (
     RoomObservation,
     VitalsObservation,
     WireReference,
+    normalized_text,
     parse,
 )
 from .position import PositionObservation, PositionTracker
@@ -54,6 +55,29 @@ class ObservationPipeline:
     ) -> tuple[tuple[Observation, ...], PositionObservation]:
         if attempted_move:
             self.tracker.moving(attempted_move)
+        self.journal.append(
+            self.session,
+            "parser_input",
+            {
+                "text": normalized_text(raw),
+                "bytes": len(raw),
+                "encoding": "latin-1",
+                "transformations": (
+                    "normalize_newlines",
+                    "remove_ansi_sgr",
+                    "remove_blank_lines",
+                    "trim_lines",
+                ),
+                "wire_ref": {
+                    "source": wire_ref.source,
+                    "first_seq": wire_ref.first_seq,
+                    "last_seq": wire_ref.last_seq,
+                    "digest": wire_ref.digest,
+                },
+                "parser_version": PARSER_VERSION,
+            },
+            trace_id=trace_id,
+        )
         observations = parse(raw, wire_ref)
         frame_coverage = Coverage()
         frame_coverage.add(observations)

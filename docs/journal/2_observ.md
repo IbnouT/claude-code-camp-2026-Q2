@@ -217,6 +217,9 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
 - Timeline buttons form a state machine, not a loose action list. Pause needs a
   visible Resume state, directional steps need adjacent retained events, and
   returning to live is meaningful only while inspecting history.
+- Goal epochs and agent turns are intersecting timelines, not a strict tree. A
+  goal can change inside a retained turn, so each iteration must link to the
+  goal active at its boundary without rewriting the true turn structure.
 
 ## Technical Conclusions
 

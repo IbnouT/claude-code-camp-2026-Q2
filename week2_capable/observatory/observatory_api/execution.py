@@ -341,7 +341,12 @@ class ExperimentExecutor:
             "--player-profile",
             job.player_profile,
             "--max-iterations",
-            str(job.definition.stop.max_iterations_per_sample),
+            str(
+                effective_config.get(
+                    "policy.max_iterations",
+                    job.definition.stop.max_iterations_per_sample,
+                )
+            ),
             "--max-sample-cost",
             str(job.definition.per_sample_spend_ceiling_usd),
         )

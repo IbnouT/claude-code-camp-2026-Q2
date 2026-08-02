@@ -59,6 +59,14 @@ flowchart TB
 - [benchmark.md](benchmark.md): the E1 journey measurement through the gateway.
 - [observatory.md](observatory.md): the causal flight recorder, debugger, and
   experiment studio.
+- [observatory/sessions.md](observatory/sessions.md): the universal recorded-run
+  workspace, from session aggregates to exact agent, model, tool, gateway,
+  Telnet, MUD, parsed, and state evidence.
+- [observatory/session_ask.md](observatory/session_ask.md): a prospective
+  grounded natural-language investigator with typed evidence tools, verified
+  citations, explicit verdicts, and bounded model use.
+- [observatory/experiments.md](observatory/experiments.md): registry-backed
+  comparisons, repeated samples, cost, behavior alignment, and safe execution.
 - Further plans land here as each component starts, one plan per component,
   reviewed before its code.
 

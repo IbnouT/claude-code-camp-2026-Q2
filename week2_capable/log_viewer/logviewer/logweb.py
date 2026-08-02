@@ -289,6 +289,8 @@ def _configuration(records: list[Record]) -> str:
         + tag("dd", _ceiling(start.get("max_iterations"), "iterations")),
         tag("dt", "work ceiling")
         + tag("dd", _ceiling(start.get("max_turn_tokens"), "tokens a turn")),
+        tag("dt", "cost ceiling")
+        + tag("dd", _cost_ceiling(start.get("max_turn_cost"))),
         tag("dt", "output cap")
         + tag("dd", _ceiling(start.get("max_output_tokens"), "tokens a reply")),
         tag("dt", "caching") + tag("dd", _caching(start)),
@@ -308,6 +310,14 @@ def _ceiling(value: Any, unit: str) -> str:
     if not int(value):
         return tag("span", "disabled", class_="absent")
     return f"{int(value):,} {unit}"
+
+
+def _cost_ceiling(value: Any) -> str:
+    if value is None:
+        return tag("span", "not recorded", class_="absent")
+    if not float(value):
+        return tag("span", "disabled", class_="absent")
+    return money(float(value), places=4)
 
 
 def _caching(start: Record) -> str:
@@ -480,6 +490,11 @@ def _one_line(text: str, width: int) -> str:
 
 
 def _first_instruction(records: list[Record]) -> str | None:
+    for record in records:
+        if record.phase == "turn":
+            instruction = record.get("instruction")
+            if isinstance(instruction, str) and instruction.strip():
+                return instruction
     for record in records:
         if record.phase != "prompt":
             continue
@@ -970,6 +985,7 @@ def _lens_context(records: list[Record]) -> str:
     session level rather than on every iteration, which is what makes the rest legible.
     """
     prompts = [r for r in records if r.phase == "prompt"]
+    requests = [r for r in records if r.phase == "model_request"]
     if not prompts:
         return tag("section", tag("p", "No prompt payload was recorded.",
                                   class_="empty"), class_="card")
@@ -983,6 +999,17 @@ def _lens_context(records: list[Record]) -> str:
         once.append(tag("details", tag(
             "summary", f"{prompts[0].get('tool_count')} tool schemas, sent on every call")
             + tag("pre", esc(names)), class_="leg"))
+    for index, record in enumerate(requests, start=1):
+        once.append(tag(
+            "details",
+            tag("summary", f"exact model request {index}")
+            + tag("pre", esc(json.dumps(
+                record.get("request"),
+                indent=2,
+                ensure_ascii=False,
+            ))),
+            class_="leg",
+        ))
 
     steps = []
     previous: list[Any] = []

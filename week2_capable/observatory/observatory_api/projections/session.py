@@ -50,6 +50,10 @@ def project_recorded_session(
     gateway_records, gateway_terminal = _gateway_records(
         bundle.gateway_rows,
         trace_links,
+        {
+            record.id: (record.iteration, record.turn)
+            for record in agent_records
+        },
     )
     agent_records = _link_agent_results(
         agent_records,
@@ -57,7 +61,10 @@ def project_recorded_session(
         gateway_terminal,
     )
     outcome = _outcome_record(bundle, summary)
-    records = tuple((*agent_records, *gateway_records, outcome))
+    records = tuple(sorted(
+        (*agent_records, *gateway_records, outcome),
+        key=_record_order,
+    ))
     world = project_world(bundle.gateway_database, objective=objective)
     cost = _cost_ledger(bundle, agent_records)
     capture_gaps = _capture_gaps(bundle, records, cost)
@@ -337,10 +344,12 @@ def _agent_records(
 def _gateway_records(
     rows: tuple[GatewayEvidenceRow, ...],
     trace_links: dict[str, dict[str, str]],
+    agent_scopes: dict[str, tuple[int | None, int | None]],
 ) -> tuple[list[SessionEvidenceRecord], dict[str, str]]:
     records: list[SessionEvidenceRecord] = []
     trace_parent: dict[str, str] = {}
     terminal: dict[str, str] = {}
+    scopes = dict(agent_scopes)
     for row in rows:
         record_id = f"gateway:{row.sequence}"
         parent: str | None = None
@@ -351,6 +360,8 @@ def _gateway_records(
                 parent = trace_parent.get(row.trace_id)
             trace_parent[row.trace_id] = record_id
             terminal[row.trace_id] = record_id
+        iteration, turn = scopes.get(parent or "", (None, None))
+        scopes[record_id] = (iteration, turn)
         records.append(
             SessionEvidenceRecord(
                 id=record_id,
@@ -362,6 +373,8 @@ def _gateway_records(
                 sequence=row.sequence,
                 at=datetime.fromtimestamp(row.at, UTC).isoformat(),
                 trace_id=row.trace_id,
+                iteration=iteration,
+                turn=turn,
                 room_id=_room_id(row),
                 status=_gateway_status(row),
                 preview=_preview(row.payload),
@@ -598,6 +611,11 @@ def _capture_gaps(
     cost: SessionCostLedger,
 ) -> tuple[str, ...]:
     gaps: list[str] = []
+    agent_phases = {
+        str(row.get("phase") or "")
+        for row in bundle.agent_rows
+    }
+    gateway_kinds = {row.kind for row in bundle.gateway_rows}
     if not bundle.agent_rows:
         gaps.append("Agent log is missing")
     if not bundle.gateway_rows:
@@ -608,6 +626,27 @@ def _capture_gaps(
         gaps.append("Agent-to-gateway trace links are missing")
     if not cost.complete:
         gaps.append(cost.completeness_detail)
+    if "response" in agent_phases and "model_request" not in agent_phases:
+        gaps.append("Exact model request body is missing")
+    if "response" in agent_phases and "provider_response" not in agent_phases:
+        gaps.append("Exact provider response body is missing")
+    transformed_results = [
+        row
+        for row in bundle.agent_rows
+        if row.get("phase") == "tool_result"
+        and isinstance(row.get("name"), str)
+        and "__" in str(row.get("name"))
+    ]
+    if transformed_results and any(
+        not isinstance(row.get("stages"), dict)
+        for row in transformed_results
+    ):
+        gaps.append("Tool result transformation stages are missing")
+    if (
+        gateway_kinds & {"wire", "observation", "unparsed"}
+        and not {"wire_text", "parser_input"}.issubset(gateway_kinds)
+    ):
+        gaps.append("MUD text transformation stages are missing")
     return tuple(gaps)
 
 

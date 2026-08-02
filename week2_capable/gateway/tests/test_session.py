@@ -105,6 +105,9 @@ class TestTheEntrySequence:
         journal.export_jsonl(session.id, exported)
         evidence = exported.read_bytes() + journal.path.read_bytes()
         assert b"do-not-persist" not in evidence
+        decoded = journal.since(session.id, kind="wire_text")
+        assert decoded[0].payload["redacted"] is True
+        assert decoded[0].payload["text"] is None
 
     async def test_arriving_straight_at_a_prompt_needs_no_further_steps(self, journal):
         # A reconnect can land in the game directly. Sending a menu choice then would type a
@@ -217,6 +220,48 @@ class TestCommands:
         commands = journal.since(session.id, kind="command")
         assert commands[-1].trace_id == "route-7"
 
+    async def test_explicit_command_trace_owns_every_wire_frame(self, journal):
+        session = make(journal, [GREETING, PASSWORD, PROMPT_BYTES])
+        await session.open()
+        original_send = session.transport.send
+        original_read = session.transport.read_until
+
+        async def send(line: str, *, secret: bool = False) -> None:
+            session._journal_wire(WireEvent(
+                at=10,
+                monotonic=10,
+                direction=Direction.OUT,
+                payload=(line + "\n").encode(),
+                redacted=secret,
+            ))
+            await original_send(line, secret=secret)
+
+        async def read(pattern, *, quiet, deadline=None):
+            data = await original_read(pattern, quiet=quiet, deadline=deadline)
+            session._journal_wire(WireEvent(
+                at=11,
+                monotonic=11,
+                direction=Direction.IN,
+                payload=data,
+            ))
+            return data
+
+        session.transport.send = send
+        session.transport.read_until = read
+        session.transport.script = [PROMPT_BYTES]
+
+        await session.command("north", trace_id="capability-42")
+
+        wire = journal.since(session.id, kind="wire")
+        assert len(wire) == 2
+        assert {event.trace_id for event in wire} == {"capability-42"}
+        decoded = journal.since(session.id, kind="wire_text")
+        assert len(decoded) == 2
+        assert {event.trace_id for event in decoded} == {"capability-42"}
+        assert decoded[0].payload["text"] == "north\n"
+        assert decoded[1].payload["text"] == PROMPT_BYTES.decode("latin-1")
+        assert session.trace_id is None
+
     async def test_parsed_facts_and_metrics_are_committed(self, journal):
         session = make(journal, [GREETING, PASSWORD, PROMPT_BYTES])
         await session.open()
@@ -226,9 +271,15 @@ class TestCommands:
         ]
         await session.command("look")
         kinds = [event.kind for event in journal.since(session.id)]
+        assert "parser_input" in kinds
         assert "observation" in kinds
         assert "position" in kinds
         assert "parse_metric" in kinds
+        parser_input = journal.since(session.id, kind="parser_input")[-1]
+        assert parser_input.payload["text"] == (
+            "The Temple\n[ Exits: n ]\n100H 82M 96V >"
+        )
+        assert parser_input.payload["wire_ref"]["digest"]
 
     async def test_unknown_output_is_an_event_not_silent_loss(self, journal):
         session = make(journal, [GREETING, PASSWORD, PROMPT_BYTES])

@@ -27,7 +27,7 @@ from ..mcp import Client
 from ..mcp.transport import DEFAULT_TIMEOUT
 from ..registry import Registry
 from ..tool import Tool
-from ..tool_result import ResultMode, render_tool_result
+from ..tool_result import ResultMode, TransformedToolResult, render_tool_result
 
 #: Joins a prefix to a tool name agent-side.
 SEPARATOR = "__"
@@ -171,11 +171,22 @@ def _build_tool(client: Client, spec: dict[str, Any],
 
     def handler(**kwargs: Any) -> str:
         result = client.call_tool(remote, {str(k): v for k, v in kwargs.items()})
-        text = render_tool_result(result["text"], result_mode)
+        source = str(result["text"])
+        rendered = render_tool_result(source, result_mode)
+        text = rendered
+        dropped = 0
         if len(text) > MAX_RESULT_CHARS:
             dropped = len(text) - MAX_RESULT_CHARS
             text = text[:MAX_RESULT_CHARS] + f"\n...[truncated {dropped} chars]"
-        return f"error: {text}" if result["error"] else text
+        model_input = f"error: {text}" if result["error"] else text
+        return TransformedToolResult(
+            model_input,
+            source=source,
+            rendered=rendered,
+            mode=result_mode,
+            error=bool(result["error"]),
+            truncated_chars=dropped,
+        )
 
     return Tool(
         name=local,

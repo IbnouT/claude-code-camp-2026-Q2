@@ -96,7 +96,11 @@ def project_live(
         if selected_at is None or _stamp(event.get("at")) <= selected_at
     ]
     objective = _objective(agent_prefix)
-    objective_initial, objective_context = _objective_contexts(agent_prefix)
+    objective_initial, objective_context = _objective_contexts(
+        agent_prefix,
+        operator_messages or [],
+        selected_at=selected_at,
+    )
     agent_thought = _agent_thought(agent_prefix)
     agent_belief = _agent_belief(agent_prefix)
     session_start = _latest(agent_prefix, "session_start")
@@ -1623,6 +1627,9 @@ def _objective(events: list[dict[str, Any]]) -> str | None:
 
 def _objective_contexts(
     events: list[dict[str, Any]],
+    operator_messages: list[dict[str, Any]],
+    *,
+    selected_at: float | None,
 ) -> tuple[LiveObjectiveContext | None, LiveObjectiveContext | None]:
     initial: LiveObjectiveContext | None = None
     current: LiveObjectiveContext | None = None
@@ -1668,6 +1675,35 @@ def _objective_contexts(
             source_kind="operator",
             revision=(current.revision + 1 if current is not None else 1),
             evidence=f"agent log line {line}",
+        )
+    for message in operator_messages:
+        if message.get("action") != "revise":
+            continue
+        instruction = _text(message.get("instruction"))
+        applied_at = _text(message.get("applied_at"))
+        if instruction is None or not instruction.strip() or applied_at is None:
+            continue
+        if selected_at is not None and _stamp(applied_at) > selected_at:
+            continue
+        title = instruction.strip()
+        if current is not None and current.title == title:
+            continue
+        if initial is None:
+            initial = LiveObjectiveContext(
+                title=title,
+                clue=None,
+                source_kind="operator",
+                revision=1,
+                evidence=f"operator message {message.get('request_id')}",
+            )
+            current = initial
+            continue
+        current = LiveObjectiveContext(
+            title=title,
+            clue=None,
+            source_kind="operator",
+            revision=current.revision + 1,
+            evidence=f"operator message {message.get('request_id')}",
         )
     return initial, current
 

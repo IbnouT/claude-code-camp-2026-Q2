@@ -34,19 +34,22 @@ FIXTURE = Path(__file__).resolve().parent / "fixtures" / "every_phase.jsonl"
 EXPECTED_FIELDS = {
     "session_start": ("schema", "model", "provider", "task", "system",
                       "context_window", "max_iterations", "max_output_tokens",
-                      "max_turn_tokens", "rates", "caches", "cache_min_tokens"),
+                      "max_turn_tokens", "max_turn_cost", "rates", "caches",
+                      "cache_min_tokens"),
     # ``attempt`` appears only when a turn number is reused, which a healthy one-turn
     # fixture cannot contain. Covered where the behaviour lives, in test_pages.py for
     # the reader and in the writer's own suite for the record.
-    "turn": ("n",),
+    "turn": ("n", "instruction"),
     "iteration": ("n", "max"),
     "prompt": ("messages", "tools", "message_count", "tool_count",
                "context_window"),
+    "model_request": ("request", "provider", "model"),
+    "provider_response": ("response", "provider", "model"),
     "plan": ("text",),
     "reasoning": ("text", "redacted"),
     "tool_call": ("name", "args", "id"),
     "tool_result": ("name", "result", "ok", "error", "tool_use_id"),
-    "response": ("text", "usage", "stop_reason", "duration_ms", "model",
+    "response": ("text", "content", "usage", "stop_reason", "duration_ms", "model",
                  "provider", "cost_usd", "usage_unit", "context_window",
                  "input_tokens", "output_tokens"),
     "retry": ("attempt", "wait", "status", "error"),

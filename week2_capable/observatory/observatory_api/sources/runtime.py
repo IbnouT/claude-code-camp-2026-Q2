@@ -42,6 +42,9 @@ class RuntimeSession:
     event_count: int
     latest_seq: int
     legacy: bool
+    objective: str | None
+    goal_count: int
+    nudge_count: int
 
     @property
     def live(self) -> bool:
@@ -70,6 +73,9 @@ class RuntimeSession:
             "latest_seq": self.latest_seq,
             "legacy": self.legacy,
             "live": self.live,
+            "objective": self.objective,
+            "goal_count": self.goal_count,
+            "nudge_count": self.nudge_count,
         }
 
 
@@ -137,7 +143,7 @@ class RuntimeSource:
     ) -> list[Event]:
         session_dir = self._session_dir(session_id)
         journal = session_dir / "gateway.db"
-        if not journal.is_file():
+        if not journal.is_file() or journal.stat().st_size == 0:
             return []
         sql = (
             "SELECT seq, session, at, monotonic, kind, payload, trace_id "
@@ -153,6 +159,12 @@ class RuntimeSource:
             arguments.append(limit)
         try:
             with self._database(journal) as database:
+                table = database.execute(
+                    "SELECT 1 FROM sqlite_master "
+                    "WHERE type = 'table' AND name = 'events'"
+                ).fetchone()
+                if table is None:
+                    return []
                 rows = database.execute(sql, arguments).fetchall()
         except sqlite3.Error as error:
             raise RuntimeSourceError(
@@ -186,6 +198,49 @@ class RuntimeSource:
                 )
             )
         return events
+
+    def wire_blob(self, session_id: str, sequence: int) -> tuple[Event, bytes] | None:
+        """Read one exact retained wire body without widening session scope."""
+        event = next(
+            iter(
+                self.events(
+                    session_id,
+                    after=max(0, sequence - 1),
+                    through=sequence,
+                    limit=1,
+                )
+            ),
+            None,
+        )
+        if event is None or event.seq != sequence or event.kind != "wire":
+            return None
+        digest = event.payload.get("digest")
+        if not isinstance(digest, str) or len(digest) != 32:
+            raise RuntimeSourceError(
+                f"session {session_id!r} wire event {sequence} has no valid digest"
+            )
+        journal = self._session_dir(session_id) / "gateway.db"
+        try:
+            with self._database(journal) as database:
+                row = database.execute(
+                    "SELECT body FROM blobs WHERE digest = ?",
+                    (digest,),
+                ).fetchone()
+        except sqlite3.Error as error:
+            raise RuntimeSourceError(
+                f"session {session_id!r} wire evidence is unreadable"
+            ) from error
+        if row is None:
+            raise RuntimeSourceError(
+                f"session {session_id!r} wire event {sequence} is missing its blob"
+            )
+        body = bytes(row["body"])
+        actual = hashlib.sha256(body).hexdigest()[:32]
+        if actual != digest:
+            raise RuntimeSourceError(
+                f"session {session_id!r} wire event {sequence} failed integrity"
+            )
+        return event, body
 
     def agent_events(self, session_id: str) -> list[dict[str, Any]]:
         session = self.session(session_id)
@@ -419,6 +474,7 @@ class RuntimeSource:
         )
         journal = session_dir / "gateway.db"
         count, latest = self._journal_summary(journal)
+        objective, goal_count, nudge_count = self._objective_summary(session_dir)
         return RuntimeSession(
             id=str(row["session_id"]),
             player_id=str(row["player_id"]),
@@ -439,7 +495,72 @@ class RuntimeSource:
             event_count=count,
             latest_seq=latest,
             legacy=bool(row["legacy"]),
+            objective=objective,
+            goal_count=goal_count,
+            nudge_count=nudge_count,
         )
+
+    def _objective_summary(
+        self,
+        session_dir: Path,
+    ) -> tuple[str | None, int, int]:
+        """Read the current applied objective and operator-message counts."""
+        source = session_dir / "operator-messages.json"
+        messages: list[dict[str, Any]] = []
+        if source.is_file():
+            try:
+                value = json.loads(source.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                value = None
+            raw = value.get("messages") if isinstance(value, dict) else None
+            if isinstance(raw, list):
+                messages = [
+                    message
+                    for message in raw
+                    if isinstance(message, dict)
+                    and isinstance(message.get("instruction"), str)
+                    and message.get("action") in {"guide", "revise"}
+                    and isinstance(message.get("applied_at"), str)
+                ]
+        initial = self._initial_objective(session_dir / "agent.jsonl")
+        revisions = [
+            str(message["instruction"]).strip()
+            for message in messages
+            if message.get("action") == "revise"
+            and str(message["instruction"]).strip()
+        ]
+        nudges = sum(message.get("action") == "guide" for message in messages)
+        objective = revisions[-1] if revisions else initial
+        goal_count = (1 if initial is not None else 0) + len(revisions)
+        return objective, goal_count, nudges
+
+    @staticmethod
+    def _initial_objective(source: Path) -> str | None:
+        """Recover an authored initial objective without treating nudges as goals."""
+        if not source.is_file():
+            return None
+        try:
+            lines = source.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            return None
+        first_turn: str | None = None
+        for line in lines:
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(event, dict):
+                continue
+            if event.get("phase") == "session_start":
+                value = event.get("objective")
+                title = value.get("title") if isinstance(value, dict) else None
+                if isinstance(title, str) and title.strip():
+                    return title.strip()
+            if event.get("phase") == "turn" and first_turn is None:
+                instruction = event.get("instruction")
+                if isinstance(instruction, str) and instruction.strip():
+                    first_turn = instruction.strip()
+        return first_turn
 
     def _session_dir(self, session_id: str) -> Path:
         if not self.available:

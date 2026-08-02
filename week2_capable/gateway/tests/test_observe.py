@@ -8,6 +8,7 @@ from mud_gateway.observe import (
     UnparsedObservation,
     VitalsObservation,
     WireReference,
+    normalized_text,
     parse,
 )
 
@@ -80,6 +81,14 @@ def test_wire_reference_digest_covers_exact_bytes():
     first = WireReference.from_bytes("session", 11, 12, b"hello")
     second = WireReference.from_bytes("session", 11, 12, b"hello!")
     assert first.digest != second.digest
+
+
+def test_normalized_text_exposes_the_exact_plain_text_parser_input():
+    assert normalized_text(
+        b"\x1b[0;33mThe Bakery\x1b[0m\r\n"
+        b"\r\n"
+        b"  The smell of bread fills the air.  \r"
+    ) == "The Bakery\nThe smell of bread fills the air."
 
 
 def test_score_publishes_full_typed_player_state() -> None:

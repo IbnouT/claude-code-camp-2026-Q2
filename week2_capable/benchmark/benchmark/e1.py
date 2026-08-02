@@ -15,6 +15,8 @@ from .metrics import LEGACY_WEEK1_MOVES, LEGACY_WEEK1_TOTAL, week1_corpus
 from .report import append_jsonl, read_rows, write_markdown
 from .runner import Budget, BudgetError, prove_surface, run_attempt
 
+PROFILES = ("direct-full", "direct-core", "hybrid-full", "hybrid-core")
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -41,7 +43,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--profile",
-        choices=("direct-full",),
+        choices=PROFILES,
         default="direct-full",
         help="validated gateway tool surface",
     )
@@ -110,8 +112,8 @@ def main(argv: list[str] | None = None) -> int:
         },
     }
     print(json.dumps(summary, indent=2, sort_keys=True))
-    if proof.profile_id != "direct-full" or proof.advertised_tools != 25:
-        parser.error("dry-run surface is not direct-full with 25 tools")
+    if proof.profile_id != arguments.profile or proof.advertised_tools < 1:
+        parser.error("dry-run surface does not match the selected gateway profile")
     if corpus.executed_total != 451 or corpus.executed_by_tool.get("move") != 316:
         parser.error("tracked Week 1 executed-call corpus drifted")
     if corpus.confirmed_total != 447 or corpus.confirmed_by_tool.get("move") != 314:
@@ -126,6 +128,8 @@ def main(argv: list[str] | None = None) -> int:
     prior = read_rows(ledger)
     if any(row.result_mode != arguments.result_mode for row in prior):
         parser.error("an output ledger cannot mix model-facing result modes")
+    if any(row.profile_id != arguments.profile for row in prior):
+        parser.error("an output ledger cannot mix gateway profiles")
     if prior and arguments.runs == 1:
         parser.error(
             "the J1 live gate already has an attempt; additional samples need "

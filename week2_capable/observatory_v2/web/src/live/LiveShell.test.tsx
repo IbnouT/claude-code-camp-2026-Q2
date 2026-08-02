@@ -1418,7 +1418,7 @@ describe("Live shell", () => {
     }));
 
     expect(navigate).toHaveBeenCalledWith(
-      "http://127.0.0.1:8787/?space=sessions&player=poucet",
+      "/sessions?player=poucet",
     );
   });
 

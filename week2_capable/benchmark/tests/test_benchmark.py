@@ -8,6 +8,7 @@ import pytest
 import yaml
 
 from benchmark.config import Repository, create_attempt
+from benchmark.e1 import main
 from benchmark.journeys import J1, J2, judge
 from benchmark.metrics import AttemptMetrics, aggregate, week1_corpus
 from benchmark.metrics import measure_attempt
@@ -20,6 +21,17 @@ from benchmark.runner import (
     _redact,
     run_attempt,
 )
+
+
+def test_cli_accepts_each_installed_gateway_profile_without_spending(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "benchmark.e1.prove_surface",
+        lambda *, profile: SurfaceProof(profile, 9, 100, 25, "abc", "PASS"),
+    )
+
+    assert main(["--profile", "hybrid-core"]) == 0
 
 
 def test_overlay_is_secret_free_and_pins_gateway_profile(tmp_path: Path) -> None:

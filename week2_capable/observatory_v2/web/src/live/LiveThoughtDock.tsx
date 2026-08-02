@@ -7,12 +7,14 @@ import { formatAge } from "./liveEvidence";
 
 type Props = {
   expanded: boolean;
+  historical?: boolean;
   thought: LiveAgentExcerpt | null;
   onToggle: () => void;
 };
 
 export function LiveThoughtDock({
   expanded,
+  historical = false,
   thought,
   onToggle,
 }: Props) {
@@ -42,7 +44,11 @@ export function LiveThoughtDock({
       >
         <span>
           Agent · {phase}
-          {thought === null ? "" : ` · ${formatAge(thought.observed_at)}`}
+          {thought === null
+            ? ""
+            : ` · ${historical
+              ? formatHistoricalTime(thought.observed_at)
+              : formatAge(thought.observed_at)}`}
         </span>
         {expanded
           ? <ChevronDown aria-hidden="true" size={14} />
@@ -64,4 +70,15 @@ export function LiveThoughtDock({
       ) : null}
     </aside>
   );
+}
+
+function formatHistoricalTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "time unavailable";
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    fractionalSecondDigits: 3,
+  }).format(date);
 }

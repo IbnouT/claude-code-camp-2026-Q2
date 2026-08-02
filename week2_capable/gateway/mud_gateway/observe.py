@@ -183,6 +183,12 @@ def segments(raw: bytes | str) -> list[Segment]:
     return found
 
 
+def normalized_text(raw: bytes | str) -> str:
+    """Return the exact plain-text frame consumed by the typed parser."""
+
+    return "\n".join(segment.text for segment in segments(raw))
+
+
 def _is_title(line: str) -> bool:
     if MOB_HERE.search(line) or SECOND_PERSON.match(line):
         return False

@@ -1,5 +1,7 @@
 import { Launcher } from "./Launcher";
 import { LiveShell } from "./live/LiveShell";
+import { SessionRoute } from "./sessions/SessionRoute";
+import { ExperimentRoute } from "./experiments/ExperimentRoute";
 import { liveIdentity } from "./routes";
 import { useTheme } from "./theme";
 
@@ -10,6 +12,22 @@ export function App() {
     return (
       <LiveShell
         identity={liveIdentity(window.location)}
+        theme={theme}
+        onThemeChange={setTheme}
+      />
+    );
+  }
+  if (window.location.pathname === "/sessions") {
+    return (
+      <SessionRoute
+        theme={theme}
+        onThemeChange={setTheme}
+      />
+    );
+  }
+  if (window.location.pathname === "/experiments") {
+    return (
+      <ExperimentRoute
         theme={theme}
         onThemeChange={setTheme}
       />

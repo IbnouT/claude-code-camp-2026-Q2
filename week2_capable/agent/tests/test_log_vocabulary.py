@@ -23,6 +23,7 @@ from tempfile import TemporaryDirectory
 
 from boukensha.logger import Logger
 from boukensha.message import Message
+from boukensha.tool_result import TransformedToolResult
 
 from .helper import StubTransport, build_agent, end_turn, ok
 
@@ -31,11 +32,14 @@ from .helper import StubTransport, build_agent, end_turn, ok
 #: without one of them failing.
 REQUIRED = {
     "session_start": ("schema",),
-    "turn": ("n",),
+    "turn": ("n", "instruction"),
     "iteration": ("n", "max"),
     "prompt": ("messages", "tools", "message_count", "tool_count",
                "context_window"),
-    "response": ("text", "usage", "stop_reason", "duration_ms"),
+    "model_request": ("request", "provider", "model"),
+    "provider_response": ("response", "provider", "model"),
+    "response": ("text", "content", "usage",
+                 "stop_reason", "duration_ms"),
     "tool_call": ("name", "args", "id"),
     "tool_result": ("name", "result", "ok", "tool_use_id"),
     "reasoning": ("text", "redacted"),
@@ -86,12 +90,22 @@ def _write_everything(path: Path) -> Logger:
     logger.iteration(n=1, max=25)
     logger.prompt(messages=[Message.user("hello")], tools={"look": object()},
                   context_window=200_000)
+    logger.model_request(
+        request={"model": "m", "messages": [{"role": "user", "content": "hello"}]},
+        provider="p",
+        model="m",
+    )
+    logger.provider_response(
+        response={"content": [{"type": "text", "text": "I see a room"}]},
+        provider="p",
+        model="m",
+    )
     logger.reasoning(text="thinking", redacted=False)
     logger.plan(text="I will look around")
     logger.tool_call(name="look", args={"target": "room"}, id="toolu_1")
     logger.tool_result(name="look", result="a room", ok=True,
                        tool_use_id="toolu_1")
-    logger.response(text="I see a room",
+    logger.response(text="I see a room", content=Message.assistant("I see a room").content,
                     usage={"input_tokens": 100, "output_tokens": 10},
                     stop_reason="end_turn", duration_ms=12.5)
     logger.compaction(before=180_000, dropped=4, context_window=200_000,
@@ -168,6 +182,30 @@ class TestEveryPhaseReachesTheFile(unittest.TestCase):
         self.assertEqual(1, data["message_count"])
         self.assertEqual(1, len(data["messages"]))
         self.assertIn("hello", str(data["messages"][0]))
+
+    def test_tool_result_keeps_every_transformation_stage(self):
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "stages.jsonl"
+            logger = Logger(session_id="stages", log=path)
+            result = TransformedToolResult(
+                "room text",
+                source='{"type":"observation","text":"room text"}',
+                rendered="room text",
+                mode="raw",
+                error=False,
+                truncated_chars=0,
+            )
+            logger.tool_result(name="look", result=result, tool_use_id="call-1")
+            logger.close()
+            record = _read(path)[-1]
+
+        self.assertEqual("room text", record["result"])
+        self.assertEqual(
+            '{"type":"observation","text":"room text"}',
+            record["stages"]["mcp_result"],
+        )
+        self.assertEqual("raw", record["stages"]["result_mode"])
+        self.assertEqual("room text", record["stages"]["model_input"])
 
     def test_a_debug_only_phase_is_absent_when_debug_is_off(self):
         with TemporaryDirectory() as tmp:

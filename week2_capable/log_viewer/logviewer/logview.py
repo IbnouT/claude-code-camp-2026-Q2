@@ -31,7 +31,8 @@ from typing import Any, Iterator
 #: and filtering, never to reject: a session from a newer step may carry a phase
 #: this list has not heard of, and it still has to be readable.
 KNOWN_PHASES = (
-    "session_start", "turn", "iteration", "prompt", "response",
+    "session_start", "turn", "iteration", "prompt", "model_request",
+    "provider_response", "response",
     "tool_call", "tool_result", "reasoning", "plan", "compaction",
     "retry", "limit_reached", "turn_end", "raw", "log_error",
 )

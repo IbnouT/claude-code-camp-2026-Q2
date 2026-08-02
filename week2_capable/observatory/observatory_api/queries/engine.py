@@ -18,6 +18,7 @@ from . import experiments as experiment_queries
 from . import knowledge as knowledge_queries
 from . import live as live_queries
 from . import recorded as recorded_queries
+from . import sessions as session_queries
 from .common import missing
 
 
@@ -84,6 +85,26 @@ def plan_query(question: str, scope: QueryScope) -> ObservatoryQuery | None:
             for term in ("sample", "job", "definition", "cohort")
         ):
             operation = "list_experiment_samples"
+        elif scope.space == "experiments" and any(
+            term in normalized
+            for term in ("find", "show", "search", "trace", "record")
+        ):
+            operation = "search_evidence"
+        elif scope.space == "experiments" and any(
+            term in normalized
+            for term in (
+                "arm",
+                "cost",
+                "expensive",
+                "call",
+                "token",
+                "success",
+                "diverg",
+                "path",
+                "result",
+            )
+        ):
+            operation = "compare_rendering"
         elif scope.space == "knowledge" and any(
             term in normalized
             for term in ("know", "learn", "fact", "entity", "place")
@@ -155,6 +176,21 @@ def answer_operation(
             result = live_queries.search(request, runtime, selected)
     elif request.scope.space == "sessions":
         if operation == "search_evidence":
+            runtime_result = session_queries.search(
+                request,
+                runtime,
+                selected,
+            )
+        elif operation == "diagnose_stop":
+            runtime_result = session_queries.diagnose_stop(request, runtime)
+        else:
+            runtime_result = session_queries.position_candidates(
+                request,
+                runtime,
+            )
+        if runtime_result is not None:
+            result = runtime_result
+        elif operation == "search_evidence":
             result = recorded_queries.search(request, recorded, selected)
         elif benchmark is None:
             result = _source_missing(request, operation, "selected run")
