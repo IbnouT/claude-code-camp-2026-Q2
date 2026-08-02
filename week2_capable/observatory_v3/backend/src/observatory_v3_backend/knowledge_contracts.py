@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from .json_types import JsonValue
 
 
 class KnowledgeEvidence(BaseModel):
@@ -29,7 +31,7 @@ class KnowledgeAssertionRecord(BaseModel):
     fact_id: str
     subject: str
     predicate: str
-    value: Any
+    value: JsonValue
     layer: Literal["belief", "parsed", "learned", "observer_truth"]
     status: str
     confidence: str

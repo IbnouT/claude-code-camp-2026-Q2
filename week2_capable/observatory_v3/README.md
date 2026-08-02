@@ -22,9 +22,9 @@ flowchart LR
 
 ## Current state
 
-- The web foundation is implemented under `web/`.
-- The backend boundary is reserved for the B1 implementation.
-- The B0 comparison harness is transition tooling outside production code.
+- The web foundation and contract boundary are implemented under `web/`.
+- The bounded source repositories and versioned API live under `backend/`.
+- Pydantic, OpenAPI, generated TypeScript, and Zod share one public contract.
 
 ## Commands
 

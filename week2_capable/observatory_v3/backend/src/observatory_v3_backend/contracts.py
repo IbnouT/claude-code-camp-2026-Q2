@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .json_types import JsonValue
 from .knowledge_contracts import PlayerKnowledge
 
 SourceId = Literal["gateway", "agent", "benchmark", "knowledge", "world"]
@@ -450,7 +451,7 @@ class InvestigationEvent(BaseModel):
     duration_ms: float = 0
     parent: int | None = None
     citation: str | None = None
-    attributes: dict[str, Any] = Field(default_factory=dict)
+    attributes: dict[str, JsonValue] = Field(default_factory=dict)
 
 
 class DiagnosticRecord(BaseModel):
@@ -723,7 +724,7 @@ class SessionEvidenceRecord(BaseModel):
     tokens: int = 0
     status: EvidenceStatus = "unknown"
     preview: str
-    fields: dict[str, Any] = Field(default_factory=dict)
+    fields: dict[str, JsonValue] = Field(default_factory=dict)
     source_ref: str
     capture_gaps: tuple[str, ...] = ()
 

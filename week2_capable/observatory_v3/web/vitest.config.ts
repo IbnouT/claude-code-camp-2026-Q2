@@ -13,6 +13,11 @@ export default defineConfig({
       "@": path.resolve(sourceDirectory),
     },
   },
+  server: {
+    fs: {
+      allow: [".."],
+    },
+  },
   test: {
     environment: "jsdom",
     include: ["src/**/*.test.{ts,tsx}"],

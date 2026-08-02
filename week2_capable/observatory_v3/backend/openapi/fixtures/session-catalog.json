@@ -1,0 +1,40 @@
+{
+  "capture_gaps": [],
+  "completeness": "complete",
+  "continuation_cursor": null,
+  "players": [
+    {
+      "id": "poucet",
+      "label": "Poucet"
+    }
+  ],
+  "sessions": [
+    {
+      "capture_status": "complete",
+      "character": "poucet",
+      "control_available": false,
+      "control_state": null,
+      "created_at": "2026-08-02T12:00:00Z",
+      "ended_at": "2026-08-02T12:04:12Z",
+      "event_count": 183,
+      "gateway_session_id": "gateway-example",
+      "goal_count": 2,
+      "id": "session-example",
+      "latest_seq": 183,
+      "legacy": false,
+      "live": false,
+      "nudge_count": 1,
+      "objective": "Find the city gate",
+      "player_id": "poucet",
+      "state": "stopped",
+      "stop_mode": "goal_completed",
+      "updated_at": "2026-08-02T12:04:12Z"
+    }
+  ],
+  "resource_id": "session-catalog",
+  "resource_version": 1,
+  "source_cursor": "fixture:session-catalog:1",
+  "source_refs": [
+    "registry.db schema 1"
+  ]
+}

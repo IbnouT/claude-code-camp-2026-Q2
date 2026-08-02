@@ -16,6 +16,7 @@
     "playwright-report/**",
     "test-results/**",
     "storybook-static/**",
-    "src/routeTree.gen.ts"
+    "src/routeTree.gen.ts",
+    "src/data/generated/**"
   ]
 }

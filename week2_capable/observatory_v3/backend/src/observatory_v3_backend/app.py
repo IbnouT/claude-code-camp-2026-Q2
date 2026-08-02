@@ -24,6 +24,8 @@ from starlette.responses import (
 )
 from starlette.routing import Route
 
+from .api_v1 import api_v1_routes, openapi_document
+from .api_v1.contracts import ApiError
 from .capabilities import discover
 from .contracts import (
     AskRequest,
@@ -231,7 +233,7 @@ def create_app(
 
     async def gateway_events(request: Request) -> Response:
         session = request.path_params["session"]
-        endpoint = request.path_params["endpoint"]
+        endpoint = request.path_params.get("endpoint", "events")
         if endpoint not in {"events", "replay"}:
             return JSONResponse({"error": "not_found"}, status_code=404)
         if runtime is not None and runtime.available:
@@ -1145,14 +1147,41 @@ def create_app(
             return JSONResponse({"error": "not_found"}, status_code=404)
         return FileResponse(target)
 
+    async def api_v1_openapi(_request: Request) -> JSONResponse:
+        return JSONResponse(openapi_document())
+
+    async def unsupported_api_version(request: Request) -> JSONResponse:
+        version = request.path_params["version"]
+        error = (
+            ApiError(
+                error="not_found",
+                detail="The requested resource is not published in API version 1.",
+            )
+            if version == 1
+            else ApiError(
+                error="unsupported_api_version",
+                detail=f"API version {version} is unsupported. Use /api/v1.",
+            )
+        )
+        return JSONResponse(error.model_dump(mode="json"), status_code=404)
+
     @asynccontextmanager
     async def lifespan(_application: Starlette) -> AsyncIterator[None]:
         yield
         await storage.close()
 
+    versioned_handlers = {
+        "health": health,
+        "capabilities": capabilities,
+    }
+
     return Starlette(
         lifespan=lifespan,
         routes=[
+            Route("/api/v1/openapi.json", api_v1_openapi),
+            *api_v1_routes(versioned_handlers),
+            Route("/api/v{version:int}", unsupported_api_version),
+            Route("/api/v{version:int}/{path:path}", unsupported_api_version),
             Route("/api/health", health),
             Route("/api/capabilities", capabilities),
             Route("/api/contracts", contracts),

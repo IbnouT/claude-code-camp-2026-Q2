@@ -519,6 +519,15 @@ Quality bar:
 - pinned justified dependency
 - contract tests
 
+Contract toolchain:
+
+- Pydantic 2.13.4 owns the authored public models.
+- OpenAPI 3.1.1 is the deterministic checked contract artifact.
+- `openapi-spec-validator` 0.9.0 independently validates the artifact.
+- Orval 8.23.0 generates TypeScript types and status-specific Zod validators.
+- Zod 4.4.3 Mini keeps runtime validation tree-shakeable.
+- Feature code reaches network data only through `src/data`.
+
 ### B3. Disposable index and stable identity
 
 Build:

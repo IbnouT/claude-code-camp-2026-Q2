@@ -288,6 +288,21 @@ without opening an unrelated session. A bounded worker pool held event-loop
 delay to 10.27 ms p95 across 16 concurrent reads, while complete records before
 a partial JSONL tail remained readable.
 
+### 12. A generated type was not yet a trustworthy boundary
+
+Static TypeScript types disappeared at runtime, so malformed evidence could
+still enter the interface. A versioned OpenAPI contract now generates both
+types and strict Zod Mini validators, while the same sanitized session fixture
+must pass Pydantic and browser validation.
+
+- Every versioned route, schema operation, generated type, and validator is
+  checked as one matching inventory.
+- A generator candidate with a high-severity transitive dependency was
+  rejected before its output became part of the application.
+- Unknown API versions return a typed JSON error before the application shell.
+- Full legacy investigations remain compatibility-only until bounded hierarchy
+  handlers exist.
+
 ## Technical Conclusions
 
 - The gateway hypothesis held. Owning the wire made raw evidence, typed

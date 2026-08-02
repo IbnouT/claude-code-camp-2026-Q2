@@ -5,8 +5,14 @@ import { fileURLToPath } from "node:url"
 const packageRoot = fileURLToPath(new URL("..", import.meta.url))
 const v3Root = path.resolve(packageRoot, "..")
 const sourceRoot = path.join(packageRoot, "src")
+const canonicalBackendRoot = path.join(v3Root, "backend")
 const backendRoot =
-  process.env.OBSERVATORY_V3_BACKEND_ROOT ?? path.join(v3Root, "backend")
+  process.env.OBSERVATORY_V3_BACKEND_ROOT ?? canonicalBackendRoot
+const backendFixtureRoot = path.join(
+  canonicalBackendRoot,
+  "openapi",
+  "fixtures"
+)
 const architectureCheck = fileURLToPath(import.meta.url)
 const sourceExtensions = new Set([".js", ".jsx", ".mjs", ".ts", ".tsx"])
 const backendExtensions = new Set([".py"])
@@ -67,6 +73,23 @@ function isInsidePackage(file) {
   return relativePath !== ".." && !relativePath.startsWith(`..${path.sep}`)
 }
 
+function isApprovedContractFixtureImport(file, specifier) {
+  if (!file.endsWith(".test.ts") && !file.endsWith(".test.tsx")) {
+    return false
+  }
+  const [sourcePath, query = ""] = specifier.split("?")
+  if (sourcePath === undefined || query !== "raw") {
+    return false
+  }
+  const resolved = path.resolve(path.dirname(file), sourcePath)
+  const relative = path.relative(backendFixtureRoot, resolved)
+  return (
+    relative !== ".." &&
+    !relative.startsWith(`..${path.sep}`) &&
+    path.extname(resolved) === ".json"
+  )
+}
+
 const scannedDirectories = ["scripts", "src", "tests"].map((directory) =>
   path.join(packageRoot, directory)
 )
@@ -119,8 +142,20 @@ for (const { contents, file } of sourceContents) {
     }
 
     if (!relativeFile.startsWith(`src${path.sep}data${path.sep}`)) {
-      if (/\bfetch\s*\(/u.test(contents)) {
-        failures.push(`${relativeFile}: fetch outside src/data`)
+      if (/\b(?:fetch|EventSource|WebSocket)\b/u.test(contents)) {
+        failures.push(`${relativeFile}: network transport outside src/data`)
+      }
+      if (/["'`]\/api\/v\d/u.test(contents)) {
+        failures.push(`${relativeFile}: API route literal outside src/data`)
+      }
+      if (
+        /\b(?:interface|type)\s+\w+(?:Request|Response|Dto|DTO|Payload)\b/u.test(
+          contents
+        )
+      ) {
+        failures.push(
+          `${relativeFile}: independently authored transport type outside src/data`
+        )
       }
     }
   }
@@ -170,8 +205,15 @@ for (const { contents, file } of sourceContents) {
     }
 
     if (specifier.startsWith(".")) {
-      const resolvedImport = path.resolve(path.dirname(file), specifier)
-      if (!isInsidePackage(resolvedImport)) {
+      const [sourcePath] = specifier.split("?")
+      const resolvedImport = path.resolve(
+        path.dirname(file),
+        sourcePath ?? specifier
+      )
+      if (
+        !isInsidePackage(resolvedImport) &&
+        !isApprovedContractFixtureImport(file, specifier)
+      ) {
         failures.push(`${relativeFile}: import escapes package ${specifier}`)
       }
     }

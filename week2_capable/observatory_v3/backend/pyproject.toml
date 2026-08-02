@@ -16,11 +16,15 @@ dependencies = [
 requires = ["uv_build>=0.11.28,<0.12.0"]
 build-backend = "uv_build"
 
+[project.scripts]
+observatory-v3-openapi = "observatory_v3_backend.api_v1.openapi:main"
+
 [dependency-groups]
 dev = [
     "anyio==4.14.2",
     "httpx==0.28.1",
     "mypy==2.3.0",
+    "openapi-spec-validator==0.9.0",
     "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
     "ruff==0.16.1",

@@ -30,6 +30,8 @@ flowchart LR
 - Vitest and Testing Library cover component behavior.
 - Playwright and axe cover browser behavior and accessibility.
 - Architecture checks block old Observatory imports and bypasses.
+- Orval generates TypeScript and status-specific Zod Mini validators.
+- Network values enter application code as `unknown` and validate in `src/data`.
 - Production builds exclude the development review module.
 
 The development server exposes the cumulative foundation review and the
@@ -56,6 +58,8 @@ production application boundary.
 | `npm run typecheck`          | Check TypeScript without emitting files             |
 | `npm run lint`               | Run Oxlint across the package                       |
 | `npm run architecture:check` | Enforce runtime ownership boundaries                |
+| `npm run contracts:generate` | Generate types and runtime validators               |
+| `npm run contracts:check`    | Check deterministic output and operation coverage   |
 | `npm test`                   | Run component tests                                 |
 | `npm run test:e2e`           | Run Chromium and axe browser gates                  |
 | `npm run build`              | Typecheck, build, and inspect the production bundle |
@@ -76,6 +80,8 @@ production application boundary.
 | Prettier                     | Deterministic source and Tailwind class ordering                 |
 | Vitest and Testing Library   | Component behavior verification                                  |
 | Playwright and axe           | Browser and accessibility verification                           |
+| Orval 8.23.0                 | OpenAPI TypeScript and Zod generation                            |
+| Zod 4.4.3 Mini               | Tree-shakeable runtime contract validation                       |
 
 Router and server-state packages are installed but remain inactive until their
 own accepted landings.
@@ -86,6 +92,8 @@ own accepted landings.
 - No code or stylesheet from `observatory/` or `observatory_v2/` may become a
   dependency.
 - Presentation components do not call `fetch` or create polling loops.
+- Feature components do not author transport request or response types.
+- API route literals and network transports remain inside `src/data`.
 - Internal navigation does not use raw document or history APIs.
 - Product routes and semantic visual tokens arrive only in their owning
   landings.
