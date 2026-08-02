@@ -262,6 +262,26 @@ logging boundary erased the source needed to explain later behaviour.
   them. Aggregate focus now retains the enclosing iteration and causal chain.
 - Older recordings name missing stages instead of implying complete evidence.
 
+### 10. The scaffold itself needed an acceptance gate
+
+The official frontend generator built and rendered, but its generated lint
+configuration rejected its own button source and its Vite configuration used a
+legacy path global. Testing the untouched scaffold separated those upstream
+defects from project code. The accepted foundation now pins the toolchain,
+checks every source boundary, proves Fast Refresh with preserved state, and
+keeps its development review surface out of the production graph.
+
+### 11. A selected session lookup was still catalog work
+
+A deterministic 66-session corpus showed that opening one session hydrated all
+65 unrelated sessions before returning the selected one. Event count alone was
+a false proxy for session weight. Combining 2,233 gateway events with 1,040
+agent records raised the complete investigation from 1.28 MiB and 16 ms to
+14.79 MiB and 791 ms, while a cursor-bounded five-event read remained below one
+millisecond at p95. Direct lookup, bounded hierarchy, and incremental
+materialization became measurable requirements rather than general performance
+preferences.
+
 ## Technical Conclusions
 
 - The gateway hypothesis held. Owning the wire made raw evidence, typed

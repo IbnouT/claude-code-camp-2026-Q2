@@ -1,0 +1,164 @@
+{
+  "environment": {
+    "implementation": "CPython",
+    "machine": "arm64",
+    "python": "3.12.7",
+    "system": "Darwin"
+  },
+  "failure_modes": {
+    "full_history_fold": {
+      "agent_records_folded": 1040,
+      "gateway_events_folded": 2233,
+      "reproduced": true
+    },
+    "partial_line": {
+      "current_behavior": "request_rejected",
+      "reproduced": true
+    },
+    "unbounded_payload": {
+      "investigation_payload_bytes": 15504249,
+      "reproduced": true
+    },
+    "unrelated_session_scan": {
+      "reproduced": true,
+      "selected_lookup_sessions_hydrated": 66,
+      "unrelated_sessions_hydrated": 65
+    }
+  },
+  "measurement": {
+    "cache_state": "warm_after_excluded_warmup",
+    "clock": "time.perf_counter",
+    "percentiles": {
+      "p50": "median",
+      "p95": "nearest_rank"
+    },
+    "repetitions": 20,
+    "request_count_per_operation": 20,
+    "warmups": 1
+  },
+  "metrics": {
+    "agent_history_read": {
+      "lines_read": 1040,
+      "p50_ms": 105.3105,
+      "p95_ms": 108.5817,
+      "repetitions": 20,
+      "source_bytes": 13537782
+    },
+    "catalog": {
+      "p50_ms": 86.6539,
+      "p95_ms": 92.9446,
+      "payload_bytes": 34316,
+      "repetitions": 20,
+      "sessions_hydrated_per_request": 66,
+      "sessions_returned": 66
+    },
+    "incremental_gateway_read": {
+      "cursor_after": 2228,
+      "p50_ms": 0.2969,
+      "p95_ms": 0.5371,
+      "repetitions": 20,
+      "rows_read": 5
+    },
+    "investigation_projection": {
+      "agent_records_folded": 1040,
+      "gateway_events_folded": 2233,
+      "p50_ms": 787.0059,
+      "p95_ms": 798.0818,
+      "records_produced": 3275,
+      "repetitions": 20
+    },
+    "investigation_serialization": {
+      "compressed_payload_bytes": 197170,
+      "p50_ms": 37.1713,
+      "p95_ms": 37.9787,
+      "payload_bytes": 15504249,
+      "repetitions": 20
+    },
+    "live_projection": {
+      "agent_records_folded": 1040,
+      "gateway_events_folded": 2233,
+      "p50_ms": 5.0313,
+      "p95_ms": 5.4958,
+      "repetitions": 20
+    },
+    "live_serialization": {
+      "compressed_payload_bytes": 2118,
+      "p50_ms": 0.1347,
+      "p95_ms": 0.1485,
+      "payload_bytes": 17731,
+      "repetitions": 20
+    },
+    "operator_history_read": {
+      "messages_read": 2,
+      "p50_ms": 0.1962,
+      "p95_ms": 0.3248,
+      "repetitions": 20
+    },
+    "reconnect_gateway_read": {
+      "p50_ms": 5.5216,
+      "p95_ms": 6.3671,
+      "repetitions": 20,
+      "rows_read": 2233,
+      "source_bytes": 659456
+    },
+    "selected_session_lookup": {
+      "p50_ms": 89.1835,
+      "p95_ms": 90.8445,
+      "repetitions": 20,
+      "sessions_hydrated_per_request": 66,
+      "unrelated_sessions_hydrated": 65
+    }
+  },
+  "provenance": {
+    "calibration": {
+      "reference_agent_records": 8440,
+      "reference_gateway_events": 19525,
+      "reference_sessions": 38,
+      "source": "sanitized_retained_measurement_envelope"
+    },
+    "cases": [
+      "many_session_registry",
+      "full_gateway_history",
+      "agent_evidence",
+      "operator_guidance",
+      "lifecycle_history",
+      "running_session",
+      "stopped_session",
+      "partial_jsonl_line"
+    ],
+    "fixture": "observatory-backend-baseline",
+    "fixture_sha256": "4e84b8399b14507ce83982dfd13edf450b61d0297eb13922b5d5b0b7ea38e31d",
+    "fixture_version": 3,
+    "gateway_schema": {
+      "owner": "boukensha gateway",
+      "version": 1
+    },
+    "generator": "tests.performance.fixture.build_baseline_fixture",
+    "registry_schema": {
+      "owner": "boukensha runtime",
+      "version": 0,
+      "version_state": "unversioned"
+    },
+    "running_sessions": 1,
+    "sanitized": true,
+    "sessions": 66,
+    "stopped_sessions": 65,
+    "target_agent_log_bytes": 13537782,
+    "target_agent_records": 1040,
+    "target_gateway_events": 2233,
+    "target_lifecycle_records": 4,
+    "target_operator_messages": 2,
+    "unrelated_agent_log_bytes": 111499643,
+    "unrelated_agent_records": 8640,
+    "unrelated_gateway_event_max": 1635,
+    "unrelated_gateway_event_min": 1,
+    "unrelated_gateway_events": 21766
+  },
+  "readiness_markers": {
+    "browser_parse_and_render": "measured_in_v3_browser_gate",
+    "fixture_ready_ms": 503.8513,
+    "server_catalog_json_ready_p50_ms": 175.8374,
+    "server_detail_json_ready_p50_ms": 1111.0429
+  },
+  "schema": "observatory.backend-baseline.v1"
+}

@@ -67,6 +67,9 @@ flowchart TB
   citations, explicit verdicts, and bounded model use.
 - [observatory/experiments.md](observatory/experiments.md): registry-backed
   comparisons, repeated samples, cost, behavior alignment, and safe execution.
+- [observatory/frontend_foundation.md](observatory/frontend_foundation.md):
+  one typed application shell, canonical components, semantic styling,
+  architecture enforcement, and visual regression gates.
 - Further plans land here as each component starts, one plan per component,
   reviewed before its code.
 

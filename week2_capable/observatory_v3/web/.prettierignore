@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+storybook-static/
+.vite/
+.pnpm-store/
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+src/routeTree.gen.ts
