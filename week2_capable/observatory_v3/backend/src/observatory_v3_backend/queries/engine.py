@@ -18,12 +18,10 @@ from ..execution import ExperimentExecutor
 from ..sources.benchmark import BenchmarkSource
 from ..sources.knowledge import KnowledgeSource
 from ..sources.recorded_session import RecordedSessionSource
-from ..sources.runtime import RuntimeSource
+from ..sources.runtime import RuntimeSource, RuntimeSourceError
 from . import experiments as experiment_queries
 from . import knowledge as knowledge_queries
-from . import live as live_queries
 from . import recorded as recorded_queries
-from . import sessions as session_queries
 from .common import missing
 
 
@@ -167,30 +165,36 @@ def answer_operation(
             "permitted operation for selected space",
         )
     if request.scope.space == "live":
-        if operation == "summarize_live":
-            result = live_queries.summarize(request, runtime)
-        elif operation == "diagnose_stop":
-            result = live_queries.diagnose_stop(request, runtime)
-        elif operation == "list_position_candidates":
-            result = live_queries.position_candidates(request, runtime)
-        else:
-            result = live_queries.search(request, runtime, selected)
+        result = _rejected(
+            request,
+            selected,
+            (
+                "Live compatibility queries were retired. "
+                "Use the bounded /api/v1/live resources."
+            ),
+            "bounded Live resource",
+        )
     elif request.scope.space == "sessions":
-        if operation == "search_evidence":
-            runtime_result = session_queries.search(
+        runtime_session = None
+        if (
+            runtime is not None
+            and runtime.available
+            and request.scope.run_id is not None
+        ):
+            try:
+                runtime_session = runtime.session(request.scope.run_id)
+            except RuntimeSourceError:
+                runtime_session = None
+        if runtime_session is not None:
+            result = _rejected(
                 request,
-                runtime,
                 selected,
+                (
+                    "Runtime-session compatibility queries were retired. "
+                    "Use the bounded /api/v1/sessions resources."
+                ),
+                "bounded Sessions resource",
             )
-        elif operation == "diagnose_stop":
-            runtime_result = session_queries.diagnose_stop(request, runtime)
-        else:
-            runtime_result = session_queries.position_candidates(
-                request,
-                runtime,
-            )
-        if runtime_result is not None:
-            result = runtime_result
         elif operation == "search_evidence":
             result = recorded_queries.search(request, recorded, selected)
         elif benchmark is None:

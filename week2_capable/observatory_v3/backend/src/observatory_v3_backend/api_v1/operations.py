@@ -13,7 +13,28 @@ from starlette.responses import JSONResponse, Response, StreamingResponse
 from starlette.routing import Route
 
 from ..contracts import ObservatoryCapabilities
-from .contracts import ApiError, HealthResponse
+from ..resources.contracts import (
+    CostRangeResponse,
+    EntityPageResponse,
+    EvidenceRecordResponse,
+    ExperimentCatalogPage,
+    ExperimentDetailResponse,
+    GoalPageResponse,
+    KnowledgeDetailPage,
+    KnowledgeEvidencePage,
+    KnowledgeSummaryResponse,
+    LifecyclePageResponse,
+    LivePartitionResponse,
+    MapPrefixResponse,
+    MaterializationPendingResponse,
+    SearchPageResponse,
+    SessionSummaryResponse,
+    TracePageResponse,
+    TurnPageResponse,
+    ValueChunkResponse,
+    WireBodyResponse,
+)
+from .contracts import ApiError, HealthResponse, SessionCatalogResponse
 
 HttpMethod = Literal["GET", "POST"]
 ParameterLocation = Literal["path", "query", "header"]
@@ -66,7 +87,21 @@ def _get(
     handler: str,
     tag: str,
     response: type[BaseModel],
+    *,
+    parameters: tuple[ParameterSpec, ...] = (),
+    materialization_pending: bool = False,
 ) -> OperationSpec:
+    pending = (
+        (
+            ResponseSpec(
+                202,
+                "Selected-session materialization is pending",
+                MaterializationPendingResponse,
+            ),
+        )
+        if materialization_pending
+        else ()
+    )
     return OperationSpec(
         method="GET",
         path=path,
@@ -74,8 +109,51 @@ def _get(
         handler=handler,
         tags=(tag,),
         request_model=None,
-        responses=(ResponseSpec(200, "Successful response", response), *ERRORS),
+        responses=(
+            ResponseSpec(200, "Successful response", response),
+            *pending,
+            *ERRORS,
+        ),
+        parameters=parameters,
     )
+
+
+SESSION_ID = ParameterSpec(
+    "session_id",
+    "path",
+    {"type": "string", "minLength": 1, "maxLength": 200},
+    required=True,
+)
+CURSOR = ParameterSpec(
+    "cursor",
+    "query",
+    {"type": "string", "minLength": 1, "maxLength": 2_048},
+)
+PAGE_LIMIT_50 = ParameterSpec(
+    "limit",
+    "query",
+    {"type": "integer", "minimum": 1, "maximum": 50, "default": 20},
+)
+PAGE_LIMIT_20 = ParameterSpec(
+    "limit",
+    "query",
+    {"type": "integer", "minimum": 1, "maximum": 20, "default": 20},
+)
+PAGE_LIMIT_100 = ParameterSpec(
+    "limit",
+    "query",
+    {"type": "integer", "minimum": 1, "maximum": 100, "default": 50},
+)
+CONTENT_OFFSET = ParameterSpec(
+    "offset",
+    "query",
+    {"type": "integer", "minimum": 0, "default": 0},
+)
+CONTENT_MAX_BYTES = ParameterSpec(
+    "max_bytes",
+    "query",
+    {"type": "integer", "minimum": 1, "maximum": 65_536, "default": 16_384},
+)
 
 
 API_V1_OPERATIONS: tuple[OperationSpec, ...] = (
@@ -86,6 +164,384 @@ API_V1_OPERATIONS: tuple[OperationSpec, ...] = (
         "capabilities",
         "system",
         ObservatoryCapabilities,
+    ),
+    _get(
+        "/sessions",
+        "getSessionCatalog",
+        "session_catalog",
+        "sessions",
+        SessionCatalogResponse,
+        parameters=(
+            CURSOR,
+            PAGE_LIMIT_50,
+            ParameterSpec(
+                "player_id",
+                "query",
+                {"type": "string", "minLength": 1, "maxLength": 120},
+            ),
+        ),
+    ),
+    _get(
+        "/sessions/{session_id:str}",
+        "getSessionSummary",
+        "session_summary",
+        "sessions",
+        SessionSummaryResponse,
+        parameters=(SESSION_ID,),
+        materialization_pending=True,
+    ),
+    _get(
+        "/sessions/{session_id:str}/goals",
+        "getSessionGoals",
+        "goals",
+        "sessions",
+        GoalPageResponse,
+        parameters=(SESSION_ID, CURSOR, PAGE_LIMIT_20),
+        materialization_pending=True,
+    ),
+    _get(
+        "/sessions/{session_id:str}/goals/{goal_id:str}/turns",
+        "getGoalTurns",
+        "turns",
+        "sessions",
+        TurnPageResponse,
+        parameters=(
+            SESSION_ID,
+            ParameterSpec(
+                "goal_id",
+                "path",
+                {"type": "string", "minLength": 1},
+                required=True,
+            ),
+            CURSOR,
+            PAGE_LIMIT_20,
+        ),
+    ),
+    _get(
+        "/sessions/{session_id:str}/lifecycle",
+        "getSessionLifecycle",
+        "lifecycle",
+        "sessions",
+        LifecyclePageResponse,
+        parameters=(SESSION_ID, CURSOR, PAGE_LIMIT_100),
+    ),
+    _get(
+        "/sessions/{session_id:str}/lifecycle/{sequence:int}/content",
+        "getLifecycleContent",
+        "lifecycle_content",
+        "sessions",
+        ValueChunkResponse,
+        parameters=(
+            SESSION_ID,
+            ParameterSpec(
+                "sequence",
+                "path",
+                {"type": "integer", "minimum": 1},
+                required=True,
+            ),
+            CONTENT_OFFSET,
+            CONTENT_MAX_BYTES,
+        ),
+        materialization_pending=True,
+    ),
+    _get(
+        "/sessions/{session_id:str}/turns/{turn_id:str}/iterations",
+        "getTurnIterations",
+        "iterations",
+        "sessions",
+        EntityPageResponse,
+        parameters=(
+            SESSION_ID,
+            ParameterSpec(
+                "turn_id",
+                "path",
+                {"type": "string", "minLength": 1},
+                required=True,
+            ),
+            CURSOR,
+            PAGE_LIMIT_100,
+        ),
+    ),
+    _get(
+        "/sessions/{session_id:str}/evidence/{record_id:str}/children",
+        "getEvidenceChildren",
+        "evidence_children",
+        "evidence",
+        EntityPageResponse,
+        parameters=(
+            SESSION_ID,
+            ParameterSpec(
+                "record_id",
+                "path",
+                {"type": "string", "minLength": 1},
+                required=True,
+            ),
+            CURSOR,
+            PAGE_LIMIT_100,
+        ),
+    ),
+    _get(
+        "/sessions/{session_id:str}/evidence/{record_id:str}",
+        "getEvidenceRecord",
+        "evidence_record",
+        "evidence",
+        EvidenceRecordResponse,
+        parameters=(
+            SESSION_ID,
+            ParameterSpec(
+                "record_id",
+                "path",
+                {"type": "string", "minLength": 1},
+                required=True,
+            ),
+        ),
+        materialization_pending=True,
+    ),
+    _get(
+        "/sessions/{session_id:str}/evidence/{record_id:str}/content",
+        "getEvidenceContent",
+        "evidence_content",
+        "evidence",
+        ValueChunkResponse,
+        parameters=(
+            SESSION_ID,
+            ParameterSpec(
+                "record_id",
+                "path",
+                {"type": "string", "minLength": 1},
+                required=True,
+            ),
+            CONTENT_OFFSET,
+            CONTENT_MAX_BYTES,
+        ),
+        materialization_pending=True,
+    ),
+    _get(
+        "/sessions/{session_id:str}/traces/{trace_id:str}",
+        "getCorrelatedTrace",
+        "trace",
+        "evidence",
+        TracePageResponse,
+        parameters=(
+            SESSION_ID,
+            ParameterSpec(
+                "trace_id",
+                "path",
+                {"type": "string", "minLength": 1},
+                required=True,
+            ),
+            CURSOR,
+            PAGE_LIMIT_100,
+        ),
+    ),
+    _get(
+        "/sessions/{session_id:str}/wire/{digest:str}",
+        "getWireBody",
+        "wire_body",
+        "evidence",
+        WireBodyResponse,
+        parameters=(
+            SESSION_ID,
+            ParameterSpec(
+                "digest",
+                "path",
+                {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                required=True,
+            ),
+            ParameterSpec(
+                "max_bytes",
+                "query",
+                {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 65_536,
+                    "default": 16_384,
+                },
+            ),
+        ),
+    ),
+    _get(
+        "/sessions/{session_id:str}/map",
+        "getSessionMapPrefix",
+        "map_prefix",
+        "sessions",
+        MapPrefixResponse,
+        parameters=(SESSION_ID, CURSOR),
+    ),
+    _get(
+        "/sessions/{session_id:str}/cost",
+        "getSessionCostRange",
+        "cost_range",
+        "sessions",
+        CostRangeResponse,
+        parameters=(
+            SESSION_ID,
+            CURSOR,
+            PAGE_LIMIT_100,
+            ParameterSpec(
+                "scope_id",
+                "query",
+                {"type": "string", "minLength": 1},
+            ),
+        ),
+    ),
+    _get(
+        "/sessions/{session_id:str}/search",
+        "searchSessionEvidence",
+        "search",
+        "evidence",
+        SearchPageResponse,
+        parameters=(
+            SESSION_ID,
+            ParameterSpec(
+                "q",
+                "query",
+                {"type": "string", "minLength": 1, "maxLength": 500},
+                required=True,
+            ),
+            CURSOR,
+            PAGE_LIMIT_50,
+        ),
+    ),
+    _get(
+        "/live/{session_id:str}/{partition:str}",
+        "getLivePartition",
+        "live_partition",
+        "live",
+        LivePartitionResponse,
+        parameters=(
+            SESSION_ID,
+            ParameterSpec(
+                "partition",
+                "path",
+                {
+                    "type": "string",
+                    "enum": [
+                        "identity-lifecycle",
+                        "world-map",
+                        "position-path",
+                        "thought-activity",
+                        "vitals-combat",
+                        "economics",
+                        "controls",
+                        "diagnostics",
+                    ],
+                },
+                required=True,
+            ),
+        ),
+    ),
+    _get(
+        "/experiments",
+        "getExperimentCatalog",
+        "experiment_catalog",
+        "experiments",
+        ExperimentCatalogPage,
+        parameters=(CURSOR, PAGE_LIMIT_50),
+    ),
+    _get(
+        "/experiments/{experiment_id:str}",
+        "getExperimentDetail",
+        "experiment_detail",
+        "experiments",
+        ExperimentDetailResponse,
+        parameters=(
+            ParameterSpec(
+                "experiment_id",
+                "path",
+                {"type": "string", "minLength": 1},
+                required=True,
+            ),
+            CURSOR,
+            PAGE_LIMIT_100,
+        ),
+    ),
+    _get(
+        "/knowledge/{player_id:str}",
+        "getKnowledgeSummary",
+        "knowledge_summary",
+        "knowledge",
+        KnowledgeSummaryResponse,
+        parameters=(
+            ParameterSpec(
+                "player_id",
+                "path",
+                {"type": "string", "minLength": 1, "maxLength": 120},
+                required=True,
+            ),
+        ),
+    ),
+    _get(
+        "/knowledge/{player_id:str}/{kind:str}",
+        "getKnowledgeDetail",
+        "knowledge_detail",
+        "knowledge",
+        KnowledgeDetailPage,
+        parameters=(
+            ParameterSpec(
+                "player_id",
+                "path",
+                {"type": "string", "minLength": 1, "maxLength": 120},
+                required=True,
+            ),
+            ParameterSpec(
+                "kind",
+                "path",
+                {
+                    "type": "string",
+                    "enum": ["assertion", "change", "snapshot", "recovery"],
+                },
+                required=True,
+            ),
+            CURSOR,
+            PAGE_LIMIT_100,
+        ),
+    ),
+    _get(
+        "/knowledge/{player_id:str}/assertions/{assertion_id:str}/evidence",
+        "getKnowledgeAssertionEvidence",
+        "knowledge_evidence",
+        "knowledge",
+        KnowledgeEvidencePage,
+        parameters=(
+            ParameterSpec(
+                "player_id",
+                "path",
+                {"type": "string", "minLength": 1, "maxLength": 120},
+                required=True,
+            ),
+            ParameterSpec(
+                "assertion_id",
+                "path",
+                {"type": "string", "minLength": 1, "maxLength": 200},
+                required=True,
+            ),
+            CURSOR,
+            PAGE_LIMIT_100,
+        ),
+    ),
+    _get(
+        "/knowledge/{player_id:str}/assertions/{assertion_id:str}/content",
+        "getKnowledgeAssertionContent",
+        "knowledge_assertion_content",
+        "knowledge",
+        ValueChunkResponse,
+        parameters=(
+            ParameterSpec(
+                "player_id",
+                "path",
+                {"type": "string", "minLength": 1, "maxLength": 120},
+                required=True,
+            ),
+            ParameterSpec(
+                "assertion_id",
+                "path",
+                {"type": "string", "minLength": 1, "maxLength": 200},
+                required=True,
+            ),
+            CONTENT_OFFSET,
+            CONTENT_MAX_BYTES,
+        ),
     ),
 )
 

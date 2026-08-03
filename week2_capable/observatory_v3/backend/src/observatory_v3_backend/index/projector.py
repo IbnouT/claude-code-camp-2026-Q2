@@ -23,6 +23,7 @@ from ..repositories.operator import (
 )
 from .identity import EntityKind, stable_entity_id
 from .models import (
+    EvidencePayload,
     ExperimentCorrelation,
     IndexedEntity,
     ProjectionReadMetrics,
@@ -32,7 +33,7 @@ from .models import (
 )
 from .store import IndexStore
 
-MAX_SEARCH_BYTES = 16 * 1024
+MAX_SEARCH_BYTES = 768
 AGENT_SEARCH_FIELDS = (
     "instruction",
     "text",
@@ -111,12 +112,25 @@ class SessionIndexProjector:
         _confirm_projection_source(agent_source, agent_source_id, "agent")
         _confirm_projection_source(gateway_source, gateway_source_id, "gateway")
         _confirm_projection_source(operator_source, operator_source_id, "operator")
-        entities, documents, latest_goal_id, latest_goal, gaps = _entities(
+        (
+            entities,
+            documents,
+            evidence_payloads,
+            latest_goal_id,
+            latest_goal,
+            gaps,
+        ) = _entities(
             session,
             agent_records,
             operator.messages,
             gateway_records,
         )
+        if not agent_source.is_file():
+            gaps.append("agent_log_unavailable")
+        if not gateway_source.is_file():
+            gaps.append("gateway_journal_unavailable")
+        if not operator_source.is_file():
+            gaps.append("operator_messages_unavailable")
         if incomplete_tail:
             gaps.append("agent_incomplete_tail")
         experiment = _experiment(session)
@@ -162,6 +176,7 @@ class SessionIndexProjector:
             watermark=watermark,
             entities=entities,
             search_documents=documents,
+            evidence_payloads=evidence_payloads,
             experiment=experiment,
             capture_gaps=tuple(dict.fromkeys(gaps)),
             read_metrics=ProjectionReadMetrics(
@@ -234,31 +249,56 @@ def _entities(
 ) -> tuple[
     tuple[IndexedEntity, ...],
     tuple[SearchDocument, ...],
+    tuple[EvidencePayload, ...],
     str | None,
     str | None,
     list[str],
 ]:
     entities: list[IndexedEntity] = []
     documents: list[SearchDocument] = []
+    payloads: list[EvidencePayload] = []
     gaps: list[str] = []
     session_entity_id = stable_entity_id(
         session.session_id,
         "session",
         f"registry:{session.session_id}",
     )
-    entities.append(
-        _entity(
-            session=session,
-            kind="session",
-            anchor=f"registry:{session.session_id}",
-            parent_id=None,
-            goal_id=None,
-            turn_id=None,
-            iteration_id=None,
-            ordinal=0,
-            occurred_at=session.created_at,
-            title=f"{session.character} session",
-            source_ref="registry.db sessions",
+    session_entity = _entity(
+        session=session,
+        kind="session",
+        anchor=f"registry:{session.session_id}",
+        parent_id=None,
+        goal_id=None,
+        turn_id=None,
+        iteration_id=None,
+        ordinal=0,
+        occurred_at=session.created_at,
+        title=f"{session.character} session",
+        source_ref="registry.db sessions",
+    )
+    entities.append(session_entity)
+    payloads.append(
+        _evidence_payload(
+            session_entity,
+            evidence_kind="registry:session",
+            trace_id=None,
+            payload={
+                "session_id": session.session_id,
+                "player_id": session.player_id,
+                "character": session.character,
+                "agent_id": session.agent_id,
+                "gateway_session_id": session.gateway_session_id,
+                "experiment_id": session.experiment_id,
+                "run_id": session.run_id,
+                "state": session.state,
+                "created_at": session.created_at,
+                "updated_at": session.updated_at,
+                "ended_at": session.ended_at,
+                "exit_code": session.exit_code,
+                "stop_mode": session.stop_mode,
+                "capture_status": session.capture_status,
+                "legacy": session.legacy,
+            },
         )
     )
     initial = _initial_goal(agent_records)
@@ -284,6 +324,14 @@ def _entities(
         latest_goal = goal.title
         entities.append(goal)
         documents.append(_document(goal, title))
+        payloads.append(
+            _evidence_payload(
+                goal,
+                evidence_kind="agent:goal",
+                trace_id=None,
+                payload={"title": title, "at": at, "line": line},
+            )
+        )
 
     logged_directives = {
         str(record.get("request_id"))
@@ -351,6 +399,14 @@ def _entities(
         )
         entities.append(entity)
         documents.append(_document(entity, instruction))
+        payloads.append(
+            _evidence_payload(
+                entity,
+                evidence_kind=f"operator:{action}",
+                trace_id=None,
+                payload=message,
+            )
+        )
 
     current_turn_id: str | None = None
     current_iteration_id: str | None = None
@@ -409,6 +465,14 @@ def _entities(
             )
             entities.append(turn)
             documents.append(_document(turn, _agent_search_text(record)))
+            payloads.append(
+                _evidence_payload(
+                    turn,
+                    evidence_kind="agent:turn",
+                    trace_id=None,
+                    payload=record,
+                )
+            )
         elif phase == "iteration":
             anchor = f"agent:{line}"
             current_iteration_id = stable_entity_id(
@@ -430,6 +494,14 @@ def _entities(
                 source_ref=f"agent.jsonl line {line}",
             )
             entities.append(iteration)
+            payloads.append(
+                _evidence_payload(
+                    iteration,
+                    evidence_kind="agent:iteration",
+                    trace_id=None,
+                    payload=record,
+                )
+            )
         record_anchor = f"agent:{line}"
         record_entity = _entity(
             session=session,
@@ -450,6 +522,18 @@ def _entities(
             source_ref=f"agent.jsonl line {line}",
         )
         entities.append(record_entity)
+        payloads.append(
+            _evidence_payload(
+                record_entity,
+                evidence_kind=f"agent:{phase}",
+                trace_id=(
+                    str(record["trace_id"])
+                    if isinstance(record.get("trace_id"), str)
+                    else None
+                ),
+                payload=record,
+            )
+        )
         text = _agent_search_text(record)
         if text:
             documents.append(_document(record_entity, text))
@@ -479,6 +563,14 @@ def _entities(
                 trace_entity_id = trace_entity.id
                 trace_ids[gateway.trace_id] = trace_entity_id
                 entities.append(trace_entity)
+                payloads.append(
+                    _evidence_payload(
+                        trace_entity,
+                        evidence_kind="gateway:trace",
+                        trace_id=gateway.trace_id,
+                        payload={"trace_id": gateway.trace_id},
+                    )
+                )
         anchor = f"gateway:{session.gateway_session_id}:{gateway.sequence}"
         gateway_entity = _entity(
             session=session,
@@ -494,6 +586,21 @@ def _entities(
             source_ref=f"gateway.db event {gateway.sequence}",
         )
         entities.append(gateway_entity)
+        payloads.append(
+            _evidence_payload(
+                gateway_entity,
+                evidence_kind=f"gateway:{gateway.kind}",
+                trace_id=gateway.trace_id,
+                payload={
+                    "sequence": gateway.sequence,
+                    "at": gateway.at,
+                    "monotonic": gateway.monotonic,
+                    "kind": gateway.kind,
+                    "trace_id": gateway.trace_id,
+                    "payload": gateway.payload,
+                },
+            )
+        )
         text = _gateway_search_text(gateway)
         if text:
             documents.append(_document(gateway_entity, text))
@@ -501,6 +608,7 @@ def _entities(
     return (
         tuple(entities),
         tuple(documents),
+        tuple(payloads),
         active_goal_id,
         latest_goal,
         gaps,
@@ -548,6 +656,58 @@ def _document(entity: IndexedEntity, body: str) -> SearchDocument:
         title=_sanitized_text(entity.title),
         body=_sanitized_text(body),
     )
+
+
+def _evidence_payload(
+    entity: IndexedEntity,
+    *,
+    evidence_kind: str,
+    trace_id: str | None,
+    payload: dict[str, Any],
+) -> EvidencePayload:
+    sanitized = sanitize_evidence(payload)
+    if not isinstance(sanitized, dict):
+        raise IndexBuildError("sanitized evidence payload must remain an object")
+    canonical = json.dumps(
+        sanitized,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode()
+    return EvidencePayload(
+        entity_id=entity.id,
+        session_id=entity.session_id,
+        evidence_kind=evidence_kind,
+        trace_id=trace_id,
+        payload=sanitized,
+        integrity_digest=sha256(canonical).hexdigest(),
+        duration_ms=_metric_number(sanitized, ("duration_ms", "elapsed_ms")),
+        tokens=_metric_integer(sanitized, ("tokens", "total_tokens")),
+        cost_usd=_metric_number(sanitized, ("cost_usd", "cost")),
+    )
+
+
+def _metric_number(payload: dict[str, Any], keys: tuple[str, ...]) -> float | None:
+    for mapping in _nested_mappings(payload):
+        for key in keys:
+            value = mapping.get(key)
+            if isinstance(value, int | float) and not isinstance(value, bool):
+                return float(value)
+    return None
+
+
+def _metric_integer(payload: dict[str, Any], keys: tuple[str, ...]) -> int | None:
+    value = _metric_number(payload, keys)
+    return None if value is None else max(0, int(value))
+
+
+def _nested_mappings(payload: dict[str, Any]) -> tuple[dict[str, Any], ...]:
+    values = [payload]
+    for key in ("usage", "metrics", "payload"):
+        nested = payload.get(key)
+        if isinstance(nested, dict):
+            values.append(nested)
+    return tuple(values)
 
 
 def _initial_goal(

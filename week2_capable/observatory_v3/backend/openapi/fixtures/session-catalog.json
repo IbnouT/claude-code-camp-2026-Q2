@@ -26,6 +26,8 @@
       "nudge_count": 1,
       "objective": "Find the city gate",
       "player_id": "poucet",
+      "projection_gaps": [],
+      "projection_status": "available",
       "state": "stopped",
       "stop_mode": "goal_completed",
       "updated_at": "2026-08-02T12:04:12Z"

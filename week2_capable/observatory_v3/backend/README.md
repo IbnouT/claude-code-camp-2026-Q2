@@ -32,8 +32,10 @@ flowchart LR
 | `control.py` | effective control state without credential reads |
 | `storage_executor.py` | bounded cancellation-aware off-loop execution |
 
-The compatibility projections and routes preserve the accepted Observatory
-behavior while `/api/v1` exposes the canonical public contract.
+`/api/v1` is the canonical bounded read contract. The `/api/ask` Live and
+runtime-session query paths are retired. Recorded-session, experiment, and
+knowledge compatibility questions remain available until their owning bounded
+replacement gate.
 
 ## Disposable index
 
@@ -89,6 +91,47 @@ flowchart LR
 - Unchanged terminal demand rereads no retained payload. New coordinates resume
   incremental materialization.
 
+## Bounded read resources
+
+```mermaid
+flowchart LR
+    Demand["Selected session demand"] --> Materialize["Single-flight materialization"]
+    Materialize --> Index["Disposable evidence index"]
+    Index --> Summary["Fixed summaries"]
+    Index --> Pages["Keyset pages"]
+    Index --> Live["Independent Live partitions"]
+    Index --> Drill["Evidence drill-down"]
+```
+
+- `/api/v1/sessions` returns at most 50 catalog entries from registry keysets.
+- Catalog entries mark projection state as available, pending, or fault.
+  Projection-owned counts remain null until materialization makes them known.
+- First selected-session summary, Goal, or evidence demand may return a typed
+  `202 materialization_pending` resource while the canonical B4 single flight
+  advances. Later reads converge to indexed content or a typed capture fault.
+- Completed one-shot demands retire their handler bookkeeping. Bootstrap faults
+  are retained in the disposable index and remain visible in the catalog.
+- A read after cold materialization revalidates native source coordinates before
+  serving indexed content, including evidence appended after the cold flight.
+- Goal and Turn pages return at most 20 items. Iteration and one-level evidence
+  child pages return at most 100 items.
+- Evidence records preserve sanitized fields, ancestry, provenance, source
+  routes, integrity digests, and bounded related identities.
+- Oversized evidence fields, lifecycle details, and knowledge assertion values
+  remain exactly reachable through explicit 65,536-byte base64 content chunks.
+- Oversized registry display labels are bounded in summaries and catalogs with
+  explicit capture gaps.
+- Trace, search, cost, experiment, and knowledge growth uses opaque keyset
+  cursors.
+- Map responses contain at most 200 nodes, 400 edges, and 100 recent path
+  identities. Backward cursors reach older windows without skipping nodes.
+- Wire bodies require one SHA-256 identity and an explicit limit of at most
+  65,536 bytes.
+- Live publishes eight independently replaceable partitions with a 128 KiB
+  payload budget.
+- Missing retained sources appear as capture gaps. Derived index upgrades
+  invalidate earlier projections before bounded reads resume.
+
 ## Public contract
 
 ```mermaid
@@ -108,7 +151,7 @@ flowchart LR
 - `openapi/observatory-v1.json` is the deterministic generation input.
 - `openapi/operations.json` is the stable operation manifest.
 - Unknown prior and future API versions return typed JSON errors.
-- Compatibility routes remain unchanged until their replacement gate.
+- B5-replaced Live and runtime-session compatibility queries are not callable.
 
 ## Development
 

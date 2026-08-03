@@ -71,6 +71,11 @@ class SessionMaterializer:
         self._flights: dict[str, _Flight] = {}
         self._closed = False
 
+    @property
+    def capacity(self) -> int:
+        """Maximum concurrent and queued selected-session flights."""
+        return self._maximum_flights
+
     async def materialize(self, session_id: str) -> MaterializationResult:
         """Join or start one selected-session advancement."""
         async with self._lock:

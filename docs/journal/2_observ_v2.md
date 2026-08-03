@@ -258,6 +258,27 @@ logging boundary erased the source needed to explain later behaviour.
 - Tool results retain original MCP text, rendering, truncation, and model input.
 - MUD evidence retains bytes, decoded text, normalized parser input, typed
   observations, and projected state as separate linked stages.
+
+### 10. Bounded reads needed explicit readiness and cleanup semantics
+
+Replacing full-session responses with bounded resources exposed two states a
+normal request test can miss:
+
+- A quick `202 Accepted` measures acknowledgement, not when useful content is
+  ready. Cold acknowledgement, useful-content convergence, and warm reads must
+  be reported separately.
+- Projection-owned counts cannot be guessed while materialization is pending.
+  Catalog entries keep those values unknown until indexed evidence exists.
+- One-shot materialization originally removed pending work before its cleanup
+  task retired. Repeating the regression exposed the event-loop race, and
+  retiring both records in one no-await finalizer made the observable state
+  deterministic.
+- Payload bounds remain acceptance gates because they define product behavior.
+  Latency remains measured evidence until a threshold is justified by the
+  actual local workflow.
+
+The bounded resource contract is in
+[the backend architecture plan](../plans/week2_observ/observatory/backend_architecture.md).
 - An aggregate that kept only matching rows destroyed the explanation around
   them. Aggregate focus now retains the enclosing iteration and causal chain.
 - Older recordings name missing stages instead of implying complete evidence.

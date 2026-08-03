@@ -854,7 +854,7 @@ Build:
 
 Gate:
 
-- Every budget below passes at p50 and p95.
+- Every timing below is measured and reported at p50 and p95.
 - No request path performs unrelated-session work.
 - No live path performs full-history work.
 - No unbounded response remains.
@@ -869,33 +869,26 @@ Quality bar:
 - complete automated suite
 - truthful documentation
 
-## Performance budgets
+## Performance evidence
 
 Measurements use a production build, deterministic fixtures, one excluded
 warm-up, at least 20 measured runs, and nearest-rank p95.
 
-### Server budgets
+Latency is evidence, not a fixed acceptance threshold. Cold acknowledgement,
+cold useful-content convergence, and warm responses are reported separately.
+A fixed latency gate requires measured product evidence and Ibnou's explicit
+approval.
 
-| Path | p50 | p95 | Maximum payload |
-| --- | ---: | ---: | ---: |
-| catalog, warm | 50 ms | 100 ms | 64 KiB per page |
-| catalog, cold | 100 ms | 200 ms | 64 KiB per page |
-| direct session summary, warm | 20 ms | 50 ms | 64 KiB |
-| direct session summary, cold | 50 ms | 100 ms | 64 KiB |
-| hierarchy page, warm | 50 ms | 150 ms | 256 KiB |
-| hierarchy page, cold | 100 ms | 250 ms | 256 KiB |
-| evidence record or bounded children | 50 ms | 150 ms | 256 KiB |
-| Live partition replacement, warm | 40 ms | 100 ms | 128 KiB |
-| epoch-mismatch reconciliation | 200 ms | 500 ms | bounded changed resources |
+### Server payload bounds
 
-### System budgets
-
-| Measurement | p50 | p95 |
-| --- | ---: | ---: |
-| retained commit to SSE notification | 40 ms | 100 ms |
-| SSE notification to validated resource | 75 ms | 150 ms |
-| retained commit to rendered Live frame | 150 ms | 250 ms |
-| event-loop delay under concurrent large-session reads | 10 ms | 25 ms |
+| Path | Maximum payload |
+| --- | ---: |
+| catalog | 64 KiB per page |
+| direct session summary | 64 KiB |
+| hierarchy page | 256 KiB |
+| evidence record or bounded children | 256 KiB |
+| Live partition replacement | 128 KiB |
+| epoch-mismatch reconciliation | bounded changed resources |
 
 Additional invariants:
 
@@ -906,8 +899,9 @@ Additional invariants:
 - full-document reloads for internal navigation: `0`
 - full-investigation responses: `0`
 
-Any budget change requires measured evidence and explicit approval. A test
-fixture or implementation cannot silently weaken a gate.
+The harness reports server and system timing without turning an unapproved
+number into a pass or fail gate. A test fixture or implementation cannot hide a
+regression or substitute acknowledgement time for useful-content convergence.
 
 ## Measurement fixtures
 

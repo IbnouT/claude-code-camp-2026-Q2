@@ -9,12 +9,14 @@ import re
 import sqlite3
 from contextlib import closing
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from types import TracebackType
 from typing import BinaryIO
 
 from .models import (
     CatalogEntry,
+    EvidencePayload,
     ExperimentCorrelation,
     HierarchyContext,
     IndexedEntity,
@@ -225,6 +227,7 @@ class IndexStore:
                     database,
                     projection.entities,
                     projection.search_documents,
+                    projection.evidence_payloads,
                 )
                 if projection.experiment is not None:
                     _insert_experiment(database, projection.experiment)
@@ -288,6 +291,60 @@ class IndexStore:
             watermark=_watermark(row),
             capture_gaps=tuple(gaps_value),
         )
+
+    def materialization_fault(self, session_id: str) -> str | None:
+        """Read one durable bootstrap fault without retaining handler state."""
+        with closing(self._read_connection()) as database:
+            row = database.execute(
+                """
+                SELECT detail
+                FROM materialization_faults
+                WHERE session_id = ?
+                """,
+                (session_id,),
+            ).fetchone()
+        return None if row is None else str(row["detail"])
+
+    def record_materialization_fault(self, session_id: str, detail: str) -> None:
+        """Persist one bounded public fault for catalog and resource reads."""
+        with closing(self._connect()) as database:
+            try:
+                database.execute(
+                    """
+                    INSERT INTO materialization_faults (
+                        session_id, detail, updated_at
+                    ) VALUES (?, ?, ?)
+                    ON CONFLICT(session_id) DO UPDATE SET
+                        detail = excluded.detail,
+                        updated_at = excluded.updated_at
+                    """,
+                    (
+                        session_id,
+                        detail[:1_024],
+                        datetime.now(UTC).isoformat(),
+                    ),
+                )
+                database.commit()
+            except sqlite3.Error as error:
+                database.rollback()
+                raise IndexProjectionError(
+                    f"session {session_id!r} materialization fault was not recorded"
+                ) from error
+
+    def clear_materialization_fault(self, session_id: str) -> None:
+        """Remove a resolved bootstrap fault after successful materialization."""
+        with closing(self._connect()) as database:
+            try:
+                database.execute(
+                    "DELETE FROM materialization_faults WHERE session_id = ?",
+                    (session_id,),
+                )
+                database.commit()
+            except sqlite3.Error as error:
+                database.rollback()
+                raise IndexProjectionError(
+                    f"session {session_id!r} materialization fault was not cleared"
+                ) from error
 
     def hierarchy_context(self, session_id: str) -> HierarchyContext:
         """Read only the committed ancestry needed for one appended suffix."""
@@ -494,6 +551,7 @@ class IndexStore:
                     database,
                     increment.entities,
                     increment.search_documents,
+                    increment.evidence_payloads,
                 )
                 if increment.experiment is not None:
                     existing = database.execute(
@@ -742,6 +800,7 @@ class IndexStore:
                 ("sessions", "session_id"),
                 ("source_watermarks", "session_id"),
                 ("entities", "ordinal, id"),
+                ("evidence_payloads", "entity_id"),
                 ("experiment_correlations", "experiment_id, run_id"),
                 ("search_documents", "entity_id"),
             ):
@@ -912,6 +971,7 @@ def _insert_entities(
     database: sqlite3.Connection,
     entities: tuple[IndexedEntity, ...],
     documents: tuple[SearchDocument, ...],
+    payloads: tuple[EvidencePayload, ...],
 ) -> None:
     database.executemany(
         """
@@ -938,6 +998,33 @@ def _insert_entities(
                 entity.source_ref,
             )
             for entity in entities
+        ),
+    )
+    database.executemany(
+        """
+        INSERT INTO evidence_payloads (
+            entity_id, session_id, evidence_kind, trace_id,
+            payload, integrity_digest, duration_ms, tokens, cost_usd
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            (
+                payload.entity_id,
+                payload.session_id,
+                payload.evidence_kind,
+                payload.trace_id,
+                json.dumps(
+                    payload.payload,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ),
+                payload.integrity_digest,
+                payload.duration_ms,
+                payload.tokens,
+                payload.cost_usd,
+            )
+            for payload in payloads
         ),
     )
     database.executemany(

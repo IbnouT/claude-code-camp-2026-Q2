@@ -41,39 +41,41 @@ class HealthResponse(PublicContract):
 class PlayerOption(PublicContract):
     """One player represented in the session catalog."""
 
-    id: str
-    label: str
+    id: str = Field(max_length=512)
+    label: str = Field(max_length=512)
 
 
 class SessionCatalogItem(PublicContract):
     """One launcher session without loading its retained evidence."""
 
-    id: str
-    player_id: str
-    character: str
-    gateway_session_id: str
-    state: str
+    id: str = Field(max_length=512)
+    player_id: str = Field(max_length=512)
+    character: str = Field(max_length=512)
+    gateway_session_id: str = Field(max_length=512)
+    state: str = Field(max_length=128)
     control_state: str | None
     control_available: bool
-    capture_status: str
-    created_at: str
-    updated_at: str
-    ended_at: str | None
-    stop_mode: str | None = None
-    event_count: int = Field(ge=0)
-    latest_seq: int = Field(ge=0)
+    capture_status: str = Field(max_length=128)
+    created_at: str = Field(max_length=128)
+    updated_at: str = Field(max_length=128)
+    ended_at: str | None = Field(default=None, max_length=128)
+    stop_mode: str | None = Field(default=None, max_length=128)
+    projection_status: Literal["available", "pending", "fault"]
+    projection_gaps: tuple[str, ...] = Field(max_length=16)
+    event_count: int | None = Field(default=None, ge=0)
+    latest_seq: int | None = Field(default=None, ge=0)
     legacy: bool
     live: bool
-    objective: str | None = None
-    goal_count: int = Field(default=0, ge=0)
-    nudge_count: int = Field(default=0, ge=0)
+    objective: str | None = Field(default=None, max_length=512)
+    goal_count: int | None = Field(default=None, ge=0)
+    nudge_count: int | None = Field(default=None, ge=0)
 
 
 class SessionCatalogResponse(PublicContract):
     """Future bounded session discovery page."""
 
     resource_id: Literal["session-catalog"] = "session-catalog"
-    resource_version: Literal[1] = 1
+    resource_version: int = Field(ge=1)
     source_cursor: str = Field(min_length=1)
     completeness: Literal["complete", "partial", "degraded"]
     continuation_cursor: str | None

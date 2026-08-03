@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from .identity import EntityKind
 
@@ -61,6 +62,21 @@ class SearchDocument:
 
 
 @dataclass(frozen=True, slots=True)
+class EvidencePayload:
+    """One sanitized retained value owned by a stable indexed entity."""
+
+    entity_id: str
+    session_id: str
+    evidence_kind: str
+    trace_id: str | None
+    payload: dict[str, Any]
+    integrity_digest: str
+    duration_ms: float | None = None
+    tokens: int | None = None
+    cost_usd: float | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class ExperimentCorrelation:
     """One authoritative experiment and run link to a canonical session."""
 
@@ -101,6 +117,7 @@ class SessionProjection:
     watermark: SourceWatermark
     entities: tuple[IndexedEntity, ...]
     search_documents: tuple[SearchDocument, ...]
+    evidence_payloads: tuple[EvidencePayload, ...]
     experiment: ExperimentCorrelation | None
     capture_gaps: tuple[str, ...]
     read_metrics: ProjectionReadMetrics
@@ -154,6 +171,7 @@ class SessionIncrement:
     watermark: SourceWatermark
     entities: tuple[IndexedEntity, ...]
     search_documents: tuple[SearchDocument, ...]
+    evidence_payloads: tuple[EvidencePayload, ...]
     experiment: ExperimentCorrelation | None
     capture_gaps: tuple[str, ...]
 

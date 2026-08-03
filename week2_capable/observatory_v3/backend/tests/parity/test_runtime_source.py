@@ -1184,7 +1184,7 @@ async def test_live_snapshot_exposes_observed_status_economics_and_frontier(
     }
 
 
-async def test_live_ask_uses_only_selected_runtime_scope(tmp_path: Path):
+async def test_live_ask_directs_callers_to_bounded_resources(tmp_path: Path):
     root = runtime_root(tmp_path)
     benchmark = tmp_path / "unrelated-benchmark"
     benchmark.mkdir()
@@ -1215,14 +1215,13 @@ async def test_live_ask_uses_only_selected_runtime_scope(tmp_path: Path):
 
     assert response.status_code == 200
     result = response.json()
-    assert result["tier"] == "deterministic"
+    assert result["tier"] == "unsupported"
     assert result["query"]["scope"]["space"] == "live"
-    assert [step["source"] for step in result["plan"]] == ["runtime"]
-    assert all(citation["source"] != "benchmark" for citation in result["citations"])
-    assert "has not stopped" in result["answer"]
+    assert result["citations"] == []
+    assert result["missing"] == ["bounded Live resource"]
 
 
-async def test_sessions_ask_diagnoses_a_launcher_runtime_by_run_id(
+async def test_sessions_ask_directs_runtime_callers_to_bounded_resources(
     tmp_path: Path,
 ):
     root = runtime_root(tmp_path)
@@ -1246,15 +1245,13 @@ async def test_sessions_ask_diagnoses_a_launcher_runtime_by_run_id(
 
     assert response.status_code == 200
     result = response.json()
-    assert result["tier"] == "deterministic"
+    assert result["tier"] == "unsupported"
     assert result["query"]["scope"]["run_id"] == "session-beta"
-    assert result["plan"][0]["source"] == "runtime"
-    assert "lifecycle state stopped" in result["answer"]
-    assert result["citations"][0]["id"] == "runtime:session:session-beta"
-    assert result["missing"] == ["specific stop mode"]
+    assert result["citations"] == []
+    assert result["missing"] == ["bounded Sessions resource"]
 
 
-async def test_sessions_ask_searches_runtime_agent_and_gateway_records(
+async def test_sessions_ask_does_not_use_retired_runtime_queries(
     tmp_path: Path,
 ):
     root = runtime_root(tmp_path)
@@ -1278,12 +1275,9 @@ async def test_sessions_ask_searches_runtime_agent_and_gateway_records(
 
     assert response.status_code == 200
     result = response.json()
-    assert result["tier"] == "deterministic"
-    assert result["plan"][0]["source"] == "runtime"
-    assert result["citations"]
-    assert all(
-        citation["source"] in {"agent", "gateway"} for citation in result["citations"]
-    )
+    assert result["tier"] == "unsupported"
+    assert result["citations"] == []
+    assert result["missing"] == ["bounded Sessions resource"]
 
 
 async def test_live_ask_rejects_player_and_session_mismatch(tmp_path: Path):
@@ -1309,7 +1303,7 @@ async def test_live_ask_rejects_player_and_session_mismatch(tmp_path: Path):
     assert response.status_code == 200
     result = response.json()
     assert result["citations"] == []
-    assert result["missing"] == ["runtime session matching the selected player"]
+    assert result["missing"] == ["bounded Live resource"]
 
 
 async def test_exact_query_cannot_replace_active_scope(tmp_path: Path):
@@ -1527,7 +1521,7 @@ async def test_supported_local_query_never_calls_the_optional_model(
         )
 
     assert response.status_code == 200
-    assert response.json()["tier"] == "deterministic"
+    assert response.json()["tier"] == "unsupported"
     assert calls == 0
 
 

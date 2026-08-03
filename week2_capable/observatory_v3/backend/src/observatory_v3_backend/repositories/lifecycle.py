@@ -67,6 +67,34 @@ class LifecycleRepository:
             ) from error
         return 0 if row is None else int(row[0])
 
+    def latest_page(
+        self,
+        session_id: str,
+        *,
+        limit: int = 32,
+    ) -> tuple[LifecycleRecord, ...]:
+        """Read the newest bounded lifecycle suffix in chronological order."""
+        if not 1 <= limit <= 1_000:
+            raise ValueError("lifecycle limit must be between 1 and 1,000")
+        try:
+            with open_readonly_database(self.source) as database:
+                rows = database.execute(
+                    """
+                    SELECT id, session_id, at, state, detail
+                    FROM lifecycle
+                    WHERE session_id = ?
+                    ORDER BY id DESC
+                    LIMIT ?
+                    """,
+                    (session_id, limit),
+                ).fetchall()
+        except sqlite3.Error as error:
+            raise MalformedSourceError(
+                self.source,
+                "lifecycle records cannot be read",
+            ) from error
+        return tuple(self._record(row) for row in reversed(rows))
+
     def _record(self, row: sqlite3.Row) -> LifecycleRecord:
         try:
             detail = json.loads(str(row["detail"]))

@@ -39,6 +39,339 @@ export const CommandAccepted = /*#__PURE__*/ zod.strictObject({
 export type CommandAccepted = zod.input<typeof CommandAccepted>;
 export type CommandAcceptedOutput = zod.output<typeof CommandAccepted>;
 
+export const costContributorCostUsdMin = 0;
+
+export const costContributorDurationMsMin = 0;
+
+export const costContributorTokensMin = 0;
+
+
+
+export const CostContributor = /*#__PURE__*/ zod.strictObject({
+  "cost_usd": /*#__PURE__*/ zod.number().check(/*#__PURE__*/ zod.gte(costContributorCostUsdMin)),
+  "duration_ms": /*#__PURE__*/ zod.number().check(/*#__PURE__*/ zod.gte(costContributorDurationMsMin)),
+  "model": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "occurred_at": /*#__PURE__*/ zod.string(),
+  "record_id": /*#__PURE__*/ zod.string(),
+  "source_ref": /*#__PURE__*/ zod.string(),
+  "tokens": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(costContributorTokensMin))
+}).check(/*#__PURE__*/ zod.describe('One response-owned token or cost contribution.'));
+
+export type CostContributor = zod.input<typeof CostContributor>;
+export type CostContributorOutput = zod.output<typeof CostContributor>;
+
+export const costRangeResponseCaptureGapsMax = 32;
+
+export const costRangeResponseContributorsMax = 100;
+
+export const costRangeResponseResourceIdMax = 512;
+
+
+
+export const costRangeResponseSourceRefsMax = 16;
+
+export const costRangeResponseTotalCostUsdMin = 0;
+
+export const costRangeResponseTotalDurationMsMin = 0;
+
+export const costRangeResponseTotalTokensMin = 0;
+
+
+
+export const CostRangeResponse = /*#__PURE__*/ zod.strictObject({
+  "capture_gaps": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(costRangeResponseCaptureGapsMax)),
+  "completeness": /*#__PURE__*/ zod.enum(['complete', 'partial', 'degraded']),
+  "continuation_cursor": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "contributors": /*#__PURE__*/ zod.array(CostContributor).check(/*#__PURE__*/ zod.maxLength(costRangeResponseContributorsMax)),
+  "resource_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(costRangeResponseResourceIdMax)),
+  "resource_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "scope_id": /*#__PURE__*/ zod.string(),
+  "source_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
+  "source_refs": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(costRangeResponseSourceRefsMax)),
+  "total_cost_usd": /*#__PURE__*/ zod.number().check(/*#__PURE__*/ zod.gte(costRangeResponseTotalCostUsdMin)),
+  "total_duration_ms": /*#__PURE__*/ zod.number().check(/*#__PURE__*/ zod.gte(costRangeResponseTotalDurationMsMin)),
+  "total_tokens": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(costRangeResponseTotalTokensMin))
+}).check(/*#__PURE__*/ zod.describe('Explicit bounded cost scope with its exact contributors.'));
+
+export type CostRangeResponse = zod.input<typeof CostRangeResponse>;
+export type CostRangeResponseOutput = zod.output<typeof CostRangeResponse>;
+
+export const entitySummaryCostUsdOneMin = 0;
+
+export const entitySummaryCostUsdDefault = null;
+export const entitySummaryDurationMsOneMin = 0;
+
+export const entitySummaryDurationMsDefault = null;
+export const entitySummaryOrdinalMin = 0;
+
+export const entitySummaryTokensOneMin = 0;
+
+export const entitySummaryTokensDefault = null;
+
+export const EntitySummary = /*#__PURE__*/ zod.strictObject({
+  "cost_usd": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.number().check(/*#__PURE__*/ zod.gte(entitySummaryCostUsdOneMin)),/*#__PURE__*/ zod.null()]), entitySummaryCostUsdDefault),
+  "duration_ms": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.number().check(/*#__PURE__*/ zod.gte(entitySummaryDurationMsOneMin)),/*#__PURE__*/ zod.null()]), entitySummaryDurationMsDefault),
+  "goal_id": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "id": /*#__PURE__*/ zod.string(),
+  "iteration_id": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "kind": /*#__PURE__*/ zod.enum(['session', 'goal', 'nudge', 'turn', 'iteration', 'record', 'trace', 'experiment_sample']),
+  "occurred_at": /*#__PURE__*/ zod.string(),
+  "ordinal": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(entitySummaryOrdinalMin)),
+  "parent_id": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "source_ref": /*#__PURE__*/ zod.string(),
+  "title": /*#__PURE__*/ zod.string(),
+  "tokens": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(entitySummaryTokensOneMin)),/*#__PURE__*/ zod.null()]), entitySummaryTokensDefault),
+  "turn_id": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()])
+}).check(/*#__PURE__*/ zod.describe('One hierarchy node without its retained payload.'));
+
+export type EntitySummary = zod.input<typeof EntitySummary>;
+export type EntitySummaryOutput = zod.output<typeof EntitySummary>;
+
+export const entityPageResponseCaptureGapsMax = 32;
+
+export const entityPageResponseItemsMax = 100;
+
+export const entityPageResponseResourceIdMax = 512;
+
+
+
+export const entityPageResponseSourceRefsMax = 16;
+
+
+
+export const EntityPageResponse = /*#__PURE__*/ zod.strictObject({
+  "capture_gaps": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(entityPageResponseCaptureGapsMax)),
+  "completeness": /*#__PURE__*/ zod.enum(['complete', 'partial', 'degraded']),
+  "continuation_cursor": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "items": /*#__PURE__*/ zod.array(EntitySummary).check(/*#__PURE__*/ zod.maxLength(entityPageResponseItemsMax)),
+  "resource_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(entityPageResponseResourceIdMax)),
+  "resource_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "source_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
+  "source_refs": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(entityPageResponseSourceRefsMax))
+}).check(/*#__PURE__*/ zod.describe('One keyset page in the session hierarchy.'));
+
+export type EntityPageResponse = zod.input<typeof EntityPageResponse>;
+export type EntityPageResponseOutput = zod.output<typeof EntityPageResponse>;
+
+export const JsonScalar = /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.boolean(),/*#__PURE__*/ zod.int(),/*#__PURE__*/ zod.number(),/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]);
+
+export type JsonScalar = zod.input<typeof JsonScalar>;
+export type JsonScalarOutput = zod.output<typeof JsonScalar>;
+
+export type JsonValue = JsonScalar | null | JsonValue[] | {[key: string]: JsonValue};
+
+export const JsonValue: zod.ZodMiniType<JsonValue> = /*#__PURE__*/ zod.union([JsonScalar,/*#__PURE__*/ zod.array(/*#__PURE__*/ zod.lazy(() => JsonValue)),/*#__PURE__*/ zod.record(/*#__PURE__*/ zod.string(), /*#__PURE__*/ zod.lazy(() => JsonValue))]);
+
+export type JsonValueOutput = zod.output<typeof JsonValue>;
+
+export const evidenceRecordResponseAncestryMax = 8;
+
+export const evidenceRecordResponseCaptureGapsMax = 32;
+
+export const evidenceRecordResponseIntegrityDigestRegExp = new RegExp('^[0-9a-f]{64}$');
+export const evidenceRecordResponseRelatedIdsMax = 100;
+
+export const evidenceRecordResponseResourceIdMax = 512;
+
+
+
+export const evidenceRecordResponseSourceRefsMax = 16;
+
+
+
+export const EvidenceRecordResponse = /*#__PURE__*/ zod.strictObject({
+  "ancestry": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(evidenceRecordResponseAncestryMax)),
+  "capture_gaps": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(evidenceRecordResponseCaptureGapsMax)),
+  "completeness": /*#__PURE__*/ zod.enum(['complete', 'partial', 'degraded']),
+  "evidence_kind": /*#__PURE__*/ zod.string(),
+  "fields": /*#__PURE__*/ zod.record(/*#__PURE__*/ zod.string(), JsonValue),
+  "integrity_digest": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.regex(evidenceRecordResponseIntegrityDigestRegExp)),
+  "record": EntitySummary,
+  "related_ids": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(evidenceRecordResponseRelatedIdsMax)),
+  "resource_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(evidenceRecordResponseResourceIdMax)),
+  "resource_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "source_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
+  "source_refs": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(evidenceRecordResponseSourceRefsMax)),
+  "trace_id": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()])
+}).check(/*#__PURE__*/ zod.describe('One retained record with ancestry, provenance, and sanitized fields.'));
+
+export type EvidenceRecordResponse = zod.input<typeof EvidenceRecordResponse>;
+export type EvidenceRecordResponseOutput = zod.output<typeof EvidenceRecordResponse>;
+
+export const ExperimentDefinitionSummary = /*#__PURE__*/ zod.strictObject({
+  "id": /*#__PURE__*/ zod.string(),
+  "values": /*#__PURE__*/ zod.record(/*#__PURE__*/ zod.string(), JsonValue)
+}).check(/*#__PURE__*/ zod.describe('One bounded immutable definition when a retained source is available.'));
+
+export type ExperimentDefinitionSummary = zod.input<typeof ExperimentDefinitionSummary>;
+export type ExperimentDefinitionSummaryOutput = zod.output<typeof ExperimentDefinitionSummary>;
+
+export const experimentSummarySampleCountMin = 0;
+
+export const experimentSummarySessionCountMin = 0;
+
+
+
+export const ExperimentSummary = /*#__PURE__*/ zod.strictObject({
+  "experiment_id": /*#__PURE__*/ zod.string(),
+  "latest_session_at": /*#__PURE__*/ zod.string(),
+  "sample_count": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(experimentSummarySampleCountMin)),
+  "session_count": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(experimentSummarySessionCountMin))
+}).check(/*#__PURE__*/ zod.describe('One immutable experiment identity and its bounded sample totals.'));
+
+export type ExperimentSummary = zod.input<typeof ExperimentSummary>;
+export type ExperimentSummaryOutput = zod.output<typeof ExperimentSummary>;
+
+export const ExperimentJobSummary = /*#__PURE__*/ zod.strictObject({
+  "id": /*#__PURE__*/ zod.string(),
+  "state": /*#__PURE__*/ zod.string(),
+  "values": /*#__PURE__*/ zod.record(/*#__PURE__*/ zod.string(), JsonValue)
+}).check(/*#__PURE__*/ zod.describe('One bounded retained job summary when a source is available.'));
+
+export type ExperimentJobSummary = zod.input<typeof ExperimentJobSummary>;
+export type ExperimentJobSummaryOutput = zod.output<typeof ExperimentJobSummary>;
+
+export const experimentCatalogPageCaptureGapsMax = 32;
+
+export const experimentCatalogPageDefinitionsMax = 50;
+
+export const experimentCatalogPageExperimentsMax = 50;
+
+export const experimentCatalogPageJobsMax = 50;
+
+export const experimentCatalogPageResourceIdMax = 512;
+
+
+
+export const experimentCatalogPageSourceRefsMax = 16;
+
+
+
+export const ExperimentCatalogPage = /*#__PURE__*/ zod.strictObject({
+  "capture_gaps": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(experimentCatalogPageCaptureGapsMax)),
+  "completeness": /*#__PURE__*/ zod.enum(['complete', 'partial', 'degraded']),
+  "continuation_cursor": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "definitions": /*#__PURE__*/ zod.array(ExperimentDefinitionSummary).check(/*#__PURE__*/ zod.maxLength(experimentCatalogPageDefinitionsMax)),
+  "experiments": /*#__PURE__*/ zod.array(ExperimentSummary).check(/*#__PURE__*/ zod.maxLength(experimentCatalogPageExperimentsMax)),
+  "jobs": /*#__PURE__*/ zod.array(ExperimentJobSummary).check(/*#__PURE__*/ zod.maxLength(experimentCatalogPageJobsMax)),
+  "resource_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(experimentCatalogPageResourceIdMax)),
+  "resource_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "source_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
+  "source_refs": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(experimentCatalogPageSourceRefsMax))
+}).check(/*#__PURE__*/ zod.describe('One bounded experiment catalog page.'));
+
+export type ExperimentCatalogPage = zod.input<typeof ExperimentCatalogPage>;
+export type ExperimentCatalogPageOutput = zod.output<typeof ExperimentCatalogPage>;
+
+export const experimentSampleSummaryCostUsdMin = 0;
+
+export const experimentSampleSummaryTurnsMin = 0;
+
+
+
+export const ExperimentSampleSummary = /*#__PURE__*/ zod.strictObject({
+  "cost_usd": /*#__PURE__*/ zod.number().check(/*#__PURE__*/ zod.gte(experimentSampleSummaryCostUsdMin)),
+  "player_id": /*#__PURE__*/ zod.string(),
+  "run_id": /*#__PURE__*/ zod.string(),
+  "session_id": /*#__PURE__*/ zod.string(),
+  "state": /*#__PURE__*/ zod.string(),
+  "turns": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(experimentSampleSummaryTurnsMin)),
+  "updated_at": /*#__PURE__*/ zod.string()
+}).check(/*#__PURE__*/ zod.describe('One experiment sample linked to a canonical session.'));
+
+export type ExperimentSampleSummary = zod.input<typeof ExperimentSampleSummary>;
+export type ExperimentSampleSummaryOutput = zod.output<typeof ExperimentSampleSummary>;
+
+export const experimentDetailResponseArmsMax = 50;
+
+export const experimentDetailResponseCaptureGapsMax = 32;
+
+export const experimentDetailResponseQueueMax = 100;
+
+export const experimentDetailResponseResourceIdMax = 512;
+
+
+export const experimentDetailResponseSamplesMax = 100;
+
+export const experimentDetailResponseSessionLinksMax = 100;
+
+
+export const experimentDetailResponseSourceRefsMax = 16;
+
+
+
+export const ExperimentDetailResponse = /*#__PURE__*/ zod.strictObject({
+  "aggregates": /*#__PURE__*/ zod.record(/*#__PURE__*/ zod.string(), /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.int(),/*#__PURE__*/ zod.number()])),
+  "arms": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.record(/*#__PURE__*/ zod.string(), JsonValue)).check(/*#__PURE__*/ zod.maxLength(experimentDetailResponseArmsMax)),
+  "capture_gaps": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(experimentDetailResponseCaptureGapsMax)),
+  "completeness": /*#__PURE__*/ zod.enum(['complete', 'partial', 'degraded']),
+  "continuation_cursor": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "definition": /*#__PURE__*/ zod.union([ExperimentDefinitionSummary,/*#__PURE__*/ zod.null()]),
+  "experiment_id": /*#__PURE__*/ zod.string(),
+  "queue": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.record(/*#__PURE__*/ zod.string(), JsonValue)).check(/*#__PURE__*/ zod.maxLength(experimentDetailResponseQueueMax)),
+  "resource_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(experimentDetailResponseResourceIdMax)),
+  "resource_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "samples": /*#__PURE__*/ zod.array(ExperimentSampleSummary).check(/*#__PURE__*/ zod.maxLength(experimentDetailResponseSamplesMax)),
+  "session_links": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(experimentDetailResponseSessionLinksMax)),
+  "source_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
+  "source_refs": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(experimentDetailResponseSourceRefsMax))
+}).check(/*#__PURE__*/ zod.describe('One experiment identity with a paginated sample page.'));
+
+export type ExperimentDetailResponse = zod.input<typeof ExperimentDetailResponse>;
+export type ExperimentDetailResponseOutput = zod.output<typeof ExperimentDetailResponse>;
+
+export const goalResourceCostUsdMin = 0;
+
+export const goalResourceDurationMsMin = 0;
+
+export const goalResourceNudgesMax = 5;
+
+export const goalResourceTokensMin = 0;
+
+export const goalResourceTurnsMax = 5;
+
+
+
+export const GoalResource = /*#__PURE__*/ zod.strictObject({
+  "child_continuation_cursor": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "cost_usd": /*#__PURE__*/ zod.number().check(/*#__PURE__*/ zod.gte(goalResourceCostUsdMin)),
+  "duration_ms": /*#__PURE__*/ zod.number().check(/*#__PURE__*/ zod.gte(goalResourceDurationMsMin)),
+  "goal": EntitySummary,
+  "nudges": /*#__PURE__*/ zod.array(EntitySummary).check(/*#__PURE__*/ zod.maxLength(goalResourceNudgesMax)),
+  "outcome": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "tokens": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(goalResourceTokensMin)),
+  "turns": /*#__PURE__*/ zod.array(EntitySummary).check(/*#__PURE__*/ zod.maxLength(goalResourceTurnsMax))
+}).check(/*#__PURE__*/ zod.describe('One useful Goal row with bounded owned context.'));
+
+export type GoalResource = zod.input<typeof GoalResource>;
+export type GoalResourceOutput = zod.output<typeof GoalResource>;
+
+export const goalPageResponseCaptureGapsMax = 32;
+
+export const goalPageResponseItemsMax = 20;
+
+export const goalPageResponseResourceIdMax = 512;
+
+
+
+export const goalPageResponseSourceRefsMax = 16;
+
+
+
+export const GoalPageResponse = /*#__PURE__*/ zod.strictObject({
+  "capture_gaps": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(goalPageResponseCaptureGapsMax)),
+  "completeness": /*#__PURE__*/ zod.enum(['complete', 'partial', 'degraded']),
+  "continuation_cursor": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "items": /*#__PURE__*/ zod.array(GoalResource).check(/*#__PURE__*/ zod.maxLength(goalPageResponseItemsMax)),
+  "resource_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(goalPageResponseResourceIdMax)),
+  "resource_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "source_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
+  "source_refs": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(goalPageResponseSourceRefsMax))
+}).check(/*#__PURE__*/ zod.describe('One keyset page of Goals and bounded useful owned context.'));
+
+export type GoalPageResponse = zod.input<typeof GoalPageResponse>;
+export type GoalPageResponseOutput = zod.output<typeof GoalPageResponse>;
+
 export const HealthResponse = /*#__PURE__*/ zod.strictObject({
   "control_plane": /*#__PURE__*/ zod.literal("authenticated_local"),
   "evidence_plane": /*#__PURE__*/ zod.literal("read_only"),
@@ -47,6 +380,193 @@ export const HealthResponse = /*#__PURE__*/ zod.strictObject({
 
 export type HealthResponse = zod.input<typeof HealthResponse>;
 export type HealthResponseOutput = zod.output<typeof HealthResponse>;
+
+export const knowledgeItemEvidenceContinuationCursorDefault = null;
+export const knowledgeItemSourceRefsMax = 32;
+
+
+
+export const KnowledgeItem = /*#__PURE__*/ zod.strictObject({
+  "evidence_continuation_cursor": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]), knowledgeItemEvidenceContinuationCursorDefault),
+  "id": /*#__PURE__*/ zod.string(),
+  "kind": /*#__PURE__*/ zod.enum(['assertion', 'change', 'snapshot', 'recovery']),
+  "source_refs": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(knowledgeItemSourceRefsMax)),
+  "values": /*#__PURE__*/ zod.record(/*#__PURE__*/ zod.string(), JsonValue)
+}).check(/*#__PURE__*/ zod.describe('One bounded durable knowledge record with provenance.'));
+
+export type KnowledgeItem = zod.input<typeof KnowledgeItem>;
+export type KnowledgeItemOutput = zod.output<typeof KnowledgeItem>;
+
+export const knowledgeDetailPageCaptureGapsMax = 32;
+
+export const knowledgeDetailPageItemsMax = 100;
+
+export const knowledgeDetailPageResourceIdMax = 512;
+
+
+
+export const knowledgeDetailPageSourceRefsMax = 16;
+
+
+
+export const KnowledgeDetailPage = /*#__PURE__*/ zod.strictObject({
+  "capture_gaps": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(knowledgeDetailPageCaptureGapsMax)),
+  "completeness": /*#__PURE__*/ zod.enum(['complete', 'partial', 'degraded']),
+  "continuation_cursor": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "items": /*#__PURE__*/ zod.array(KnowledgeItem).check(/*#__PURE__*/ zod.maxLength(knowledgeDetailPageItemsMax)),
+  "kind": /*#__PURE__*/ zod.enum(['assertion', 'change', 'snapshot', 'recovery']),
+  "player_id": /*#__PURE__*/ zod.string(),
+  "resource_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(knowledgeDetailPageResourceIdMax)),
+  "resource_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "source_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
+  "source_refs": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(knowledgeDetailPageSourceRefsMax))
+}).check(/*#__PURE__*/ zod.describe('One keyset page from a selected durable knowledge layer.'));
+
+export type KnowledgeDetailPage = zod.input<typeof KnowledgeDetailPage>;
+export type KnowledgeDetailPageOutput = zod.output<typeof KnowledgeDetailPage>;
+
+
+
+
+export const KnowledgeEvidenceRef = /*#__PURE__*/ zod.strictObject({
+  "id": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "values": /*#__PURE__*/ zod.record(/*#__PURE__*/ zod.string(), JsonValue)
+}).check(/*#__PURE__*/ zod.describe('One retained assertion evidence reference.'));
+
+export type KnowledgeEvidenceRef = zod.input<typeof KnowledgeEvidenceRef>;
+export type KnowledgeEvidenceRefOutput = zod.output<typeof KnowledgeEvidenceRef>;
+
+export const knowledgeEvidencePageCaptureGapsMax = 32;
+
+export const knowledgeEvidencePageItemsMax = 100;
+
+export const knowledgeEvidencePageResourceIdMax = 512;
+
+
+
+export const knowledgeEvidencePageSourceRefsMax = 16;
+
+
+
+export const KnowledgeEvidencePage = /*#__PURE__*/ zod.strictObject({
+  "assertion_id": /*#__PURE__*/ zod.string(),
+  "capture_gaps": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(knowledgeEvidencePageCaptureGapsMax)),
+  "completeness": /*#__PURE__*/ zod.enum(['complete', 'partial', 'degraded']),
+  "continuation_cursor": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "items": /*#__PURE__*/ zod.array(KnowledgeEvidenceRef).check(/*#__PURE__*/ zod.maxLength(knowledgeEvidencePageItemsMax)),
+  "player_id": /*#__PURE__*/ zod.string(),
+  "resource_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(knowledgeEvidencePageResourceIdMax)),
+  "resource_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "source_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
+  "source_refs": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(knowledgeEvidencePageSourceRefsMax))
+}).check(/*#__PURE__*/ zod.describe('One keyset page of retained assertion evidence references.'));
+
+export type KnowledgeEvidencePage = zod.input<typeof KnowledgeEvidencePage>;
+export type KnowledgeEvidencePageOutput = zod.output<typeof KnowledgeEvidencePage>;
+
+export const KnowledgeMetric = /*#__PURE__*/ zod.strictObject({
+  "id": /*#__PURE__*/ zod.string(),
+  "value": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.int(),/*#__PURE__*/ zod.number()])
+}).check(/*#__PURE__*/ zod.describe('One stable summary count from the durable knowledge store.'));
+
+export type KnowledgeMetric = zod.input<typeof KnowledgeMetric>;
+export type KnowledgeMetricOutput = zod.output<typeof KnowledgeMetric>;
+
+export const knowledgeSummaryResponseCaptureGapsMax = 32;
+
+export const knowledgeSummaryResponseCdcCursorMin = 0;
+
+export const knowledgeSummaryResponseMetricsMax = 16;
+
+export const knowledgeSummaryResponseResourceIdMax = 512;
+
+
+
+export const knowledgeSummaryResponseSourceRefsMax = 16;
+
+
+
+export const KnowledgeSummaryResponse = /*#__PURE__*/ zod.strictObject({
+  "capture_gaps": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(knowledgeSummaryResponseCaptureGapsMax)),
+  "cdc_cursor": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(knowledgeSummaryResponseCdcCursorMin)),
+  "completeness": /*#__PURE__*/ zod.enum(['complete', 'partial', 'degraded']),
+  "metrics": /*#__PURE__*/ zod.array(KnowledgeMetric).check(/*#__PURE__*/ zod.maxLength(knowledgeSummaryResponseMetricsMax)),
+  "player_id": /*#__PURE__*/ zod.string(),
+  "resource_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(knowledgeSummaryResponseResourceIdMax)),
+  "resource_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "source_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
+  "source_refs": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(knowledgeSummaryResponseSourceRefsMax))
+}).check(/*#__PURE__*/ zod.describe('Fixed player knowledge totals, conflicts, and freshness.'));
+
+export type KnowledgeSummaryResponse = zod.input<typeof KnowledgeSummaryResponse>;
+export type KnowledgeSummaryResponseOutput = zod.output<typeof KnowledgeSummaryResponse>;
+
+
+
+
+export const LifecycleSummary = /*#__PURE__*/ zod.strictObject({
+  "at": /*#__PURE__*/ zod.string(),
+  "detail": /*#__PURE__*/ zod.record(/*#__PURE__*/ zod.string(), JsonValue),
+  "sequence": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "state": /*#__PURE__*/ zod.string()
+}).check(/*#__PURE__*/ zod.describe('One bounded lifecycle transition in a session summary.'));
+
+export type LifecycleSummary = zod.input<typeof LifecycleSummary>;
+export type LifecycleSummaryOutput = zod.output<typeof LifecycleSummary>;
+
+export const lifecyclePageResponseCaptureGapsMax = 32;
+
+export const lifecyclePageResponseItemsMax = 100;
+
+export const lifecyclePageResponseResourceIdMax = 512;
+
+
+
+export const lifecyclePageResponseSourceRefsMax = 16;
+
+
+
+export const LifecyclePageResponse = /*#__PURE__*/ zod.strictObject({
+  "capture_gaps": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(lifecyclePageResponseCaptureGapsMax)),
+  "completeness": /*#__PURE__*/ zod.enum(['complete', 'partial', 'degraded']),
+  "continuation_cursor": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "items": /*#__PURE__*/ zod.array(LifecycleSummary).check(/*#__PURE__*/ zod.maxLength(lifecyclePageResponseItemsMax)),
+  "resource_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(lifecyclePageResponseResourceIdMax)),
+  "resource_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "source_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
+  "source_refs": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(lifecyclePageResponseSourceRefsMax))
+}).check(/*#__PURE__*/ zod.describe('One keyset page of retained lifecycle transitions.'));
+
+export type LifecyclePageResponse = zod.input<typeof LifecyclePageResponse>;
+export type LifecyclePageResponseOutput = zod.output<typeof LifecyclePageResponse>;
+
+export const livePartitionResponseCaptureGapsMax = 32;
+
+export const livePartitionResponseResourceIdMax = 512;
+
+
+
+export const livePartitionResponseSourceRefsMax = 16;
+
+export const livePartitionResponseStableNodeIdsMax = 512;
+
+
+
+export const LivePartitionResponse = /*#__PURE__*/ zod.strictObject({
+  "capture_gaps": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(livePartitionResponseCaptureGapsMax)),
+  "completeness": /*#__PURE__*/ zod.enum(['complete', 'partial', 'degraded']),
+  "partition": /*#__PURE__*/ zod.enum(['identity-lifecycle', 'world-map', 'position-path', 'thought-activity', 'vitals-combat', 'economics', 'controls', 'diagnostics']),
+  "resource_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(livePartitionResponseResourceIdMax)),
+  "resource_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "session_id": /*#__PURE__*/ zod.string(),
+  "source_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
+  "source_refs": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(livePartitionResponseSourceRefsMax)),
+  "stable_node_ids": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(livePartitionResponseStableNodeIdsMax)),
+  "values": /*#__PURE__*/ zod.record(/*#__PURE__*/ zod.string(), JsonValue)
+}).check(/*#__PURE__*/ zod.describe('One independently replaceable Live projection partition.'));
+
+export type LivePartitionResponse = zod.input<typeof LivePartitionResponse>;
+export type LivePartitionResponseOutput = zod.output<typeof LivePartitionResponse>;
 
 export const liveVoiceCapabilityEndpointTemplateDefault = null;
 export const liveVoiceCapabilityMaxCharactersDefault = 400;
@@ -60,6 +580,100 @@ export const LiveVoiceCapability = /*#__PURE__*/ zod.strictObject({
 
 export type LiveVoiceCapability = zod.input<typeof LiveVoiceCapability>;
 export type LiveVoiceCapabilityOutput = zod.output<typeof LiveVoiceCapability>;
+
+export const mapEdgeSequenceMin = 0;
+
+
+
+export const MapEdge = /*#__PURE__*/ zod.strictObject({
+  "direction": /*#__PURE__*/ zod.string(),
+  "sequence": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(mapEdgeSequenceMin)),
+  "source": /*#__PURE__*/ zod.string(),
+  "target": /*#__PURE__*/ zod.string()
+}).check(/*#__PURE__*/ zod.describe('One observed directed transition.'));
+
+export type MapEdge = zod.input<typeof MapEdge>;
+export type MapEdgeOutput = zod.output<typeof MapEdge>;
+
+export const mapNodeExitsMax = 32;
+
+export const mapNodeLastSequenceMin = 0;
+
+export const mapNodeXDefault = null;
+export const mapNodeYDefault = null;
+
+export const MapNode = /*#__PURE__*/ zod.strictObject({
+  "exits": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(mapNodeExitsMax)),
+  "id": /*#__PURE__*/ zod.string(),
+  "last_sequence": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(mapNodeLastSequenceMin)),
+  "source_ref": /*#__PURE__*/ zod.string(),
+  "title": /*#__PURE__*/ zod.string(),
+  "x": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.number(),/*#__PURE__*/ zod.null()]), mapNodeXDefault),
+  "y": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.number(),/*#__PURE__*/ zod.null()]), mapNodeYDefault)
+}).check(/*#__PURE__*/ zod.describe('One observed place in a bounded graph prefix.'));
+
+export type MapNode = zod.input<typeof MapNode>;
+export type MapNodeOutput = zod.output<typeof MapNode>;
+
+export const mapPrefixResponseCaptureGapsMax = 32;
+
+export const mapPrefixResponseEdgesMax = 400;
+
+export const mapPrefixResponseNodesMax = 200;
+
+export const mapPrefixResponseRecentPathMax = 100;
+
+export const mapPrefixResponseResourceIdMax = 512;
+
+
+
+export const mapPrefixResponseSourceRefsMax = 16;
+
+
+
+export const MapPrefixResponse = /*#__PURE__*/ zod.strictObject({
+  "capture_gaps": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(mapPrefixResponseCaptureGapsMax)),
+  "completeness": /*#__PURE__*/ zod.enum(['complete', 'partial', 'degraded']),
+  "continuation_cursor": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "current_room_id": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "edges": /*#__PURE__*/ zod.array(MapEdge).check(/*#__PURE__*/ zod.maxLength(mapPrefixResponseEdgesMax)),
+  "nodes": /*#__PURE__*/ zod.array(MapNode).check(/*#__PURE__*/ zod.maxLength(mapPrefixResponseNodesMax)),
+  "recent_path": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(mapPrefixResponseRecentPathMax)),
+  "resource_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(mapPrefixResponseResourceIdMax)),
+  "resource_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "source_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
+  "source_refs": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(mapPrefixResponseSourceRefsMax))
+}).check(/*#__PURE__*/ zod.describe('Bounded graph, selected position, and recent path.'));
+
+export type MapPrefixResponse = zod.input<typeof MapPrefixResponse>;
+export type MapPrefixResponseOutput = zod.output<typeof MapPrefixResponse>;
+
+export const materializationPendingResponseCaptureGapsMax = 32;
+
+export const materializationPendingResponseResourceIdMax = 512;
+
+
+export const materializationPendingResponseRetryAfterMsMax = 5000;
+
+
+export const materializationPendingResponseSourceRefsMax = 16;
+
+
+
+export const MaterializationPendingResponse = /*#__PURE__*/ zod.strictObject({
+  "capture_gaps": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(materializationPendingResponseCaptureGapsMax)),
+  "completeness": /*#__PURE__*/ zod.enum(['complete', 'partial', 'degraded']),
+  "resource_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(materializationPendingResponseResourceIdMax)),
+  "resource_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "retry_after_ms": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(materializationPendingResponseRetryAfterMsMax)),
+  "session_id": /*#__PURE__*/ zod.string(),
+  "source_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
+  "source_refs": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(materializationPendingResponseSourceRefsMax)),
+  "state": /*#__PURE__*/ zod.literal("materialization_pending")
+}).check(/*#__PURE__*/ zod.describe('Truthful selected-session state while the canonical projection advances.'));
+
+export type MaterializationPendingResponse = zod.input<typeof MaterializationPendingResponse>;
+export type MaterializationPendingResponseOutput = zod.output<typeof MaterializationPendingResponse>;
 
 export const sourceStatusContractDigestDefault = null;
 
@@ -86,9 +700,15 @@ export const ObservatoryCapabilities = /*#__PURE__*/ zod.strictObject({
 export type ObservatoryCapabilities = zod.input<typeof ObservatoryCapabilities>;
 export type ObservatoryCapabilitiesOutput = zod.output<typeof ObservatoryCapabilities>;
 
+export const playerOptionIdMax = 512;
+
+export const playerOptionLabelMax = 512;
+
+
+
 export const PlayerOption = /*#__PURE__*/ zod.strictObject({
-  "id": /*#__PURE__*/ zod.string(),
-  "label": /*#__PURE__*/ zod.string()
+  "id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(playerOptionIdMax)),
+  "label": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(playerOptionLabelMax))
 }).check(/*#__PURE__*/ zod.describe('One player represented in the session catalog.'));
 
 export type PlayerOption = zod.input<typeof PlayerOption>;
@@ -114,39 +734,107 @@ export const ResourceChangedNotification = /*#__PURE__*/ zod.strictObject({
 export type ResourceChangedNotification = zod.input<typeof ResourceChangedNotification>;
 export type ResourceChangedNotificationOutput = zod.output<typeof ResourceChangedNotification>;
 
-export const sessionCatalogItemEventCountMin = 0;
+export const SearchMatch = /*#__PURE__*/ zod.strictObject({
+  "excerpt": /*#__PURE__*/ zod.string(),
+  "kind": /*#__PURE__*/ zod.enum(['session', 'goal', 'nudge', 'turn', 'iteration', 'record', 'trace', 'experiment_sample']),
+  "occurred_at": /*#__PURE__*/ zod.string(),
+  "record_id": /*#__PURE__*/ zod.string(),
+  "title": /*#__PURE__*/ zod.string()
+}).check(/*#__PURE__*/ zod.describe('One stable search result and navigation target.'));
 
-export const sessionCatalogItemGoalCountDefault = 0;
-export const sessionCatalogItemGoalCountMin = 0;
+export type SearchMatch = zod.input<typeof SearchMatch>;
+export type SearchMatchOutput = zod.output<typeof SearchMatch>;
 
-export const sessionCatalogItemLatestSeqMin = 0;
+export const searchPageResponseCaptureGapsMax = 32;
 
-export const sessionCatalogItemNudgeCountDefault = 0;
-export const sessionCatalogItemNudgeCountMin = 0;
+export const searchPageResponseMatchesMax = 50;
+
+export const searchPageResponseResourceIdMax = 512;
+
+
+
+export const searchPageResponseSourceRefsMax = 16;
+
+
+
+export const SearchPageResponse = /*#__PURE__*/ zod.strictObject({
+  "capture_gaps": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(searchPageResponseCaptureGapsMax)),
+  "completeness": /*#__PURE__*/ zod.enum(['complete', 'partial', 'degraded']),
+  "continuation_cursor": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "matches": /*#__PURE__*/ zod.array(SearchMatch).check(/*#__PURE__*/ zod.maxLength(searchPageResponseMatchesMax)),
+  "query": /*#__PURE__*/ zod.string(),
+  "resource_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(searchPageResponseResourceIdMax)),
+  "resource_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "source_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
+  "source_refs": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(searchPageResponseSourceRefsMax))
+}).check(/*#__PURE__*/ zod.describe('One stable keyset page of sanitized evidence matches.'));
+
+export type SearchPageResponse = zod.input<typeof SearchPageResponse>;
+export type SearchPageResponseOutput = zod.output<typeof SearchPageResponse>;
+
+export const sessionCatalogItemCaptureStatusMax = 128;
+
+export const sessionCatalogItemCharacterMax = 512;
+
+export const sessionCatalogItemCreatedAtMax = 128;
+
+export const sessionCatalogItemEndedAtOneMax = 128;
+
+export const sessionCatalogItemEndedAtDefault = null;
+export const sessionCatalogItemEventCountOneMin = 0;
+
+export const sessionCatalogItemEventCountDefault = null;
+export const sessionCatalogItemGatewaySessionIdMax = 512;
+
+export const sessionCatalogItemGoalCountOneMin = 0;
+
+export const sessionCatalogItemGoalCountDefault = null;
+export const sessionCatalogItemIdMax = 512;
+
+export const sessionCatalogItemLatestSeqOneMin = 0;
+
+export const sessionCatalogItemLatestSeqDefault = null;
+export const sessionCatalogItemNudgeCountOneMin = 0;
+
+export const sessionCatalogItemNudgeCountDefault = null;
+export const sessionCatalogItemObjectiveOneMax = 512;
 
 export const sessionCatalogItemObjectiveDefault = null;
+export const sessionCatalogItemPlayerIdMax = 512;
+
+export const sessionCatalogItemProjectionGapsMax = 16;
+
+export const sessionCatalogItemStateMax = 128;
+
+export const sessionCatalogItemStopModeOneMax = 128;
+
 export const sessionCatalogItemStopModeDefault = null;
+export const sessionCatalogItemUpdatedAtMax = 128;
+
+
 
 export const SessionCatalogItem = /*#__PURE__*/ zod.strictObject({
-  "capture_status": /*#__PURE__*/ zod.string(),
-  "character": /*#__PURE__*/ zod.string(),
+  "capture_status": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionCatalogItemCaptureStatusMax)),
+  "character": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionCatalogItemCharacterMax)),
   "control_available": /*#__PURE__*/ zod.boolean(),
   "control_state": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
-  "created_at": /*#__PURE__*/ zod.string(),
-  "ended_at": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
-  "event_count": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(sessionCatalogItemEventCountMin)),
-  "gateway_session_id": /*#__PURE__*/ zod.string(),
-  "goal_count": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(sessionCatalogItemGoalCountMin)), sessionCatalogItemGoalCountDefault),
-  "id": /*#__PURE__*/ zod.string(),
-  "latest_seq": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(sessionCatalogItemLatestSeqMin)),
+  "created_at": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionCatalogItemCreatedAtMax)),
+  "ended_at": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionCatalogItemEndedAtOneMax)),/*#__PURE__*/ zod.null()]), sessionCatalogItemEndedAtDefault),
+  "event_count": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(sessionCatalogItemEventCountOneMin)),/*#__PURE__*/ zod.null()]), sessionCatalogItemEventCountDefault),
+  "gateway_session_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionCatalogItemGatewaySessionIdMax)),
+  "goal_count": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(sessionCatalogItemGoalCountOneMin)),/*#__PURE__*/ zod.null()]), sessionCatalogItemGoalCountDefault),
+  "id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionCatalogItemIdMax)),
+  "latest_seq": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(sessionCatalogItemLatestSeqOneMin)),/*#__PURE__*/ zod.null()]), sessionCatalogItemLatestSeqDefault),
   "legacy": /*#__PURE__*/ zod.boolean(),
   "live": /*#__PURE__*/ zod.boolean(),
-  "nudge_count": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(sessionCatalogItemNudgeCountMin)), sessionCatalogItemNudgeCountDefault),
-  "objective": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]), sessionCatalogItemObjectiveDefault),
-  "player_id": /*#__PURE__*/ zod.string(),
-  "state": /*#__PURE__*/ zod.string(),
-  "stop_mode": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]), sessionCatalogItemStopModeDefault),
-  "updated_at": /*#__PURE__*/ zod.string()
+  "nudge_count": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(sessionCatalogItemNudgeCountOneMin)),/*#__PURE__*/ zod.null()]), sessionCatalogItemNudgeCountDefault),
+  "objective": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionCatalogItemObjectiveOneMax)),/*#__PURE__*/ zod.null()]), sessionCatalogItemObjectiveDefault),
+  "player_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionCatalogItemPlayerIdMax)),
+  "projection_gaps": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(sessionCatalogItemProjectionGapsMax)),
+  "projection_status": /*#__PURE__*/ zod.enum(['available', 'pending', 'fault']),
+  "state": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionCatalogItemStateMax)),
+  "stop_mode": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionCatalogItemStopModeOneMax)),/*#__PURE__*/ zod.null()]), sessionCatalogItemStopModeDefault),
+  "updated_at": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionCatalogItemUpdatedAtMax))
 }).check(/*#__PURE__*/ zod.describe('One launcher session without loading its retained evidence.'));
 
 export type SessionCatalogItem = zod.input<typeof SessionCatalogItem>;
@@ -157,7 +845,6 @@ export const sessionCatalogResponseCaptureGapsMax = 32;
 export const sessionCatalogResponsePlayersMax = 50;
 
 export const sessionCatalogResponseResourceIdDefault = `session-catalog`;
-export const sessionCatalogResponseResourceVersionDefault = 1;
 export const sessionCatalogResponseSessionsMax = 50;
 
 
@@ -171,7 +858,7 @@ export const SessionCatalogResponse = /*#__PURE__*/ zod.strictObject({
   "continuation_cursor": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
   "players": /*#__PURE__*/ zod.array(PlayerOption).check(/*#__PURE__*/ zod.maxLength(sessionCatalogResponsePlayersMax)),
   "resource_id": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.literal("session-catalog"), sessionCatalogResponseResourceIdDefault),
-  "resource_version": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.literal(1), sessionCatalogResponseResourceVersionDefault),
+  "resource_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
   "sessions": /*#__PURE__*/ zod.array(SessionCatalogItem).check(/*#__PURE__*/ zod.maxLength(sessionCatalogResponseSessionsMax)),
   "source_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
   "source_refs": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(sessionCatalogResponseSourceRefsMax))
@@ -198,6 +885,248 @@ export const SessionCommandRequest = /*#__PURE__*/ zod.strictObject({
 
 export type SessionCommandRequest = zod.input<typeof SessionCommandRequest>;
 export type SessionCommandRequestOutput = zod.output<typeof SessionCommandRequest>;
+
+export const sessionTotalsCostUsdMin = 0;
+
+export const sessionTotalsDurationMsMin = 0;
+
+export const sessionTotalsGoalsMin = 0;
+
+export const sessionTotalsIterationsMin = 0;
+
+export const sessionTotalsNudgesMin = 0;
+
+export const sessionTotalsRecordsMin = 0;
+
+export const sessionTotalsTokensMin = 0;
+
+export const sessionTotalsTurnsMin = 0;
+
+
+
+export const SessionTotals = /*#__PURE__*/ zod.strictObject({
+  "cost_usd": /*#__PURE__*/ zod.number().check(/*#__PURE__*/ zod.gte(sessionTotalsCostUsdMin)),
+  "duration_ms": /*#__PURE__*/ zod.number().check(/*#__PURE__*/ zod.gte(sessionTotalsDurationMsMin)),
+  "goals": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(sessionTotalsGoalsMin)),
+  "iterations": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(sessionTotalsIterationsMin)),
+  "nudges": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(sessionTotalsNudgesMin)),
+  "records": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(sessionTotalsRecordsMin)),
+  "tokens": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(sessionTotalsTokensMin)),
+  "turns": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(sessionTotalsTurnsMin))
+}).check(/*#__PURE__*/ zod.describe('Materialized totals available without loading hierarchy pages.'));
+
+export type SessionTotals = zod.input<typeof SessionTotals>;
+export type SessionTotalsOutput = zod.output<typeof SessionTotals>;
+
+export const sessionSummaryResponseCaptureGapsMax = 32;
+
+export const sessionSummaryResponseCaptureStatusMax = 128;
+
+export const sessionSummaryResponseCharacterMax = 512;
+
+export const sessionSummaryResponseCreatedAtMax = 128;
+
+export const sessionSummaryResponseEndedAtOneMax = 128;
+
+export const sessionSummaryResponseLatestGoalOneMax = 512;
+
+export const sessionSummaryResponseLatestGoalIdOneMax = 512;
+
+export const sessionSummaryResponseLifecycleMax = 32;
+
+export const sessionSummaryResponsePlayerIdMax = 512;
+
+export const sessionSummaryResponseResourceIdMax = 512;
+
+
+export const sessionSummaryResponseSessionIdMax = 512;
+
+
+export const sessionSummaryResponseSourceRefsMax = 16;
+
+export const sessionSummaryResponseStateMax = 128;
+
+export const sessionSummaryResponseUpdatedAtMax = 128;
+
+
+
+export const SessionSummaryResponse = /*#__PURE__*/ zod.strictObject({
+  "capture_gaps": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(sessionSummaryResponseCaptureGapsMax)),
+  "capture_status": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionSummaryResponseCaptureStatusMax)),
+  "character": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionSummaryResponseCharacterMax)),
+  "completeness": /*#__PURE__*/ zod.enum(['complete', 'partial', 'degraded']),
+  "created_at": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionSummaryResponseCreatedAtMax)),
+  "ended_at": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionSummaryResponseEndedAtOneMax)),/*#__PURE__*/ zod.null()]),
+  "goal_cursor": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "latest_goal": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionSummaryResponseLatestGoalOneMax)),/*#__PURE__*/ zod.null()]),
+  "latest_goal_id": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionSummaryResponseLatestGoalIdOneMax)),/*#__PURE__*/ zod.null()]),
+  "lifecycle": /*#__PURE__*/ zod.array(LifecycleSummary).check(/*#__PURE__*/ zod.maxLength(sessionSummaryResponseLifecycleMax)),
+  "lifecycle_cursor": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "player_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionSummaryResponsePlayerIdMax)),
+  "resource_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(sessionSummaryResponseResourceIdMax)),
+  "resource_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "search_cursor": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "session_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionSummaryResponseSessionIdMax)),
+  "source_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
+  "source_refs": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(sessionSummaryResponseSourceRefsMax)),
+  "state": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionSummaryResponseStateMax)),
+  "totals": SessionTotals,
+  "updated_at": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionSummaryResponseUpdatedAtMax))
+}).check(/*#__PURE__*/ zod.describe('Fixed useful summary for one selected materialized session.'));
+
+export type SessionSummaryResponse = zod.input<typeof SessionSummaryResponse>;
+export type SessionSummaryResponseOutput = zod.output<typeof SessionSummaryResponse>;
+
+export const TraceRecord = /*#__PURE__*/ zod.strictObject({
+  "evidence_kind": /*#__PURE__*/ zod.string(),
+  "record": EntitySummary
+}).check(/*#__PURE__*/ zod.describe('One bounded subsystem record inside a correlated trace.'));
+
+export type TraceRecord = zod.input<typeof TraceRecord>;
+export type TraceRecordOutput = zod.output<typeof TraceRecord>;
+
+export const tracePageResponseCaptureGapsMax = 32;
+
+export const tracePageResponseItemsMax = 100;
+
+export const tracePageResponseResourceIdMax = 512;
+
+
+
+export const tracePageResponseSourceRefsMax = 16;
+
+
+
+export const TracePageResponse = /*#__PURE__*/ zod.strictObject({
+  "capture_gaps": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(tracePageResponseCaptureGapsMax)),
+  "completeness": /*#__PURE__*/ zod.enum(['complete', 'partial', 'degraded']),
+  "continuation_cursor": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "items": /*#__PURE__*/ zod.array(TraceRecord).check(/*#__PURE__*/ zod.maxLength(tracePageResponseItemsMax)),
+  "resource_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(tracePageResponseResourceIdMax)),
+  "resource_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "source_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
+  "source_refs": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(tracePageResponseSourceRefsMax)),
+  "trace_id": /*#__PURE__*/ zod.string()
+}).check(/*#__PURE__*/ zod.describe('One keyset page across a correlated trace.'));
+
+export type TracePageResponse = zod.input<typeof TracePageResponse>;
+export type TracePageResponseOutput = zod.output<typeof TracePageResponse>;
+
+export const turnResourceCostUsdMin = 0;
+
+export const turnResourceDurationMsMin = 0;
+
+export const turnResourceIterationsMax = 10;
+
+export const turnResourceTokensMin = 0;
+
+
+
+export const TurnResource = /*#__PURE__*/ zod.strictObject({
+  "child_continuation_cursor": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "cost_usd": /*#__PURE__*/ zod.number().check(/*#__PURE__*/ zod.gte(turnResourceCostUsdMin)),
+  "duration_ms": /*#__PURE__*/ zod.number().check(/*#__PURE__*/ zod.gte(turnResourceDurationMsMin)),
+  "iterations": /*#__PURE__*/ zod.array(EntitySummary).check(/*#__PURE__*/ zod.maxLength(turnResourceIterationsMax)),
+  "outcome": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "tokens": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(turnResourceTokensMin)),
+  "turn": EntitySummary
+}).check(/*#__PURE__*/ zod.describe('One useful Turn row with bounded Iteration context.'));
+
+export type TurnResource = zod.input<typeof TurnResource>;
+export type TurnResourceOutput = zod.output<typeof TurnResource>;
+
+export const turnPageResponseCaptureGapsMax = 32;
+
+export const turnPageResponseItemsMax = 20;
+
+export const turnPageResponseResourceIdMax = 512;
+
+
+
+export const turnPageResponseSourceRefsMax = 16;
+
+
+
+export const TurnPageResponse = /*#__PURE__*/ zod.strictObject({
+  "capture_gaps": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(turnPageResponseCaptureGapsMax)),
+  "completeness": /*#__PURE__*/ zod.enum(['complete', 'partial', 'degraded']),
+  "continuation_cursor": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "items": /*#__PURE__*/ zod.array(TurnResource).check(/*#__PURE__*/ zod.maxLength(turnPageResponseItemsMax)),
+  "resource_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(turnPageResponseResourceIdMax)),
+  "resource_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "source_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
+  "source_refs": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(turnPageResponseSourceRefsMax))
+}).check(/*#__PURE__*/ zod.describe('One keyset page of Turns and bounded useful Iteration context.'));
+
+export type TurnPageResponse = zod.input<typeof TurnPageResponse>;
+export type TurnPageResponseOutput = zod.output<typeof TurnPageResponse>;
+
+export const valueChunkResponseCaptureGapsMax = 32;
+
+export const valueChunkResponseContentDigestRegExp = new RegExp('^[0-9a-f]{64}$');
+
+export const valueChunkResponseNextOffsetDefault = null;
+export const valueChunkResponseOffsetMin = 0;
+
+export const valueChunkResponseResourceIdMax = 512;
+
+
+
+export const valueChunkResponseSourceRefsMax = 16;
+
+export const valueChunkResponseTotalBytesMin = 0;
+
+
+
+export const ValueChunkResponse = /*#__PURE__*/ zod.strictObject({
+  "capture_gaps": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(valueChunkResponseCaptureGapsMax)),
+  "chunk": /*#__PURE__*/ zod.string(),
+  "completeness": /*#__PURE__*/ zod.enum(['complete', 'partial', 'degraded']),
+  "content_digest": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.regex(valueChunkResponseContentDigestRegExp)),
+  "encoding": /*#__PURE__*/ zod.literal("base64"),
+  "next_offset": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),/*#__PURE__*/ zod.null()]), valueChunkResponseNextOffsetDefault),
+  "offset": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(valueChunkResponseOffsetMin)),
+  "resource_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(valueChunkResponseResourceIdMax)),
+  "resource_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "source_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
+  "source_refs": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(valueChunkResponseSourceRefsMax)),
+  "total_bytes": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(valueChunkResponseTotalBytesMin))
+}).check(/*#__PURE__*/ zod.describe('One bounded base64 chunk of canonical sanitized retained content.'));
+
+export type ValueChunkResponse = zod.input<typeof ValueChunkResponse>;
+export type ValueChunkResponseOutput = zod.output<typeof ValueChunkResponse>;
+
+export const wireBodyResponseByteLengthMin = 0;
+export const wireBodyResponseByteLengthMax = 65536;
+
+export const wireBodyResponseCaptureGapsMax = 32;
+
+export const wireBodyResponseDigestRegExp = new RegExp('^[0-9a-f]{64}$');
+export const wireBodyResponseResourceIdMax = 512;
+
+
+
+export const wireBodyResponseSourceRefsMax = 16;
+
+
+
+export const WireBodyResponse = /*#__PURE__*/ zod.strictObject({
+  "body": /*#__PURE__*/ zod.string(),
+  "byte_length": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(wireBodyResponseByteLengthMin)).check(/*#__PURE__*/ zod.lte(wireBodyResponseByteLengthMax)),
+  "capture_gaps": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(wireBodyResponseCaptureGapsMax)),
+  "completeness": /*#__PURE__*/ zod.enum(['complete', 'partial', 'degraded']),
+  "digest": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.regex(wireBodyResponseDigestRegExp)),
+  "media_type": /*#__PURE__*/ zod.literal("text/plain; charset=utf-8"),
+  "redacted": /*#__PURE__*/ zod.boolean(),
+  "resource_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(wireBodyResponseResourceIdMax)),
+  "resource_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "source_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
+  "source_refs": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(wireBodyResponseSourceRefsMax)),
+  "truncated": /*#__PURE__*/ zod.boolean()
+}).check(/*#__PURE__*/ zod.describe('One verified sanitized wire body with a strict request limit.'));
+
+export type WireBodyResponse = zod.input<typeof WireBodyResponse>;
+export type WireBodyResponseOutput = zod.output<typeof WireBodyResponse>;
 export const GetCapabilities200Response = ObservatoryCapabilities
 
 export const GetCapabilities404Response = ApiError
@@ -207,6 +1136,55 @@ export const GetCapabilities422Response = ApiError
 export const GetCapabilities503Response = ApiError
 
 
+export const getExperimentCatalogQueryCursorMax = 2048;
+
+export const getExperimentCatalogQueryLimitDefault = 20;
+export const getExperimentCatalogQueryLimitMax = 50;
+
+
+
+export const GetExperimentCatalogQueryParams = /*#__PURE__*/ zod.strictObject({
+  "cursor": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getExperimentCatalogQueryCursorMax))),
+  "limit": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(getExperimentCatalogQueryLimitMax)), getExperimentCatalogQueryLimitDefault)
+})
+
+export const GetExperimentCatalog200Response = ExperimentCatalogPage
+
+export const GetExperimentCatalog404Response = ApiError
+
+export const GetExperimentCatalog422Response = ApiError
+
+export const GetExperimentCatalog503Response = ApiError
+
+
+
+
+
+export const GetExperimentDetailParams = /*#__PURE__*/ zod.strictObject({
+  "experiment_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1))
+})
+
+export const getExperimentDetailQueryCursorMax = 2048;
+
+export const getExperimentDetailQueryLimitDefault = 50;
+export const getExperimentDetailQueryLimitMax = 100;
+
+
+
+export const GetExperimentDetailQueryParams = /*#__PURE__*/ zod.strictObject({
+  "cursor": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getExperimentDetailQueryCursorMax))),
+  "limit": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(getExperimentDetailQueryLimitMax)), getExperimentDetailQueryLimitDefault)
+})
+
+export const GetExperimentDetail200Response = ExperimentDetailResponse
+
+export const GetExperimentDetail404Response = ApiError
+
+export const GetExperimentDetail422Response = ApiError
+
+export const GetExperimentDetail503Response = ApiError
+
+
 export const GetHealth200Response = HealthResponse
 
 export const GetHealth404Response = ApiError
@@ -214,3 +1192,565 @@ export const GetHealth404Response = ApiError
 export const GetHealth422Response = ApiError
 
 export const GetHealth503Response = ApiError
+
+
+export const getKnowledgeSummaryPathPlayerIdMax = 120;
+
+
+
+export const GetKnowledgeSummaryParams = /*#__PURE__*/ zod.strictObject({
+  "player_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getKnowledgeSummaryPathPlayerIdMax))
+})
+
+export const GetKnowledgeSummary200Response = KnowledgeSummaryResponse
+
+export const GetKnowledgeSummary404Response = ApiError
+
+export const GetKnowledgeSummary422Response = ApiError
+
+export const GetKnowledgeSummary503Response = ApiError
+
+
+export const getKnowledgeAssertionContentPathPlayerIdMax = 120;
+
+export const getKnowledgeAssertionContentPathAssertionIdMax = 200;
+
+
+
+export const GetKnowledgeAssertionContentParams = /*#__PURE__*/ zod.strictObject({
+  "player_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getKnowledgeAssertionContentPathPlayerIdMax)),
+  "assertion_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getKnowledgeAssertionContentPathAssertionIdMax))
+})
+
+export const getKnowledgeAssertionContentQueryOffsetDefault = 0;
+export const getKnowledgeAssertionContentQueryOffsetMin = 0;
+
+export const getKnowledgeAssertionContentQueryMaxBytesDefault = 16384;
+export const getKnowledgeAssertionContentQueryMaxBytesMax = 65536;
+
+
+
+export const GetKnowledgeAssertionContentQueryParams = /*#__PURE__*/ zod.strictObject({
+  "offset": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(getKnowledgeAssertionContentQueryOffsetMin)), getKnowledgeAssertionContentQueryOffsetDefault),
+  "max_bytes": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(getKnowledgeAssertionContentQueryMaxBytesMax)), getKnowledgeAssertionContentQueryMaxBytesDefault)
+})
+
+export const GetKnowledgeAssertionContent200Response = ValueChunkResponse
+
+export const GetKnowledgeAssertionContent404Response = ApiError
+
+export const GetKnowledgeAssertionContent422Response = ApiError
+
+export const GetKnowledgeAssertionContent503Response = ApiError
+
+
+export const getKnowledgeAssertionEvidencePathPlayerIdMax = 120;
+
+export const getKnowledgeAssertionEvidencePathAssertionIdMax = 200;
+
+
+
+export const GetKnowledgeAssertionEvidenceParams = /*#__PURE__*/ zod.strictObject({
+  "player_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getKnowledgeAssertionEvidencePathPlayerIdMax)),
+  "assertion_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getKnowledgeAssertionEvidencePathAssertionIdMax))
+})
+
+export const getKnowledgeAssertionEvidenceQueryCursorMax = 2048;
+
+export const getKnowledgeAssertionEvidenceQueryLimitDefault = 50;
+export const getKnowledgeAssertionEvidenceQueryLimitMax = 100;
+
+
+
+export const GetKnowledgeAssertionEvidenceQueryParams = /*#__PURE__*/ zod.strictObject({
+  "cursor": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getKnowledgeAssertionEvidenceQueryCursorMax))),
+  "limit": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(getKnowledgeAssertionEvidenceQueryLimitMax)), getKnowledgeAssertionEvidenceQueryLimitDefault)
+})
+
+export const GetKnowledgeAssertionEvidence200Response = KnowledgeEvidencePage
+
+export const GetKnowledgeAssertionEvidence404Response = ApiError
+
+export const GetKnowledgeAssertionEvidence422Response = ApiError
+
+export const GetKnowledgeAssertionEvidence503Response = ApiError
+
+
+export const getKnowledgeDetailPathPlayerIdMax = 120;
+
+
+
+export const GetKnowledgeDetailParams = /*#__PURE__*/ zod.strictObject({
+  "player_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getKnowledgeDetailPathPlayerIdMax)),
+  "kind": /*#__PURE__*/ zod.enum(['assertion', 'change', 'snapshot', 'recovery'])
+})
+
+export const getKnowledgeDetailQueryCursorMax = 2048;
+
+export const getKnowledgeDetailQueryLimitDefault = 50;
+export const getKnowledgeDetailQueryLimitMax = 100;
+
+
+
+export const GetKnowledgeDetailQueryParams = /*#__PURE__*/ zod.strictObject({
+  "cursor": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getKnowledgeDetailQueryCursorMax))),
+  "limit": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(getKnowledgeDetailQueryLimitMax)), getKnowledgeDetailQueryLimitDefault)
+})
+
+export const GetKnowledgeDetail200Response = KnowledgeDetailPage
+
+export const GetKnowledgeDetail404Response = ApiError
+
+export const GetKnowledgeDetail422Response = ApiError
+
+export const GetKnowledgeDetail503Response = ApiError
+
+
+export const getLivePartitionPathSessionIdMax = 200;
+
+
+
+export const GetLivePartitionParams = /*#__PURE__*/ zod.strictObject({
+  "session_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getLivePartitionPathSessionIdMax)),
+  "partition": /*#__PURE__*/ zod.enum(['identity-lifecycle', 'world-map', 'position-path', 'thought-activity', 'vitals-combat', 'economics', 'controls', 'diagnostics'])
+})
+
+export const GetLivePartition200Response = LivePartitionResponse
+
+export const GetLivePartition404Response = ApiError
+
+export const GetLivePartition422Response = ApiError
+
+export const GetLivePartition503Response = ApiError
+
+
+export const getSessionCatalogQueryCursorMax = 2048;
+
+export const getSessionCatalogQueryLimitDefault = 20;
+export const getSessionCatalogQueryLimitMax = 50;
+
+export const getSessionCatalogQueryPlayerIdMax = 120;
+
+
+
+export const GetSessionCatalogQueryParams = /*#__PURE__*/ zod.strictObject({
+  "cursor": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getSessionCatalogQueryCursorMax))),
+  "limit": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(getSessionCatalogQueryLimitMax)), getSessionCatalogQueryLimitDefault),
+  "player_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getSessionCatalogQueryPlayerIdMax)))
+})
+
+export const GetSessionCatalog200Response = SessionCatalogResponse
+
+export const GetSessionCatalog404Response = ApiError
+
+export const GetSessionCatalog422Response = ApiError
+
+export const GetSessionCatalog503Response = ApiError
+
+
+export const getSessionSummaryPathSessionIdMax = 200;
+
+
+
+export const GetSessionSummaryParams = /*#__PURE__*/ zod.strictObject({
+  "session_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getSessionSummaryPathSessionIdMax))
+})
+
+export const GetSessionSummary200Response = SessionSummaryResponse
+
+export const GetSessionSummary202Response = MaterializationPendingResponse
+
+export const GetSessionSummary404Response = ApiError
+
+export const GetSessionSummary422Response = ApiError
+
+export const GetSessionSummary503Response = ApiError
+
+
+export const getSessionCostRangePathSessionIdMax = 200;
+
+
+
+export const GetSessionCostRangeParams = /*#__PURE__*/ zod.strictObject({
+  "session_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getSessionCostRangePathSessionIdMax))
+})
+
+export const getSessionCostRangeQueryCursorMax = 2048;
+
+export const getSessionCostRangeQueryLimitDefault = 50;
+export const getSessionCostRangeQueryLimitMax = 100;
+
+
+
+
+export const GetSessionCostRangeQueryParams = /*#__PURE__*/ zod.strictObject({
+  "cursor": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getSessionCostRangeQueryCursorMax))),
+  "limit": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(getSessionCostRangeQueryLimitMax)), getSessionCostRangeQueryLimitDefault),
+  "scope_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)))
+})
+
+export const GetSessionCostRange200Response = CostRangeResponse
+
+export const GetSessionCostRange404Response = ApiError
+
+export const GetSessionCostRange422Response = ApiError
+
+export const GetSessionCostRange503Response = ApiError
+
+
+export const getEvidenceRecordPathSessionIdMax = 200;
+
+
+
+
+export const GetEvidenceRecordParams = /*#__PURE__*/ zod.strictObject({
+  "session_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getEvidenceRecordPathSessionIdMax)),
+  "record_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1))
+})
+
+export const GetEvidenceRecord200Response = EvidenceRecordResponse
+
+export const GetEvidenceRecord202Response = MaterializationPendingResponse
+
+export const GetEvidenceRecord404Response = ApiError
+
+export const GetEvidenceRecord422Response = ApiError
+
+export const GetEvidenceRecord503Response = ApiError
+
+
+export const getEvidenceChildrenPathSessionIdMax = 200;
+
+
+
+
+export const GetEvidenceChildrenParams = /*#__PURE__*/ zod.strictObject({
+  "session_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getEvidenceChildrenPathSessionIdMax)),
+  "record_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1))
+})
+
+export const getEvidenceChildrenQueryCursorMax = 2048;
+
+export const getEvidenceChildrenQueryLimitDefault = 50;
+export const getEvidenceChildrenQueryLimitMax = 100;
+
+
+
+export const GetEvidenceChildrenQueryParams = /*#__PURE__*/ zod.strictObject({
+  "cursor": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getEvidenceChildrenQueryCursorMax))),
+  "limit": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(getEvidenceChildrenQueryLimitMax)), getEvidenceChildrenQueryLimitDefault)
+})
+
+export const GetEvidenceChildren200Response = EntityPageResponse
+
+export const GetEvidenceChildren404Response = ApiError
+
+export const GetEvidenceChildren422Response = ApiError
+
+export const GetEvidenceChildren503Response = ApiError
+
+
+export const getEvidenceContentPathSessionIdMax = 200;
+
+
+
+
+export const GetEvidenceContentParams = /*#__PURE__*/ zod.strictObject({
+  "session_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getEvidenceContentPathSessionIdMax)),
+  "record_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1))
+})
+
+export const getEvidenceContentQueryOffsetDefault = 0;
+export const getEvidenceContentQueryOffsetMin = 0;
+
+export const getEvidenceContentQueryMaxBytesDefault = 16384;
+export const getEvidenceContentQueryMaxBytesMax = 65536;
+
+
+
+export const GetEvidenceContentQueryParams = /*#__PURE__*/ zod.strictObject({
+  "offset": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(getEvidenceContentQueryOffsetMin)), getEvidenceContentQueryOffsetDefault),
+  "max_bytes": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(getEvidenceContentQueryMaxBytesMax)), getEvidenceContentQueryMaxBytesDefault)
+})
+
+export const GetEvidenceContent200Response = ValueChunkResponse
+
+export const GetEvidenceContent202Response = MaterializationPendingResponse
+
+export const GetEvidenceContent404Response = ApiError
+
+export const GetEvidenceContent422Response = ApiError
+
+export const GetEvidenceContent503Response = ApiError
+
+
+export const getSessionGoalsPathSessionIdMax = 200;
+
+
+
+export const GetSessionGoalsParams = /*#__PURE__*/ zod.strictObject({
+  "session_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getSessionGoalsPathSessionIdMax))
+})
+
+export const getSessionGoalsQueryCursorMax = 2048;
+
+export const getSessionGoalsQueryLimitDefault = 20;
+export const getSessionGoalsQueryLimitMax = 20;
+
+
+
+export const GetSessionGoalsQueryParams = /*#__PURE__*/ zod.strictObject({
+  "cursor": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getSessionGoalsQueryCursorMax))),
+  "limit": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(getSessionGoalsQueryLimitMax)), getSessionGoalsQueryLimitDefault)
+})
+
+export const GetSessionGoals200Response = GoalPageResponse
+
+export const GetSessionGoals202Response = MaterializationPendingResponse
+
+export const GetSessionGoals404Response = ApiError
+
+export const GetSessionGoals422Response = ApiError
+
+export const GetSessionGoals503Response = ApiError
+
+
+export const getGoalTurnsPathSessionIdMax = 200;
+
+
+
+
+export const GetGoalTurnsParams = /*#__PURE__*/ zod.strictObject({
+  "session_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getGoalTurnsPathSessionIdMax)),
+  "goal_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1))
+})
+
+export const getGoalTurnsQueryCursorMax = 2048;
+
+export const getGoalTurnsQueryLimitDefault = 20;
+export const getGoalTurnsQueryLimitMax = 20;
+
+
+
+export const GetGoalTurnsQueryParams = /*#__PURE__*/ zod.strictObject({
+  "cursor": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getGoalTurnsQueryCursorMax))),
+  "limit": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(getGoalTurnsQueryLimitMax)), getGoalTurnsQueryLimitDefault)
+})
+
+export const GetGoalTurns200Response = TurnPageResponse
+
+export const GetGoalTurns404Response = ApiError
+
+export const GetGoalTurns422Response = ApiError
+
+export const GetGoalTurns503Response = ApiError
+
+
+export const getSessionLifecyclePathSessionIdMax = 200;
+
+
+
+export const GetSessionLifecycleParams = /*#__PURE__*/ zod.strictObject({
+  "session_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getSessionLifecyclePathSessionIdMax))
+})
+
+export const getSessionLifecycleQueryCursorMax = 2048;
+
+export const getSessionLifecycleQueryLimitDefault = 50;
+export const getSessionLifecycleQueryLimitMax = 100;
+
+
+
+export const GetSessionLifecycleQueryParams = /*#__PURE__*/ zod.strictObject({
+  "cursor": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getSessionLifecycleQueryCursorMax))),
+  "limit": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(getSessionLifecycleQueryLimitMax)), getSessionLifecycleQueryLimitDefault)
+})
+
+export const GetSessionLifecycle200Response = LifecyclePageResponse
+
+export const GetSessionLifecycle404Response = ApiError
+
+export const GetSessionLifecycle422Response = ApiError
+
+export const GetSessionLifecycle503Response = ApiError
+
+
+export const getLifecycleContentPathSessionIdMax = 200;
+
+
+
+
+export const GetLifecycleContentParams = /*#__PURE__*/ zod.strictObject({
+  "session_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getLifecycleContentPathSessionIdMax)),
+  "sequence": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1))
+})
+
+export const getLifecycleContentQueryOffsetDefault = 0;
+export const getLifecycleContentQueryOffsetMin = 0;
+
+export const getLifecycleContentQueryMaxBytesDefault = 16384;
+export const getLifecycleContentQueryMaxBytesMax = 65536;
+
+
+
+export const GetLifecycleContentQueryParams = /*#__PURE__*/ zod.strictObject({
+  "offset": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(getLifecycleContentQueryOffsetMin)), getLifecycleContentQueryOffsetDefault),
+  "max_bytes": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(getLifecycleContentQueryMaxBytesMax)), getLifecycleContentQueryMaxBytesDefault)
+})
+
+export const GetLifecycleContent200Response = ValueChunkResponse
+
+export const GetLifecycleContent202Response = MaterializationPendingResponse
+
+export const GetLifecycleContent404Response = ApiError
+
+export const GetLifecycleContent422Response = ApiError
+
+export const GetLifecycleContent503Response = ApiError
+
+
+export const getSessionMapPrefixPathSessionIdMax = 200;
+
+
+
+export const GetSessionMapPrefixParams = /*#__PURE__*/ zod.strictObject({
+  "session_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getSessionMapPrefixPathSessionIdMax))
+})
+
+export const getSessionMapPrefixQueryCursorMax = 2048;
+
+
+
+export const GetSessionMapPrefixQueryParams = /*#__PURE__*/ zod.strictObject({
+  "cursor": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getSessionMapPrefixQueryCursorMax)))
+})
+
+export const GetSessionMapPrefix200Response = MapPrefixResponse
+
+export const GetSessionMapPrefix404Response = ApiError
+
+export const GetSessionMapPrefix422Response = ApiError
+
+export const GetSessionMapPrefix503Response = ApiError
+
+
+export const searchSessionEvidencePathSessionIdMax = 200;
+
+
+
+export const SearchSessionEvidenceParams = /*#__PURE__*/ zod.strictObject({
+  "session_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(searchSessionEvidencePathSessionIdMax))
+})
+
+export const searchSessionEvidenceQueryQMax = 500;
+
+export const searchSessionEvidenceQueryCursorMax = 2048;
+
+export const searchSessionEvidenceQueryLimitDefault = 20;
+export const searchSessionEvidenceQueryLimitMax = 50;
+
+
+
+export const SearchSessionEvidenceQueryParams = /*#__PURE__*/ zod.strictObject({
+  "q": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(searchSessionEvidenceQueryQMax)),
+  "cursor": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(searchSessionEvidenceQueryCursorMax))),
+  "limit": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(searchSessionEvidenceQueryLimitMax)), searchSessionEvidenceQueryLimitDefault)
+})
+
+export const SearchSessionEvidence200Response = SearchPageResponse
+
+export const SearchSessionEvidence404Response = ApiError
+
+export const SearchSessionEvidence422Response = ApiError
+
+export const SearchSessionEvidence503Response = ApiError
+
+
+export const getCorrelatedTracePathSessionIdMax = 200;
+
+
+
+
+export const GetCorrelatedTraceParams = /*#__PURE__*/ zod.strictObject({
+  "session_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getCorrelatedTracePathSessionIdMax)),
+  "trace_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1))
+})
+
+export const getCorrelatedTraceQueryCursorMax = 2048;
+
+export const getCorrelatedTraceQueryLimitDefault = 50;
+export const getCorrelatedTraceQueryLimitMax = 100;
+
+
+
+export const GetCorrelatedTraceQueryParams = /*#__PURE__*/ zod.strictObject({
+  "cursor": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getCorrelatedTraceQueryCursorMax))),
+  "limit": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(getCorrelatedTraceQueryLimitMax)), getCorrelatedTraceQueryLimitDefault)
+})
+
+export const GetCorrelatedTrace200Response = TracePageResponse
+
+export const GetCorrelatedTrace404Response = ApiError
+
+export const GetCorrelatedTrace422Response = ApiError
+
+export const GetCorrelatedTrace503Response = ApiError
+
+
+export const getTurnIterationsPathSessionIdMax = 200;
+
+
+
+
+export const GetTurnIterationsParams = /*#__PURE__*/ zod.strictObject({
+  "session_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getTurnIterationsPathSessionIdMax)),
+  "turn_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1))
+})
+
+export const getTurnIterationsQueryCursorMax = 2048;
+
+export const getTurnIterationsQueryLimitDefault = 50;
+export const getTurnIterationsQueryLimitMax = 100;
+
+
+
+export const GetTurnIterationsQueryParams = /*#__PURE__*/ zod.strictObject({
+  "cursor": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getTurnIterationsQueryCursorMax))),
+  "limit": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(getTurnIterationsQueryLimitMax)), getTurnIterationsQueryLimitDefault)
+})
+
+export const GetTurnIterations200Response = EntityPageResponse
+
+export const GetTurnIterations404Response = ApiError
+
+export const GetTurnIterations422Response = ApiError
+
+export const GetTurnIterations503Response = ApiError
+
+
+export const getWireBodyPathSessionIdMax = 200;
+
+export const getWireBodyPathDigestRegExp = new RegExp('^[0-9a-f]{64}$');
+
+
+export const GetWireBodyParams = /*#__PURE__*/ zod.strictObject({
+  "session_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getWireBodyPathSessionIdMax)),
+  "digest": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.regex(getWireBodyPathDigestRegExp))
+})
+
+export const getWireBodyQueryMaxBytesDefault = 16384;
+export const getWireBodyQueryMaxBytesMax = 65536;
+
+
+
+export const GetWireBodyQueryParams = /*#__PURE__*/ zod.strictObject({
+  "max_bytes": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(getWireBodyQueryMaxBytesMax)), getWireBodyQueryMaxBytesDefault)
+})
+
+export const GetWireBody200Response = WireBodyResponse
+
+export const GetWireBody404Response = ApiError
+
+export const GetWireBody422Response = ApiError
+
+export const GetWireBody503Response = ApiError

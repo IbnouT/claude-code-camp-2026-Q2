@@ -9,6 +9,7 @@ from typing import Any
 from ..errors import MalformedSourceError
 from ..index.identity import EntityKind, stable_entity_id
 from ..index.models import (
+    EvidencePayload,
     ExperimentCorrelation,
     HierarchyContext,
     IndexedEntity,
@@ -25,6 +26,7 @@ from ..index.projector import (
     _agent_title,
     _document,
     _entity,
+    _evidence_payload,
     _experiment,
     _gateway_search_text,
     _positive_int,
@@ -416,6 +418,7 @@ def _incremental_projection(
 ) -> SessionIncrement | None:
     entities: list[IndexedEntity] = []
     documents: list[SearchDocument] = []
+    payloads: list[EvidencePayload] = []
     logged_directives = {
         str(record["request_id"])
         for record in agent_records
@@ -539,6 +542,14 @@ def _incremental_projection(
         )
         entities.append(entity)
         documents.append(_document(entity, instruction))
+        payloads.append(
+            _evidence_payload(
+                entity,
+                evidence_kind=f"operator:{action}",
+                trace_id=None,
+                payload=message,
+            )
+        )
 
     scoped_goal_id = context.scoped_goal_id
     current_turn_id = context.current_turn_id
@@ -597,6 +608,14 @@ def _incremental_projection(
             )
             entities.append(turn)
             documents.append(_document(turn, _agent_search_text(agent_record)))
+            payloads.append(
+                _evidence_payload(
+                    turn,
+                    evidence_kind="agent:turn",
+                    trace_id=None,
+                    payload=agent_record,
+                )
+            )
         elif phase == "iteration":
             anchor = f"agent:{line}"
             current_iteration_id = stable_entity_id(
@@ -620,6 +639,14 @@ def _incremental_projection(
                 source_ref=f"agent.jsonl line {line}",
             )
             entities.append(iteration)
+            payloads.append(
+                _evidence_payload(
+                    iteration,
+                    evidence_kind="agent:iteration",
+                    trace_id=None,
+                    payload=agent_record,
+                )
+            )
         record_entity = _entity(
             session=session,
             kind="record",
@@ -639,6 +666,18 @@ def _incremental_projection(
             source_ref=f"agent.jsonl line {line}",
         )
         entities.append(record_entity)
+        payloads.append(
+            _evidence_payload(
+                record_entity,
+                evidence_kind=f"agent:{phase}",
+                trace_id=(
+                    str(agent_record["trace_id"])
+                    if isinstance(agent_record.get("trace_id"), str)
+                    else None
+                ),
+                payload=agent_record,
+            )
+        )
         text = _agent_search_text(agent_record)
         if text:
             documents.append(_document(record_entity, text))
@@ -673,6 +712,14 @@ def _incremental_projection(
                 trace_entity_id = trace.id
                 trace_ids[trace_anchor] = trace_entity_id
                 entities.append(trace)
+                payloads.append(
+                    _evidence_payload(
+                        trace,
+                        evidence_kind="gateway:trace",
+                        trace_id=gateway.trace_id,
+                        payload={"trace_id": gateway.trace_id},
+                    )
+                )
         gateway_entity = _entity(
             session=session,
             kind="record",
@@ -687,6 +734,21 @@ def _incremental_projection(
             source_ref=f"gateway.db event {gateway.sequence}",
         )
         entities.append(gateway_entity)
+        payloads.append(
+            _evidence_payload(
+                gateway_entity,
+                evidence_kind=f"gateway:{gateway.kind}",
+                trace_id=gateway.trace_id,
+                payload={
+                    "sequence": gateway.sequence,
+                    "at": gateway.at,
+                    "monotonic": gateway.monotonic,
+                    "kind": gateway.kind,
+                    "trace_id": gateway.trace_id,
+                    "payload": gateway.payload,
+                },
+            )
+        )
         text = _gateway_search_text(gateway)
         if text:
             documents.append(_document(gateway_entity, text))
@@ -705,6 +767,7 @@ def _incremental_projection(
         watermark=next_watermark,
         entities=tuple(entities),
         search_documents=tuple(documents),
+        evidence_payloads=tuple(payloads),
         experiment=_experiment(session),
         capture_gaps=tuple(dict.fromkeys(gaps)),
     )

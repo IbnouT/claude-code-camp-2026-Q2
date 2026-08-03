@@ -89,6 +89,41 @@ def test_increment_reads_only_new_agent_and_gateway_suffix(
         )
 
 
+def test_schema_two_resource_upgrade_rebuilds_evidence_projection(
+    tmp_path: Path,
+) -> None:
+    fixture = build_retained_fixture(tmp_path)
+    source = tmp_path / "index.sqlite3"
+    registry = RegistryDatabase(fixture.config_dir)
+    with IndexStore(source) as index:
+        IncrementalSessionAdvancer(registry, index).advance(fixture.selected_session_id)
+
+    with sqlite3.connect(source) as database:
+        database.execute("DROP TABLE evidence_payloads")
+        database.execute("PRAGMA user_version=2")
+
+    with IndexStore(source) as index:
+        invalidated = _checkpoint(index, fixture)
+        recovered = IncrementalSessionAdvancer(registry, index).advance(
+            fixture.selected_session_id
+        )
+        with sqlite3.connect(source) as database:
+            payload_count = int(
+                database.execute(
+                    """
+                    SELECT COUNT(*)
+                    FROM evidence_payloads
+                    WHERE session_id = ?
+                    """,
+                    (fixture.selected_session_id,),
+                ).fetchone()[0]
+            )
+
+    assert invalidated.watermark.gateway_source_id == "unknown"
+    assert recovered.kind == "recovered"
+    assert payload_count > 0
+
+
 def test_bootstrap_rejects_agent_replacement_during_projection(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-INDEX_SCHEMA_VERSION = 2
+INDEX_SCHEMA_VERSION = 4
 PROJECTOR_VERSION = 1
 
 MIGRATIONS = {
@@ -18,6 +18,39 @@ MIGRATIONS = {
             DEFAULT '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945';
         ALTER TABLE source_watermarks
         ADD COLUMN operator_state TEXT NOT NULL DEFAULT '[]';
+    """,
+    2: """
+        CREATE TABLE evidence_payloads (
+            entity_id TEXT PRIMARY KEY
+                REFERENCES entities(id) ON DELETE CASCADE,
+            session_id TEXT NOT NULL,
+            evidence_kind TEXT NOT NULL,
+            trace_id TEXT,
+            payload TEXT NOT NULL,
+            integrity_digest TEXT NOT NULL,
+            duration_ms REAL,
+            tokens INTEGER,
+            cost_usd REAL
+        );
+        CREATE INDEX evidence_session_kind
+        ON evidence_payloads(
+            session_id,
+            evidence_kind,
+            entity_id,
+            trace_id
+        );
+        CREATE INDEX evidence_session_cost
+        ON evidence_payloads(session_id, cost_usd, entity_id);
+
+        UPDATE source_watermarks
+        SET gateway_source_id = 'unknown';
+    """,
+    3: """
+        CREATE TABLE IF NOT EXISTS materialization_faults (
+            session_id TEXT PRIMARY KEY,
+            detail TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
     """,
 }
 
@@ -100,6 +133,12 @@ CREATE TABLE IF NOT EXISTS source_watermarks (
     knowledge_revision TEXT
 );
 
+CREATE TABLE IF NOT EXISTS materialization_faults (
+    session_id TEXT PRIMARY KEY,
+    detail TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS entities (
     id TEXT PRIMARY KEY,
     session_id TEXT NOT NULL
@@ -149,6 +188,30 @@ CREATE TABLE IF NOT EXISTS search_documents (
     occurred_at TEXT NOT NULL,
     title TEXT NOT NULL,
     body TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS evidence_payloads (
+    entity_id TEXT PRIMARY KEY
+        REFERENCES entities(id) ON DELETE CASCADE,
+    session_id TEXT NOT NULL,
+    evidence_kind TEXT NOT NULL,
+    trace_id TEXT,
+    payload TEXT NOT NULL,
+    integrity_digest TEXT NOT NULL,
+    duration_ms REAL,
+    tokens INTEGER,
+    cost_usd REAL
+);
+
+CREATE INDEX IF NOT EXISTS evidence_session_cost
+ON evidence_payloads(session_id, cost_usd, entity_id);
+
+CREATE INDEX IF NOT EXISTS evidence_session_kind
+ON evidence_payloads(
+    session_id,
+    evidence_kind,
+    entity_id,
+    trace_id
 );
 
 CREATE INDEX IF NOT EXISTS search_scope

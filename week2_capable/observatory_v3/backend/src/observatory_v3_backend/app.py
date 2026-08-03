@@ -26,6 +26,7 @@ from starlette.routing import Route
 
 from .api_v1 import api_v1_routes, openapi_document
 from .api_v1.contracts import ApiError
+from .api_v1.operations import Handler
 from .capabilities import discover
 from .contracts import (
     AskRequest,
@@ -54,6 +55,9 @@ from .projections.session import (
 from .queries import answer
 from .queries.model import ModelTranslator
 from .repositories import RegistryDatabase
+from .resources.cursor import InvalidCursorError
+from .resources.handlers import ReadResourceHandlers
+from .resources.knowledge import KnowledgeResourceRepository
 from .runtime_views import RuntimeReadService
 from .settings import Settings
 from .sources.atlas import AtlasSource
@@ -1168,31 +1172,96 @@ def create_app(
         )
         return JSONResponse(error.model_dump(mode="json"), status_code=404)
 
+    def versioned_resource_handler(name: str) -> Handler:
+        async def handler(request: Request) -> JSONResponse:
+            resources = getattr(request.app.state, "read_resources", None)
+            if resources is None:
+                return JSONResponse(
+                    {
+                        "error": "source_unavailable",
+                        "detail": "The retained session index is not configured.",
+                    },
+                    status_code=503,
+                )
+            endpoint = getattr(resources, name)
+            try:
+                response = await endpoint(request)
+            except (ValueError, InvalidCursorError) as error:
+                return JSONResponse(
+                    {"error": "invalid_request", "detail": str(error)},
+                    status_code=422,
+                )
+            if not isinstance(response, JSONResponse):
+                raise TypeError("bounded resource handler returned a non-JSON response")
+            return response
+
+        handler.__name__ = name
+        return handler
+
     @asynccontextmanager
     async def lifespan(application: Starlette) -> AsyncIterator[None]:
         index: IndexStore | None = None
         materializer: SessionMaterializer | None = None
+        resources: ReadResourceHandlers | None = None
         try:
             if active.runtime_root is not None:
                 index = IndexStore.for_runtime(active.runtime_root)
                 if (active.runtime_root / "registry.db").is_file():
+                    registry = RegistryDatabase(active.runtime_root)
                     materializer = SessionMaterializer(
-                        RegistryDatabase(active.runtime_root),
+                        registry,
                         index,
+                    )
+                    resources = ReadResourceHandlers(
+                        index=index,
+                        registry=registry,
+                        materializer=materializer,
+                        storage=storage,
+                        knowledge=KnowledgeResourceRepository(active.runtime_root),
                     )
             application.state.session_index = index
             application.state.session_materializer = materializer
+            application.state.read_resources = resources
             yield
         finally:
             if materializer is not None:
                 await materializer.close()
+            if resources is not None:
+                await resources.close()
             if index is not None:
                 index.close()
             await storage.close()
 
-    versioned_handlers = {
+    versioned_handlers: dict[str, Handler] = {
         "health": health,
         "capabilities": capabilities,
+        **{
+            name: versioned_resource_handler(name)
+            for name in (
+                "session_catalog",
+                "session_summary",
+                "lifecycle",
+                "lifecycle_content",
+                "goals",
+                "turns",
+                "iterations",
+                "evidence_children",
+                "evidence_record",
+                "evidence_content",
+                "trace",
+                "wire_body",
+                "map_prefix",
+                "cost_range",
+                "search",
+                "live_partition",
+                "experiment_catalog",
+                "experiment_detail",
+                "knowledge_summary",
+                "knowledge_detail",
+                "knowledge_evidence",
+                "knowledge_assertion_content",
+            )
+        },
     }
 
     return Starlette(

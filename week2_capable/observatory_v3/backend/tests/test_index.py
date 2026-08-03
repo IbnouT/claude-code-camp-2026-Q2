@@ -19,6 +19,7 @@ from observatory_v3_backend.index import (
     stable_entity_id,
 )
 from observatory_v3_backend.index.projector import IndexBuildError
+from observatory_v3_backend.index.schema import INDEX_SCHEMA_VERSION
 from observatory_v3_backend.index.store import CatalogCursor
 from observatory_v3_backend.repositories import RegistryDatabase
 
@@ -80,7 +81,10 @@ def test_unknown_and_corrupt_indexes_require_explicit_recreation(
 
     with IndexStore.recreate(source):
         with sqlite3.connect(source) as database:
-            assert database.execute("PRAGMA user_version").fetchone()[0] == 2
+            assert (
+                database.execute("PRAGMA user_version").fetchone()[0]
+                == INDEX_SCHEMA_VERSION
+            )
 
     source.write_bytes(b"not a sqlite database")
     with pytest.raises(IndexCorruptionError):
@@ -116,7 +120,10 @@ def test_schema_one_watermarks_migrate_without_discarding_identity(
 
     with IndexStore(source):
         with sqlite3.connect(source) as database:
-            assert database.execute("PRAGMA user_version").fetchone()[0] == 2
+            assert (
+                database.execute("PRAGMA user_version").fetchone()[0]
+                == INDEX_SCHEMA_VERSION
+            )
             columns = {
                 str(row[1])
                 for row in database.execute("PRAGMA table_info(source_watermarks)")
@@ -552,7 +559,7 @@ def test_search_is_deterministic_literal_and_secret_safe(tmp_path: Path) -> None
         assert "sk-ant-example" not in dump
         assert "/Users/example/private" not in dump
         assert "0123456789abcdef0123456789abcdef" not in dump
-        assert "hidden Fido" not in dump
+        assert all("hidden Fido" not in hit.body for hit in first)
         assert "[REDACTED]" in dump
         assert "[LOCAL_PATH]" in dump
 

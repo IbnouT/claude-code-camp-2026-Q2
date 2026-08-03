@@ -76,6 +76,1008 @@
         "title": "CommandAccepted",
         "type": "object"
       },
+      "CostContributor": {
+        "additionalProperties": false,
+        "description": "One response-owned token or cost contribution.",
+        "properties": {
+          "cost_usd": {
+            "minimum": 0,
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "duration_ms": {
+            "minimum": 0,
+            "title": "Duration Ms",
+            "type": "number"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "occurred_at": {
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "record_id": {
+            "title": "Record Id",
+            "type": "string"
+          },
+          "source_ref": {
+            "title": "Source Ref",
+            "type": "string"
+          },
+          "tokens": {
+            "minimum": 0,
+            "title": "Tokens",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "record_id",
+          "occurred_at",
+          "model",
+          "tokens",
+          "cost_usd",
+          "duration_ms",
+          "source_ref"
+        ],
+        "title": "CostContributor",
+        "type": "object"
+      },
+      "CostRangeResponse": {
+        "additionalProperties": false,
+        "description": "Explicit bounded cost scope with its exact contributors.",
+        "properties": {
+          "capture_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Capture Gaps",
+            "type": "array"
+          },
+          "completeness": {
+            "enum": [
+              "complete",
+              "partial",
+              "degraded"
+            ],
+            "title": "Completeness",
+            "type": "string"
+          },
+          "continuation_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Continuation Cursor"
+          },
+          "contributors": {
+            "items": {
+              "$ref": "#/components/schemas/CostContributor"
+            },
+            "maxItems": 100,
+            "title": "Contributors",
+            "type": "array"
+          },
+          "resource_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_version": {
+            "minimum": 1,
+            "title": "Resource Version",
+            "type": "integer"
+          },
+          "scope_id": {
+            "title": "Scope Id",
+            "type": "string"
+          },
+          "source_cursor": {
+            "minLength": 1,
+            "title": "Source Cursor",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "Source Refs",
+            "type": "array"
+          },
+          "total_cost_usd": {
+            "minimum": 0,
+            "title": "Total Cost Usd",
+            "type": "number"
+          },
+          "total_duration_ms": {
+            "minimum": 0,
+            "title": "Total Duration Ms",
+            "type": "number"
+          },
+          "total_tokens": {
+            "minimum": 0,
+            "title": "Total Tokens",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "resource_id",
+          "resource_version",
+          "source_cursor",
+          "completeness",
+          "capture_gaps",
+          "source_refs",
+          "scope_id",
+          "total_tokens",
+          "total_cost_usd",
+          "total_duration_ms",
+          "continuation_cursor",
+          "contributors"
+        ],
+        "title": "CostRangeResponse",
+        "type": "object"
+      },
+      "EntityPageResponse": {
+        "additionalProperties": false,
+        "description": "One keyset page in the session hierarchy.",
+        "properties": {
+          "capture_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Capture Gaps",
+            "type": "array"
+          },
+          "completeness": {
+            "enum": [
+              "complete",
+              "partial",
+              "degraded"
+            ],
+            "title": "Completeness",
+            "type": "string"
+          },
+          "continuation_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Continuation Cursor"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EntitySummary"
+            },
+            "maxItems": 100,
+            "title": "Items",
+            "type": "array"
+          },
+          "resource_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_version": {
+            "minimum": 1,
+            "title": "Resource Version",
+            "type": "integer"
+          },
+          "source_cursor": {
+            "minLength": 1,
+            "title": "Source Cursor",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "Source Refs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "resource_id",
+          "resource_version",
+          "source_cursor",
+          "completeness",
+          "capture_gaps",
+          "source_refs",
+          "continuation_cursor",
+          "items"
+        ],
+        "title": "EntityPageResponse",
+        "type": "object"
+      },
+      "EntitySummary": {
+        "additionalProperties": false,
+        "description": "One hierarchy node without its retained payload.",
+        "properties": {
+          "cost_usd": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cost Usd"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Duration Ms"
+          },
+          "goal_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal Id"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "iteration_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iteration Id"
+          },
+          "kind": {
+            "enum": [
+              "session",
+              "goal",
+              "nudge",
+              "turn",
+              "iteration",
+              "record",
+              "trace",
+              "experiment_sample"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "occurred_at": {
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "ordinal": {
+            "minimum": 0,
+            "title": "Ordinal",
+            "type": "integer"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "source_ref": {
+            "title": "Source Ref",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "tokens": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Tokens"
+          },
+          "turn_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Turn Id"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "parent_id",
+          "goal_id",
+          "turn_id",
+          "iteration_id",
+          "ordinal",
+          "occurred_at",
+          "title",
+          "source_ref"
+        ],
+        "title": "EntitySummary",
+        "type": "object"
+      },
+      "EvidenceRecordResponse": {
+        "additionalProperties": false,
+        "description": "One retained record with ancestry, provenance, and sanitized fields.",
+        "properties": {
+          "ancestry": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "title": "Ancestry",
+            "type": "array"
+          },
+          "capture_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Capture Gaps",
+            "type": "array"
+          },
+          "completeness": {
+            "enum": [
+              "complete",
+              "partial",
+              "degraded"
+            ],
+            "title": "Completeness",
+            "type": "string"
+          },
+          "evidence_kind": {
+            "title": "Evidence Kind",
+            "type": "string"
+          },
+          "fields": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Fields",
+            "type": "object"
+          },
+          "integrity_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Integrity Digest",
+            "type": "string"
+          },
+          "record": {
+            "$ref": "#/components/schemas/EntitySummary"
+          },
+          "related_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Related Ids",
+            "type": "array"
+          },
+          "resource_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_version": {
+            "minimum": 1,
+            "title": "Resource Version",
+            "type": "integer"
+          },
+          "source_cursor": {
+            "minLength": 1,
+            "title": "Source Cursor",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "Source Refs",
+            "type": "array"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Id"
+          }
+        },
+        "required": [
+          "resource_id",
+          "resource_version",
+          "source_cursor",
+          "completeness",
+          "capture_gaps",
+          "source_refs",
+          "record",
+          "evidence_kind",
+          "trace_id",
+          "integrity_digest",
+          "fields",
+          "ancestry",
+          "related_ids"
+        ],
+        "title": "EvidenceRecordResponse",
+        "type": "object"
+      },
+      "ExperimentCatalogPage": {
+        "additionalProperties": false,
+        "description": "One bounded experiment catalog page.",
+        "properties": {
+          "capture_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Capture Gaps",
+            "type": "array"
+          },
+          "completeness": {
+            "enum": [
+              "complete",
+              "partial",
+              "degraded"
+            ],
+            "title": "Completeness",
+            "type": "string"
+          },
+          "continuation_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Continuation Cursor"
+          },
+          "definitions": {
+            "items": {
+              "$ref": "#/components/schemas/ExperimentDefinitionSummary"
+            },
+            "maxItems": 50,
+            "title": "Definitions",
+            "type": "array"
+          },
+          "experiments": {
+            "items": {
+              "$ref": "#/components/schemas/ExperimentSummary"
+            },
+            "maxItems": 50,
+            "title": "Experiments",
+            "type": "array"
+          },
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/ExperimentJobSummary"
+            },
+            "maxItems": 50,
+            "title": "Jobs",
+            "type": "array"
+          },
+          "resource_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_version": {
+            "minimum": 1,
+            "title": "Resource Version",
+            "type": "integer"
+          },
+          "source_cursor": {
+            "minLength": 1,
+            "title": "Source Cursor",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "Source Refs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "resource_id",
+          "resource_version",
+          "source_cursor",
+          "completeness",
+          "capture_gaps",
+          "source_refs",
+          "continuation_cursor",
+          "experiments",
+          "definitions",
+          "jobs"
+        ],
+        "title": "ExperimentCatalogPage",
+        "type": "object"
+      },
+      "ExperimentDefinitionSummary": {
+        "additionalProperties": false,
+        "description": "One bounded immutable definition when a retained source is available.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "values": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "values"
+        ],
+        "title": "ExperimentDefinitionSummary",
+        "type": "object"
+      },
+      "ExperimentDetailResponse": {
+        "additionalProperties": false,
+        "description": "One experiment identity with a paginated sample page.",
+        "properties": {
+          "aggregates": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "title": "Aggregates",
+            "type": "object"
+          },
+          "arms": {
+            "items": {
+              "additionalProperties": {
+                "$ref": "#/components/schemas/JsonValue"
+              },
+              "type": "object"
+            },
+            "maxItems": 50,
+            "title": "Arms",
+            "type": "array"
+          },
+          "capture_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Capture Gaps",
+            "type": "array"
+          },
+          "completeness": {
+            "enum": [
+              "complete",
+              "partial",
+              "degraded"
+            ],
+            "title": "Completeness",
+            "type": "string"
+          },
+          "continuation_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Continuation Cursor"
+          },
+          "definition": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExperimentDefinitionSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "string"
+          },
+          "queue": {
+            "items": {
+              "additionalProperties": {
+                "$ref": "#/components/schemas/JsonValue"
+              },
+              "type": "object"
+            },
+            "maxItems": 100,
+            "title": "Queue",
+            "type": "array"
+          },
+          "resource_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_version": {
+            "minimum": 1,
+            "title": "Resource Version",
+            "type": "integer"
+          },
+          "samples": {
+            "items": {
+              "$ref": "#/components/schemas/ExperimentSampleSummary"
+            },
+            "maxItems": 100,
+            "title": "Samples",
+            "type": "array"
+          },
+          "session_links": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Session Links",
+            "type": "array"
+          },
+          "source_cursor": {
+            "minLength": 1,
+            "title": "Source Cursor",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "Source Refs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "resource_id",
+          "resource_version",
+          "source_cursor",
+          "completeness",
+          "capture_gaps",
+          "source_refs",
+          "experiment_id",
+          "continuation_cursor",
+          "definition",
+          "arms",
+          "queue",
+          "aggregates",
+          "session_links",
+          "samples"
+        ],
+        "title": "ExperimentDetailResponse",
+        "type": "object"
+      },
+      "ExperimentJobSummary": {
+        "additionalProperties": false,
+        "description": "One bounded retained job summary when a source is available.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "values": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "state",
+          "values"
+        ],
+        "title": "ExperimentJobSummary",
+        "type": "object"
+      },
+      "ExperimentSampleSummary": {
+        "additionalProperties": false,
+        "description": "One experiment sample linked to a canonical session.",
+        "properties": {
+          "cost_usd": {
+            "minimum": 0,
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "player_id": {
+            "title": "Player Id",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "turns": {
+            "minimum": 0,
+            "title": "Turns",
+            "type": "integer"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "session_id",
+          "player_id",
+          "state",
+          "updated_at",
+          "cost_usd",
+          "turns"
+        ],
+        "title": "ExperimentSampleSummary",
+        "type": "object"
+      },
+      "ExperimentSummary": {
+        "additionalProperties": false,
+        "description": "One immutable experiment identity and its bounded sample totals.",
+        "properties": {
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "string"
+          },
+          "latest_session_at": {
+            "title": "Latest Session At",
+            "type": "string"
+          },
+          "sample_count": {
+            "minimum": 0,
+            "title": "Sample Count",
+            "type": "integer"
+          },
+          "session_count": {
+            "minimum": 0,
+            "title": "Session Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "experiment_id",
+          "sample_count",
+          "session_count",
+          "latest_session_at"
+        ],
+        "title": "ExperimentSummary",
+        "type": "object"
+      },
+      "GoalPageResponse": {
+        "additionalProperties": false,
+        "description": "One keyset page of Goals and bounded useful owned context.",
+        "properties": {
+          "capture_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Capture Gaps",
+            "type": "array"
+          },
+          "completeness": {
+            "enum": [
+              "complete",
+              "partial",
+              "degraded"
+            ],
+            "title": "Completeness",
+            "type": "string"
+          },
+          "continuation_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Continuation Cursor"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/GoalResource"
+            },
+            "maxItems": 20,
+            "title": "Items",
+            "type": "array"
+          },
+          "resource_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_version": {
+            "minimum": 1,
+            "title": "Resource Version",
+            "type": "integer"
+          },
+          "source_cursor": {
+            "minLength": 1,
+            "title": "Source Cursor",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "Source Refs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "resource_id",
+          "resource_version",
+          "source_cursor",
+          "completeness",
+          "capture_gaps",
+          "source_refs",
+          "continuation_cursor",
+          "items"
+        ],
+        "title": "GoalPageResponse",
+        "type": "object"
+      },
+      "GoalResource": {
+        "additionalProperties": false,
+        "description": "One useful Goal row with bounded owned context.",
+        "properties": {
+          "child_continuation_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Child Continuation Cursor"
+          },
+          "cost_usd": {
+            "minimum": 0,
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "duration_ms": {
+            "minimum": 0,
+            "title": "Duration Ms",
+            "type": "number"
+          },
+          "goal": {
+            "$ref": "#/components/schemas/EntitySummary"
+          },
+          "nudges": {
+            "items": {
+              "$ref": "#/components/schemas/EntitySummary"
+            },
+            "maxItems": 5,
+            "title": "Nudges",
+            "type": "array"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          },
+          "tokens": {
+            "minimum": 0,
+            "title": "Tokens",
+            "type": "integer"
+          },
+          "turns": {
+            "items": {
+              "$ref": "#/components/schemas/EntitySummary"
+            },
+            "maxItems": 5,
+            "title": "Turns",
+            "type": "array"
+          }
+        },
+        "required": [
+          "goal",
+          "nudges",
+          "turns",
+          "outcome",
+          "tokens",
+          "cost_usd",
+          "duration_ms",
+          "child_continuation_cursor"
+        ],
+        "title": "GoalResource",
+        "type": "object"
+      },
       "HealthResponse": {
         "additionalProperties": false,
         "description": "Current API health and authority split.",
@@ -102,6 +1104,615 @@
           "control_plane"
         ],
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "JsonScalar": {
+        "anyOf": [
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "integer"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "JsonValue": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/JsonScalar"
+          },
+          {
+            "items": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "array"
+          },
+          {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "object"
+          }
+        ]
+      },
+      "KnowledgeDetailPage": {
+        "additionalProperties": false,
+        "description": "One keyset page from a selected durable knowledge layer.",
+        "properties": {
+          "capture_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Capture Gaps",
+            "type": "array"
+          },
+          "completeness": {
+            "enum": [
+              "complete",
+              "partial",
+              "degraded"
+            ],
+            "title": "Completeness",
+            "type": "string"
+          },
+          "continuation_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Continuation Cursor"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeItem"
+            },
+            "maxItems": 100,
+            "title": "Items",
+            "type": "array"
+          },
+          "kind": {
+            "enum": [
+              "assertion",
+              "change",
+              "snapshot",
+              "recovery"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "player_id": {
+            "title": "Player Id",
+            "type": "string"
+          },
+          "resource_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_version": {
+            "minimum": 1,
+            "title": "Resource Version",
+            "type": "integer"
+          },
+          "source_cursor": {
+            "minLength": 1,
+            "title": "Source Cursor",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "Source Refs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "resource_id",
+          "resource_version",
+          "source_cursor",
+          "completeness",
+          "capture_gaps",
+          "source_refs",
+          "player_id",
+          "kind",
+          "continuation_cursor",
+          "items"
+        ],
+        "title": "KnowledgeDetailPage",
+        "type": "object"
+      },
+      "KnowledgeEvidencePage": {
+        "additionalProperties": false,
+        "description": "One keyset page of retained assertion evidence references.",
+        "properties": {
+          "assertion_id": {
+            "title": "Assertion Id",
+            "type": "string"
+          },
+          "capture_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Capture Gaps",
+            "type": "array"
+          },
+          "completeness": {
+            "enum": [
+              "complete",
+              "partial",
+              "degraded"
+            ],
+            "title": "Completeness",
+            "type": "string"
+          },
+          "continuation_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Continuation Cursor"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeEvidenceRef"
+            },
+            "maxItems": 100,
+            "title": "Items",
+            "type": "array"
+          },
+          "player_id": {
+            "title": "Player Id",
+            "type": "string"
+          },
+          "resource_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_version": {
+            "minimum": 1,
+            "title": "Resource Version",
+            "type": "integer"
+          },
+          "source_cursor": {
+            "minLength": 1,
+            "title": "Source Cursor",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "Source Refs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "resource_id",
+          "resource_version",
+          "source_cursor",
+          "completeness",
+          "capture_gaps",
+          "source_refs",
+          "player_id",
+          "assertion_id",
+          "continuation_cursor",
+          "items"
+        ],
+        "title": "KnowledgeEvidencePage",
+        "type": "object"
+      },
+      "KnowledgeEvidenceRef": {
+        "additionalProperties": false,
+        "description": "One retained assertion evidence reference.",
+        "properties": {
+          "id": {
+            "minimum": 1,
+            "title": "Id",
+            "type": "integer"
+          },
+          "values": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "values"
+        ],
+        "title": "KnowledgeEvidenceRef",
+        "type": "object"
+      },
+      "KnowledgeItem": {
+        "additionalProperties": false,
+        "description": "One bounded durable knowledge record with provenance.",
+        "properties": {
+          "evidence_continuation_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Evidence Continuation Cursor"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "assertion",
+              "change",
+              "snapshot",
+              "recovery"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Source Refs",
+            "type": "array"
+          },
+          "values": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "values",
+          "source_refs"
+        ],
+        "title": "KnowledgeItem",
+        "type": "object"
+      },
+      "KnowledgeMetric": {
+        "additionalProperties": false,
+        "description": "One stable summary count from the durable knowledge store.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "id",
+          "value"
+        ],
+        "title": "KnowledgeMetric",
+        "type": "object"
+      },
+      "KnowledgeSummaryResponse": {
+        "additionalProperties": false,
+        "description": "Fixed player knowledge totals, conflicts, and freshness.",
+        "properties": {
+          "capture_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Capture Gaps",
+            "type": "array"
+          },
+          "cdc_cursor": {
+            "minimum": 0,
+            "title": "Cdc Cursor",
+            "type": "integer"
+          },
+          "completeness": {
+            "enum": [
+              "complete",
+              "partial",
+              "degraded"
+            ],
+            "title": "Completeness",
+            "type": "string"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeMetric"
+            },
+            "maxItems": 16,
+            "title": "Metrics",
+            "type": "array"
+          },
+          "player_id": {
+            "title": "Player Id",
+            "type": "string"
+          },
+          "resource_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_version": {
+            "minimum": 1,
+            "title": "Resource Version",
+            "type": "integer"
+          },
+          "source_cursor": {
+            "minLength": 1,
+            "title": "Source Cursor",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "Source Refs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "resource_id",
+          "resource_version",
+          "source_cursor",
+          "completeness",
+          "capture_gaps",
+          "source_refs",
+          "player_id",
+          "cdc_cursor",
+          "metrics"
+        ],
+        "title": "KnowledgeSummaryResponse",
+        "type": "object"
+      },
+      "LifecyclePageResponse": {
+        "additionalProperties": false,
+        "description": "One keyset page of retained lifecycle transitions.",
+        "properties": {
+          "capture_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Capture Gaps",
+            "type": "array"
+          },
+          "completeness": {
+            "enum": [
+              "complete",
+              "partial",
+              "degraded"
+            ],
+            "title": "Completeness",
+            "type": "string"
+          },
+          "continuation_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Continuation Cursor"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LifecycleSummary"
+            },
+            "maxItems": 100,
+            "title": "Items",
+            "type": "array"
+          },
+          "resource_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_version": {
+            "minimum": 1,
+            "title": "Resource Version",
+            "type": "integer"
+          },
+          "source_cursor": {
+            "minLength": 1,
+            "title": "Source Cursor",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "Source Refs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "resource_id",
+          "resource_version",
+          "source_cursor",
+          "completeness",
+          "capture_gaps",
+          "source_refs",
+          "continuation_cursor",
+          "items"
+        ],
+        "title": "LifecyclePageResponse",
+        "type": "object"
+      },
+      "LifecycleSummary": {
+        "additionalProperties": false,
+        "description": "One bounded lifecycle transition in a session summary.",
+        "properties": {
+          "at": {
+            "title": "At",
+            "type": "string"
+          },
+          "detail": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Detail",
+            "type": "object"
+          },
+          "sequence": {
+            "minimum": 1,
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sequence",
+          "at",
+          "state",
+          "detail"
+        ],
+        "title": "LifecycleSummary",
+        "type": "object"
+      },
+      "LivePartitionResponse": {
+        "additionalProperties": false,
+        "description": "One independently replaceable Live projection partition.",
+        "properties": {
+          "capture_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Capture Gaps",
+            "type": "array"
+          },
+          "completeness": {
+            "enum": [
+              "complete",
+              "partial",
+              "degraded"
+            ],
+            "title": "Completeness",
+            "type": "string"
+          },
+          "partition": {
+            "enum": [
+              "identity-lifecycle",
+              "world-map",
+              "position-path",
+              "thought-activity",
+              "vitals-combat",
+              "economics",
+              "controls",
+              "diagnostics"
+            ],
+            "title": "Partition",
+            "type": "string"
+          },
+          "resource_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_version": {
+            "minimum": 1,
+            "title": "Resource Version",
+            "type": "integer"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "source_cursor": {
+            "minLength": 1,
+            "title": "Source Cursor",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "Source Refs",
+            "type": "array"
+          },
+          "stable_node_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 512,
+            "title": "Stable Node Ids",
+            "type": "array"
+          },
+          "values": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "resource_id",
+          "resource_version",
+          "source_cursor",
+          "completeness",
+          "capture_gaps",
+          "source_refs",
+          "session_id",
+          "partition",
+          "stable_node_ids",
+          "values"
+        ],
+        "title": "LivePartitionResponse",
         "type": "object"
       },
       "LiveVoiceCapability": {
@@ -139,6 +1750,284 @@
           "detail"
         ],
         "title": "LiveVoiceCapability",
+        "type": "object"
+      },
+      "MapEdge": {
+        "additionalProperties": false,
+        "description": "One observed directed transition.",
+        "properties": {
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "sequence": {
+            "minimum": 0,
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "target",
+          "direction",
+          "sequence"
+        ],
+        "title": "MapEdge",
+        "type": "object"
+      },
+      "MapNode": {
+        "additionalProperties": false,
+        "description": "One observed place in a bounded graph prefix.",
+        "properties": {
+          "exits": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Exits",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_sequence": {
+            "minimum": 0,
+            "title": "Last Sequence",
+            "type": "integer"
+          },
+          "source_ref": {
+            "title": "Source Ref",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "x": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "X"
+          },
+          "y": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Y"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "exits",
+          "last_sequence",
+          "source_ref"
+        ],
+        "title": "MapNode",
+        "type": "object"
+      },
+      "MapPrefixResponse": {
+        "additionalProperties": false,
+        "description": "Bounded graph, selected position, and recent path.",
+        "properties": {
+          "capture_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Capture Gaps",
+            "type": "array"
+          },
+          "completeness": {
+            "enum": [
+              "complete",
+              "partial",
+              "degraded"
+            ],
+            "title": "Completeness",
+            "type": "string"
+          },
+          "continuation_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Continuation Cursor"
+          },
+          "current_room_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Room Id"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/MapEdge"
+            },
+            "maxItems": 400,
+            "title": "Edges",
+            "type": "array"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/MapNode"
+            },
+            "maxItems": 200,
+            "title": "Nodes",
+            "type": "array"
+          },
+          "recent_path": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Recent Path",
+            "type": "array"
+          },
+          "resource_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_version": {
+            "minimum": 1,
+            "title": "Resource Version",
+            "type": "integer"
+          },
+          "source_cursor": {
+            "minLength": 1,
+            "title": "Source Cursor",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "Source Refs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "resource_id",
+          "resource_version",
+          "source_cursor",
+          "completeness",
+          "capture_gaps",
+          "source_refs",
+          "current_room_id",
+          "nodes",
+          "edges",
+          "recent_path",
+          "continuation_cursor"
+        ],
+        "title": "MapPrefixResponse",
+        "type": "object"
+      },
+      "MaterializationPendingResponse": {
+        "additionalProperties": false,
+        "description": "Truthful selected-session state while the canonical projection advances.",
+        "properties": {
+          "capture_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Capture Gaps",
+            "type": "array"
+          },
+          "completeness": {
+            "enum": [
+              "complete",
+              "partial",
+              "degraded"
+            ],
+            "title": "Completeness",
+            "type": "string"
+          },
+          "resource_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_version": {
+            "minimum": 1,
+            "title": "Resource Version",
+            "type": "integer"
+          },
+          "retry_after_ms": {
+            "maximum": 5000,
+            "minimum": 1,
+            "title": "Retry After Ms",
+            "type": "integer"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "source_cursor": {
+            "minLength": 1,
+            "title": "Source Cursor",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "Source Refs",
+            "type": "array"
+          },
+          "state": {
+            "const": "materialization_pending",
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resource_id",
+          "resource_version",
+          "source_cursor",
+          "completeness",
+          "capture_gaps",
+          "source_refs",
+          "session_id",
+          "state",
+          "retry_after_ms"
+        ],
+        "title": "MaterializationPendingResponse",
         "type": "object"
       },
       "ObservatoryCapabilities": {
@@ -181,10 +2070,12 @@
         "description": "One player represented in the session catalog.",
         "properties": {
           "id": {
+            "maxLength": 512,
             "title": "Id",
             "type": "string"
           },
           "label": {
+            "maxLength": 512,
             "title": "Label",
             "type": "string"
           }
@@ -247,15 +2138,145 @@
         "title": "ResourceChangedNotification",
         "type": "object"
       },
+      "SearchMatch": {
+        "additionalProperties": false,
+        "description": "One stable search result and navigation target.",
+        "properties": {
+          "excerpt": {
+            "title": "Excerpt",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "session",
+              "goal",
+              "nudge",
+              "turn",
+              "iteration",
+              "record",
+              "trace",
+              "experiment_sample"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "occurred_at": {
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "record_id": {
+            "title": "Record Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "kind",
+          "occurred_at",
+          "title",
+          "excerpt"
+        ],
+        "title": "SearchMatch",
+        "type": "object"
+      },
+      "SearchPageResponse": {
+        "additionalProperties": false,
+        "description": "One stable keyset page of sanitized evidence matches.",
+        "properties": {
+          "capture_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Capture Gaps",
+            "type": "array"
+          },
+          "completeness": {
+            "enum": [
+              "complete",
+              "partial",
+              "degraded"
+            ],
+            "title": "Completeness",
+            "type": "string"
+          },
+          "continuation_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Continuation Cursor"
+          },
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/SearchMatch"
+            },
+            "maxItems": 50,
+            "title": "Matches",
+            "type": "array"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "resource_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_version": {
+            "minimum": 1,
+            "title": "Resource Version",
+            "type": "integer"
+          },
+          "source_cursor": {
+            "minLength": 1,
+            "title": "Source Cursor",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "Source Refs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "resource_id",
+          "resource_version",
+          "source_cursor",
+          "completeness",
+          "capture_gaps",
+          "source_refs",
+          "query",
+          "continuation_cursor",
+          "matches"
+        ],
+        "title": "SearchPageResponse",
+        "type": "object"
+      },
       "SessionCatalogItem": {
         "additionalProperties": false,
         "description": "One launcher session without loading its retained evidence.",
         "properties": {
           "capture_status": {
+            "maxLength": 128,
             "title": "Capture Status",
             "type": "string"
           },
           "character": {
+            "maxLength": 512,
             "title": "Character",
             "type": "string"
           },
@@ -275,43 +2296,71 @@
             "title": "Control State"
           },
           "created_at": {
+            "maxLength": 128,
             "title": "Created At",
             "type": "string"
           },
           "ended_at": {
             "anyOf": [
               {
+                "maxLength": 128,
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
+            "default": null,
             "title": "Ended At"
           },
           "event_count": {
-            "minimum": 0,
-            "title": "Event Count",
-            "type": "integer"
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Event Count"
           },
           "gateway_session_id": {
+            "maxLength": 512,
             "title": "Gateway Session Id",
             "type": "string"
           },
           "goal_count": {
-            "default": 0,
-            "minimum": 0,
-            "title": "Goal Count",
-            "type": "integer"
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Goal Count"
           },
           "id": {
+            "maxLength": 512,
             "title": "Id",
             "type": "string"
           },
           "latest_seq": {
-            "minimum": 0,
-            "title": "Latest Seq",
-            "type": "integer"
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Latest Seq"
           },
           "legacy": {
             "title": "Legacy",
@@ -322,14 +2371,22 @@
             "type": "boolean"
           },
           "nudge_count": {
-            "default": 0,
-            "minimum": 0,
-            "title": "Nudge Count",
-            "type": "integer"
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Nudge Count"
           },
           "objective": {
             "anyOf": [
               {
+                "maxLength": 512,
                 "type": "string"
               },
               {
@@ -340,16 +2397,36 @@
             "title": "Objective"
           },
           "player_id": {
+            "maxLength": 512,
             "title": "Player Id",
             "type": "string"
           },
+          "projection_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "Projection Gaps",
+            "type": "array"
+          },
+          "projection_status": {
+            "enum": [
+              "available",
+              "pending",
+              "fault"
+            ],
+            "title": "Projection Status",
+            "type": "string"
+          },
           "state": {
+            "maxLength": 128,
             "title": "State",
             "type": "string"
           },
           "stop_mode": {
             "anyOf": [
               {
+                "maxLength": 128,
                 "type": "string"
               },
               {
@@ -360,6 +2437,7 @@
             "title": "Stop Mode"
           },
           "updated_at": {
+            "maxLength": 128,
             "title": "Updated At",
             "type": "string"
           }
@@ -375,9 +2453,8 @@
           "capture_status",
           "created_at",
           "updated_at",
-          "ended_at",
-          "event_count",
-          "latest_seq",
+          "projection_status",
+          "projection_gaps",
           "legacy",
           "live"
         ],
@@ -431,8 +2508,7 @@
             "type": "string"
           },
           "resource_version": {
-            "const": 1,
-            "default": 1,
+            "minimum": 1,
             "title": "Resource Version",
             "type": "integer"
           },
@@ -459,6 +2535,7 @@
           }
         },
         "required": [
+          "resource_version",
           "source_cursor",
           "completeness",
           "continuation_cursor",
@@ -518,6 +2595,251 @@
         "title": "SessionCommandRequest",
         "type": "object"
       },
+      "SessionSummaryResponse": {
+        "additionalProperties": false,
+        "description": "Fixed useful summary for one selected materialized session.",
+        "properties": {
+          "capture_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Capture Gaps",
+            "type": "array"
+          },
+          "capture_status": {
+            "maxLength": 128,
+            "title": "Capture Status",
+            "type": "string"
+          },
+          "character": {
+            "maxLength": 512,
+            "title": "Character",
+            "type": "string"
+          },
+          "completeness": {
+            "enum": [
+              "complete",
+              "partial",
+              "degraded"
+            ],
+            "title": "Completeness",
+            "type": "string"
+          },
+          "created_at": {
+            "maxLength": 128,
+            "title": "Created At",
+            "type": "string"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "goal_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal Cursor"
+          },
+          "latest_goal": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Goal"
+          },
+          "latest_goal_id": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Goal Id"
+          },
+          "lifecycle": {
+            "items": {
+              "$ref": "#/components/schemas/LifecycleSummary"
+            },
+            "maxItems": 32,
+            "title": "Lifecycle",
+            "type": "array"
+          },
+          "lifecycle_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lifecycle Cursor"
+          },
+          "player_id": {
+            "maxLength": 512,
+            "title": "Player Id",
+            "type": "string"
+          },
+          "resource_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_version": {
+            "minimum": 1,
+            "title": "Resource Version",
+            "type": "integer"
+          },
+          "search_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Search Cursor"
+          },
+          "session_id": {
+            "maxLength": 512,
+            "title": "Session Id",
+            "type": "string"
+          },
+          "source_cursor": {
+            "minLength": 1,
+            "title": "Source Cursor",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "Source Refs",
+            "type": "array"
+          },
+          "state": {
+            "maxLength": 128,
+            "title": "State",
+            "type": "string"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/SessionTotals"
+          },
+          "updated_at": {
+            "maxLength": 128,
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resource_id",
+          "resource_version",
+          "source_cursor",
+          "completeness",
+          "capture_gaps",
+          "source_refs",
+          "session_id",
+          "player_id",
+          "character",
+          "state",
+          "created_at",
+          "updated_at",
+          "ended_at",
+          "capture_status",
+          "latest_goal_id",
+          "latest_goal",
+          "totals",
+          "lifecycle",
+          "lifecycle_cursor",
+          "goal_cursor",
+          "search_cursor"
+        ],
+        "title": "SessionSummaryResponse",
+        "type": "object"
+      },
+      "SessionTotals": {
+        "additionalProperties": false,
+        "description": "Materialized totals available without loading hierarchy pages.",
+        "properties": {
+          "cost_usd": {
+            "minimum": 0,
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "duration_ms": {
+            "minimum": 0,
+            "title": "Duration Ms",
+            "type": "number"
+          },
+          "goals": {
+            "minimum": 0,
+            "title": "Goals",
+            "type": "integer"
+          },
+          "iterations": {
+            "minimum": 0,
+            "title": "Iterations",
+            "type": "integer"
+          },
+          "nudges": {
+            "minimum": 0,
+            "title": "Nudges",
+            "type": "integer"
+          },
+          "records": {
+            "minimum": 0,
+            "title": "Records",
+            "type": "integer"
+          },
+          "tokens": {
+            "minimum": 0,
+            "title": "Tokens",
+            "type": "integer"
+          },
+          "turns": {
+            "minimum": 0,
+            "title": "Turns",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "goals",
+          "nudges",
+          "turns",
+          "iterations",
+          "records",
+          "tokens",
+          "cost_usd",
+          "duration_ms"
+        ],
+        "title": "SessionTotals",
+        "type": "object"
+      },
       "SourceStatus": {
         "additionalProperties": false,
         "description": "One evidence source and its current availability.",
@@ -570,6 +2892,441 @@
           "detail"
         ],
         "title": "SourceStatus",
+        "type": "object"
+      },
+      "TracePageResponse": {
+        "additionalProperties": false,
+        "description": "One keyset page across a correlated trace.",
+        "properties": {
+          "capture_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Capture Gaps",
+            "type": "array"
+          },
+          "completeness": {
+            "enum": [
+              "complete",
+              "partial",
+              "degraded"
+            ],
+            "title": "Completeness",
+            "type": "string"
+          },
+          "continuation_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Continuation Cursor"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TraceRecord"
+            },
+            "maxItems": 100,
+            "title": "Items",
+            "type": "array"
+          },
+          "resource_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_version": {
+            "minimum": 1,
+            "title": "Resource Version",
+            "type": "integer"
+          },
+          "source_cursor": {
+            "minLength": 1,
+            "title": "Source Cursor",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "Source Refs",
+            "type": "array"
+          },
+          "trace_id": {
+            "title": "Trace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resource_id",
+          "resource_version",
+          "source_cursor",
+          "completeness",
+          "capture_gaps",
+          "source_refs",
+          "trace_id",
+          "continuation_cursor",
+          "items"
+        ],
+        "title": "TracePageResponse",
+        "type": "object"
+      },
+      "TraceRecord": {
+        "additionalProperties": false,
+        "description": "One bounded subsystem record inside a correlated trace.",
+        "properties": {
+          "evidence_kind": {
+            "title": "Evidence Kind",
+            "type": "string"
+          },
+          "record": {
+            "$ref": "#/components/schemas/EntitySummary"
+          }
+        },
+        "required": [
+          "record",
+          "evidence_kind"
+        ],
+        "title": "TraceRecord",
+        "type": "object"
+      },
+      "TurnPageResponse": {
+        "additionalProperties": false,
+        "description": "One keyset page of Turns and bounded useful Iteration context.",
+        "properties": {
+          "capture_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Capture Gaps",
+            "type": "array"
+          },
+          "completeness": {
+            "enum": [
+              "complete",
+              "partial",
+              "degraded"
+            ],
+            "title": "Completeness",
+            "type": "string"
+          },
+          "continuation_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Continuation Cursor"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TurnResource"
+            },
+            "maxItems": 20,
+            "title": "Items",
+            "type": "array"
+          },
+          "resource_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_version": {
+            "minimum": 1,
+            "title": "Resource Version",
+            "type": "integer"
+          },
+          "source_cursor": {
+            "minLength": 1,
+            "title": "Source Cursor",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "Source Refs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "resource_id",
+          "resource_version",
+          "source_cursor",
+          "completeness",
+          "capture_gaps",
+          "source_refs",
+          "continuation_cursor",
+          "items"
+        ],
+        "title": "TurnPageResponse",
+        "type": "object"
+      },
+      "TurnResource": {
+        "additionalProperties": false,
+        "description": "One useful Turn row with bounded Iteration context.",
+        "properties": {
+          "child_continuation_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Child Continuation Cursor"
+          },
+          "cost_usd": {
+            "minimum": 0,
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "duration_ms": {
+            "minimum": 0,
+            "title": "Duration Ms",
+            "type": "number"
+          },
+          "iterations": {
+            "items": {
+              "$ref": "#/components/schemas/EntitySummary"
+            },
+            "maxItems": 10,
+            "title": "Iterations",
+            "type": "array"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          },
+          "tokens": {
+            "minimum": 0,
+            "title": "Tokens",
+            "type": "integer"
+          },
+          "turn": {
+            "$ref": "#/components/schemas/EntitySummary"
+          }
+        },
+        "required": [
+          "turn",
+          "iterations",
+          "outcome",
+          "tokens",
+          "cost_usd",
+          "duration_ms",
+          "child_continuation_cursor"
+        ],
+        "title": "TurnResource",
+        "type": "object"
+      },
+      "ValueChunkResponse": {
+        "additionalProperties": false,
+        "description": "One bounded base64 chunk of canonical sanitized retained content.",
+        "properties": {
+          "capture_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Capture Gaps",
+            "type": "array"
+          },
+          "chunk": {
+            "title": "Chunk",
+            "type": "string"
+          },
+          "completeness": {
+            "enum": [
+              "complete",
+              "partial",
+              "degraded"
+            ],
+            "title": "Completeness",
+            "type": "string"
+          },
+          "content_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Content Digest",
+            "type": "string"
+          },
+          "encoding": {
+            "const": "base64",
+            "title": "Encoding",
+            "type": "string"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Next Offset"
+          },
+          "offset": {
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "resource_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_version": {
+            "minimum": 1,
+            "title": "Resource Version",
+            "type": "integer"
+          },
+          "source_cursor": {
+            "minLength": 1,
+            "title": "Source Cursor",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "Source Refs",
+            "type": "array"
+          },
+          "total_bytes": {
+            "minimum": 0,
+            "title": "Total Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "resource_id",
+          "resource_version",
+          "source_cursor",
+          "completeness",
+          "capture_gaps",
+          "source_refs",
+          "content_digest",
+          "offset",
+          "total_bytes",
+          "encoding",
+          "chunk"
+        ],
+        "title": "ValueChunkResponse",
+        "type": "object"
+      },
+      "WireBodyResponse": {
+        "additionalProperties": false,
+        "description": "One verified sanitized wire body with a strict request limit.",
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "byte_length": {
+            "maximum": 65536,
+            "minimum": 0,
+            "title": "Byte Length",
+            "type": "integer"
+          },
+          "capture_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Capture Gaps",
+            "type": "array"
+          },
+          "completeness": {
+            "enum": [
+              "complete",
+              "partial",
+              "degraded"
+            ],
+            "title": "Completeness",
+            "type": "string"
+          },
+          "digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Digest",
+            "type": "string"
+          },
+          "media_type": {
+            "const": "text/plain; charset=utf-8",
+            "title": "Media Type",
+            "type": "string"
+          },
+          "redacted": {
+            "title": "Redacted",
+            "type": "boolean"
+          },
+          "resource_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_version": {
+            "minimum": 1,
+            "title": "Resource Version",
+            "type": "integer"
+          },
+          "source_cursor": {
+            "minLength": 1,
+            "title": "Source Cursor",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "Source Refs",
+            "type": "array"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "resource_id",
+          "resource_version",
+          "source_cursor",
+          "completeness",
+          "capture_gaps",
+          "source_refs",
+          "digest",
+          "media_type",
+          "byte_length",
+          "truncated",
+          "body",
+          "redacted"
+        ],
+        "title": "WireBodyResponse",
         "type": "object"
       }
     }
@@ -632,6 +3389,161 @@
         ]
       }
     },
+    "/api/v1/experiments": {
+      "get": {
+        "operationId": "getExperimentCatalog",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "maxLength": 2048,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentCatalogPage"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "experiments"
+        ]
+      }
+    },
+    "/api/v1/experiments/{experiment_id}": {
+      "get": {
+        "operationId": "getExperimentDetail",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "maxLength": 2048,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentDetailResponse"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "experiments"
+        ]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "getHealth",
@@ -680,6 +3592,1754 @@
         },
         "tags": [
           "system"
+        ]
+      }
+    },
+    "/api/v1/knowledge/{player_id}": {
+      "get": {
+        "operationId": "getKnowledgeSummary",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "player_id",
+            "required": true,
+            "schema": {
+              "maxLength": 120,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeSummaryResponse"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/{player_id}/assertions/{assertion_id}/content": {
+      "get": {
+        "operationId": "getKnowledgeAssertionContent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "player_id",
+            "required": true,
+            "schema": {
+              "maxLength": 120,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "assertion_id",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_bytes",
+            "required": false,
+            "schema": {
+              "default": 16384,
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValueChunkResponse"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/{player_id}/assertions/{assertion_id}/evidence": {
+      "get": {
+        "operationId": "getKnowledgeAssertionEvidence",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "player_id",
+            "required": true,
+            "schema": {
+              "maxLength": 120,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "assertion_id",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "maxLength": 2048,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeEvidencePage"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/{player_id}/{kind}": {
+      "get": {
+        "operationId": "getKnowledgeDetail",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "player_id",
+            "required": true,
+            "schema": {
+              "maxLength": 120,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "assertion",
+                "change",
+                "snapshot",
+                "recovery"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "maxLength": 2048,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeDetailPage"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/live/{session_id}/{partition}": {
+      "get": {
+        "operationId": "getLivePartition",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "partition",
+            "required": true,
+            "schema": {
+              "enum": [
+                "identity-lifecycle",
+                "world-map",
+                "position-path",
+                "thought-activity",
+                "vitals-combat",
+                "economics",
+                "controls",
+                "diagnostics"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LivePartitionResponse"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "live"
+        ]
+      }
+    },
+    "/api/v1/sessions": {
+      "get": {
+        "operationId": "getSessionCatalog",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "maxLength": 2048,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "player_id",
+            "required": false,
+            "schema": {
+              "maxLength": 120,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionCatalogResponse"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}": {
+      "get": {
+        "operationId": "getSessionSummary",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionSummaryResponse"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterializationPendingResponse"
+                }
+              }
+            },
+            "description": "Selected-session materialization is pending"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/cost": {
+      "get": {
+        "operationId": "getSessionCostRange",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "maxLength": 2048,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope_id",
+            "required": false,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CostRangeResponse"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/evidence/{record_id}": {
+      "get": {
+        "operationId": "getEvidenceRecord",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceRecordResponse"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterializationPendingResponse"
+                }
+              }
+            },
+            "description": "Selected-session materialization is pending"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "evidence"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/evidence/{record_id}/children": {
+      "get": {
+        "operationId": "getEvidenceChildren",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "maxLength": 2048,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityPageResponse"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "evidence"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/evidence/{record_id}/content": {
+      "get": {
+        "operationId": "getEvidenceContent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_bytes",
+            "required": false,
+            "schema": {
+              "default": 16384,
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValueChunkResponse"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterializationPendingResponse"
+                }
+              }
+            },
+            "description": "Selected-session materialization is pending"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "evidence"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/goals": {
+      "get": {
+        "operationId": "getSessionGoals",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "maxLength": 2048,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 20,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalPageResponse"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterializationPendingResponse"
+                }
+              }
+            },
+            "description": "Selected-session materialization is pending"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/goals/{goal_id}/turns": {
+      "get": {
+        "operationId": "getGoalTurns",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "goal_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "maxLength": 2048,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 20,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TurnPageResponse"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/lifecycle": {
+      "get": {
+        "operationId": "getSessionLifecycle",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "maxLength": 2048,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LifecyclePageResponse"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/lifecycle/{sequence}/content": {
+      "get": {
+        "operationId": "getLifecycleContent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "sequence",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_bytes",
+            "required": false,
+            "schema": {
+              "default": 16384,
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValueChunkResponse"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterializationPendingResponse"
+                }
+              }
+            },
+            "description": "Selected-session materialization is pending"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/map": {
+      "get": {
+        "operationId": "getSessionMapPrefix",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "maxLength": 2048,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapPrefixResponse"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/search": {
+      "get": {
+        "operationId": "searchSessionEvidence",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 500,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "maxLength": 2048,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchPageResponse"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "evidence"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/traces/{trace_id}": {
+      "get": {
+        "operationId": "getCorrelatedTrace",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "trace_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "maxLength": 2048,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TracePageResponse"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "evidence"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/turns/{turn_id}/iterations": {
+      "get": {
+        "operationId": "getTurnIterations",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "turn_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "maxLength": 2048,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityPageResponse"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/wire/{digest}": {
+      "get": {
+        "operationId": "getWireBody",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "digest",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_bytes",
+            "required": false,
+            "schema": {
+              "default": 16384,
+              "maximum": 65536,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireBodyResponse"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "evidence"
         ]
       }
     }

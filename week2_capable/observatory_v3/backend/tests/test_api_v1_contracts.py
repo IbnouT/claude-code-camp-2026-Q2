@@ -82,7 +82,15 @@ def test_public_schema_excludes_legacy_complete_investigations() -> None:
     document = openapi_document()
     paths = document["paths"]
     assert isinstance(paths, dict)
-    assert set(paths) == {"/api/v1/health", "/api/v1/capabilities"}
+    assert {
+        "/api/v1/health",
+        "/api/v1/capabilities",
+        "/api/v1/sessions",
+        "/api/v1/sessions/{session_id}",
+        "/api/v1/live/{session_id}/{partition}",
+        "/api/v1/experiments",
+        "/api/v1/knowledge/{player_id}",
+    } <= set(paths)
 
     components = document["components"]
     assert isinstance(components, dict)
@@ -167,7 +175,7 @@ async def test_v1_health_and_unknown_versions_precede_spa_fallback(
         assert response.json()["error"] == "unsupported_api_version"
 
 
-async def test_only_real_fixed_resources_are_published_in_v1(
+async def test_bounded_resources_report_unavailable_without_runtime(
     tmp_path: Path,
 ) -> None:
     app = create_app(
@@ -185,11 +193,11 @@ async def test_only_real_fixed_resources_are_published_in_v1(
         unpublished = await client.get("/api/v1/sessions")
 
     assert capabilities.status_code == 200
-    assert unpublished.status_code == 404
+    assert unpublished.status_code == 503
     assert unpublished.json() == {
         "contract_version": "v1",
-        "error": "not_found",
-        "detail": "The requested resource is not published in API version 1.",
+        "error": "source_unavailable",
+        "detail": "The retained session index is not configured.",
     }
 
 
