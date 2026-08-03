@@ -132,6 +132,49 @@ flowchart LR
 - Missing retained sources appear as capture gaps. Derived index upgrades
   invalidate earlier projections before bounded reads resume.
 
+## Resource notifications
+
+```mermaid
+sequenceDiagram
+    participant Browser
+    participant SSE as Notification hub
+    participant Materializer
+    participant API as Bounded read API
+
+    Browser->>SSE: GET /api/v1/notifications?session_id=...
+    SSE->>Materializer: share selected-session demand
+    Materializer->>Materializer: commit projection and composite cursor
+    Materializer->>API: read exact changed resource metadata
+    API-->>SSE: readable resource id, version, and cursor
+    SSE-->>Browser: resource_changed
+    Browser->>API: fetch only the changed resource
+```
+
+- Event ids use `<server-epoch>:<change-counter>`.
+- `Last-Event-ID` replays changes inside the current server epoch.
+- Epoch mismatch and replay exhaustion return one bounded `reconcile` event.
+- Restart reconciliation waits for the selected session's committed targets.
+- Notifications identify readable resources and never carry raw evidence.
+- Identical resource versions and cursors coalesce before publication.
+- One watcher and one materializer flight serve every tab for a selected session.
+- Disconnect removes only the subscriber. In-flight shared work reaches its safe
+  boundary.
+- Cold and post-bootstrap capture faults publish a readable faulted catalog.
+- Terminal and capture-fault publications bypass identical-cursor suppression.
+- Successful retained control receipts wake the selected-session watcher.
+
+The transport has fixed in-memory bounds.
+
+| Bound | Limit |
+|---|---:|
+| Shared replay records | 256 |
+| Current resource identities | 256 |
+| Reconciliation targets | 64 |
+| Subscribers | 32 |
+| Demanded sessions | 16 |
+| Committed root targets per session pass | 14 |
+| SSE retry hint | 1,000 ms |
+
 ## Public contract
 
 ```mermaid
@@ -145,8 +188,8 @@ flowchart LR
 
 - `/api/v1/openapi.json` publishes the local canonical schema.
 - `/api/v1/health` and `/api/v1/capabilities` are the first callable resources.
-- Future bounded resource and notification shapes are components, not false
-  placeholder routes.
+- Resource notification and reconciliation shapes are reusable components on
+  the callable SSE route.
 - Future optimistic command and durable receipt shapes follow the same rule.
 - `openapi/observatory-v1.json` is the deterministic generation input.
 - `openapi/operations.json` is the stable operation manifest.

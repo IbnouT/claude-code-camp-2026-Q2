@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, RootModel
 
 from ..contracts import (
     ExperimentDefinition,
@@ -196,16 +196,55 @@ class LiveControlReceipt(PublicContract):
     insertion: str
 
 
+class ResourceChangeTarget(PublicContract):
+    """One committed bounded resource identified for refetch."""
+
+    resource_kind: str = Field(min_length=1, max_length=64)
+    resource_id: str = Field(min_length=1, max_length=512)
+    resource_version: int = Field(ge=1)
+    source_cursor: str = Field(min_length=1, max_length=256)
+
+
 class ResourceChangedNotification(PublicContract):
     """One notification that identifies a bounded resource to refetch."""
 
     contract_version: Literal["v1"] = "v1"
     event: Literal["resource_changed"] = "resource_changed"
-    resource_kind: str = Field(min_length=1)
-    resource_id: str = Field(min_length=1)
+    server_epoch: str = Field(pattern=r"^[0-9a-f]{32}$")
+    change_counter: int = Field(ge=1)
+    resource_kind: str = Field(min_length=1, max_length=64)
+    resource_id: str = Field(min_length=1, max_length=512)
     resource_version: int = Field(ge=1)
-    source_cursor: str = Field(min_length=1)
+    source_cursor: str = Field(min_length=1, max_length=256)
     at: float
+
+
+class ResourceReconciliationNotification(PublicContract):
+    """One bounded current-resource set after replay cannot continue."""
+
+    contract_version: Literal["v1"] = "v1"
+    event: Literal["reconcile"] = "reconcile"
+    server_epoch: str = Field(pattern=r"^[0-9a-f]{32}$")
+    change_counter: int = Field(ge=0)
+    reason: Literal[
+        "epoch_mismatch",
+        "invalid_event_id",
+        "replay_window_exhausted",
+        "counter_ahead",
+    ]
+    resources: tuple[ResourceChangeTarget, ...] = Field(max_length=64)
+    at: float
+
+
+class ResourceNotification(
+    RootModel[
+        Annotated[
+            ResourceChangedNotification | ResourceReconciliationNotification,
+            Field(discriminator="event"),
+        ]
+    ]
+):
+    """Typed payload carried by the version 1 event stream."""
 
 
 class SessionCommandRequest(PublicContract):
@@ -232,6 +271,8 @@ PUBLIC_COMPONENT_MODELS: tuple[type[BaseModel], ...] = (
     CommandAccepted,
     HealthResponse,
     ResourceChangedNotification,
+    ResourceNotification,
+    ResourceReconciliationNotification,
     SessionCommandRequest,
     SessionCatalogResponse,
 )

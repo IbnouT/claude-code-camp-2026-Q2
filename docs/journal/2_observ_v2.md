@@ -360,6 +360,22 @@ positions together.
 The cursor and materialization rules are in
 [the backend architecture plan](../plans/week2_observ/observatory/backend_architecture.md).
 
+### 15. Notifications needed to identify invalidation, not repeat evidence
+
+Streaming resource bodies would duplicate the bounded read contracts and make
+reconnect work grow with retained evidence. Resource notifications now carry
+only the identity and cursor needed to reread committed state.
+
+- Publication happens only after the changed target is readable.
+- `Last-Event-ID` replays a bounded window inside one server epoch.
+- Epoch mismatch or replay exhaustion emits one bounded reconciliation.
+- Multiple subscribers share one demanded materialization path.
+- Subscriber teardown removes its demand without cancelling shared work.
+- Cold capture faults remain durable, typed, readable resource changes.
+
+The notification and reconciliation bounds are specified in
+[the backend architecture plan](../plans/week2_observ/observatory/backend_architecture.md).
+
 ## Technical Conclusions
 
 - The gateway hypothesis held. Owning the wire made raw evidence, typed

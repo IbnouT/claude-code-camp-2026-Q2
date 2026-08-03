@@ -765,8 +765,9 @@ Build:
 - Add server epoch and monotonic change counter.
 - Support `Last-Event-ID` inside one epoch.
 - Add bounded epoch-mismatch reconciliation.
-- Add server and Query-client cursor-aware coalescing.
+- Add server-side cursor-aware coalescing.
 - Keep raw event streams separate from projection notification.
+- Leave Query-client invalidation and browser coalescing to FT4.
 
 Gate:
 

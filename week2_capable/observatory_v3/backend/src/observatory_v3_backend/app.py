@@ -46,6 +46,19 @@ from .incidents import build_capsule
 from .index import IndexStore
 from .knowledge_contracts import KnowledgeRecoveryRequest
 from .materialization import SessionMaterializer
+from .notifications import (
+    NotificationHubClosedError,
+    NotificationSubscriberLimitError,
+    ResourceNotificationHub,
+)
+from .notifications.service import (
+    NotificationDemandClosedError,
+    NotificationDemandLimitError,
+    NotificationSeedError,
+    NotificationSessionNotFoundError,
+    SessionNotificationService,
+)
+from .notifications.transport import session_notification_response
 from .projections.history import diagnostic_history
 from .projections.knowledge import project_knowledge
 from .projections.session import (
@@ -397,6 +410,9 @@ def create_app(
                 {"error": "control_rejected", "detail": str(error)},
                 status_code=409,
             )
+        notifications = getattr(request.app.state, "session_notifications", None)
+        if isinstance(notifications, SessionNotificationService):
+            await notifications.source_changed(request.path_params["session"])
         return JSONResponse(receipt)
 
     async def live_voice(request: Request) -> Response:
@@ -1172,6 +1188,60 @@ def create_app(
         )
         return JSONResponse(error.model_dump(mode="json"), status_code=404)
 
+    async def resource_notifications(request: Request) -> Response:
+        session_id = request.query_params.get("session_id")
+        if session_id is None or not 1 <= len(session_id) <= 200:
+            return JSONResponse(
+                {
+                    "error": "invalid_request",
+                    "detail": "session_id must contain between 1 and 200 characters",
+                },
+                status_code=422,
+            )
+        hub = getattr(request.app.state, "resource_notification_hub", None)
+        service = getattr(request.app.state, "session_notifications", None)
+        if not isinstance(hub, ResourceNotificationHub) or not isinstance(
+            service,
+            SessionNotificationService,
+        ):
+            return JSONResponse(
+                {
+                    "error": "source_unavailable",
+                    "detail": (
+                        "The retained session notification source is unavailable."
+                    ),
+                },
+                status_code=503,
+            )
+        try:
+            return await session_notification_response(
+                request,
+                hub=hub,
+                service=service,
+            )
+        except NotificationSessionNotFoundError:
+            return JSONResponse(
+                {
+                    "error": "not_found",
+                    "detail": "The selected session does not exist.",
+                },
+                status_code=404,
+            )
+        except (
+            NotificationDemandClosedError,
+            NotificationDemandLimitError,
+            NotificationHubClosedError,
+            NotificationSeedError,
+            NotificationSubscriberLimitError,
+        ):
+            return JSONResponse(
+                {
+                    "error": "source_unavailable",
+                    "detail": "The notification stream is at capacity.",
+                },
+                status_code=503,
+            )
+
     def versioned_resource_handler(name: str) -> Handler:
         async def handler(request: Request) -> JSONResponse:
             resources = getattr(request.app.state, "read_resources", None)
@@ -1203,6 +1273,8 @@ def create_app(
         index: IndexStore | None = None
         materializer: SessionMaterializer | None = None
         resources: ReadResourceHandlers | None = None
+        notification_hub = ResourceNotificationHub()
+        notifications: SessionNotificationService | None = None
         try:
             if active.runtime_root is not None:
                 index = IndexStore.for_runtime(active.runtime_root)
@@ -1219,15 +1291,29 @@ def create_app(
                         storage=storage,
                         knowledge=KnowledgeResourceRepository(active.runtime_root),
                     )
+                    notifications = SessionNotificationService(
+                        registry=registry,
+                        index=index,
+                        resources=resources.resources,
+                        catalog_target=resources.notification_catalog_target,
+                        materializer=materializer,
+                        storage=storage,
+                        hub=notification_hub,
+                    )
             application.state.session_index = index
             application.state.session_materializer = materializer
             application.state.read_resources = resources
+            application.state.resource_notification_hub = notification_hub
+            application.state.session_notifications = notifications
             yield
         finally:
-            if materializer is not None:
-                await materializer.close()
+            if notifications is not None:
+                await notifications.close()
             if resources is not None:
                 await resources.close()
+            if materializer is not None:
+                await materializer.close()
+            await notification_hub.close()
             if index is not None:
                 index.close()
             await storage.close()
@@ -1235,6 +1321,7 @@ def create_app(
     versioned_handlers: dict[str, Handler] = {
         "health": health,
         "capabilities": capabilities,
+        "resource_notifications": resource_notifications,
         **{
             name: versioned_resource_handler(name)
             for name in (

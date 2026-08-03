@@ -1,0 +1,29 @@
+[
+  {
+    "contract_version": "v1",
+    "event": "resource_changed",
+    "server_epoch": "0123456789abcdef0123456789abcdef",
+    "change_counter": 7,
+    "resource_kind": "session_summary",
+    "resource_id": "session:fixture:summary",
+    "resource_version": 3,
+    "source_cursor": "obc1_fixture",
+    "at": 1785765600.0
+  },
+  {
+    "contract_version": "v1",
+    "event": "reconcile",
+    "server_epoch": "fedcba9876543210fedcba9876543210",
+    "change_counter": 0,
+    "reason": "epoch_mismatch",
+    "resources": [
+      {
+        "resource_kind": "session_summary",
+        "resource_id": "session:fixture:summary",
+        "resource_version": 3,
+        "source_cursor": "obc1_fixture"
+      }
+    ],
+    "at": 1785765601.0
+  }
+]

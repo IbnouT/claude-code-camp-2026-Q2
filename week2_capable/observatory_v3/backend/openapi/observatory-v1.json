@@ -2087,6 +2087,43 @@
         "title": "PlayerOption",
         "type": "object"
       },
+      "ResourceChangeTarget": {
+        "additionalProperties": false,
+        "description": "One committed bounded resource identified for refetch.",
+        "properties": {
+          "resource_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_kind": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Resource Kind",
+            "type": "string"
+          },
+          "resource_version": {
+            "minimum": 1,
+            "title": "Resource Version",
+            "type": "integer"
+          },
+          "source_cursor": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Source Cursor",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resource_kind",
+          "resource_id",
+          "resource_version",
+          "source_cursor"
+        ],
+        "title": "ResourceChangeTarget",
+        "type": "object"
+      },
       "ResourceChangedNotification": {
         "additionalProperties": false,
         "description": "One notification that identifies a bounded resource to refetch.",
@@ -2094,6 +2131,11 @@
           "at": {
             "title": "At",
             "type": "number"
+          },
+          "change_counter": {
+            "minimum": 1,
+            "title": "Change Counter",
+            "type": "integer"
           },
           "contract_version": {
             "const": "v1",
@@ -2108,11 +2150,13 @@
             "type": "string"
           },
           "resource_id": {
+            "maxLength": 512,
             "minLength": 1,
             "title": "Resource Id",
             "type": "string"
           },
           "resource_kind": {
+            "maxLength": 64,
             "minLength": 1,
             "title": "Resource Kind",
             "type": "string"
@@ -2122,13 +2166,21 @@
             "title": "Resource Version",
             "type": "integer"
           },
+          "server_epoch": {
+            "pattern": "^[0-9a-f]{32}$",
+            "title": "Server Epoch",
+            "type": "string"
+          },
           "source_cursor": {
+            "maxLength": 256,
             "minLength": 1,
             "title": "Source Cursor",
             "type": "string"
           }
         },
         "required": [
+          "server_epoch",
+          "change_counter",
           "resource_kind",
           "resource_id",
           "resource_version",
@@ -2136,6 +2188,84 @@
           "at"
         ],
         "title": "ResourceChangedNotification",
+        "type": "object"
+      },
+      "ResourceNotification": {
+        "description": "Typed payload carried by the version 1 event stream.",
+        "discriminator": {
+          "mapping": {
+            "reconcile": "#/components/schemas/ResourceReconciliationNotification",
+            "resource_changed": "#/components/schemas/ResourceChangedNotification"
+          },
+          "propertyName": "event"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ResourceChangedNotification"
+          },
+          {
+            "$ref": "#/components/schemas/ResourceReconciliationNotification"
+          }
+        ],
+        "title": "ResourceNotification"
+      },
+      "ResourceReconciliationNotification": {
+        "additionalProperties": false,
+        "description": "One bounded current-resource set after replay cannot continue.",
+        "properties": {
+          "at": {
+            "title": "At",
+            "type": "number"
+          },
+          "change_counter": {
+            "minimum": 0,
+            "title": "Change Counter",
+            "type": "integer"
+          },
+          "contract_version": {
+            "const": "v1",
+            "default": "v1",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "event": {
+            "const": "reconcile",
+            "default": "reconcile",
+            "title": "Event",
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "epoch_mismatch",
+              "invalid_event_id",
+              "replay_window_exhausted",
+              "counter_ahead"
+            ],
+            "title": "Reason",
+            "type": "string"
+          },
+          "resources": {
+            "items": {
+              "$ref": "#/components/schemas/ResourceChangeTarget"
+            },
+            "maxItems": 64,
+            "title": "Resources",
+            "type": "array"
+          },
+          "server_epoch": {
+            "pattern": "^[0-9a-f]{32}$",
+            "title": "Server Epoch",
+            "type": "string"
+          }
+        },
+        "required": [
+          "server_epoch",
+          "change_counter",
+          "reason",
+          "resources",
+          "at"
+        ],
+        "title": "ResourceReconciliationNotification",
         "type": "object"
       },
       "SearchMatch": {
@@ -4017,6 +4147,77 @@
         },
         "tags": [
           "live"
+        ]
+      }
+    },
+    "/api/v1/notifications": {
+      "get": {
+        "operationId": "getResourceNotifications",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Last-Event-ID",
+            "required": false,
+            "schema": {
+              "pattern": "^[0-9a-f]{32}:[0-9]+$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceNotification"
+                }
+              }
+            },
+            "description": "Committed bounded resource notifications"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "notifications"
         ]
       }
     },

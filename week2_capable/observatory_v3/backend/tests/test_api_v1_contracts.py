@@ -85,6 +85,7 @@ def test_public_schema_excludes_legacy_complete_investigations() -> None:
     assert {
         "/api/v1/health",
         "/api/v1/capabilities",
+        "/api/v1/notifications",
         "/api/v1/sessions",
         "/api/v1/sessions/{session_id}",
         "/api/v1/live/{session_id}/{partition}",
@@ -100,6 +101,9 @@ def test_public_schema_excludes_legacy_complete_investigations() -> None:
         "ApiError",
         "CommandAccepted",
         "ResourceChangedNotification",
+        "ResourceChangeTarget",
+        "ResourceNotification",
+        "ResourceReconciliationNotification",
         "SessionCommandRequest",
         "SessionCatalogResponse",
     } <= set(schemas)
@@ -108,6 +112,35 @@ def test_public_schema_excludes_legacy_complete_investigations() -> None:
         "RecordedSessionInvestigation",
         "RuntimeSessionInvestigation",
     }.isdisjoint(schemas)
+
+
+def test_notification_operation_freezes_statuses_and_typed_stream_models() -> None:
+    document = openapi_document()
+    paths = document["paths"]
+    assert isinstance(paths, dict)
+    operation = paths["/api/v1/notifications"]["get"]
+    assert isinstance(operation, dict)
+    responses = operation["responses"]
+    assert isinstance(responses, dict)
+
+    assert set(responses) == {"200", "404", "422", "503"}
+    assert responses["200"]["content"]["text/event-stream"]["schema"] == {
+        "$ref": "#/components/schemas/ResourceNotification"
+    }
+    for status in ("404", "422", "503"):
+        assert responses[status]["content"]["application/json"]["schema"] == {
+            "$ref": "#/components/schemas/ApiError"
+        }
+
+    components = document["components"]
+    assert isinstance(components, dict)
+    schemas = components["schemas"]
+    assert isinstance(schemas, dict)
+    assert {
+        "ResourceChangeTarget",
+        "ResourceNotification",
+        "ResourceReconciliationNotification",
+    } <= set(schemas)
 
 
 def test_starlette_routes_derive_from_the_operation_registry(

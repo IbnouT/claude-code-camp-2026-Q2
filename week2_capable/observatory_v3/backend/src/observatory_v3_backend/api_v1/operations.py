@@ -34,7 +34,12 @@ from ..resources.contracts import (
     ValueChunkResponse,
     WireBodyResponse,
 )
-from .contracts import ApiError, HealthResponse, SessionCatalogResponse
+from .contracts import (
+    ApiError,
+    HealthResponse,
+    ResourceNotification,
+    SessionCatalogResponse,
+)
 
 HttpMethod = Literal["GET", "POST"]
 ParameterLocation = Literal["path", "query", "header"]
@@ -164,6 +169,39 @@ API_V1_OPERATIONS: tuple[OperationSpec, ...] = (
         "capabilities",
         "system",
         ObservatoryCapabilities,
+    ),
+    OperationSpec(
+        method="GET",
+        path="/notifications",
+        operation_id="getResourceNotifications",
+        handler="resource_notifications",
+        tags=("notifications",),
+        request_model=None,
+        responses=(
+            ResponseSpec(
+                200,
+                "Committed bounded resource notifications",
+                ResourceNotification,
+                media_type="text/event-stream",
+            ),
+            *ERRORS,
+        ),
+        parameters=(
+            ParameterSpec(
+                "session_id",
+                "query",
+                {"type": "string", "minLength": 1, "maxLength": 200},
+                required=True,
+            ),
+            ParameterSpec(
+                "Last-Event-ID",
+                "header",
+                {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{32}:[0-9]+$",
+                },
+            ),
+        ),
     ),
     _get(
         "/sessions",

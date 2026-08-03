@@ -13,6 +13,7 @@ from starlette.responses import JSONResponse
 
 from ..api_v1.contracts import (
     PlayerOption,
+    ResourceChangeTarget,
     SessionCatalogItem,
     SessionCatalogResponse,
 )
@@ -66,8 +67,36 @@ class ReadResourceHandlers:
         """Read one launcher catalog keyset without opening evidence journals."""
         limit = _limit(request, maximum=50, default=20)
         player_id = request.query_params.get("player_id")
-        resource_id = f"session-catalog:{player_id or 'all'}"
         cursor = request.query_params.get("cursor")
+        response = await self._session_catalog_value(
+            limit=limit,
+            player_id=player_id,
+            cursor=cursor,
+        )
+        return _json(response)
+
+    async def notification_catalog_target(self) -> ResourceChangeTarget:
+        """Read the exact default catalog metadata used for fault publication."""
+        response = await self._session_catalog_value(
+            limit=20,
+            player_id=None,
+            cursor=None,
+        )
+        return ResourceChangeTarget(
+            resource_kind="session_catalog",
+            resource_id=response.resource_id,
+            resource_version=response.resource_version,
+            source_cursor=response.source_cursor,
+        )
+
+    async def _session_catalog_value(
+        self,
+        *,
+        limit: int,
+        player_id: str | None,
+        cursor: str | None,
+    ) -> SessionCatalogResponse:
+        resource_id = f"session-catalog:{player_id or 'all'}"
         after = None if cursor is None else decode_cursor(cursor, resource=resource_id)
         page = await self.storage.run(
             SessionCatalogRepository(self.registry).keyset_page,
@@ -200,7 +229,7 @@ class ReadResourceHandlers:
             players=players,
             sessions=tuple(sessions),
         )
-        return _json(response)
+        return response
 
     async def session_summary(self, request: Request) -> JSONResponse:
         session_id = _session_id(request)

@@ -11,6 +11,11 @@
   ],
   [
     "GET",
+    "/api/v1/notifications",
+    "getResourceNotifications"
+  ],
+  [
+    "GET",
     "/api/v1/sessions",
     "getSessionCatalog"
   ],
