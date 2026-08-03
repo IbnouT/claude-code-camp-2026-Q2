@@ -41,6 +41,9 @@ flowchart LR
 - Storybook isolates every primitive and its supported interaction states.
 - TanStack Router owns typed paths, parameters, search state, and navigation.
 - One root shell persists while route outlets change.
+- TanStack Query owns validated server state, cancellation, retry, and
+  invalidation.
+- B6 notifications coalesce affected bounded-resource refreshes by cursor.
 
 The development server exposes the product shell and cumulative review at
 `/review`. The production build excludes that route and its review modules.
@@ -134,6 +137,7 @@ flowchart LR
 | `npm run contracts:check`    | Check deterministic output and operation coverage   |
 | `npm test`                   | Run component tests                                 |
 | `npm run test:e2e`           | Run Chromium and axe browser gates                  |
+| `npm run test:data`          | Run focused typed server-state scenarios            |
 | `npm run test:shell`         | Run focused shell and navigation scenarios          |
 | `npm run storybook`          | Start the isolated primitive workshop               |
 | `npm run storybook:build`    | Build the pinned development-only workshop          |
@@ -160,7 +164,40 @@ flowchart LR
 | Orval 8.23.0                 | OpenAPI TypeScript and Zod generation                            |
 | Zod 4.4.3 Mini               | Tree-shakeable runtime contract validation                       |
 
-TanStack Query remains inactive until its server-state landing.
+## Typed server state
+
+One data boundary owns requests from transport through cache invalidation.
+
+```mermaid
+flowchart LR
+    View["Presentation hook"]
+    Query["TanStack Query"]
+    Adapter["Typed request adapter"]
+    Schema["Generated validator"]
+    API["Bounded v3 resource"]
+    SSE["B6 notification"]
+
+    View --> Query
+    Query --> Adapter
+    Adapter --> API
+    API --> Schema
+    Schema --> Query
+    SSE --> Query
+```
+
+- Native fetch receives TanStack Query cancellation signals.
+- Generated schemas validate capabilities and every bounded response in use.
+- HTTP, transport, and response-validation failures remain distinct.
+- Query keys include resource identity, pagination cursor, and server epoch.
+- Identical consumers share one in-flight request and one validated cache.
+- Page and detail factories never request a complete investigation.
+- Detail factories represent `202` materialization as a typed result.
+- Query defaults bound retry and backoff without recurring polling.
+- Immutable stopped resources have no interval or timer.
+- B6 notification bursts retain the newest opaque cursor.
+- One in-flight refresh permits one coalesced trailing refresh.
+- Epoch reconciliation invalidates only its bounded resource list.
+- The development review proves two capabilities consumers share one request.
 
 ## Boundaries
 

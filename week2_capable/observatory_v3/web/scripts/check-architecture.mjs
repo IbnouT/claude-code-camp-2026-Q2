@@ -36,6 +36,10 @@ const prohibitedLegacyReferences = [
   "week2_capable/observatory/",
   "week2_capable/observatory\\",
 ]
+const allowedPresentationDataImports = new Set([
+  "@/data/capabilities",
+  "@/data/server-state-provider",
+])
 
 async function collectSourceFiles(directory, extensions = sourceExtensions) {
   let entries
@@ -127,6 +131,14 @@ for (const { contents, file } of sourceContents) {
     file === sourceRoot || file.startsWith(`${sourceRoot}${path.sep}`)
 
   if (isRuntimeSource) {
+    for (const match of contents.matchAll(
+      /\brefetchInterval\s*:\s*(?<value>[^,\n}]+)/gu
+    )) {
+      if (match.groups?.value.trim() !== "false") {
+        failures.push(`${relativeFile}: recurring query polling enabled`)
+      }
+    }
+
     for (const legacyReference of prohibitedLegacyReferences) {
       if (contents.includes(legacyReference)) {
         failures.push(
@@ -157,6 +169,14 @@ for (const { contents, file } of sourceContents) {
           `${relativeFile}: independently authored transport type outside src/data`
         )
       }
+      if (contents.includes("@tanstack/react-query")) {
+        failures.push(
+          `${relativeFile}: direct TanStack Query use outside src/data`
+        )
+      }
+      if (contents.includes("refetchInterval")) {
+        failures.push(`${relativeFile}: polling configuration outside src/data`)
+      }
     }
   }
 
@@ -164,6 +184,17 @@ for (const { contents, file } of sourceContents) {
     const specifier = match.groups?.specifier
     if (specifier === undefined) {
       continue
+    }
+
+    if (
+      isRuntimeSource &&
+      !relativeFile.startsWith(`src${path.sep}data${path.sep}`) &&
+      specifier.startsWith("@/data/") &&
+      !allowedPresentationDataImports.has(specifier)
+    ) {
+      failures.push(
+        `${relativeFile}: direct data implementation import ${specifier}`
+      )
     }
 
     if (

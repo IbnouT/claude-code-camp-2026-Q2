@@ -11,6 +11,7 @@ const developmentOnlyMarkers = [
   "observatory.backend-baseline.v1",
   "Backend contract baseline",
   "V3_DEVELOPMENT_ROUTER_REVIEW_ONLY",
+  "V3_SERVER_STATE_REVIEW_ONLY",
 ]
 
 async function collectFiles(directory) {

@@ -8,9 +8,25 @@ import {
   createAppRouter,
   type DevelopmentRouteExtension,
 } from "@/app/create-app-router"
+import { capabilitiesQueryOptions } from "@/data/capabilities"
+import {
+  ServerStateProvider,
+  createServerStateClient,
+} from "@/data/server-state-provider"
 import { App as FoundationReview } from "@/dev/foundation-review"
+import { ServerStateReview } from "@/dev/server-state-review"
 
 const DEVELOPMENT_ROUTE_MARKER = "V3_DEVELOPMENT_ROUTER_REVIEW_ONLY"
+const serverStateClient = createServerStateClient()
+
+function DevelopmentReview() {
+  return (
+    <>
+      <FoundationReview />
+      <ServerStateReview />
+    </>
+  )
+}
 
 declare global {
   interface Window {
@@ -26,9 +42,11 @@ function createDevelopmentRoute(
   rootRoute: AnyRootRoute
 ): DevelopmentRouteExtension {
   const route = createRoute({
+    beforeLoad: () =>
+      serverStateClient.prefetchQuery(capabilitiesQueryOptions()),
     getParentRoute: () => rootRoute,
     path: "/review",
-    component: FoundationReview,
+    component: DevelopmentReview,
   })
 
   return {
@@ -49,7 +67,9 @@ function App() {
   return (
     <>
       <span hidden>{DEVELOPMENT_ROUTE_MARKER}</span>
-      <RouterProvider router={router} />
+      <ServerStateProvider client={serverStateClient}>
+        <RouterProvider router={router} />
+      </ServerStateProvider>
     </>
   )
 }

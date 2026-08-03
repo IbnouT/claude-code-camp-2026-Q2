@@ -20,24 +20,46 @@ export const ApiError = /*#__PURE__*/ zod.strictObject({
 export type ApiError = zod.input<typeof ApiError>;
 export type ApiErrorOutput = zod.output<typeof ApiError>;
 
-
-export const commandAcceptedRequestIdMin = 8;
-export const commandAcceptedRequestIdMax = 128;
+export const commandResponseActorMax = 120;
 
 
-export const commandAcceptedStateDefault = `queued`;
+export const commandResponseIdempotencyKeyMin = 8;
+export const commandResponseIdempotencyKeyMax = 128;
+
+export const commandResponsePlayerIdMax = 120;
 
 
-export const CommandAccepted = /*#__PURE__*/ zod.strictObject({
+export const commandResponseResourceVersionDefault = 1;
+export const commandResponseResultDetailOneMax = 500;
+
+export const commandResponseResultDetailDefault = null;
+export const commandResponseSourceCursorMax = 256;
+
+
+
+
+export const CommandResponse = /*#__PURE__*/ zod.strictObject({
+  "action": /*#__PURE__*/ zod.enum(['start', 'guide', 'revise', 'pause', 'resume', 'stop']),
+  "actor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(commandResponseActorMax)),
   "command_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
-  "request_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(commandAcceptedRequestIdMin)).check(/*#__PURE__*/ zod.maxLength(commandAcceptedRequestIdMax)),
+  "expected_cursor": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "finished_at": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "idempotency_key": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(commandResponseIdempotencyKeyMin)).check(/*#__PURE__*/ zod.maxLength(commandResponseIdempotencyKeyMax)),
+  "player_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(commandResponsePlayerIdMax)),
   "resource_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
-  "state": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.literal("queued"), commandAcceptedStateDefault),
+  "resource_version": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.literal(1), commandResponseResourceVersionDefault),
+  "result_code": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "result_detail": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(commandResponseResultDetailOneMax)),/*#__PURE__*/ zod.null()]), commandResponseResultDetailDefault),
+  "result_session_id": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "session_id": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "source_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(commandResponseSourceCursorMax)),
+  "started_at": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "state": /*#__PURE__*/ zod.enum(['queued', 'running', 'succeeded', 'failed']),
   "submitted_at": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1))
-}).check(/*#__PURE__*/ zod.describe('Future durable acknowledgement for one accepted session command.'));
+}).check(/*#__PURE__*/ zod.describe('Bounded public-safe state for one durable command.'));
 
-export type CommandAccepted = zod.input<typeof CommandAccepted>;
-export type CommandAcceptedOutput = zod.output<typeof CommandAccepted>;
+export type CommandResponse = zod.input<typeof CommandResponse>;
+export type CommandResponseOutput = zod.output<typeof CommandResponse>;
 
 export const costContributorCostUsdMin = 0;
 
@@ -714,25 +736,95 @@ export const PlayerOption = /*#__PURE__*/ zod.strictObject({
 export type PlayerOption = zod.input<typeof PlayerOption>;
 export type PlayerOptionOutput = zod.output<typeof PlayerOption>;
 
+export const resourceChangeTargetPlayerIdOneMax = 120;
+
+export const resourceChangeTargetPlayerIdDefault = null;
+export const resourceChangeTargetResourceIdMax = 512;
+
+export const resourceChangeTargetResourceKindMax = 64;
+
+
+export const resourceChangeTargetSessionIdOneMax = 200;
+
+export const resourceChangeTargetSessionIdDefault = null;
+export const resourceChangeTargetSourceCursorMax = 256;
+
+
+
+export const ResourceChangeTarget = /*#__PURE__*/ zod.strictObject({
+  "player_id": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(resourceChangeTargetPlayerIdOneMax)),/*#__PURE__*/ zod.null()]), resourceChangeTargetPlayerIdDefault),
+  "resource_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(resourceChangeTargetResourceIdMax)),
+  "resource_kind": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(resourceChangeTargetResourceKindMax)),
+  "resource_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "session_id": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(resourceChangeTargetSessionIdOneMax)),/*#__PURE__*/ zod.null()]), resourceChangeTargetSessionIdDefault),
+  "source_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(resourceChangeTargetSourceCursorMax))
+}).check(/*#__PURE__*/ zod.describe('One committed bounded resource identified for refetch.'));
+
+export type ResourceChangeTarget = zod.input<typeof ResourceChangeTarget>;
+export type ResourceChangeTargetOutput = zod.output<typeof ResourceChangeTarget>;
+
+
 export const resourceChangedNotificationContractVersionDefault = `v1`;
 export const resourceChangedNotificationEventDefault = `resource_changed`;
+export const resourceChangedNotificationPlayerIdOneMax = 120;
+
+export const resourceChangedNotificationPlayerIdDefault = null;
+export const resourceChangedNotificationResourceIdMax = 512;
+
+export const resourceChangedNotificationResourceKindMax = 64;
 
 
+export const resourceChangedNotificationServerEpochRegExp = new RegExp('^[0-9a-f]{32}$');
+export const resourceChangedNotificationSessionIdOneMax = 200;
+
+export const resourceChangedNotificationSessionIdDefault = null;
+export const resourceChangedNotificationSourceCursorMax = 256;
 
 
 
 export const ResourceChangedNotification = /*#__PURE__*/ zod.strictObject({
   "at": /*#__PURE__*/ zod.number(),
+  "change_counter": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
   "contract_version": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.literal("v1"), resourceChangedNotificationContractVersionDefault),
-  "event": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.literal("resource_changed"), resourceChangedNotificationEventDefault),
-  "resource_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
-  "resource_kind": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
+  "event": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.enum(['resource_changed']), resourceChangedNotificationEventDefault),
+  "player_id": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(resourceChangedNotificationPlayerIdOneMax)),/*#__PURE__*/ zod.null()]), resourceChangedNotificationPlayerIdDefault),
+  "resource_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(resourceChangedNotificationResourceIdMax)),
+  "resource_kind": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(resourceChangedNotificationResourceKindMax)),
   "resource_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
-  "source_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1))
+  "server_epoch": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.regex(resourceChangedNotificationServerEpochRegExp)),
+  "session_id": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(resourceChangedNotificationSessionIdOneMax)),/*#__PURE__*/ zod.null()]), resourceChangedNotificationSessionIdDefault),
+  "source_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(resourceChangedNotificationSourceCursorMax))
 }).check(/*#__PURE__*/ zod.describe('One notification that identifies a bounded resource to refetch.'));
 
 export type ResourceChangedNotification = zod.input<typeof ResourceChangedNotification>;
 export type ResourceChangedNotificationOutput = zod.output<typeof ResourceChangedNotification>;
+
+export const resourceReconciliationNotificationChangeCounterMin = 0;
+
+export const resourceReconciliationNotificationContractVersionDefault = `v1`;
+export const resourceReconciliationNotificationEventDefault = `reconcile`;
+export const resourceReconciliationNotificationResourcesMax = 64;
+
+export const resourceReconciliationNotificationServerEpochRegExp = new RegExp('^[0-9a-f]{32}$');
+
+
+export const ResourceReconciliationNotification = /*#__PURE__*/ zod.strictObject({
+  "at": /*#__PURE__*/ zod.number(),
+  "change_counter": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(resourceReconciliationNotificationChangeCounterMin)),
+  "contract_version": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.literal("v1"), resourceReconciliationNotificationContractVersionDefault),
+  "event": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.enum(['reconcile']), resourceReconciliationNotificationEventDefault),
+  "reason": /*#__PURE__*/ zod.enum(['epoch_mismatch', 'invalid_event_id', 'replay_window_exhausted', 'counter_ahead']),
+  "resources": /*#__PURE__*/ zod.array(ResourceChangeTarget).check(/*#__PURE__*/ zod.maxLength(resourceReconciliationNotificationResourcesMax)),
+  "server_epoch": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.regex(resourceReconciliationNotificationServerEpochRegExp))
+}).check(/*#__PURE__*/ zod.describe('One bounded current-resource set after replay cannot continue.'));
+
+export type ResourceReconciliationNotification = zod.input<typeof ResourceReconciliationNotification>;
+export type ResourceReconciliationNotificationOutput = zod.output<typeof ResourceReconciliationNotification>;
+
+export const ResourceNotification = /*#__PURE__*/ zod.union([ResourceChangedNotification,ResourceReconciliationNotification]).check(/*#__PURE__*/ zod.describe('Typed payload carried by the version 1 event stream.'));
+
+export type ResourceNotification = zod.input<typeof ResourceNotification>;
+export type ResourceNotificationOutput = zod.output<typeof ResourceNotification>;
 
 export const SearchMatch = /*#__PURE__*/ zod.strictObject({
   "excerpt": /*#__PURE__*/ zod.string(),
@@ -867,21 +959,30 @@ export const SessionCatalogResponse = /*#__PURE__*/ zod.strictObject({
 export type SessionCatalogResponse = zod.input<typeof SessionCatalogResponse>;
 export type SessionCatalogResponseOutput = zod.output<typeof SessionCatalogResponse>;
 
+export const sessionCommandRequestActorMax = 120;
+
+export const sessionCommandRequestExpectedCursorMax = 2048;
+
+export const sessionCommandRequestForceDefault = false;
+export const sessionCommandRequestIdempotencyKeyMin = 8;
+export const sessionCommandRequestIdempotencyKeyMax = 128;
 
 export const sessionCommandRequestInstructionOneMax = 4000;
 
 export const sessionCommandRequestInstructionDefault = null;
-export const sessionCommandRequestRequestIdMin = 8;
-export const sessionCommandRequestRequestIdMax = 128;
+export const sessionCommandRequestPlayerIdMax = 120;
 
 
 
 export const SessionCommandRequest = /*#__PURE__*/ zod.strictObject({
   "action": /*#__PURE__*/ zod.enum(['guide', 'revise', 'pause', 'resume', 'stop']),
-  "expected_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
+  "actor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(sessionCommandRequestActorMax)),
+  "expected_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(sessionCommandRequestExpectedCursorMax)),
+  "force": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.boolean(), sessionCommandRequestForceDefault),
+  "idempotency_key": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(sessionCommandRequestIdempotencyKeyMin)).check(/*#__PURE__*/ zod.maxLength(sessionCommandRequestIdempotencyKeyMax)),
   "instruction": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionCommandRequestInstructionOneMax)),/*#__PURE__*/ zod.null()]), sessionCommandRequestInstructionDefault),
-  "request_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(sessionCommandRequestRequestIdMin)).check(/*#__PURE__*/ zod.maxLength(sessionCommandRequestRequestIdMax))
-}).check(/*#__PURE__*/ zod.describe('Future optimistic command against one exact session cursor.'));
+  "player_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(sessionCommandRequestPlayerIdMax))
+}).check(/*#__PURE__*/ zod.describe('Durable optimistic command against one exact session cursor.'));
 
 export type SessionCommandRequest = zod.input<typeof SessionCommandRequest>;
 export type SessionCommandRequestOutput = zod.output<typeof SessionCommandRequest>;
@@ -976,6 +1077,28 @@ export const SessionSummaryResponse = /*#__PURE__*/ zod.strictObject({
 
 export type SessionSummaryResponse = zod.input<typeof SessionSummaryResponse>;
 export type SessionSummaryResponseOutput = zod.output<typeof SessionSummaryResponse>;
+
+export const startCommandRequestActorMax = 120;
+
+export const startCommandRequestIdempotencyKeyMin = 8;
+export const startCommandRequestIdempotencyKeyMax = 128;
+
+export const startCommandRequestInstructionOneMax = 4000;
+
+export const startCommandRequestInstructionDefault = null;
+export const startCommandRequestPlayerIdMax = 120;
+
+
+
+export const StartCommandRequest = /*#__PURE__*/ zod.strictObject({
+  "actor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(startCommandRequestActorMax)),
+  "idempotency_key": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(startCommandRequestIdempotencyKeyMin)).check(/*#__PURE__*/ zod.maxLength(startCommandRequestIdempotencyKeyMax)),
+  "instruction": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(startCommandRequestInstructionOneMax)),/*#__PURE__*/ zod.null()]), startCommandRequestInstructionDefault),
+  "player_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(startCommandRequestPlayerIdMax))
+}).check(/*#__PURE__*/ zod.describe('Durable asynchronous request for one player runtime.'));
+
+export type StartCommandRequest = zod.input<typeof StartCommandRequest>;
+export type StartCommandRequestOutput = zod.output<typeof StartCommandRequest>;
 
 export const TraceRecord = /*#__PURE__*/ zod.strictObject({
   "evidence_kind": /*#__PURE__*/ zod.string(),
@@ -1134,6 +1257,34 @@ export const GetCapabilities404Response = ApiError
 export const GetCapabilities422Response = ApiError
 
 export const GetCapabilities503Response = ApiError
+
+
+export const StartSessionBody = StartCommandRequest
+
+export const StartSession202Response = CommandResponse
+
+export const StartSession409Response = ApiError
+
+export const StartSession422Response = ApiError
+
+export const StartSession503Response = ApiError
+
+
+export const getCommandPathCommandIdMax = 64;
+
+
+
+export const GetCommandParams = /*#__PURE__*/ zod.strictObject({
+  "command_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getCommandPathCommandIdMax))
+})
+
+export const GetCommand200Response = CommandResponse
+
+export const GetCommand404Response = ApiError
+
+export const GetCommand422Response = ApiError
+
+export const GetCommand503Response = ApiError
 
 
 export const getExperimentCatalogQueryCursorMax = 2048;
@@ -1324,6 +1475,30 @@ export const GetLivePartition422Response = ApiError
 export const GetLivePartition503Response = ApiError
 
 
+export const getResourceNotificationsQuerySessionIdMax = 200;
+
+
+
+export const GetResourceNotificationsQueryParams = /*#__PURE__*/ zod.strictObject({
+  "session_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getResourceNotificationsQuerySessionIdMax))
+})
+
+export const getResourceNotificationsHeaderLastEventIDRegExp = new RegExp('^[0-9a-f]{32}:[0-9]+$');
+
+
+export const GetResourceNotificationsHeader = /*#__PURE__*/ zod.strictObject({
+  "Last-Event-ID": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.regex(getResourceNotificationsHeaderLastEventIDRegExp)))
+})
+
+export const GetResourceNotifications200Response = /*#__PURE__*/ zod.unknown()
+
+export const GetResourceNotifications404Response = ApiError
+
+export const GetResourceNotifications422Response = ApiError
+
+export const GetResourceNotifications503Response = ApiError
+
+
 export const getSessionCatalogQueryCursorMax = 2048;
 
 export const getSessionCatalogQueryLimitDefault = 20;
@@ -1365,6 +1540,25 @@ export const GetSessionSummary404Response = ApiError
 export const GetSessionSummary422Response = ApiError
 
 export const GetSessionSummary503Response = ApiError
+
+
+export const controlSessionPathSessionIdMax = 200;
+
+
+
+export const ControlSessionParams = /*#__PURE__*/ zod.strictObject({
+  "session_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(controlSessionPathSessionIdMax))
+})
+
+export const ControlSessionBody = SessionCommandRequest
+
+export const ControlSession202Response = CommandResponse
+
+export const ControlSession409Response = ApiError
+
+export const ControlSession422Response = ApiError
+
+export const ControlSession503Response = ApiError
 
 
 export const getSessionCostRangePathSessionIdMax = 200;

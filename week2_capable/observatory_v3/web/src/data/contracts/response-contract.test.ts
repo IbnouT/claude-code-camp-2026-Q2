@@ -2,11 +2,16 @@ import { describe, expect, it } from "vitest"
 
 import sessionCatalogFixture from "../../../../backend/openapi/fixtures/session-catalog.json?raw"
 import {
+  ApiError,
   SessionCatalogResponse,
   type SessionCatalogResponseOutput,
 } from "@/data/generated/validators"
 
-import { parseContractResponse } from "./response-contract"
+import {
+  HttpResponseError,
+  ResponseValidationError,
+  parseContractResponse,
+} from "./response-contract"
 
 describe("parseContractResponse", () => {
   it("accepts the sanitized Python fixture with the generated validator", async () => {
@@ -33,7 +38,8 @@ describe("parseContractResponse", () => {
         new Map([[200, SessionCatalogResponse]])
       )
     ).rejects.toMatchObject({
-      name: "ContractFault",
+      kind: "validation",
+      name: "ResponseValidationError",
       status: 200,
     })
   })
@@ -54,7 +60,8 @@ describe("parseContractResponse", () => {
         new Map([[200, SessionCatalogResponse]])
       )
     ).rejects.toMatchObject({
-      name: "ContractFault",
+      kind: "http",
+      name: "HttpResponseError",
       status: 503,
       body: { error: "source_unavailable" },
     })
@@ -71,8 +78,22 @@ describe("parseContractResponse", () => {
         new Map([[200, SessionCatalogResponse]])
       )
     ).rejects.toMatchObject({
-      name: "ContractFault",
+      kind: "validation",
+      name: "ResponseValidationError",
       status: 200,
     })
+  })
+
+  it("keeps HTTP and response validation errors as distinct types", () => {
+    const body = ApiError.parse({
+      contract_version: "v1",
+      detail: null,
+      error: "missing",
+    })
+
+    expect(new HttpResponseError(404, body)).toBeInstanceOf(HttpResponseError)
+    expect(new ResponseValidationError("invalid", 200)).toBeInstanceOf(
+      ResponseValidationError
+    )
   })
 })
