@@ -22,6 +22,7 @@ from observatory_v3_backend.index.identity import stable_entity_id
 from observatory_v3_backend.settings import Settings
 
 from .fixtures import RetainedFixture, build_retained_fixture
+from .readiness.fixture import build_readiness_fixture
 
 
 async def test_catalog_uses_stable_keysets_and_fixed_page_limits(
@@ -1201,57 +1202,7 @@ def _write_knowledge(config_dir: Path) -> None:
 
 
 def _representative_fixture(root: Path) -> RetainedFixture:
-    fixture = build_retained_fixture(root, session_count=38)
-    identity = {
-        "session_id": fixture.selected_session_id,
-        "player_id": "alpha",
-    }
-    records = [
-        {
-            **identity,
-            "phase": "session_start",
-            "objective": {"title": "Representative load"},
-            "at": "2026-08-01T00:00:00+00:00",
-        }
-    ]
-    records.extend(
-        {
-            **identity,
-            "phase": "reasoning",
-            "text": f"evidence-{index:04d} " + "x" * 220,
-            "at": f"2026-08-01T00:00:{index % 60:02d}+00:00",
-        }
-        for index in range(1, 5_000)
-    )
-    (fixture.selected_session_dir / "agent.jsonl").write_text(
-        "".join(json.dumps(record) + "\n" for record in records),
-        encoding="utf-8",
-    )
-    with sqlite3.connect(fixture.selected_session_dir / "gateway.db") as database:
-        database.execute("DELETE FROM events")
-        database.executemany(
-            """
-            INSERT INTO events (
-                session, at, monotonic, kind, trace_id, payload
-            ) VALUES (?, ?, ?, 'observation', NULL, ?)
-            """,
-            (
-                (
-                    fixture.selected_gateway_session_id,
-                    float(sequence),
-                    float(sequence),
-                    json.dumps(
-                        {
-                            "place_id": f"place:{sequence % 250}",
-                            "title": f"Place {sequence % 250}",
-                            "direction": "north",
-                        }
-                    ),
-                )
-                for sequence in range(1, 2_001)
-            ),
-        )
-    return fixture
+    return build_readiness_fixture(root).retained
 
 
 class _ClientContext:

@@ -31,6 +31,9 @@ describe("development foundation review", () => {
       screen.getByRole("heading", { name: "Backend contract baseline" })
     ).toBeInTheDocument()
     expect(
+      screen.getByRole("heading", { name: "B9 bounded browser-ready path" })
+    ).toBeInTheDocument()
+    expect(
       screen.getByRole("heading", { name: "Observatory semantic tokens" })
     ).toBeInTheDocument()
     expect(

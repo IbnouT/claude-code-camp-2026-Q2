@@ -176,6 +176,7 @@ flowchart LR
 | `npm run test:e2e`           | Run Chromium and axe browser gates                  |
 | `npm run test:data`          | Run focused typed server-state scenarios            |
 | `npm run test:shell`         | Run focused shell and navigation scenarios          |
+| `npm run test:readiness`     | Run the production backend browser readiness gate   |
 | `npm run storybook`          | Start the isolated primitive workshop               |
 | `npm run storybook:build`    | Build the pinned development-only workshop          |
 | `npm run storybook:test`     | Run axe across every selectable built story         |
@@ -235,6 +236,41 @@ flowchart LR
 - One in-flight refresh permits one coalesced trailing refresh.
 - Epoch reconciliation invalidates only its bounded resource list.
 - The development review proves two capabilities consumers share one request.
+
+## Production backend readiness
+
+The readiness gate runs the built application against the real local ASGI
+backend and its deterministic retained fixture.
+
+```mermaid
+flowchart LR
+    Build["Vite production build"]
+    Server["Uvicorn and retained fixture"]
+    Browser["Chromium"]
+    Metrics["20-sample browser attachment"]
+    Evidence["Backend readiness JSON"]
+
+    Build --> Server
+    Server --> Browser
+    Browser --> Metrics
+    Evidence --> Metrics
+```
+
+- The browser validates the bounded catalog contract before rendering it.
+- One excluded warmup precedes 20 measured requests.
+- One navigation and exactly 21 catalog requests prove bounded request work.
+- A stopped session becomes readable without recurring refresh requests.
+- Backend evidence records fixture provenance, payloads, source work, layer
+  timing, event-loop delay, memory, restart, reconnect, and index rebuild.
+- `src/dev/backend-readiness.json` is review data and stays outside the
+  production graph.
+
+Run the gate after producing the application build.
+
+```bash
+npm run build
+npm run test:readiness
+```
 
 ## Boundaries
 

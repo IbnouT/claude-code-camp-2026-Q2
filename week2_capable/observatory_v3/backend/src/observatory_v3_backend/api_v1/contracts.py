@@ -40,6 +40,19 @@ class ApiError(PublicContract):
     detail: str | None = None
 
 
+class RetiredEndpointResponse(PublicContract):
+    """One bounded terminal response for a replaced legacy route."""
+
+    contract_version: Literal["v1"] = "v1"
+    error: Literal["endpoint_retired"] = "endpoint_retired"
+    method: Literal["GET", "POST"]
+    legacy_path: str = Field(min_length=1, max_length=256)
+    replacements: tuple[
+        Annotated[str, Field(min_length=1, max_length=256)],
+        ...,
+    ] = Field(min_length=1, max_length=4)
+
+
 class HealthResponse(PublicContract):
     """Current API health and authority split."""
 

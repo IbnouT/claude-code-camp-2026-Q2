@@ -129,7 +129,7 @@ def test_missing_store_is_explicit_and_invalid_player_is_rejected(
         source.read("../beta")
 
 
-async def test_player_knowledge_route_is_owned_and_cursor_validated(
+def test_player_knowledge_source_is_owned_and_selected(
     tmp_path: Path,
 ):
     alpha = store_for(tmp_path, "alpha")
@@ -142,21 +142,11 @@ async def test_player_knowledge_route_is_owned_and_cursor_validated(
         evidence=evidence("alpha-session", 3),
     )
     alpha.close()
-    app = create_app(Settings(runtime_root=tmp_path, web_dist=tmp_path))
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://observatory",
-    ) as client:
-        response = await client.get("/api/players/alpha/knowledge?after=0")
-        invalid = await client.get("/api/players/alpha/knowledge?after=-1")
-
-    assert response.status_code == 200
-    payload = response.json()
+    source = KnowledgeSource(tmp_path)
+    payload = source.read("alpha", after=0).model_dump(mode="json")
     assert payload["player_id"] == "alpha"
     assert payload["source"] == "per-player durable knowledge"
     assert payload["assertions"][0]["value"] == 4
-    assert invalid.status_code == 422
 
 
 async def test_knowledge_ask_reads_only_the_selected_player(

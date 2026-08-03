@@ -272,6 +272,54 @@ flowchart LR
 - Unknown prior and future API versions return typed JSON errors.
 - B5-replaced Live and runtime-session compatibility queries are not callable.
 
+## Browser readiness evidence
+
+One reproducible fixture carries backend work from retained sources through the
+production browser gate.
+
+```mermaid
+flowchart LR
+    Fixture["Sanitized retained fixture"]
+    Storage["Bounded storage workers"]
+    Index["Disposable derived index"]
+    API["Versioned resources"]
+    Browser["Production Chromium"]
+    Report["Tracked readiness evidence"]
+
+    Fixture --> Storage
+    Storage --> Index
+    Index --> API
+    API --> Browser
+    API --> Report
+    Browser --> Report
+```
+
+- The fixture contains 38 sessions, 5,000 agent records, and 2,000 gateway
+  events.
+- Cold, warm, concurrent, reconnect, restart, running, stopped, partial, and
+  long-session paths use retained local evidence.
+- Each distribution excludes one warmup and records 20 samples.
+- The report records p50 as the median and p95 as nearest rank.
+- Payload, compressed payload, request, source-work, memory, event-loop, and
+  layer measurements have no invented latency threshold.
+- Resetting the derived index preserves resource identity, cursor, totals, and
+  lifecycle from retained sources.
+- Fifteen replaced legacy method and path pairs return a typed bounded `410`
+  response before any retained source or streaming fallback.
+- `readiness/retired-endpoints.json` records each retired method, path, route
+  status, and versioned replacement.
+- `tests/readiness/measure.py` generates the tracked JSON evidence.
+- `tests/test_readiness.py` gates provenance, bounds, semantic rebuild, terminal
+  route responses, zero source work, and canonical browser paths.
+
+Generate the backend evidence from a fresh temporary fixture.
+
+```bash
+uv run python -m tests.readiness.measure \
+  --output ../web/src/dev/backend-readiness.json
+uv run pytest -q tests/test_readiness.py
+```
+
 ## Development
 
 Use the pinned Python and locked dependencies.

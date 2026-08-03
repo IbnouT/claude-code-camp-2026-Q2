@@ -8,15 +8,20 @@ import sqlite3
 import tempfile
 import threading
 from pathlib import Path
+from typing import Any
 
 import httpx
+import pytest
 from mud_gateway.journal import Journal
+from mud_gateway.stream import serialize_event
 
 from observatory_v3_backend.app import create_app
 from observatory_v3_backend.contracts import LiveMilestone, LiveTimelineItem
 from observatory_v3_backend.projections.live import _objective, _quiet_cohorts
 from observatory_v3_backend.repositories import ControlRepository
+from observatory_v3_backend.runtime_views import RuntimeReadService
 from observatory_v3_backend.settings import Settings
+from observatory_v3_backend.sources.atlas import AtlasSource
 from observatory_v3_backend.sources.runtime import RuntimeSource, RuntimeSourceError
 
 REGISTRY_SCHEMA = """
@@ -363,6 +368,47 @@ def runtime_root(tmp_path: Path) -> Path:
     return root
 
 
+def runtime_catalog(root: Path) -> dict[str, Any]:
+    available = RuntimeSource(root).sessions()
+    players: dict[str, dict[str, str]] = {}
+    for session in available:
+        players.setdefault(
+            session.player_id,
+            {"id": session.player_id, "label": session.character},
+        )
+    return {
+        "version": 1,
+        "players": list(players.values()),
+        "sessions": [session.public() for session in available],
+    }
+
+
+def runtime_investigation(root: Path, session_id: str) -> dict[str, Any]:
+    result = RuntimeReadService(
+        RuntimeSource(root),
+        AtlasSource(None, override_path=None),
+    ).investigation(session_id)
+    if result is None:
+        raise AssertionError(f"missing runtime session: {session_id}")
+    return result.model_dump(mode="json")
+
+
+def runtime_snapshot(
+    root: Path,
+    session_id: str,
+    *,
+    through: int | None = None,
+    world_root: Path | None = None,
+) -> dict[str, Any]:
+    result = RuntimeReadService(
+        RuntimeSource(root),
+        AtlasSource(world_root, override_path=None),
+    ).live(session_id, through=through)
+    if result is None:
+        raise AssertionError(f"missing runtime session: {session_id}")
+    return result.model_dump(mode="json")
+
+
 async def test_catalog_discovers_all_players_and_session_states(tmp_path: Path):
     root = runtime_root(tmp_path)
     alpha_dir = root / "profiles" / "alpha" / "sessions" / "session-alpha"
@@ -370,17 +416,15 @@ async def test_catalog_discovers_all_players_and_session_states(tmp_path: Path):
         json.dumps({"state": "paused"}),
         encoding="utf-8",
     )
+    payload = runtime_catalog(root)
     app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(
         transport=transport,
         base_url="http://observatory",
     ) as client:
-        response = await client.get("/api/sessions")
-        capabilities = await client.get("/api/capabilities")
+        capabilities = await client.get("/api/v1/capabilities")
 
-    assert response.status_code == 200
-    payload = response.json()
     assert [player["id"] for player in payload["players"]] == ["alpha", "beta"]
     assert [session["id"] for session in payload["sessions"]] == [
         "session-alpha",
@@ -401,16 +445,7 @@ async def test_runtime_session_investigation_opens_any_launcher_run(
     tmp_path: Path,
 ):
     root = runtime_root(tmp_path)
-    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://observatory",
-    ) as client:
-        response = await client.get("/api/sessions/session-beta/investigation")
-
-    assert response.status_code == 200
-    payload = response.json()
+    payload = runtime_investigation(root, "session-beta")
     assert payload["source_kind"] == "runtime_session"
     assert payload["run"]["lifecycle"] == "stopped"
     assert payload["run"]["capture_status"] == "complete"
@@ -467,16 +502,8 @@ async def test_objective_revisions_and_nudges_remain_distinct_everywhere(
         ),
         encoding="utf-8",
     )
-    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://observatory",
-    ) as client:
-        catalog = (await client.get("/api/sessions")).json()
-        investigation = (
-            await client.get("/api/sessions/session-alpha/investigation")
-        ).json()
+    catalog = runtime_catalog(root)
+    investigation = runtime_investigation(root, "session-alpha")
 
     session = catalog["sessions"][0]
     assert session["objective"] == "Practice at the warrior guild"
@@ -540,13 +567,7 @@ async def test_runtime_investigation_exposes_complete_model_exchange(
             },
         ):
             handle.write(json.dumps(event) + "\n")
-    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://observatory",
-    ) as client:
-        payload = (await client.get("/api/sessions/session-beta/investigation")).json()
+    payload = runtime_investigation(root, "session-beta")
 
     by_kind = {
         record["kind"]: record
@@ -648,22 +669,14 @@ async def test_wire_evidence_drills_to_integrity_checked_bytes(tmp_path: Path):
         monotonic=4,
     )
     journal.close()
-    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://observatory",
-    ) as client:
-        response = await client.get(f"/api/sessions/session-beta/wire/{wire.seq}")
-        investigation = await client.get("/api/sessions/session-beta/investigation")
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["record_id"] == f"gateway:{wire.seq}"
-    assert payload["digest"] == digest
-    assert payload["bytes"] == len(body)
-    assert payload["content_text"] == body.decode()
-    records = investigation.json()["records"]
+    wire_result = RuntimeSource(root).wire_blob("session-beta", wire.seq)
+    assert wire_result is not None
+    event, retained_body = wire_result
+    assert event.seq == wire.seq
+    assert event.payload["digest"] == digest
+    assert len(retained_body) == len(body)
+    assert retained_body.decode() == body.decode()
+    records = runtime_investigation(root, "session-beta")["records"]
     raw_record = next(
         record for record in records if record["id"] == f"gateway:{wire.seq}"
     )
@@ -690,7 +703,7 @@ async def test_wire_evidence_drills_to_integrity_checked_bytes(tmp_path: Path):
     assert parser_input_record["fields"]["text"] == (
         "Available pets are:\n300 - the puppy"
     )
-    assert payload["content_base64"] != ""
+    assert retained_body != b""
 
 
 def test_empty_gateway_database_is_a_valid_zero_event_capture(
@@ -708,37 +721,24 @@ async def test_each_selected_runtime_session_replays_only_its_own_evidence(
     tmp_path: Path,
 ):
     root = runtime_root(tmp_path)
-    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://observatory",
-    ) as client:
-        alpha = await client.get("/api/sessions/session-alpha/replay?after=0")
-        beta = await client.get("/api/sessions/session-beta/replay?after=0")
+    runtime = RuntimeSource(root)
+    alpha = "".join(serialize_event(event) for event in runtime.events("session-alpha"))
+    beta = "".join(serialize_event(event) for event in runtime.events("session-beta"))
 
-    assert alpha.status_code == 200
-    assert "gateway-alpha" in alpha.text
-    assert "gateway-beta" not in alpha.text
-    assert '"cost_usd":0.11' in alpha.text
-    assert beta.status_code == 200
-    assert "gateway-beta" in beta.text
-    assert "gateway-alpha" not in beta.text
-    assert '"cost_usd":0.22' in beta.text
+    assert "gateway-alpha" in alpha
+    assert "gateway-beta" not in alpha
+    assert '"cost_usd":0.11' in alpha
+    assert "gateway-beta" in beta
+    assert "gateway-alpha" not in beta
+    assert '"cost_usd":0.22' in beta
 
 
 async def test_live_snapshot_joins_cost_to_the_selected_player_only(
     tmp_path: Path,
 ):
     root = runtime_root(tmp_path)
-    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://observatory",
-    ) as client:
-        alpha = (await client.get("/api/sessions/session-alpha/snapshot")).json()
-        beta = (await client.get("/api/sessions/session-beta/snapshot")).json()
+    alpha = runtime_snapshot(root, "session-alpha")
+    beta = runtime_snapshot(root, "session-beta")
 
     assert alpha["player_id"] == "alpha"
     assert alpha["objective"] == "Explore as Alpha"
@@ -775,19 +775,9 @@ async def test_historical_snapshot_is_the_exact_selected_prefix(
     tmp_path: Path,
 ):
     root = runtime_root(tmp_path)
-    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://observatory",
-    ) as client:
-        first = (
-            await client.get("/api/sessions/session-alpha/snapshot?through=1")
-        ).json()
-        latest = (await client.get("/api/sessions/session-alpha/snapshot")).json()
-        paused_at_latest = (
-            await client.get("/api/sessions/session-alpha/snapshot?through=2")
-        ).json()
+    first = runtime_snapshot(root, "session-alpha", through=1)
+    latest = runtime_snapshot(root, "session-alpha")
+    paused_at_latest = runtime_snapshot(root, "session-alpha", through=2)
 
     assert first["through_sequence"] == 1
     assert first["following_live"] is False
@@ -853,16 +843,8 @@ async def test_live_snapshot_separates_agent_thought_from_concise_belief(
         ):
             handle.write(json.dumps(event) + "\n")
 
-    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://observatory",
-    ) as client:
-        historical = (
-            await client.get("/api/sessions/session-alpha/snapshot?through=1")
-        ).json()
-        latest = (await client.get("/api/sessions/session-alpha/snapshot")).json()
+    historical = runtime_snapshot(root, "session-alpha", through=1)
+    latest = runtime_snapshot(root, "session-alpha")
 
     assert historical["agent_thought"] is None
     assert historical["agent_belief"] is None
@@ -961,7 +943,7 @@ async def test_live_voice_uses_exact_thought_prefix_and_external_cache(
         transport=transport,
         base_url="http://observatory",
     ) as client:
-        capabilities = (await client.get("/api/capabilities")).json()
+        capabilities = (await client.get("/api/v1/capabilities")).json()
         historical = await client.post(
             "/api/sessions/session-alpha/voice",
             json={"expected_sequence": 1},
@@ -1123,16 +1105,8 @@ async def test_live_snapshot_exposes_observed_status_economics_and_frontier(
         ):
             handle.write(json.dumps(record, separators=(",", ":")) + "\n")
 
-    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://observatory",
-    ) as client:
-        historical = (
-            await client.get("/api/sessions/session-alpha/snapshot?through=3")
-        ).json()
-        snapshot = (await client.get("/api/sessions/session-alpha/snapshot")).json()
+    historical = runtime_snapshot(root, "session-alpha", through=3)
+    snapshot = runtime_snapshot(root, "session-alpha")
 
     assert historical["player_status"]["fields"]["hit"]["value"] == 86
     assert historical["player_status"]["fields"]["level"]["value"] == 3
@@ -1574,13 +1548,7 @@ async def test_operator_guidance_and_revised_goal_are_visible_evidence(
             )
             + "\n"
         )
-    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://observatory",
-    ) as client:
-        snapshot = (await client.get("/api/sessions/session-alpha/snapshot")).json()
+    snapshot = runtime_snapshot(root, "session-alpha")
 
     assert snapshot["objective"] == "Find and fight Fido"
     operator_item = next(
@@ -1591,41 +1559,30 @@ async def test_operator_guidance_and_revised_goal_are_visible_evidence(
     assert operator_item["sequence"] == 2
 
 
-async def test_running_session_stream_observes_a_new_journal_event(
+async def test_running_session_source_observes_a_new_journal_event(
     tmp_path: Path,
 ):
     root = runtime_root(tmp_path)
     session_dir = root / "profiles" / "alpha" / "sessions" / "session-alpha"
-    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://observatory",
-    ) as client:
-        pending = asyncio.create_task(
-            client.get("/api/sessions/session-alpha/events?after=2&limit=1")
-        )
-        await asyncio.sleep(0.15)
-        journal = Journal(session_dir / "gateway.db")
-        journal.append(
-            "gateway-alpha",
-            "position",
-            {
-                "place": 3001,
-                "title": "The Temple Of Midgaard",
-                "confidence": "high",
-                "method": "room-id",
-            },
-            at=3,
-            monotonic=3,
-        )
-        journal.close()
-        response = await asyncio.wait_for(pending, timeout=2)
+    journal = Journal(session_dir / "gateway.db")
+    journal.append(
+        "gateway-alpha",
+        "position",
+        {
+            "place": 3001,
+            "title": "The Temple Of Midgaard",
+            "confidence": "high",
+            "method": "room-id",
+        },
+        at=3,
+        monotonic=3,
+    )
+    journal.close()
+    events = RuntimeSource(root).events("session-alpha", after=2, limit=1)
 
-    assert response.status_code == 200
-    assert "gateway-alpha" in response.text
-    assert "gateway-beta" not in response.text
-    assert "The Temple Of Midgaard" in response.text
+    assert len(events) == 1
+    assert events[0].session == "gateway-alpha"
+    assert events[0].payload["title"] == "The Temple Of Midgaard"
 
 
 async def test_control_targets_only_the_selected_live_agent(tmp_path: Path):
@@ -1665,51 +1622,40 @@ async def test_control_targets_only_the_selected_live_agent(tmp_path: Path):
         if socket_path.exists():
             break
         await asyncio.sleep(0.01)
-    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://observatory",
-    ) as client:
-        catalog = (await client.get("/api/sessions")).json()
-        response = await client.post(
-            "/api/sessions/session-alpha/control",
-            json={
-                "request_id": "operator-request-1",
-                "action": "guide",
-                "instruction": "Look east",
-                "expected_sequence": 2,
-            },
+    runtime = RuntimeSource(root)
+    catalog = runtime_catalog(root)
+    response = await asyncio.to_thread(
+        runtime.control,
+        "session-alpha",
+        request_id="operator-request-1",
+        action="guide",
+        instruction="Look east",
+        expected_sequence=2,
+    )
+    with pytest.raises(RuntimeSourceError, match="advanced"):
+        runtime.control(
+            "session-alpha",
+            request_id="operator-request-2",
+            action="pause",
+            instruction=None,
+            expected_sequence=1,
         )
-        stale = await client.post(
-            "/api/sessions/session-alpha/control",
-            json={
-                "request_id": "operator-request-2",
-                "action": "pause",
-                "expected_sequence": 1,
-            },
-        )
-        ended = await client.post(
-            "/api/sessions/session-beta/control",
-            json={
-                "request_id": "operator-request-3",
-                "action": "pause",
-                "expected_sequence": 2,
-            },
+    with pytest.raises(RuntimeSourceError, match="not live"):
+        runtime.control(
+            "session-beta",
+            request_id="operator-request-3",
+            action="pause",
+            instruction=None,
+            expected_sequence=2,
         )
     worker.join(timeout=2)
 
-    assert response.status_code == 200
     assert catalog["sessions"][0]["control_available"] is True
-    assert response.json()["insertion"] == "next_iteration_boundary"
+    assert response["insertion"] == "next_iteration_boundary"
     assert received[0]["player_id"] == "alpha"
     assert received[0]["session_id"] == "session-alpha"
     assert received[0]["token"] == "token-alpha"
     assert "beta" not in json.dumps(received)
-    assert stale.status_code == 409
-    assert "advanced" in stale.json()["detail"]
-    assert ended.status_code == 409
-    assert "not live" in ended.json()["detail"]
 
 
 def test_registry_paths_cannot_escape_the_player_session_layout(tmp_path: Path):
@@ -1820,18 +1766,12 @@ async def test_combat_episode_uses_correlated_command_and_terminal_evidence(
     )
     journal.close()
 
-    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://observatory",
-    ) as client:
-        before_terminal = (
-            await client.get(
-                f"/api/sessions/session-alpha/snapshot?through={unrelated.seq}"
-            )
-        ).json()
-        completed = (await client.get("/api/sessions/session-alpha/snapshot")).json()
+    before_terminal = runtime_snapshot(
+        root,
+        "session-alpha",
+        through=unrelated.seq,
+    )
+    completed = runtime_snapshot(root, "session-alpha")
 
     assert before_terminal["combat"] is True
     assert before_terminal["combat_episode"]["active"] is True
@@ -1914,20 +1854,12 @@ async def test_combat_episode_supports_mob_start_switch_and_flee(
     )
     journal.close()
 
-    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://observatory",
-    ) as client:
-        mob = (
-            await client.get(
-                f"/api/sessions/session-alpha/snapshot?through={mob_start.seq}"
-            )
-        ).json()["combat_episode"]
-        completed = (await client.get("/api/sessions/session-alpha/snapshot")).json()[
-            "combat_episode"
-        ]
+    mob = runtime_snapshot(
+        root,
+        "session-alpha",
+        through=mob_start.seq,
+    )["combat_episode"]
+    completed = runtime_snapshot(root, "session-alpha")["combat_episode"]
 
     assert mob["active"] is True
     assert mob["opponent"] is None
@@ -1959,13 +1891,7 @@ async def test_active_combat_at_capture_end_is_unresolved(tmp_path: Path):
     )
     journal.close()
 
-    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://observatory",
-    ) as client:
-        snapshot = (await client.get("/api/sessions/session-beta/snapshot")).json()
+    snapshot = runtime_snapshot(root, "session-beta")
 
     assert snapshot["combat"] is False
     assert snapshot["combat_episode"]["active"] is False
@@ -2036,13 +1962,7 @@ async def test_combat_episode_switches_only_on_correlated_combat(
     )
     journal.close()
 
-    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://observatory",
-    ) as client:
-        snapshot = (await client.get("/api/sessions/session-alpha/snapshot")).json()
+    snapshot = runtime_snapshot(root, "session-alpha")
 
     episode = snapshot["combat_episode"]
     assert episode["active"] is True
@@ -2129,18 +2049,17 @@ async def test_zone_follows_verified_reset_and_directional_atlas_chain(
     )
     journal.close()
 
-    app = create_app(Settings(runtime_root=root, world_root=world, web_dist=tmp_path))
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://observatory",
-    ) as client:
-        correlated = (
-            await client.get(
-                f"/api/sessions/session-alpha/snapshot?through={position.seq}"
-            )
-        ).json()
-        broken = (await client.get("/api/sessions/session-alpha/snapshot")).json()
+    correlated = runtime_snapshot(
+        root,
+        "session-alpha",
+        through=position.seq,
+        world_root=world,
+    )
+    broken = runtime_snapshot(
+        root,
+        "session-alpha",
+        world_root=world,
+    )
 
     assert correlated["zone"] == {
         "zone_id": 7,
@@ -2259,13 +2178,11 @@ async def test_world_atlas_correlation_recovers_repeated_synthetic_places(
         )
     journal.close()
 
-    app = create_app(Settings(runtime_root=root, world_root=world, web_dist=tmp_path))
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://observatory",
-    ) as client:
-        snapshot = (await client.get("/api/sessions/session-alpha/snapshot")).json()
+    snapshot = runtime_snapshot(
+        root,
+        "session-alpha",
+        world_root=world,
+    )
 
     vnums = {
         node["place"]: node["atlas"]["vnum"] for node in snapshot["world"]["nodes"]
@@ -2388,13 +2305,7 @@ async def test_destination_action_requires_beacon_and_learned_route(
             + "\n"
         )
 
-    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://observatory",
-    ) as client:
-        snapshot = (await client.get("/api/sessions/session-alpha/snapshot")).json()
+    snapshot = runtime_snapshot(root, "session-alpha")
 
     action = snapshot["suggested_action"]
     assert action["kind"] == "route"

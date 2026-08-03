@@ -12,7 +12,6 @@ from pathlib import Path
 
 import httpx
 from mud_gateway.contracts import contract_schemas
-from mud_gateway.stream import serialize_event
 from pydantic import ValidationError
 from starlette.applications import Starlette
 from starlette.requests import Request
@@ -20,7 +19,6 @@ from starlette.responses import (
     FileResponse,
     JSONResponse,
     Response,
-    StreamingResponse,
 )
 from starlette.routing import Route
 
@@ -105,6 +103,7 @@ from .resources.cursor import (
 )
 from .resources.handlers import ReadResourceHandlers
 from .resources.knowledge import KnowledgeResourceRepository
+from .retirement import retired_endpoint_routes, unowned_legacy_api_routes
 from .runtime_views import RuntimeReadService
 from .settings import Settings
 from .sources.atlas import AtlasSource
@@ -650,50 +649,8 @@ def create_app(
         except (httpx.HTTPError, ValueError) as error:
             return _upstream_error(error)
 
-    async def gateway_events(request: Request) -> Response:
-        session = request.path_params["session"]
-        endpoint = request.path_params.get("endpoint", "events")
-        if endpoint not in {"events", "replay"}:
-            return JSONResponse({"error": "not_found"}, status_code=404)
-        if runtime is not None and runtime.available:
-            try:
-                selected = await storage.run(runtime.session, session)
-            except RuntimeSourceError as error:
-                return _runtime_error(error)
-            if selected is None:
-                return JSONResponse({"error": "not_found"}, status_code=404)
-            return _runtime_events(
-                request,
-                runtime,
-                storage,
-                selected.id,
-                endpoint,
-            )
-        query = list(request.query_params.multi_items())
-        context = gateway.stream(
-            f"/sessions/{session}/{endpoint}",
-            query=query,
-        )
-        try:
-            upstream = await context.__aenter__()
-        except (httpx.HTTPError, ValueError) as error:
-            return _upstream_error(error)
-
-        async def body() -> AsyncIterator[bytes]:
-            try:
-                async for chunk in upstream.aiter_raw():
-                    yield chunk
-            finally:
-                await context.__aexit__(None, None, None)
-
-        return StreamingResponse(
-            body(),
-            media_type="text/event-stream",
-            headers={
-                "Cache-Control": "no-cache",
-                "X-Accel-Buffering": "no",
-            },
-        )
+    async def unknown_session_endpoint(_request: Request) -> JSONResponse:
+        return JSONResponse({"error": "not_found"}, status_code=404)
 
     async def live_snapshot(request: Request) -> JSONResponse:
         if runtime is None or not runtime.available:
@@ -1878,24 +1835,8 @@ def create_app(
             *api_v1_routes(versioned_handlers),
             Route("/api/v{version:int}", unsupported_api_version),
             Route("/api/v{version:int}/{path:path}", unsupported_api_version),
-            Route("/api/health", health),
-            Route("/api/capabilities", capabilities),
+            *retired_endpoint_routes(),
             Route("/api/contracts", contracts),
-            Route("/api/sessions", sessions),
-            Route("/api/sessions/{session:str}/snapshot", live_snapshot),
-            Route(
-                "/api/sessions/{session:str}/investigation",
-                session_investigation,
-            ),
-            Route(
-                "/api/sessions/{session:str}/wire/{sequence:int}",
-                session_wire_evidence,
-            ),
-            Route(
-                "/api/sessions/{session:str}/control",
-                live_control,
-                methods=["POST"],
-            ),
             Route(
                 "/api/sessions/{session:str}/voice",
                 live_voice,
@@ -1903,7 +1844,7 @@ def create_app(
             ),
             Route(
                 "/api/sessions/{session:str}/{endpoint:str}",
-                gateway_events,
+                unknown_session_endpoint,
             ),
             Route("/api/runs", runs),
             Route("/api/recorded-sessions", recorded_session_catalog),
@@ -1917,10 +1858,6 @@ def create_app(
                 run_knowledge_projection,
             ),
             Route(
-                "/api/players/{player_id:str}/knowledge",
-                player_knowledge,
-            ),
-            Route(
                 "/api/players/{player_id:str}/knowledge/recovery",
                 recover_player_knowledge,
                 methods=["POST"],
@@ -1928,18 +1865,6 @@ def create_app(
             Route("/api/diagnostic-history", history),
             Route("/api/incidents/export", export_incident, methods=["POST"]),
             Route("/api/comparisons", comparisons),
-            Route("/api/experiments/catalog", experiments_catalog),
-            Route("/api/experiments/run", run_experiment, methods=["POST"]),
-            Route("/api/experiments/jobs", experiment_jobs),
-            Route(
-                "/api/experiments/jobs/{job_id:str}",
-                experiment_job,
-            ),
-            Route(
-                "/api/experiments/jobs/{job_id:str}/control",
-                control_experiment,
-                methods=["POST"],
-            ),
             Route(
                 "/api/experiments/validate",
                 validate_experiment,
@@ -1956,6 +1881,7 @@ def create_app(
                 comparison,
             ),
             Route("/api/ask", ask, methods=["POST"]),
+            *unowned_legacy_api_routes(),
             Route("/assets/{path:path}", asset),
             Route("/", index),
             Route("/{path:path}", index),
@@ -1989,63 +1915,6 @@ def _existing_frontend_file(root: Path, relative: Path) -> Path | None:
     if canonical_root not in target.parents or not target.is_file():
         return None
     return target
-
-
-def _runtime_events(
-    request: Request,
-    runtime: RuntimeSource,
-    storage: StorageExecutor,
-    session_id: str,
-    endpoint: str,
-) -> StreamingResponse:
-    after_value = request.query_params.get("after")
-    header_value = request.headers.get("last-event-id")
-    cursor = int(after_value or header_value or "0")
-    limit_value = request.query_params.get("limit")
-    limit = int(limit_value) if limit_value else None
-    tail = request.query_params.get("tail", "1") != "0"
-
-    async def body() -> AsyncIterator[str]:
-        nonlocal cursor
-        delivered = 0
-        while True:
-            try:
-                events = await storage.run(
-                    runtime.events,
-                    session_id,
-                    after=cursor,
-                    limit=(None if limit is None else max(0, limit - delivered)),
-                )
-            except RuntimeSourceError:
-                return
-            for event in events:
-                cursor = event.seq
-                delivered += 1
-                yield serialize_event(event)
-                if limit is not None and delivered >= limit:
-                    return
-            if endpoint == "replay" or not tail:
-                return
-            try:
-                selected = await storage.run(runtime.session, session_id)
-            except RuntimeSourceError:
-                return
-            if selected is None or (
-                not selected.live and cursor >= selected.latest_seq
-            ):
-                return
-            if await request.is_disconnected():
-                return
-            await asyncio.sleep(0.1)
-
-    return StreamingResponse(
-        body(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
-        },
-    )
 
 
 def main() -> None:

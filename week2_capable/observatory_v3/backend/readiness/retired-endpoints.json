@@ -1,0 +1,106 @@
+{
+  "replacements": [
+    {
+      "legacy": "/api/health",
+      "method": "GET",
+      "route_status": "retired_typed_410",
+      "replacement": ["/api/v1/health"]
+    },
+    {
+      "legacy": "/api/capabilities",
+      "method": "GET",
+      "route_status": "retired_typed_410",
+      "replacement": ["/api/v1/capabilities"]
+    },
+    {
+      "legacy": "/api/sessions",
+      "method": "GET",
+      "route_status": "retired_typed_410",
+      "replacement": ["/api/v1/sessions"]
+    },
+    {
+      "legacy": "/api/sessions/{session}/snapshot",
+      "method": "GET",
+      "route_status": "retired_typed_410",
+      "replacement": ["/api/v1/live/{session_id}/{partition}"]
+    },
+    {
+      "legacy": "/api/sessions/{session}/investigation",
+      "method": "GET",
+      "route_status": "retired_typed_410",
+      "replacement": [
+        "/api/v1/sessions/{session_id}",
+        "/api/v1/sessions/{session_id}/goals",
+        "/api/v1/sessions/{session_id}/search"
+      ]
+    },
+    {
+      "legacy": "/api/sessions/{session}/wire/{sequence}",
+      "method": "GET",
+      "route_status": "retired_typed_410",
+      "replacement": ["/api/v1/sessions/{session_id}/wire/{digest}"]
+    },
+    {
+      "legacy": "/api/sessions/{session}/control",
+      "method": "POST",
+      "route_status": "retired_typed_410",
+      "replacement": ["/api/v1/sessions/{session_id}/commands"]
+    },
+    {
+      "legacy": "/api/sessions/{session}/events",
+      "method": "GET",
+      "route_status": "retired_typed_410",
+      "replacement": [
+        "/api/v1/notifications",
+        "/api/v1/live/{session_id}/{partition}"
+      ]
+    },
+    {
+      "legacy": "/api/sessions/{session}/replay",
+      "method": "GET",
+      "route_status": "retired_typed_410",
+      "replacement": [
+        "/api/v1/notifications",
+        "/api/v1/live/{session_id}/{partition}"
+      ]
+    },
+    {
+      "legacy": "/api/experiments/catalog",
+      "method": "GET",
+      "route_status": "retired_typed_410",
+      "replacement": ["/api/v1/experiments"]
+    },
+    {
+      "legacy": "/api/experiments/run",
+      "method": "POST",
+      "route_status": "retired_typed_410",
+      "replacement": ["/api/v1/experiments/run"]
+    },
+    {
+      "legacy": "/api/experiments/jobs",
+      "method": "GET",
+      "route_status": "retired_typed_410",
+      "replacement": ["/api/v1/experiments/jobs"]
+    },
+    {
+      "legacy": "/api/experiments/jobs/{job_id}",
+      "method": "GET",
+      "route_status": "retired_typed_410",
+      "replacement": ["/api/v1/experiments/jobs/{job_id}"]
+    },
+    {
+      "legacy": "/api/experiments/jobs/{job_id}/control",
+      "method": "POST",
+      "route_status": "retired_typed_410",
+      "replacement": ["/api/v1/experiments/jobs/{job_id}/control"]
+    },
+    {
+      "legacy": "/api/players/{player_id}/knowledge",
+      "method": "GET",
+      "route_status": "retired_typed_410",
+      "replacement": ["/api/v1/knowledge/{player_id}"]
+    }
+  ],
+  "schema": "observatory.retired-endpoints.v2",
+  "status": "route_retirement_enforced"
+}

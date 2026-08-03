@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import {
   ArrowRight,
+  CheckCircle2,
   Database,
   FileJson,
   ScanSearch,
@@ -9,6 +10,7 @@ import {
 } from "lucide-react"
 
 import baselineSource from "./backend-baseline.json?raw"
+import readinessSource from "./backend-readiness.json?raw"
 
 interface Metric {
   p50_ms: number
@@ -16,6 +18,10 @@ interface Metric {
   payload_bytes?: number
   rows_read?: number
   sessions_hydrated_per_request?: number
+}
+
+interface ReadinessMetricValue extends Metric {
+  samples: number
 }
 
 interface BaselineEvidence {
@@ -85,8 +91,60 @@ interface BaselineEvidence {
   }
 }
 
+interface ReadinessEvidence {
+  schema: "observatory.backend-readiness.v1"
+  browser_gate: {
+    artifact: string
+    cache_state: string
+    production_build: boolean
+    samples: number
+  }
+  fixture: {
+    agent_records: number
+    digest_sha256: string
+    gateway_events: number
+    sessions: number
+  }
+  rebuild: {
+    identity_stable: boolean
+    source_loss: boolean
+  }
+  resources: {
+    cold_useful_content_ms: number
+    concurrent_projection_generation: number
+    event_loop_delay: ReadinessMetricValue
+    payload_bytes: {
+      catalog: number
+      live: number
+      summary: number
+    }
+    stopped_session: {
+      recurring_refresh_requests: number
+    }
+    warm: {
+      catalog: ReadinessMetricValue
+      live: ReadinessMetricValue
+      summary: ReadinessMetricValue
+    }
+  }
+  scenarios: {
+    cold: boolean
+    concurrent: boolean
+    long_session: boolean
+    running_session: boolean
+    stopped_session: boolean
+    warm: boolean
+  }
+  system: {
+    materializer_capacity: number
+    peak_traced_memory_bytes: number
+    storage_worker_capacity: number
+  }
+}
+
 const parseStarted = performance.now()
 const baseline = readBaseline(baselineSource)
+const readiness = readReadiness(readinessSource)
 const parsedAt = performance.now()
 
 const path = [
@@ -198,6 +256,67 @@ export function BackendBaselineReview() {
           </p>
         </div>
       </div>
+
+      <article
+        className="mt-6 rounded-2xl border border-success bg-surface p-5"
+        data-testid="backend-readiness"
+      >
+        <div className="flex items-start gap-3">
+          <CheckCircle2
+            aria-hidden="true"
+            className="mt-0.5 size-5 text-success"
+          />
+          <div>
+            <h3 className="font-semibold text-content-primary">
+              B9 bounded browser-ready path
+            </h3>
+            <p className="mt-1 text-sm text-content-muted">
+              Measured on the maintained 38-session fixture. Latency is reported
+              evidence, not an invented threshold.
+            </p>
+          </div>
+        </div>
+        <dl className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <ReadinessMetric
+            label="Cold useful content"
+            value={`${readiness.resources.cold_useful_content_ms.toFixed(2)} ms`}
+            detail={`${formatInteger(readiness.fixture.agent_records + readiness.fixture.gateway_events)} retained records`}
+          />
+          <ReadinessMetric
+            label="Warm summary p50 / p95"
+            value={`${readiness.resources.warm.summary.p50_ms.toFixed(2)} / ${readiness.resources.warm.summary.p95_ms.toFixed(2)} ms`}
+            detail={`${readiness.resources.warm.summary.samples} measured runs`}
+          />
+          <ReadinessMetric
+            label="Warm Live p50 / p95"
+            value={`${readiness.resources.warm.live.p50_ms.toFixed(2)} / ${readiness.resources.warm.live.p95_ms.toFixed(2)} ms`}
+            detail={formatBytes(readiness.resources.payload_bytes.live)}
+          />
+          <ReadinessMetric
+            label="Event-loop delay p95"
+            value={`${readiness.resources.event_loop_delay.p95_ms.toFixed(2)} ms`}
+            detail={`${readiness.system.storage_worker_capacity} storage workers, ${readiness.system.materializer_capacity} flights`}
+          />
+        </dl>
+        <ul className="mt-5 grid gap-2 text-xs text-content-muted sm:grid-cols-2 xl:grid-cols-4">
+          <li>One projection generation serves concurrent cold readers.</li>
+          <li>
+            Stopped recurring refreshes:{" "}
+            {readiness.resources.stopped_session.recurring_refresh_requests}.
+          </li>
+          <li>
+            Rebuild identity stable:{" "}
+            {readiness.rebuild.identity_stable ? "yes" : "no"}.
+          </li>
+          <li>
+            Production Chromium: {readiness.browser_gate.samples} measured runs.
+          </li>
+        </ul>
+        <p className="mt-4 font-mono text-[0.68rem] text-content-muted">
+          Fixture {readiness.fixture.digest_sha256.slice(0, 16)} · peak traced
+          memory {formatBytes(readiness.system.peak_traced_memory_bytes)}
+        </p>
+      </article>
 
       <ol
         aria-label="Measured backend request path"
@@ -381,6 +500,26 @@ function MetricRow({
   )
 }
 
+function ReadinessMetric({
+  label,
+  value,
+  detail,
+}: {
+  label: string
+  value: string
+  detail: string
+}) {
+  return (
+    <div className="rounded-xl border border-line bg-canvas p-4">
+      <dt className="text-xs text-content-muted">{label}</dt>
+      <dd className="mt-1 font-mono text-sm font-semibold text-content-primary">
+        {value}
+      </dd>
+      <dd className="mt-2 text-xs leading-5 text-content-muted">{detail}</dd>
+    </div>
+  )
+}
+
 function readBaseline(source: string): BaselineEvidence {
   const value: unknown = JSON.parse(source)
   if (
@@ -392,6 +531,19 @@ function readBaseline(source: string): BaselineEvidence {
     throw new Error("Unsupported backend baseline evidence")
   }
   return value as BaselineEvidence
+}
+
+function readReadiness(source: string): ReadinessEvidence {
+  const value: unknown = JSON.parse(source)
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    !("schema" in value) ||
+    value.schema !== "observatory.backend-readiness.v1"
+  ) {
+    throw new Error("Unsupported backend readiness evidence")
+  }
+  return value as ReadinessEvidence
 }
 
 function formatInteger(value: number): string {

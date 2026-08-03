@@ -23,6 +23,7 @@ from observatory_v3_backend.sources.comparison import (
     rendering_comparison,
     rendering_definition,
 )
+from observatory_v3_backend.sources.gateway import GatewaySource
 from observatory_v3_backend.storage_executor import StorageExecutor
 
 
@@ -149,7 +150,7 @@ async def test_health_is_read_only(tmp_path):
         transport=transport,
         base_url="http://observatory",
     ) as client:
-        response = await client.get("/api/health")
+        response = await client.get("/api/v1/health")
     assert response.json() == {
         "status": "ok",
         "evidence_plane": "read_only",
@@ -169,7 +170,7 @@ async def test_capabilities_are_honest_when_sources_are_absent(tmp_path):
         transport=transport,
         base_url="http://observatory",
     ) as client:
-        response = await client.get("/api/capabilities")
+        response = await client.get("/api/v1/capabilities")
     sources = {item["id"]: item for item in response.json()["sources"]}
     assert sources["gateway"]["state"] == "unavailable"
     assert sources["knowledge"]["state"] == "disabled"
@@ -189,7 +190,7 @@ async def test_capability_flags_disable_only_named_features(tmp_path):
         transport=transport,
         base_url="http://observatory",
     ) as client:
-        features = (await client.get("/api/capabilities")).json()["features"]
+        features = (await client.get("/api/v1/capabilities")).json()["features"]
     assert "compare" not in features
     assert "copilot-local" not in features
     assert "incident-capsules" in features
@@ -209,7 +210,7 @@ async def test_experiment_execution_requires_confirmation_before_policy(tmp_path
         base_url="http://observatory",
     ) as client:
         unconfirmed = await client.post(
-            "/api/experiments/run",
+            "/api/v1/experiments/run",
             json={
                 "request_id": "test-unconfirmed",
                 "definition": rendering_definition().model_dump(mode="json"),
@@ -219,7 +220,7 @@ async def test_experiment_execution_requires_confirmation_before_policy(tmp_path
             },
         )
         confirmed_but_disabled = await client.post(
-            "/api/experiments/run",
+            "/api/v1/experiments/run",
             json={
                 "request_id": "test-disabled",
                 "definition": rendering_definition().model_dump(mode="json"),
@@ -268,7 +269,7 @@ async def test_persisted_experiment_jobs_reopen_without_enabling_execution(
         transport=transport,
         base_url="http://observatory",
     ) as client:
-        response = await client.get("/api/experiments/jobs")
+        response = await client.get("/api/v1/experiments/jobs")
 
     assert response.status_code == 200
     jobs = response.json()["jobs"]
@@ -367,25 +368,18 @@ async def test_world_atlas_uses_zone_lod_without_collapsing_titles(tmp_path):
     assert [node["vnum"] for node in zone["nodes"]] == [100, 101]
 
 
-async def test_gateway_sessions_are_proxied_without_rewriting(tmp_path):
+async def test_gateway_sessions_source_preserves_upstream_payload():
     async def gateway(request: httpx.Request) -> httpx.Response:
         assert request.url.path == "/sessions"
         return httpx.Response(200, json={"sessions": ["s1", "s2"]})
 
-    app = create_app(
-        Settings(gateway_url="http://gateway", web_dist=tmp_path),
-        gateway_transport=httpx.MockTransport(gateway),
+    source = GatewaySource(
+        "http://gateway",
+        transport=httpx.MockTransport(gateway),
     )
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://observatory",
-    ) as client:
-        response = await client.get("/api/sessions")
-    payload = response.json()
-    assert payload["version"] == 1
-    assert payload["players"] == [{"id": "legacy", "label": "Legacy gateway"}]
-    assert [session["id"] for session in payload["sessions"]] == ["s1", "s2"]
+    payload = await source.sessions()
+
+    assert payload == {"sessions": ["s1", "s2"]}
 
 
 async def test_gateway_contracts_are_proxied_without_rewriting(tmp_path):
@@ -413,7 +407,7 @@ async def test_gateway_contracts_are_proxied_without_rewriting(tmp_path):
     assert response.json() == canonical
 
 
-async def test_live_and_replay_sse_remain_byte_equivalent(tmp_path):
+async def test_gateway_live_and_replay_streams_remain_byte_equivalent():
     canonical = (
         b'id: 1\nevent: observation\ndata: {"seq":1,"session":"s1",'
         b'"at":1.0,"kind":"observation","trace_id":null,'
@@ -428,19 +422,23 @@ async def test_live_and_replay_sse_remain_byte_equivalent(tmp_path):
             headers={"content-type": "text/event-stream"},
         )
 
-    app = create_app(
-        Settings(gateway_url="http://gateway", web_dist=tmp_path),
-        gateway_transport=httpx.MockTransport(gateway),
+    source = GatewaySource(
+        "http://gateway",
+        transport=httpx.MockTransport(gateway),
     )
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://observatory",
-    ) as client:
-        replay = await client.get("/api/sessions/s1/replay?after=0")
-        live = await client.get("/api/sessions/s1/events?after=0")
-    assert replay.content == canonical
-    assert live.content == canonical
+    async with source.stream(
+        "/sessions/s1/replay",
+        query=[("after", "0")],
+    ) as replay:
+        replay_content = await replay.aread()
+    async with source.stream(
+        "/sessions/s1/events",
+        query=[("after", "0")],
+    ) as live:
+        live_content = await live.aread()
+
+    assert replay_content == canonical
+    assert live_content == canonical
 
 
 async def test_j2_false_completion_links_claim_to_verified_outcome(tmp_path):

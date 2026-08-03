@@ -12,6 +12,9 @@ test("development foundation renders and passes axe", async ({
   await expect(
     page.getByRole("heading", { name: "Backend contract baseline" })
   ).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "B9 bounded browser-ready path" })
+  ).toBeVisible()
   await expect(page.getByText("65 unrelated sessions")).toBeVisible()
   await expect(page.getByTestId("browser-ready")).toHaveAttribute(
     "data-browser-ready-ms",

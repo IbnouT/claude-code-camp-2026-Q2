@@ -235,7 +235,7 @@ async def test_bounded_resources_report_unavailable_without_runtime(
     }
 
 
-async def test_compatibility_health_contract_remains_unchanged(
+async def test_versioned_health_contract_remains_unchanged(
     tmp_path: Path,
 ) -> None:
     app = create_app(Settings(web_dist=tmp_path))
@@ -244,7 +244,7 @@ async def test_compatibility_health_contract_remains_unchanged(
         transport=transport,
         base_url="http://observatory",
     ) as client:
-        response = await client.get("/api/health")
+        response = await client.get("/api/v1/health")
 
     assert response.json() == {
         "status": "ok",

@@ -22,6 +22,7 @@
     "hmr:check": "node scripts/check-hmr.mjs",
     "test": "vitest run",
     "test:data": "playwright test tests/server-state.spec.ts",
+    "test:readiness": "playwright test --config playwright.readiness.config.ts",
     "test:shell": "playwright test tests/shell.spec.ts",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
