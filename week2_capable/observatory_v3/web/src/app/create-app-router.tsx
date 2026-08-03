@@ -9,6 +9,12 @@ import {
 import type { RouterHistory } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 import { z } from "zod"
+import {
+  ActivityIcon,
+  BookOpenIcon,
+  FlaskConicalIcon,
+  TelescopeIcon,
+} from "lucide-react"
 
 import { AppShell } from "@/app/app-shell"
 import {
@@ -32,22 +38,33 @@ type CreateAppRouterOptions = {
   prepareRoute?: () => Promise<void> | void
 }
 
+const contextSearchShape = {
+  player: z.string().max(120).optional().catch(undefined),
+  session: z.string().max(200).optional().catch(undefined),
+}
+
 const liveSearchSchema = z.object({
+  ...contextSearchShape,
   view: z.enum(["overview", "activity"]).catch("overview").default("overview"),
 })
 
 const sessionsSearchSchema = z.object({
+  ...contextSearchShape,
   page: z.coerce.number().int().positive().catch(1).default(1),
   state: z.enum(["all", "running", "complete"]).catch("all").default("all"),
 })
 
 const experimentsSearchSchema = z.object({
+  ...contextSearchShape,
   lens: z.enum(["compare", "paths"]).catch("compare").default("compare"),
 })
 
 const knowledgeSearchSchema = z.object({
+  ...contextSearchShape,
   query: z.string().max(120).catch("").default(""),
 })
+
+const sessionSearchSchema = z.object(contextSearchShape)
 
 const sessionParamsSchema = z.object({
   sessionId: z.string().regex(/^[a-z0-9][a-z0-9-]{2,63}$/),
@@ -59,6 +76,14 @@ const activeNavigationClassName =
   "border-action-border bg-accent-soft text-content-primary"
 const inactiveNavigationClassName =
   "border-transparent text-content-muted hover:bg-surface-soft hover:text-content-primary"
+
+function contextFromSearch(previous: Record<string, unknown>) {
+  return {
+    player: typeof previous.player === "string" ? previous.player : undefined,
+    session:
+      typeof previous.session === "string" ? previous.session : undefined,
+  }
+}
 
 function createAppRouter(options: CreateAppRouterOptions = {}) {
   let navigation: ReactNode = null
@@ -109,6 +134,7 @@ function createAppRouter(options: CreateAppRouterOptions = {}) {
   const sessionRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/sessions/$sessionId",
+    validateSearch: sessionSearchSchema,
     beforeLoad: options.prepareRoute,
     errorComponent: RouteErrorBoundary,
     pendingComponent: RoutePendingBoundary,
@@ -171,27 +197,69 @@ function createAppRouter(options: CreateAppRouterOptions = {}) {
     ...(development === undefined ? [] : [development.route]),
   ]
 
-  const navigationItems = [
-    { exact: true, label: "Live", to: "/live" },
-    { exact: false, label: "Sessions", to: "/sessions" },
-    { exact: true, label: "Experiments", to: "/experiments" },
-    { exact: true, label: "Knowledge", to: "/knowledge" },
-  ] as const
-
   navigation = (
     <>
-      {navigationItems.map(({ exact, label, to }) => (
-        <rootRoute.Link
-          key={label}
-          to={to}
-          activeOptions={{ exact, includeSearch: false }}
-          className={navigationClassName}
-          activeProps={{ className: activeNavigationClassName }}
-          inactiveProps={{ className: inactiveNavigationClassName }}
-        >
-          {label}
-        </rootRoute.Link>
-      ))}
+      <rootRoute.Link
+        aria-label="Live"
+        to="/live"
+        search={(previous: Record<string, unknown>) => ({
+          ...contextFromSearch(previous),
+          view: "overview",
+        })}
+        activeOptions={{ exact: true, includeSearch: false }}
+        className={navigationClassName}
+        activeProps={{ className: activeNavigationClassName }}
+        inactiveProps={{ className: inactiveNavigationClassName }}
+      >
+        <ActivityIcon aria-hidden="true" className="size-[15px]" />
+        <span>Live</span>
+      </rootRoute.Link>
+      <rootRoute.Link
+        aria-label="Sessions"
+        to="/sessions"
+        search={(previous: Record<string, unknown>) => ({
+          ...contextFromSearch(previous),
+          page: 1,
+          state: "all",
+        })}
+        activeOptions={{ exact: false, includeSearch: false }}
+        className={navigationClassName}
+        activeProps={{ className: activeNavigationClassName }}
+        inactiveProps={{ className: inactiveNavigationClassName }}
+      >
+        <TelescopeIcon aria-hidden="true" className="size-[15px]" />
+        <span>Sessions</span>
+      </rootRoute.Link>
+      <rootRoute.Link
+        aria-label="Experiments"
+        to="/experiments"
+        search={(previous: Record<string, unknown>) => ({
+          ...contextFromSearch(previous),
+          lens: "compare",
+        })}
+        activeOptions={{ exact: true, includeSearch: false }}
+        className={navigationClassName}
+        activeProps={{ className: activeNavigationClassName }}
+        inactiveProps={{ className: inactiveNavigationClassName }}
+      >
+        <FlaskConicalIcon aria-hidden="true" className="size-[15px]" />
+        <span>Experiments</span>
+      </rootRoute.Link>
+      <rootRoute.Link
+        aria-label="Knowledge"
+        to="/knowledge"
+        search={(previous: Record<string, unknown>) => ({
+          ...contextFromSearch(previous),
+          query: "",
+        })}
+        activeOptions={{ exact: true, includeSearch: false }}
+        className={navigationClassName}
+        activeProps={{ className: activeNavigationClassName }}
+        inactiveProps={{ className: inactiveNavigationClassName }}
+      >
+        <BookOpenIcon aria-hidden="true" className="size-[15px]" />
+        <span>Knowledge</span>
+      </rootRoute.Link>
       {development === undefined ? null : (
         <rootRoute.Link
           to={development.to}

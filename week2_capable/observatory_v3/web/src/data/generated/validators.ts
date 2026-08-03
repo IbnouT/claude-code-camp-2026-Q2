@@ -220,6 +220,55 @@ export const EvidenceRecordResponse = /*#__PURE__*/ zod.strictObject({
 export type EvidenceRecordResponse = zod.input<typeof EvidenceRecordResponse>;
 export type EvidenceRecordResponseOutput = zod.output<typeof EvidenceRecordResponse>;
 
+export const experimentAggregatesCancelledMin = 0;
+
+export const experimentAggregatesExcludedMin = 0;
+
+export const experimentAggregatesFailedMin = 0;
+
+export const experimentAggregatesPlannedMin = 0;
+
+export const experimentAggregatesQueuedMin = 0;
+
+export const experimentAggregatesRunningMin = 0;
+
+export const experimentAggregatesSpentUsdMin = 0;
+
+export const experimentAggregatesSuccessMin = 0;
+
+
+
+export const ExperimentAggregates = /*#__PURE__*/ zod.strictObject({
+  "cancelled": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(experimentAggregatesCancelledMin)),
+  "excluded": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(experimentAggregatesExcludedMin)),
+  "failed": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(experimentAggregatesFailedMin)),
+  "planned": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(experimentAggregatesPlannedMin)),
+  "queued": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(experimentAggregatesQueuedMin)),
+  "running": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(experimentAggregatesRunningMin)),
+  "spent_usd": /*#__PURE__*/ zod.number().check(/*#__PURE__*/ zod.gte(experimentAggregatesSpentUsdMin)),
+  "success": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(experimentAggregatesSuccessMin))
+}).check(/*#__PURE__*/ zod.describe('Exact derived counts and retained spend for one experiment job.'));
+
+export type ExperimentAggregates = zod.input<typeof ExperimentAggregates>;
+export type ExperimentAggregatesOutput = zod.output<typeof ExperimentAggregates>;
+
+export const experimentArmDefinitionIdMax = 80;
+
+
+export const experimentArmDefinitionIdRegExp = new RegExp('^[A-Za-z0-9_-]+$');
+export const experimentArmDefinitionLabelMax = 160;
+
+
+
+export const ExperimentArmDefinition = /*#__PURE__*/ zod.strictObject({
+  "id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(experimentArmDefinitionIdMax)).check(/*#__PURE__*/ zod.regex(experimentArmDefinitionIdRegExp)),
+  "label": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(experimentArmDefinitionLabelMax)),
+  "values": /*#__PURE__*/ zod.record(/*#__PURE__*/ zod.string(), /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.boolean(),/*#__PURE__*/ zod.int(),/*#__PURE__*/ zod.number(),/*#__PURE__*/ zod.string()]))
+}).check(/*#__PURE__*/ zod.describe('One immutable arm and its effective registered configuration.'));
+
+export type ExperimentArmDefinition = zod.input<typeof ExperimentArmDefinition>;
+export type ExperimentArmDefinitionOutput = zod.output<typeof ExperimentArmDefinition>;
+
 export const ExperimentDefinitionSummary = /*#__PURE__*/ zod.strictObject({
   "id": /*#__PURE__*/ zod.string(),
   "values": /*#__PURE__*/ zod.record(/*#__PURE__*/ zod.string(), JsonValue)
@@ -285,6 +334,97 @@ export const ExperimentCatalogPage = /*#__PURE__*/ zod.strictObject({
 export type ExperimentCatalogPage = zod.input<typeof ExperimentCatalogPage>;
 export type ExperimentCatalogPageOutput = zod.output<typeof ExperimentCatalogPage>;
 
+export const ExperimentControlRequest = /*#__PURE__*/ zod.strictObject({
+  "action": /*#__PURE__*/ zod.enum(['stop', 'resume'])
+}).check(/*#__PURE__*/ zod.describe('A reversible experiment lifecycle command.'));
+
+export type ExperimentControlRequest = zod.input<typeof ExperimentControlRequest>;
+export type ExperimentControlRequestOutput = zod.output<typeof ExperimentControlRequest>;
+
+export const experimentStopCriteriaMaxIterationsPerSampleMax = 10000;
+
+export const experimentStopCriteriaMaxTotalCostUsdExclusiveMin = 0;
+export const experimentStopCriteriaMaxTotalCostUsdMax = 1000;
+
+export const experimentStopCriteriaMaxWallSecondsPerSampleMax = 14400;
+
+export const experimentStopCriteriaSuccessTargetMax = 2000;
+
+
+
+export const ExperimentStopCriteria = /*#__PURE__*/ zod.strictObject({
+  "max_iterations_per_sample": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(experimentStopCriteriaMaxIterationsPerSampleMax)),
+  "max_total_cost_usd": /*#__PURE__*/ zod.number().check(/*#__PURE__*/ zod.gt(experimentStopCriteriaMaxTotalCostUsdExclusiveMin)).check(/*#__PURE__*/ zod.lte(experimentStopCriteriaMaxTotalCostUsdMax)),
+  "max_wall_seconds_per_sample": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(experimentStopCriteriaMaxWallSecondsPerSampleMax)),
+  "operator_stop_enabled": /*#__PURE__*/ zod.boolean(),
+  "success_target": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(experimentStopCriteriaSuccessTargetMax)),
+  "verified_predicate_required": /*#__PURE__*/ zod.boolean()
+}).check(/*#__PURE__*/ zod.describe('The six independent boundaries that can stop experiment execution.'));
+
+export type ExperimentStopCriteria = zod.input<typeof ExperimentStopCriteria>;
+export type ExperimentStopCriteriaOutput = zod.output<typeof ExperimentStopCriteria>;
+
+export const experimentDefinitionArmsMin = 2;
+export const experimentDefinitionArmsMax = 20;
+
+export const experimentDefinitionChangedFeatureDefault = null;
+export const experimentDefinitionConcurrencyDefault = 1;
+export const experimentDefinitionConcurrencyMax = 4;
+
+export const experimentDefinitionEffectiveMaxSpendUsdExclusiveMin = 0;
+export const experimentDefinitionEffectiveMaxSpendUsdMax = 1000;
+
+export const experimentDefinitionIdMax = 160;
+
+
+export const experimentDefinitionIdRegExp = new RegExp('^[A-Za-z0-9_-]+$');
+export const experimentDefinitionJourneyMax = 80;
+
+export const experimentDefinitionObjectiveMax = 4096;
+
+export const experimentDefinitionParentDefinitionIdDefault = null;
+export const experimentDefinitionPerSampleSpendCeilingUsdExclusiveMin = 0;
+export const experimentDefinitionPerSampleSpendCeilingUsdMax = 100;
+
+export const experimentDefinitionRepetitionsPerArmMax = 100;
+
+export const experimentDefinitionResetIdentityMax = 240;
+
+export const experimentDefinitionResetStrategyMax = 1024;
+
+export const experimentDefinitionStartingStateMax = 1024;
+
+export const experimentDefinitionSuccessPredicateMax = 4096;
+
+export const experimentDefinitionTitleMax = 240;
+
+
+
+
+export const ExperimentDefinition = /*#__PURE__*/ zod.strictObject({
+  "arms": /*#__PURE__*/ zod.array(ExperimentArmDefinition).check(/*#__PURE__*/ zod.minLength(experimentDefinitionArmsMin)).check(/*#__PURE__*/ zod.maxLength(experimentDefinitionArmsMax)),
+  "changed_feature": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]), experimentDefinitionChangedFeatureDefault),
+  "concurrency": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(experimentDefinitionConcurrencyMax)), experimentDefinitionConcurrencyDefault),
+  "effective_max_spend_usd": /*#__PURE__*/ zod.number().check(/*#__PURE__*/ zod.gt(experimentDefinitionEffectiveMaxSpendUsdExclusiveMin)).check(/*#__PURE__*/ zod.lte(experimentDefinitionEffectiveMaxSpendUsdMax)),
+  "id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(experimentDefinitionIdMax)).check(/*#__PURE__*/ zod.regex(experimentDefinitionIdRegExp)),
+  "journey": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(experimentDefinitionJourneyMax)),
+  "objective": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(experimentDefinitionObjectiveMax)),
+  "parent_definition_id": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]), experimentDefinitionParentDefinitionIdDefault),
+  "per_sample_spend_ceiling_usd": /*#__PURE__*/ zod.number().check(/*#__PURE__*/ zod.gt(experimentDefinitionPerSampleSpendCeilingUsdExclusiveMin)).check(/*#__PURE__*/ zod.lte(experimentDefinitionPerSampleSpendCeilingUsdMax)),
+  "repetitions_per_arm": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(experimentDefinitionRepetitionsPerArmMax)),
+  "reset_identity": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(experimentDefinitionResetIdentityMax)),
+  "reset_strategy": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(experimentDefinitionResetStrategyMax)),
+  "source": /*#__PURE__*/ zod.enum(['imported_evidence', 'executable_definition']),
+  "starting_state": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(experimentDefinitionStartingStateMax)),
+  "stop": ExperimentStopCriteria,
+  "success_predicate": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(experimentDefinitionSuccessPredicateMax)),
+  "title": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(experimentDefinitionTitleMax)),
+  "version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1))
+}).check(/*#__PURE__*/ zod.describe('A versioned, reproducible controlled-test definition.'));
+
+export type ExperimentDefinition = zod.input<typeof ExperimentDefinition>;
+export type ExperimentDefinitionOutput = zod.output<typeof ExperimentDefinition>;
+
 export const experimentSampleSummaryCostUsdMin = 0;
 
 export const experimentSampleSummaryTurnsMin = 0;
@@ -295,11 +435,11 @@ export const ExperimentSampleSummary = /*#__PURE__*/ zod.strictObject({
   "cost_usd": /*#__PURE__*/ zod.number().check(/*#__PURE__*/ zod.gte(experimentSampleSummaryCostUsdMin)),
   "player_id": /*#__PURE__*/ zod.string(),
   "run_id": /*#__PURE__*/ zod.string(),
-  "session_id": /*#__PURE__*/ zod.string(),
+  "session_id": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
   "state": /*#__PURE__*/ zod.string(),
   "turns": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(experimentSampleSummaryTurnsMin)),
   "updated_at": /*#__PURE__*/ zod.string()
-}).check(/*#__PURE__*/ zod.describe('One experiment sample linked to a canonical session.'));
+}).check(/*#__PURE__*/ zod.describe('One experiment sample and its canonical session when retained.'));
 
 export type ExperimentSampleSummary = zod.input<typeof ExperimentSampleSummary>;
 export type ExperimentSampleSummaryOutput = zod.output<typeof ExperimentSampleSummary>;
@@ -341,6 +481,94 @@ export const ExperimentDetailResponse = /*#__PURE__*/ zod.strictObject({
 
 export type ExperimentDetailResponse = zod.input<typeof ExperimentDetailResponse>;
 export type ExperimentDetailResponseOutput = zod.output<typeof ExperimentDetailResponse>;
+
+
+export const experimentSampleStateQueuePositionMin = 0;
+
+
+
+export const ExperimentSampleState = /*#__PURE__*/ zod.strictObject({
+  "arm_id": /*#__PURE__*/ zod.string(),
+  "calls": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.int(),/*#__PURE__*/ zod.null()]),
+  "cost_usd": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.number(),/*#__PURE__*/ zod.null()]),
+  "detail": /*#__PURE__*/ zod.string(),
+  "effective_config": /*#__PURE__*/ zod.record(/*#__PURE__*/ zod.string(), /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.boolean(),/*#__PURE__*/ zod.int(),/*#__PURE__*/ zod.number(),/*#__PURE__*/ zod.string()])),
+  "id": /*#__PURE__*/ zod.string(),
+  "ordinal": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "queue_position": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(experimentSampleStateQueuePositionMin)),
+  "run_id": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "session_id": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "state": /*#__PURE__*/ zod.enum(['queued', 'launching', 'running', 'success', 'agent_failure', 'setup_failure', 'cancelled', 'interrupted', 'excluded']),
+  "turns": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.int(),/*#__PURE__*/ zod.null()])
+}).check(/*#__PURE__*/ zod.describe('One sample in a persisted experiment job.'));
+
+export type ExperimentSampleState = zod.input<typeof ExperimentSampleState>;
+export type ExperimentSampleStateOutput = zod.output<typeof ExperimentSampleState>;
+
+
+export const experimentJobResponseConfirmedMaxSpendUsdMin = 0;
+
+export const experimentJobResponseContinuationCursorDefault = null;
+export const experimentJobResponseSamplesMax = 100;
+
+export const experimentJobResponseSpentUsdMin = 0;
+
+
+
+export const ExperimentJobResponse = /*#__PURE__*/ zod.strictObject({
+  "aggregates": ExperimentAggregates,
+  "concurrency": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "confirmed_max_spend_usd": /*#__PURE__*/ zod.number().check(/*#__PURE__*/ zod.gte(experimentJobResponseConfirmedMaxSpendUsdMin)),
+  "continuation_cursor": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]), experimentJobResponseContinuationCursorDefault),
+  "created_at": /*#__PURE__*/ zod.string(),
+  "current_sample": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "definition": ExperimentDefinition,
+  "definition_id": /*#__PURE__*/ zod.string(),
+  "definition_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "id": /*#__PURE__*/ zod.string(),
+  "launch_blocked": /*#__PURE__*/ zod.boolean(),
+  "player_profile": /*#__PURE__*/ zod.string(),
+  "request_id": /*#__PURE__*/ zod.string(),
+  "samples": /*#__PURE__*/ zod.array(ExperimentSampleState).check(/*#__PURE__*/ zod.maxLength(experimentJobResponseSamplesMax)),
+  "spent_usd": /*#__PURE__*/ zod.number().check(/*#__PURE__*/ zod.gte(experimentJobResponseSpentUsdMin)),
+  "state": /*#__PURE__*/ zod.enum(['queued', 'running', 'stopping', 'stopped', 'completed', 'failed', 'cancelled']),
+  "terminal_reason": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "updated_at": /*#__PURE__*/ zod.string()
+}).check(/*#__PURE__*/ zod.describe('One persisted and resumable experiment job.'));
+
+export type ExperimentJobResponse = zod.input<typeof ExperimentJobResponse>;
+export type ExperimentJobResponseOutput = zod.output<typeof ExperimentJobResponse>;
+
+export const experimentJobsResponseContinuationCursorDefault = null;
+export const experimentJobsResponseJobsMax = 50;
+
+
+
+export const ExperimentJobsResponse = /*#__PURE__*/ zod.strictObject({
+  "continuation_cursor": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]), experimentJobsResponseContinuationCursorDefault),
+  "jobs": /*#__PURE__*/ zod.array(ExperimentJobResponse).check(/*#__PURE__*/ zod.maxLength(experimentJobsResponseJobsMax))
+}).check(/*#__PURE__*/ zod.describe('All locally persisted experiment jobs.'));
+
+export type ExperimentJobsResponse = zod.input<typeof ExperimentJobsResponse>;
+export type ExperimentJobsResponseOutput = zod.output<typeof ExperimentJobsResponse>;
+
+export const experimentRunRequestConfirmedMaxSpendUsdExclusiveMin = 0;
+
+export const experimentRunRequestPlayerProfileRegExp = new RegExp('^[A-Za-z][A-Za-z0-9_-]*$');
+export const experimentRunRequestRequestIdMax = 160;
+
+
+
+export const ExperimentRunRequest = /*#__PURE__*/ zod.strictObject({
+  "confirmed": /*#__PURE__*/ zod.boolean(),
+  "confirmed_max_spend_usd": /*#__PURE__*/ zod.number().check(/*#__PURE__*/ zod.gt(experimentRunRequestConfirmedMaxSpendUsdExclusiveMin)),
+  "definition": ExperimentDefinition,
+  "player_profile": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.regex(experimentRunRequestPlayerProfileRegExp)),
+  "request_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(experimentRunRequestRequestIdMax))
+}).check(/*#__PURE__*/ zod.describe('An explicit paid-execution confirmation for one validated definition.'));
+
+export type ExperimentRunRequest = zod.input<typeof ExperimentRunRequest>;
+export type ExperimentRunRequestOutput = zod.output<typeof ExperimentRunRequest>;
 
 export const goalResourceCostUsdMin = 0;
 
@@ -1306,6 +1534,100 @@ export const GetExperimentCatalog404Response = ApiError
 export const GetExperimentCatalog422Response = ApiError
 
 export const GetExperimentCatalog503Response = ApiError
+
+
+export const getExperimentJobsQueryCursorMax = 2048;
+
+export const getExperimentJobsQueryLimitDefault = 20;
+export const getExperimentJobsQueryLimitMax = 50;
+
+
+
+export const GetExperimentJobsQueryParams = /*#__PURE__*/ zod.strictObject({
+  "cursor": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getExperimentJobsQueryCursorMax))),
+  "limit": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(getExperimentJobsQueryLimitMax)), getExperimentJobsQueryLimitDefault)
+})
+
+export const GetExperimentJobs200Response = ExperimentJobsResponse
+
+export const GetExperimentJobs404Response = ApiError
+
+export const GetExperimentJobs422Response = ApiError
+
+export const GetExperimentJobs503Response = ApiError
+
+
+export const getExperimentJobPathJobIdMax = 160;
+
+
+
+export const GetExperimentJobParams = /*#__PURE__*/ zod.strictObject({
+  "job_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getExperimentJobPathJobIdMax))
+})
+
+export const getExperimentJobQueryCursorMax = 2048;
+
+export const getExperimentJobQueryLimitDefault = 50;
+export const getExperimentJobQueryLimitMax = 100;
+
+
+
+export const GetExperimentJobQueryParams = /*#__PURE__*/ zod.strictObject({
+  "cursor": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getExperimentJobQueryCursorMax))),
+  "limit": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(getExperimentJobQueryLimitMax)), getExperimentJobQueryLimitDefault)
+})
+
+export const GetExperimentJob200Response = ExperimentJobResponse
+
+export const GetExperimentJob404Response = ApiError
+
+export const GetExperimentJob422Response = ApiError
+
+export const GetExperimentJob503Response = ApiError
+
+
+export const controlExperimentPathJobIdMax = 160;
+
+
+
+export const ControlExperimentParams = /*#__PURE__*/ zod.strictObject({
+  "job_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(controlExperimentPathJobIdMax))
+})
+
+export const controlExperimentQueryCursorMax = 2048;
+
+export const controlExperimentQueryLimitDefault = 50;
+export const controlExperimentQueryLimitMax = 100;
+
+
+
+export const ControlExperimentQueryParams = /*#__PURE__*/ zod.strictObject({
+  "cursor": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(controlExperimentQueryCursorMax))),
+  "limit": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(controlExperimentQueryLimitMax)), controlExperimentQueryLimitDefault)
+})
+
+export const ControlExperimentBody = ExperimentControlRequest
+
+export const ControlExperiment200Response = ExperimentJobResponse
+
+export const ControlExperiment404Response = ApiError
+
+export const ControlExperiment409Response = ApiError
+
+export const ControlExperiment422Response = ApiError
+
+export const ControlExperiment503Response = ApiError
+
+
+export const RunExperimentBody = ExperimentRunRequest
+
+export const RunExperiment202Response = ExperimentJobResponse
+
+export const RunExperiment409Response = ApiError
+
+export const RunExperiment422Response = ApiError
+
+export const RunExperiment503Response = ApiError
 
 
 

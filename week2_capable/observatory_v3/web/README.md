@@ -124,6 +124,43 @@ flowchart LR
 - Browser tests cover deep links, history, refresh, keyboard navigation, zero
   document reloads, and stable shell identity.
 
+## Shared header and selected context
+
+One application header carries the same player and session through every
+product space.
+
+```mermaid
+flowchart LR
+    Catalog["Bounded player-scoped catalog pages"]
+    Context["Selected player and session"]
+    URL["Validated route search"]
+    Header["Shared application header"]
+    Spaces["Live, Sessions, Experiments, Knowledge"]
+    Actions["Route capability actions"]
+
+    Catalog --> Context
+    Context --> URL
+    URL --> Header
+    Header --> Spaces
+    Context --> Actions
+```
+
+- The FT4 server-state boundary owns catalog loading and manual refresh.
+- Player-scoped pagination continues through the final opaque cursor.
+- Running sessions sort before retained sessions, then by latest update.
+- The selector shows five alternatives for the selected player.
+- Detail paths take identity precedence over conflicting search values.
+- Missing and mismatched sessions recover to the selected player's latest.
+- The all-sessions dialog searches displayed dates and derived lifecycle.
+- Validated search state preserves selection across typed product links.
+- Brand navigation returns to Live without dropping player or session context.
+- Direct states cover loading, partial, stale, reconnecting, empty, and error.
+- Catalog capabilities distinguish live control from retained read-only data.
+- Route action slots omit live actions for stopped sessions.
+- Dark and light themes use the accepted Observatory storage value.
+- Browser gates cover keyboard focus, axe, density, narrow layout, zero
+  reloads, and frozen header geometry.
+
 ## Commands
 
 | Command                      | Purpose                                             |

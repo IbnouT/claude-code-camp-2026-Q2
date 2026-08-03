@@ -4,6 +4,10 @@ import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it } from "vitest"
 
 import { createAppRouter } from "@/app/create-app-router"
+import {
+  ServerStateProvider,
+  createServerStateClient,
+} from "@/data/server-state-provider"
 
 afterEach(cleanup)
 
@@ -24,7 +28,11 @@ function renderRoute(
     history: createMemoryHistory({ initialEntries: [initialEntry] }),
     prepareRoute,
   })
-  render(<RouterProvider router={router} />)
+  render(
+    <ServerStateProvider client={createServerStateClient()}>
+      <RouterProvider router={router} />
+    </ServerStateProvider>
+  )
   return router
 }
 
@@ -86,6 +94,32 @@ describe("typed application router", () => {
     expect(screen.getByRole("link", { name: "Live" })).not.toHaveAttribute(
       "aria-current"
     )
+  })
+
+  it("carries selected context through typed product-space links", async () => {
+    const user = userEvent.setup()
+    const router = renderRoute(
+      "/live?view=activity&player=player-7&session=session-42"
+    )
+
+    expect(
+      await screen.findByRole("heading", { name: "Live" })
+    ).toBeInTheDocument()
+    await user.click(screen.getByRole("link", { name: "Experiments" }))
+
+    expect(router.state.location.pathname).toBe("/experiments")
+    expect(router.state.location.search).toMatchObject({
+      lens: "compare",
+      player: "player-7",
+      session: "session-42",
+    })
+
+    await user.click(screen.getByRole("link", { name: "Knowledge" }))
+    expect(router.state.location.search).toMatchObject({
+      player: "player-7",
+      query: "",
+      session: "session-42",
+    })
   })
 
   it("keeps one shell through routed pending, parameter error, and recovery", async () => {

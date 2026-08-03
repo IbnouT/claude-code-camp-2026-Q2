@@ -38,6 +38,7 @@ const prohibitedLegacyReferences = [
 ]
 const allowedPresentationDataImports = new Set([
   "@/data/capabilities",
+  "@/data/session-catalog",
   "@/data/server-state-provider",
 ])
 
