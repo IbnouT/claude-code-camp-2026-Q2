@@ -19,6 +19,8 @@ flowchart LR
     Browser --> Live
     Browser --> UI
     UI --> Style
+    UI --> Base["Base UI behavior"]
+    Workshop["Storybook workshop"] --> UI
 ```
 
 ## Foundation
@@ -35,6 +37,8 @@ flowchart LR
 - Production builds exclude the development review module.
 - Tailwind consumes semantic Observatory tokens instead of a literal palette.
 - Dark and light values retain frozen source and computed-style evidence.
+- Canonical primitives own every Base UI behavior import.
+- Storybook isolates every primitive and its supported interaction states.
 
 The development server exposes the cumulative foundation review and the
 deterministic backend B0 measurements. The production build exposes only the
@@ -68,6 +72,22 @@ The token layer retains accepted Observatory values behind shared names.
   unbounded detail payloads, and partial-line rejection.
 - The measured artifact and review components are excluded from production.
 
+## Canonical UI primitives
+
+The component layer is the only feature-facing presentation boundary.
+
+- Controls include Button, IconButton, Input, and SearchInput.
+- Status includes Badge and lifecycle-aware StatusBadge.
+- Surfaces include Card and ScrollArea.
+- Navigation includes Tabs and Select.
+- Disclosure includes Dialog, Popover, DropdownMenu, Tooltip, and Collapsible.
+- CVA owns visual variants where a component supports multiple appearances.
+- Base UI owns keyboard, focus, selection, dismissal, and restoration behavior.
+- The development review shows the cumulative component layer with FT1 tokens.
+- Storybook 10.5.5 provides directly selectable dark, light, normal, and dense
+  workshop states.
+- The Storybook build runs axe against every selectable story.
+
 ## Commands
 
 | Command                      | Purpose                                             |
@@ -81,6 +101,9 @@ The token layer retains accepted Observatory values behind shared names.
 | `npm run contracts:check`    | Check deterministic output and operation coverage   |
 | `npm test`                   | Run component tests                                 |
 | `npm run test:e2e`           | Run Chromium and axe browser gates                  |
+| `npm run storybook`          | Start the isolated primitive workshop               |
+| `npm run storybook:build`    | Build the pinned development-only workshop          |
+| `npm run storybook:test`     | Run axe across every selectable built story         |
 | `npm run build`              | Typecheck, build, and inspect the production bundle |
 | `npm run check`              | Run every landing gate                              |
 
@@ -99,6 +122,7 @@ The token layer retains accepted Observatory values behind shared names.
 | Prettier                     | Deterministic source and Tailwind class ordering                 |
 | Vitest and Testing Library   | Component behavior verification                                  |
 | Playwright and axe           | Browser and accessibility verification                           |
+| Storybook 10.5.5             | Isolated primitive states and cumulative component workshop      |
 | Orval 8.23.0                 | OpenAPI TypeScript and Zod generation                            |
 | Zod 4.4.3 Mini               | Tree-shakeable runtime contract validation                       |
 

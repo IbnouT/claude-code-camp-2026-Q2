@@ -9,9 +9,10 @@ import {
 } from "lucide-react"
 
 import { BackendBaselineReview } from "./backend-baseline-review"
+import { PrimitiveReview } from "./primitive-review"
 import { TokenReviewGallery } from "./token-review"
 
-const FOUNDATION_REVIEW_MARKER = "V3_FOUNDATION_REVIEW_ONLY"
+const FOUNDATION_REVIEW_MARKER = "V3_FOUNDATION_REVIEW_HMR_CHECK"
 
 const foundationFacts = [
   {
@@ -71,6 +72,8 @@ export function App() {
         <BackendBaselineReview />
 
         <TokenReviewGallery />
+
+        <PrimitiveReview />
 
         <section
           aria-labelledby="foundation-status"

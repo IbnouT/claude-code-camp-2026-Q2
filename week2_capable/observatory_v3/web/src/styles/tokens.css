@@ -29,6 +29,7 @@
   /* v1 :root cyan, green, amber, coral, and violet pairs */
   --accent: #68e1dc;
   --accent-soft: #163738;
+  --action-border: rgb(104 225 220 / 30%);
   --success: #8bdfa9;
   --success-soft: #123227;
   --warning: #eac06a;
