@@ -6,7 +6,7 @@ const frozenURL = "http://127.0.0.1:8787/"
 test("primitive interactions preserve keyboard, focus, and dismissal behavior", async ({
   page,
 }, testInfo) => {
-  await page.goto("/")
+  await page.goto("/review")
 
   const review = page.getByTestId("primitive-review")
   await expect(
@@ -99,7 +99,7 @@ test("retained action primitive matches the live frozen action across themes and
     window.localStorage.setItem("boukensha-observatory-theme", "light")
   })
   await frozenPage.goto(frozenURL, { waitUntil: "networkidle" })
-  await page.goto("/")
+  await page.goto("/review")
   const themeControls = page.getByTestId("token-gallery")
   await themeControls.getByRole("button", { name: "Light" }).click()
   await expect(page.getByTestId("primitive-review")).toBeVisible()
@@ -188,14 +188,15 @@ test("retained action primitive matches the live frozen action across themes and
     width: "1px",
   })
 
+  // oxlint-disable no-await-in-loop
   for (const theme of ["Dark", "Light"] as const) {
     await frozenPage.evaluate((selectedTheme) => {
-      window.localStorage.setItem(
-        "boukensha-observatory-theme",
-        selectedTheme.toLowerCase()
-      )
+      if (selectedTheme === "Light") {
+        document.documentElement.dataset.theme = "light"
+      } else {
+        delete document.documentElement.dataset.theme
+      }
     }, theme)
-    await frozenPage.reload({ waitUntil: "networkidle" })
     await themeControls.getByRole("button", { name: theme }).click()
 
     for (const density of ["normal", "dense"] as const) {
@@ -265,6 +266,7 @@ test("retained action primitive matches the live frozen action across themes and
       ])
     }
   }
+  // oxlint-enable no-await-in-loop
 
   await page.evaluate(() => {
     document.documentElement.dataset.density = "normal"

@@ -21,6 +21,7 @@
     "format:check": "prettier --check .",
     "hmr:check": "node scripts/check-hmr.mjs",
     "test": "vitest run",
+    "test:shell": "playwright test tests/shell.spec.ts",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "typecheck": "tsc -b --pretty false",

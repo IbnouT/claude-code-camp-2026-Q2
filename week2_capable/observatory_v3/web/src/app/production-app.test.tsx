@@ -4,12 +4,15 @@ import { describe, expect, it } from "vitest"
 import { App } from "./production-app"
 
 describe("production application boundary", () => {
-  it("renders only the production foundation state", () => {
+  it("renders the production router without development review content", async () => {
     render(<App />)
 
     expect(
-      screen.getByRole("heading", { name: "Frontend foundation ready" })
+      await screen.findByRole("heading", { name: "Live" })
     ).toBeInTheDocument()
     expect(screen.queryByText("Foundation review")).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("link", { name: "Review" })
+    ).not.toBeInTheDocument()
   })
 })

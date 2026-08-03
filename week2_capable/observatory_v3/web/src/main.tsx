@@ -10,7 +10,7 @@ if (rootElement === null) {
 }
 
 const rootModule = import.meta.env.DEV
-  ? import("./dev/foundation-review")
+  ? import("./dev/development-app")
   : import("./app/production-app")
 
 void rootModule.then(({ App }) => {

@@ -39,10 +39,11 @@ flowchart LR
 - Dark and light values retain frozen source and computed-style evidence.
 - Canonical primitives own every Base UI behavior import.
 - Storybook isolates every primitive and its supported interaction states.
+- TanStack Router owns typed paths, parameters, search state, and navigation.
+- One root shell persists while route outlets change.
 
-The development server exposes the cumulative foundation review and the
-deterministic backend B0 measurements. The production build exposes only the
-production application boundary.
+The development server exposes the product shell and cumulative review at
+`/review`. The production build excludes that route and its review modules.
 
 ## Semantic visual foundation
 
@@ -88,6 +89,38 @@ The component layer is the only feature-facing presentation boundary.
   workshop states.
 - The Storybook build runs axe against every selectable story.
 
+## Typed application shell
+
+The router owns every location and keeps one shell mounted.
+
+```mermaid
+flowchart LR
+    Root["Persistent root shell"]
+    Outlet["Typed route outlet"]
+    Live["/live"]
+    Sessions["/sessions and /sessions/$sessionId"]
+    Experiments["/experiments"]
+    Knowledge["/knowledge"]
+    Review["/review, development only"]
+
+    Root --> Outlet
+    Outlet --> Live
+    Outlet --> Sessions
+    Outlet --> Experiments
+    Outlet --> Knowledge
+    Outlet --> Review
+```
+
+- Route-specific TanStack links handle internal navigation.
+- Zod validates search values and the session route parameter at runtime.
+- Invalid search values use bounded defaults.
+- Invalid parameters render the route error boundary.
+- Unknown paths render the root not-found boundary.
+- The route outlet has a loading boundary ready for owning feature loaders.
+- Route changes move focus to the persistent content landmark.
+- Browser tests cover deep links, history, refresh, keyboard navigation, zero
+  document reloads, and stable shell identity.
+
 ## Commands
 
 | Command                      | Purpose                                             |
@@ -101,6 +134,7 @@ The component layer is the only feature-facing presentation boundary.
 | `npm run contracts:check`    | Check deterministic output and operation coverage   |
 | `npm test`                   | Run component tests                                 |
 | `npm run test:e2e`           | Run Chromium and axe browser gates                  |
+| `npm run test:shell`         | Run focused shell and navigation scenarios          |
 | `npm run storybook`          | Start the isolated primitive workshop               |
 | `npm run storybook:build`    | Build the pinned development-only workshop          |
 | `npm run storybook:test`     | Run axe across every selectable built story         |
@@ -115,7 +149,7 @@ The component layer is the only feature-facing presentation boundary.
 | Vite and React plugin        | Development server, Fast Refresh, and production build           |
 | Tailwind CSS and Vite plugin | Zero-runtime utility styling                                     |
 | shadcn and Base UI           | Repository-owned components over accessible behavior             |
-| TanStack Router              | Typed URL and navigation state for the shell landing             |
+| TanStack Router              | Typed URL, search, history, and shell navigation                 |
 | TanStack Query               | Request lifecycle and server-state ownership                     |
 | Lucide React                 | Tree-shakeable interface icons                                   |
 | Oxlint                       | Full-source TypeScript, React, import, and accessibility linting |
@@ -126,8 +160,7 @@ The component layer is the only feature-facing presentation boundary.
 | Orval 8.23.0                 | OpenAPI TypeScript and Zod generation                            |
 | Zod 4.4.3 Mini               | Tree-shakeable runtime contract validation                       |
 
-Router and server-state packages are installed but remain inactive until their
-own accepted landings.
+TanStack Query remains inactive until its server-state landing.
 
 ## Boundaries
 
@@ -138,5 +171,5 @@ own accepted landings.
 - Feature components do not author transport request or response types.
 - API route literals and network transports remain inside `src/data`.
 - Internal navigation does not use raw document or history APIs.
-- Product routes and semantic visual tokens arrive only in their owning
-  landings.
+- Development review modules do not enter the production graph.
+- Feature routes remain placeholders until their owning landings.

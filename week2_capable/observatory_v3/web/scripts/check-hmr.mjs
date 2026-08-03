@@ -10,8 +10,8 @@ const packageRoot = fileURLToPath(new URL("..", import.meta.url))
 const sourcePath = path.join(packageRoot, "src", "dev", "foundation-review.tsx")
 const port = 4175
 const baseURL = `http://127.0.0.1:${port}`
-const originalMarker = "V3_FOUNDATION_REVIEW_ONLY"
-const refreshedMarker = "V3_FOUNDATION_REVIEW_HMR_CHECK"
+const originalMarker = "V3_FOUNDATION_REVIEW_HMR_CHECK"
+const refreshedMarker = "V3_FOUNDATION_REVIEW_HMR_REFRESHED"
 const probeValue = "preserve-across-hmr"
 
 const delay = (milliseconds) =>
@@ -68,7 +68,7 @@ try {
   await waitForServer()
   browser = await chromium.launch()
   const page = await browser.newPage()
-  await page.goto(baseURL)
+  await page.goto(`${baseURL}/review`)
 
   const probe = page.getByRole("textbox", { name: "HMR state probe" })
   await probe.fill(probeValue)

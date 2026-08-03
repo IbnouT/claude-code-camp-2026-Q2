@@ -48,7 +48,7 @@ export function App() {
   const [probe, setProbe] = useState("")
 
   return (
-    <main className="min-h-svh bg-canvas text-content-primary">
+    <div className="bg-canvas text-content-primary">
       <div className="mx-auto flex min-h-svh w-full max-w-7xl flex-col px-5 py-8 sm:px-8 lg:px-12 lg:py-10">
         <header className="flex flex-col gap-5 border-b border-line pb-7 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -171,6 +171,6 @@ export function App() {
           from the production module graph.
         </footer>
       </div>
-    </main>
+    </div>
   )
 }

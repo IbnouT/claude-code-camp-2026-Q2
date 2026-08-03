@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test"
 test("development foundation renders and passes axe", async ({
   page,
 }, testInfo) => {
-  await page.goto("/")
+  await page.goto("/review")
 
   await expect(
     page.getByRole("heading", { name: "Observatory architecture" })

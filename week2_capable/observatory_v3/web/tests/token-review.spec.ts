@@ -112,7 +112,7 @@ for (const theme of ["dark", "light"] as const) {
       document.documentElement.dataset.theme = selectedTheme
     }, theme)
 
-    await page.goto("/")
+    await page.goto("/review")
     if (theme === "light") {
       await page.getByRole("button", { name: "Light" }).click()
     }
@@ -263,7 +263,7 @@ for (const theme of ["dark", "light"] as const) {
   test(`${theme} token gallery has no unexpected visual change`, async ({
     page,
   }) => {
-    await page.goto("/")
+    await page.goto("/review")
     if (theme === "light") {
       await page.getByRole("button", { name: "Light" }).click()
     }
