@@ -33,10 +33,29 @@ flowchart LR
 - Orval generates TypeScript and status-specific Zod Mini validators.
 - Network values enter application code as `unknown` and validate in `src/data`.
 - Production builds exclude the development review module.
+- Tailwind consumes semantic Observatory tokens instead of a literal palette.
+- Dark and light values retain frozen source and computed-style evidence.
 
 The development server exposes the cumulative foundation review and the
 deterministic backend B0 measurements. The production build exposes only the
 production application boundary.
+
+## Semantic visual foundation
+
+The token layer retains accepted Observatory values behind shared names.
+
+- Foundation tokens cover canvas, surfaces, content, lines, and overlays.
+- Intent tokens cover accent, success, warning, danger, belief, and cost.
+- Lifecycle tokens distinguish idle, checking, running, success, stopped, and
+  failed states.
+- Map tokens cover navigation, room, terrain, and landmark states.
+- Typography separates interface text from timestamp, cost, and trace data.
+- Geometry covers spacing, radii, controls, density, focus, motion, elevation,
+  and layers.
+- The development gallery renders every category in dark and light themes.
+- Playwright compares representative computed values with the frozen app on
+  port `8787`.
+- Playwright screenshots and axe guard the cumulative review gallery.
 
 ## Backend B0 evidence
 

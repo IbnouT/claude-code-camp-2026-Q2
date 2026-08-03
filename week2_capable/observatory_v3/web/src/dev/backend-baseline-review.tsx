@@ -163,11 +163,11 @@ export function BackendBaselineReview() {
   return (
     <section
       aria-labelledby="backend-baseline-title"
-      className="border-b border-neutral-800 py-7"
+      className="border-b border-line py-7"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-semibold tracking-[0.16em] text-cyan-300 uppercase">
+          <p className="text-xs font-semibold tracking-[0.16em] text-accent uppercase">
             Landing 2 · Measured current path
           </p>
           <h2
@@ -176,16 +176,16 @@ export function BackendBaselineReview() {
           >
             Backend contract baseline
           </h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-400">
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-content-muted">
             Sanitized deterministic evidence reproduces the current failure
             modes before backend behavior changes. Values are measurements, not
             targets.
           </p>
         </div>
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/70 px-4 py-3 text-right">
-          <p className="text-xs text-neutral-500">Browser parse and paint</p>
+        <div className="rounded-xl border border-line bg-surface px-4 py-3 text-right">
+          <p className="text-xs text-content-muted">Browser parse and paint</p>
           <p
-            className="mt-1 font-mono text-sm text-neutral-200"
+            className="mt-1 font-mono text-sm text-content-primary"
             data-browser-ready-ms={browserReadyMs?.toFixed(2)}
             data-testid="browser-ready"
           >
@@ -193,7 +193,7 @@ export function BackendBaselineReview() {
               ? "Measuring"
               : `${browserReadyMs.toFixed(2)} ms`}
           </p>
-          <p className="mt-1 text-[0.7rem] text-neutral-600">
+          <p className="mt-1 text-[0.7rem] text-content-muted">
             JSON parse {Math.max(0, parsedAt - parseStarted).toFixed(2)} ms
           </p>
         </div>
@@ -205,22 +205,22 @@ export function BackendBaselineReview() {
       >
         {path.map(({ label, value, detail, icon: Icon }, index) => (
           <li key={label} className="contents">
-            <article className="rounded-2xl border border-neutral-800 bg-neutral-900/70 p-4">
-              <Icon aria-hidden="true" className="size-5 text-cyan-300" />
-              <p className="mt-4 text-xs font-semibold tracking-wide text-neutral-500 uppercase">
+            <article className="rounded-2xl border border-line bg-surface p-4">
+              <Icon aria-hidden="true" className="size-5 text-accent" />
+              <p className="mt-4 text-xs font-semibold tracking-wide text-content-muted uppercase">
                 {label}
               </p>
-              <p className="mt-1 font-mono text-base font-semibold text-neutral-100">
+              <p className="mt-1 font-mono text-base font-semibold text-content-primary">
                 {value}
               </p>
-              <p className="mt-1 text-xs leading-5 text-neutral-500">
+              <p className="mt-1 text-xs leading-5 text-content-muted">
                 {detail}
               </p>
             </article>
             {index < path.length - 1 ? (
               <ArrowRight
                 aria-hidden="true"
-                className="mx-auto hidden size-5 self-center text-neutral-700 lg:block"
+                className="mx-auto hidden size-5 self-center text-line-strong lg:block"
               />
             ) : null}
           </li>
@@ -228,15 +228,12 @@ export function BackendBaselineReview() {
       </ol>
 
       <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_1.1fr]">
-        <article className="rounded-2xl border border-amber-300/20 bg-amber-300/5 p-5">
+        <article className="rounded-2xl border border-warning bg-warning-soft p-5">
           <div className="flex items-center gap-3">
-            <TriangleAlert
-              aria-hidden="true"
-              className="size-5 text-amber-300"
-            />
+            <TriangleAlert aria-hidden="true" className="size-5 text-warning" />
             <div>
               <h3 className="font-semibold">Reproduced failure modes</h3>
-              <p className="text-sm text-neutral-500">
+              <p className="text-sm text-warning">
                 B1 through B5 must remove these measured costs
               </p>
             </div>
@@ -245,13 +242,13 @@ export function BackendBaselineReview() {
             {failureModes.map(({ label, value, detail }) => (
               <div
                 key={label}
-                className="rounded-xl border border-neutral-800 bg-neutral-950/55 p-4"
+                className="rounded-xl border border-line bg-canvas p-4"
               >
-                <dt className="text-xs text-neutral-500">{label}</dt>
-                <dd className="mt-1 font-mono text-sm font-semibold text-amber-200">
+                <dt className="text-xs text-content-muted">{label}</dt>
+                <dd className="mt-1 font-mono text-sm font-semibold text-warning">
                   {value}
                 </dd>
-                <dd className="mt-2 text-xs leading-5 text-neutral-500">
+                <dd className="mt-2 text-xs leading-5 text-content-muted">
                   {detail}
                 </dd>
               </div>
@@ -259,17 +256,17 @@ export function BackendBaselineReview() {
           </dl>
         </article>
 
-        <article className="overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/70">
-          <div className="border-b border-neutral-800 px-5 py-4">
+        <article className="overflow-hidden rounded-2xl border border-line bg-surface">
+          <div className="border-b border-line px-5 py-4">
             <h3 className="font-semibold">Measured operations</h3>
-            <p className="text-sm text-neutral-500">
+            <p className="text-sm text-content-muted">
               {baseline.measurement.repetitions} repetitions, median p50,
               nearest-rank p95
             </p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[34rem] text-left text-sm">
-              <thead className="text-xs text-neutral-500">
+              <thead className="text-xs text-content-muted">
                 <tr>
                   <th className="px-5 py-3 font-medium">Operation</th>
                   <th className="px-3 py-3 font-medium">p50</th>
@@ -277,7 +274,7 @@ export function BackendBaselineReview() {
                   <th className="px-5 py-3 text-right font-medium">Work</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-800">
+              <tbody className="divide-y divide-line">
                 <MetricRow
                   label="Catalog"
                   metric={baseline.metrics.catalog}
@@ -316,19 +313,23 @@ export function BackendBaselineReview() {
               </tbody>
             </table>
           </div>
-          <div className="grid gap-px border-t border-neutral-800 bg-neutral-800 sm:grid-cols-2">
-            <div className="bg-neutral-950/70 px-5 py-3">
-              <p className="text-xs text-neutral-500">Catalog JSON ready p50</p>
-              <p className="mt-1 font-mono text-sm text-neutral-200">
+          <div className="grid gap-px border-t border-line bg-line sm:grid-cols-2">
+            <div className="bg-canvas px-5 py-3">
+              <p className="text-xs text-content-muted">
+                Catalog JSON ready p50
+              </p>
+              <p className="mt-1 font-mono text-sm text-content-primary">
                 {baseline.readiness_markers.server_catalog_json_ready_p50_ms.toFixed(
                   2
                 )}{" "}
                 ms
               </p>
             </div>
-            <div className="bg-neutral-950/70 px-5 py-3">
-              <p className="text-xs text-neutral-500">Detail JSON ready p50</p>
-              <p className="mt-1 font-mono text-sm text-neutral-200">
+            <div className="bg-canvas px-5 py-3">
+              <p className="text-xs text-content-muted">
+                Detail JSON ready p50
+              </p>
+              <p className="mt-1 font-mono text-sm text-content-primary">
                 {baseline.readiness_markers.server_detail_json_ready_p50_ms.toFixed(
                   2
                 )}{" "}
@@ -339,7 +340,7 @@ export function BackendBaselineReview() {
         </article>
       </div>
 
-      <p className="mt-4 text-xs leading-5 text-neutral-600">
+      <p className="mt-4 text-xs leading-5 text-content-muted">
         Fixture: {baseline.provenance.fixture}. Registry schema{" "}
         {baseline.provenance.registry_schema.version} (
         {baseline.provenance.registry_schema.version_state}), gateway schema{" "}
@@ -366,14 +367,14 @@ function MetricRow({
 }) {
   return (
     <tr>
-      <th className="px-5 py-3 font-medium text-neutral-300">{label}</th>
-      <td className="px-3 py-3 font-mono text-neutral-400">
+      <th className="px-5 py-3 font-medium text-content-muted">{label}</th>
+      <td className="px-3 py-3 font-mono text-content-muted">
         {metric.p50_ms.toFixed(2)} ms
       </td>
-      <td className="px-3 py-3 font-mono text-neutral-400">
+      <td className="px-3 py-3 font-mono text-content-muted">
         {metric.p95_ms.toFixed(2)} ms
       </td>
-      <td className="px-5 py-3 text-right font-mono text-neutral-500">
+      <td className="px-5 py-3 text-right font-mono text-content-muted">
         {work}
       </td>
     </tr>

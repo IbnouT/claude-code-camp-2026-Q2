@@ -1,0 +1,259 @@
+/*
+ * Frozen evidence: commit 3acf11678b46c2dc90836d405f0ff550ae01b984.
+ *
+ * Color, shadow, motion, geometry, and scale values come from
+ * observatory/web/src/styles/tokens.css. Map values come from
+ * observatory_v2/web/src/tokens.css. The semantic aliases below preserve the
+ * exact authored values while removing literal color and route names from the
+ * v3 API.
+ */
+:root {
+  color-scheme: dark;
+
+  /* v1 :root --color-bg, --color-surface, --color-raised, --color-overlay */
+  --canvas: #080b0f;
+  --surface: #0d1218;
+  --surface-raised: #111820;
+  --surface-soft: #151d26;
+  --overlay: #04080cd1;
+
+  /* v1 :root --color-text, --color-muted, --color-quiet */
+  --content-primary: #edf4f8;
+  --content-muted: #8493a1;
+  --content-quiet: #596775;
+
+  /* v1 :root --color-line, --color-line-strong */
+  --line: #1d2833;
+  --line-strong: #2b3947;
+
+  /* v1 :root cyan, green, amber, coral, and violet pairs */
+  --accent: #68e1dc;
+  --accent-soft: #163738;
+  --success: #8bdfa9;
+  --success-soft: #123227;
+  --warning: #eac06a;
+  --warning-soft: #3b301d;
+  --danger: #ff8178;
+  --danger-soft: #3e2425;
+  --belief: #b7a7ff;
+  --belief-soft: #292640;
+  --cost: #eac06a;
+  --cost-soft: #3b301d;
+
+  /*
+   * Lifecycle aliases reuse retained status colors. Evidence selectors are
+   * base.css .state-actual, .state-incomplete, and .state-attention.
+   */
+  --lifecycle-idle: #596775;
+  --lifecycle-checking: #eac06a;
+  --lifecycle-running: #68e1dc;
+  --lifecycle-succeeded: #8bdfa9;
+  --lifecycle-stopped: #8493a1;
+  --lifecycle-failed: #ff8178;
+
+  /* v1 :root terminal, map field, and glow custom properties */
+  --terminal-canvas: #05080b;
+  --terminal-content: #c6d3de;
+  --map-grid: rgb(104 225 220 / 5%);
+  --map-glow: rgb(104 225 220 / 18%);
+
+  /*
+   * v2 :root map custom properties, renamed by visual meaning. Each fill is
+   * paired with the following line token from the same frozen declaration.
+   */
+  --map-link: #243449;
+  --map-frontier: #4a5c74;
+  --map-vertical: #8fb4e0;
+  --map-room: #1c3350;
+  --map-room-line: #2f5680;
+  --map-current: #12333a;
+  --map-current-line: #2f6b6f;
+  --map-temple: #183a2e;
+  --map-temple-line: #2b5c48;
+  --map-shop: #3a2f18;
+  --map-shop-line: #5c4a2b;
+  --map-dark: #241a2e;
+  --map-dark-line: #463357;
+  --map-route: #1b4255;
+  --map-route-line: #31789b;
+  --map-interior: #2b2833;
+  --map-interior-line: #565167;
+  --map-underground: #2b1c12;
+  --map-underground-line: #6d472c;
+  --map-urban: #276f86;
+  --map-urban-line: #41a6c8;
+  --map-open-land: #526624;
+  --map-open-land-line: #89aa3c;
+  --map-water: #1a5b56;
+  --map-water-line: #2ea399;
+  --map-highland: #44223a;
+  --map-highland-line: #82406e;
+  --map-woodland: #143d1f;
+  --map-woodland-line: #2b8241;
+  --map-commerce: #785f1c;
+  --map-commerce-line: #c29b2e;
+  --map-civic: #2f2f79;
+  --map-civic-line: #4b4bb9;
+  --map-sacred: #421c4f;
+  --map-sacred-line: #7b3493;
+  --map-special: #5b1a2a;
+  --map-special-line: #a32e4b;
+
+  /*
+   * Typography evidence: tokens.css --font-ui and --font-mono, base.css
+   * .eyebrow and buttons, header.css brand, navigation, and context controls.
+   */
+  --font-ui:
+    Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  --font-data: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --type-ui-xs: 10px;
+  --type-ui-sm: 12px;
+  --type-ui-md: 13.5px;
+  --type-ui-lg: 15px;
+  --type-ui-title: 15px;
+  --type-data-xs: 9px;
+  --type-data-sm: 10px;
+  --type-data-md: 12px;
+  --type-data-lg: 14px;
+
+  /* v1 :root radius and spacing custom properties */
+  --corner-xs: 6px;
+  --corner-sm: 8px;
+  --corner-md: 10px;
+  --corner-lg: 12px;
+  --corner-xl: 16px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /*
+   * v1 :root shadows and focus custom properties. Popover colors use the
+   * frozen browser's computed serialization.
+   */
+  --elevation-raised: 0 24px 70px rgb(0 0 0 / 32%);
+  --elevation-popover: 0 20px 50px #0000006b;
+  --focus-ring: 0 0 0 3px rgb(104 225 220 / 22%);
+
+  /* v1 :root motion and responsive geometry custom properties */
+  --motion-fast: 120ms;
+  --motion-normal: 180ms;
+  --header-height: 62px;
+  --content-gap: 14px;
+  --card-padding: 16px;
+  --control-height: 38px;
+
+  /*
+   * Layer evidence: header.css .canonical-header (30), .session-menu (80),
+   * dialogs.css .dialog-backdrop (100), with local content layers retained as
+   * 0 and 1.
+   */
+  --layer-base: 0;
+  --layer-raised: 1;
+  --layer-header: 30;
+  --layer-popover: 80;
+  --layer-modal: 100;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  /* v1 [data-theme="light"] surface, content, line, and status values */
+  --canvas: #eef2f6;
+  /* Frozen browser computed #fff from the source literal #ffffff. */
+  --surface: #fff;
+  --surface-raised: #f4f7fa;
+  --surface-soft: #e9eef4;
+  --overlay: #e6edf3d1;
+  --content-primary: #12202b;
+  --content-muted: #4e5d6b;
+  --content-quiet: #8394a2;
+  --line: #dde4ec;
+  --line-strong: #c6d0db;
+  --accent: #0c8f88;
+  --accent-soft: #d3efed;
+  --success: #1f9256;
+  --success-soft: #dcefe3;
+  --warning: #9a6f00;
+  --warning-soft: #f6eccf;
+  --danger: #d3454f;
+  --danger-soft: #f7dcdd;
+  --belief: #6f58b8;
+  --belief-soft: #e6e2fb;
+  --cost: #9a6f00;
+  --cost-soft: #f6eccf;
+  --lifecycle-idle: #8394a2;
+  --lifecycle-checking: #9a6f00;
+  --lifecycle-running: #0c8f88;
+  --lifecycle-succeeded: #1f9256;
+  --lifecycle-stopped: #4e5d6b;
+  --lifecycle-failed: #d3454f;
+  /*
+   * The frozen light selector does not override terminal colors. They
+   * therefore retain the dark :root values in both themes.
+   */
+  --terminal-canvas: #05080b;
+  --terminal-content: #c6d3de;
+  --map-grid: rgb(12 143 136 / 7%);
+  --map-glow: rgb(12 143 136 / 15%);
+
+  /* v2 [data-theme="light"] map custom properties */
+  --map-link: #aab8c8;
+  --map-frontier: #647993;
+  --map-vertical: #426e9f;
+  --map-room: #dce8f5;
+  --map-room-line: #7696b8;
+  --map-current: #d3efed;
+  --map-current-line: #0c8f88;
+  --map-temple: #dcefe3;
+  --map-temple-line: #5d9b78;
+  --map-shop: #f4ead2;
+  --map-shop-line: #a78642;
+  --map-dark: #e9e0f0;
+  --map-dark-line: #8d70a4;
+  --map-route: #aad1e4;
+  --map-route-line: #4d9ec7;
+  --map-interior: #dedbe6;
+  --map-interior-line: #9b93b4;
+  --map-underground: #d3ad92;
+  --map-underground-line: #a76d44;
+  --map-urban: #81dada;
+  --map-urban-line: #32aeae;
+  --map-open-land: #deeac3;
+  --map-open-land-line: #adca68;
+  --map-water: #d7f4f1;
+  --map-water-line: #78d9d1;
+  --map-highland: #ddbbd3;
+  --map-highland-line: #b5699e;
+  --map-woodland: #8cd99f;
+  --map-woodland-line: #3bb058;
+  --map-commerce: #efe2bd;
+  --map-commerce-line: #d8b75a;
+  --map-civic: #a3a3db;
+  --map-civic-line: #4b4bb9;
+  --map-sacred: #c58ed7;
+  --map-sacred-line: #913dae;
+  --map-special: #ebb7c4;
+  --map-special-line: #d05876;
+  --elevation-raised: 0 18px 44px rgb(20 40 60 / 12%);
+  --elevation-popover: 0 20px 50px #14283c2e;
+  --focus-ring: 0 0 0 3px rgb(12 143 136 / 20%);
+}
+
+:root[data-density="dense"] {
+  --header-height: 58px;
+  --content-gap: 10px;
+  --card-padding: 12px;
+  --control-height: 34px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-normal: 0ms;
+  }
+}
