@@ -14,13 +14,18 @@ class SourceWatermark:
     registry_updated_at: str
     lifecycle_sequence: int
     gateway_session_id: str
+    gateway_source_id: str
     gateway_sequence: int
     agent_source_id: str
     agent_offset: int
     agent_next_line: int
     operator_source_id: str
     operator_revision: str
+    operator_message_count: int
+    operator_history_digest: str
+    operator_state: str
     experiment_revision: str | None
+    knowledge_revision: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,6 +71,15 @@ class ExperimentCorrelation:
 
 
 @dataclass(frozen=True, slots=True)
+class ProjectionReadMetrics:
+    """Complete source rows consumed by one explicit recovery projection."""
+
+    agent_records: int
+    gateway_records: int
+    lifecycle_records: int
+
+
+@dataclass(frozen=True, slots=True)
 class SessionProjection:
     """A complete selected-session replacement prepared before the write."""
 
@@ -84,6 +98,59 @@ class SessionProjection:
     turn_count: int
     iteration_count: int
     record_count: int
+    watermark: SourceWatermark
+    entities: tuple[IndexedEntity, ...]
+    search_documents: tuple[SearchDocument, ...]
+    experiment: ExperimentCorrelation | None
+    capture_gaps: tuple[str, ...]
+    read_metrics: ProjectionReadMetrics
+
+
+@dataclass(frozen=True, slots=True)
+class SessionCheckpoint:
+    """One committed generation and its complete native source coordinates."""
+
+    session_id: str
+    state: str
+    updated_at: str
+    ended_at: str | None
+    capture_status: str
+    latest_goal_id: str | None
+    latest_goal: str | None
+    goal_count: int
+    nudge_count: int
+    turn_count: int
+    iteration_count: int
+    record_count: int
+    generation: int
+    watermark: SourceWatermark
+    capture_gaps: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class HierarchyContext:
+    """Minimal committed ancestry required to project an appended suffix."""
+
+    session_entity_id: str
+    initial_goal_id: str | None
+    initial_goal_title: str | None
+    scoped_goal_id: str | None
+    current_turn_id: str | None
+    current_iteration_id: str | None
+    last_agent_at: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class SessionIncrement:
+    """One validated suffix committed against an expected watermark."""
+
+    session_id: str
+    state: str
+    updated_at: str
+    ended_at: str | None
+    capture_status: str
+    latest_goal_id: str | None
+    latest_goal: str | None
     watermark: SourceWatermark
     entities: tuple[IndexedEntity, ...]
     search_documents: tuple[SearchDocument, ...]

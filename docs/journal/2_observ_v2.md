@@ -318,6 +318,27 @@ coordinates and replaces one validated session atomically.
 The identity and index lifecycle are specified in
 [the backend architecture plan](../plans/week2_observ/observatory/backend_architecture.md).
 
+### 14. Session freshness needed more than a gateway sequence
+
+A 2,000-event session showed why a single sequence could not describe a
+coherent run. Agent bytes, operator revisions, lifecycle changes, and gateway
+events can advance independently. A composite cursor now commits those source
+positions together.
+
+- Appending one gateway event read one event, with 3.49 ms median and 4.28 ms
+  p95 advancement time on the deterministic fixture.
+- Concurrent readers share one bounded off-loop advancement.
+- Partial agent lines wait for completion, while replacement, truncation, and
+  malformed evidence preserve the last complete generation as a capture fault.
+- A changed atomic snapshot is new evidence only when it preserves the prior
+  request history and any committed application boundary. A new file revision
+  alone does not prove continuity.
+- A terminal checkpoint still validates bounded source coordinates before it is
+  reused. This avoids payload rereads without making late evidence invisible.
+
+The cursor and materialization rules are in
+[the backend architecture plan](../plans/week2_observ/observatory/backend_architecture.md).
+
 ## Technical Conclusions
 
 - The gateway hypothesis held. Owning the wire made raw evidence, typed

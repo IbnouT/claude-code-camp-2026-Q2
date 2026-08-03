@@ -9,6 +9,79 @@ from typing import Any
 from ..errors import MalformedSourceError
 from ..models import OperatorSnapshot, SessionRecord
 
+MAX_OPERATOR_BYTES = 4 * 1024 * 1024
+MAX_OPERATOR_MESSAGES = 1_000
+
+
+def operator_history_digest(
+    messages: tuple[dict[str, Any], ...],
+) -> str:
+    """Digest immutable operator request history in retained file order."""
+    history = tuple(
+        {
+            "request_id": message["request_id"],
+            "action": message["action"],
+            "instruction": message["instruction"],
+            "sent_at": message["sent_at"],
+        }
+        for message in messages
+    )
+    canonical = json.dumps(
+        history,
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode()
+    return sha256(canonical).hexdigest()
+
+
+def operator_application_state(
+    messages: tuple[dict[str, Any], ...],
+) -> str:
+    """Serialize bounded request application state for monotonic validation."""
+    state = tuple(
+        {
+            "request_id": message["request_id"],
+            "applied_iteration": message["applied_iteration"],
+            "applied_at": message["applied_at"],
+        }
+        for message in messages
+    )
+    return json.dumps(
+        state,
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def operator_transition_fault(
+    previous_state: str,
+    messages: tuple[dict[str, Any], ...],
+) -> str | None:
+    """Reject loss or mutation of an already committed application boundary."""
+    previous = json.loads(previous_state)
+    if not isinstance(previous, list):
+        raise ValueError("committed operator state is not a list")
+    if len(messages) < len(previous):
+        return "operator_snapshot_truncated"
+    for index, retained in enumerate(previous):
+        if not isinstance(retained, dict):
+            raise ValueError("committed operator entry is not an object")
+        current = messages[index]
+        if retained.get("request_id") != current["request_id"]:
+            return "operator_snapshot_history_changed"
+        retained_iteration = retained.get("applied_iteration")
+        retained_at = retained.get("applied_at")
+        if retained_iteration is None and retained_at is None:
+            continue
+        if (
+            retained_iteration != current["applied_iteration"]
+            or retained_at != current["applied_at"]
+        ):
+            return "operator_application_boundary_changed"
+    return None
+
 
 class OperatorRepository:
     """Read bounded operator messages without accepting malformed evidence."""
@@ -27,8 +100,16 @@ class OperatorRepository:
         if not self.source.is_file():
             return OperatorSnapshot(messages=(), revision=sha256(b"").hexdigest())
         try:
-            encoded = self.source.read_bytes()
+            with self.source.open("rb") as handle:
+                encoded = handle.read(MAX_OPERATOR_BYTES + 1)
+            if len(encoded) > MAX_OPERATOR_BYTES:
+                raise MalformedSourceError(
+                    self.source,
+                    "operator message file exceeds 4 MiB",
+                )
             value = json.loads(encoded)
+        except MalformedSourceError:
+            raise
         except (OSError, json.JSONDecodeError) as error:
             raise MalformedSourceError(
                 self.source,
@@ -44,6 +125,11 @@ class OperatorRepository:
             raise MalformedSourceError(
                 self.source,
                 "operator messages must be a list",
+            )
+        if len(raw_messages) > MAX_OPERATOR_MESSAGES:
+            raise MalformedSourceError(
+                self.source,
+                "operator messages exceed 1,000 records",
             )
         messages: list[dict[str, Any]] = []
         seen: dict[str, dict[str, Any]] = {}

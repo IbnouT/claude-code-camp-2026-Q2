@@ -27,7 +27,7 @@ flowchart LR
 | `registry.py` | bounded catalog and direct session lookup |
 | `events.py` | bounded gateway event pages |
 | `agent.py` | byte-cursor agent JSONL pages |
-| `operator.py` | retained Goal and Nudge messages |
+| `operator.py` | bounded retained Goal and Nudge snapshots |
 | `lifecycle.py` | launcher lifecycle history |
 | `control.py` | effective control state without credential reads |
 | `storage_executor.py` | bounded cancellation-aware off-loop execution |
@@ -55,6 +55,39 @@ flowchart LR
 - Full-text search indexes an explicit sanitized allowlist.
 - The launcher registry and gateway journals remain query-only.
 - Unknown or corrupt index schemas require explicit recreation.
+
+## Incremental materialization
+
+```mermaid
+flowchart LR
+    Demand["Selected-session demand"] --> Flight["Per-session single flight"]
+    Flight --> Cursor["Committed composite cursor"]
+    Cursor --> Agent["Agent byte suffix"]
+    Cursor --> Gateway["Gateway sequence suffix"]
+    Cursor --> Lifecycle["Lifecycle sequence suffix"]
+    Agent --> Commit["Atomic compare-and-swap commit"]
+    Gateway --> Commit
+    Lifecycle --> Commit
+    Commit --> Terminal["Terminal coordinate validation"]
+```
+
+- The cursor covers source identities, native offsets, revisions, and optional
+  knowledge state.
+- Client tokens are versioned digests and expose no local source identity.
+- Concurrent consumers share one off-loop advancement.
+- Active work and queued sessions have fixed limits.
+- Partial JSONL records remain behind the committed byte cursor.
+- Replacement, truncation, and malformed evidence preserve the prior
+  generation and record a capture fault.
+- Atomic operator snapshots must retain their prior request count and
+  immutable request history.
+- A pending operator request may become applied once. Its committed Iteration
+  and timestamp cannot move afterward.
+- Source identity is confirmed after each retained read and before commit.
+- Terminal demand validates registry, agent size, gateway and lifecycle high
+  water, operator identity, and experiment correlation.
+- Unchanged terminal demand rereads no retained payload. New coordinates resume
+  incremental materialization.
 
 ## Public contract
 

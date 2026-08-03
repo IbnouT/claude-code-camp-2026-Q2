@@ -76,6 +76,25 @@ class EventRepository:
             ) from error
         return tuple(self._record(row) for row in rows)
 
+    def latest_sequence(self) -> int:
+        """Read the selected gateway session's indexed retained high water."""
+        try:
+            with open_readonly_database(self.source) as database:
+                row = database.execute(
+                    """
+                    SELECT COALESCE(MAX(seq), 0)
+                    FROM events
+                    WHERE session = ?
+                    """,
+                    (self.session.gateway_session_id,),
+                ).fetchone()
+        except sqlite3.Error as error:
+            raise MalformedSourceError(
+                self.source,
+                "gateway high water cannot be read",
+            ) from error
+        return 0 if row is None else int(row[0])
+
     def _record(self, row: sqlite3.Row) -> GatewayEventRecord:
         try:
             payload = json.loads(str(row["payload"]))

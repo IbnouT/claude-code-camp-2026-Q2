@@ -5,6 +5,7 @@ from .projector import SessionIndexProjector
 from .store import (
     CatalogPage,
     IndexCorruptionError,
+    IndexProjectionConflict,
     IndexStore,
     IndexWriterUnavailableError,
     UnsupportedIndexSchemaError,
@@ -14,6 +15,7 @@ __all__ = [
     "CatalogPage",
     "EntityKind",
     "IndexCorruptionError",
+    "IndexProjectionConflict",
     "IndexStore",
     "IndexWriterUnavailableError",
     "SessionIndexProjector",

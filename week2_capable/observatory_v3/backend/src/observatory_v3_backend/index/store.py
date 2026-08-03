@@ -13,8 +13,19 @@ from pathlib import Path
 from types import TracebackType
 from typing import BinaryIO
 
-from .models import CatalogEntry, SearchHit, SessionProjection
-from .schema import INDEX_SCHEMA_VERSION, PROJECTOR_VERSION, SCHEMA
+from .models import (
+    CatalogEntry,
+    ExperimentCorrelation,
+    HierarchyContext,
+    IndexedEntity,
+    SearchDocument,
+    SearchHit,
+    SessionCheckpoint,
+    SessionIncrement,
+    SessionProjection,
+    SourceWatermark,
+)
+from .schema import INDEX_SCHEMA_VERSION, MIGRATIONS, PROJECTOR_VERSION, SCHEMA
 
 BUSY_TIMEOUT_MS = 2_000
 WAL_AUTOCHECKPOINT_PAGES = 1_000
@@ -35,6 +46,10 @@ class IndexWriterUnavailableError(RuntimeError):
 
 class IndexProjectionError(RuntimeError):
     """A complete session replacement violated index invariants."""
+
+
+class IndexProjectionConflict(RuntimeError):
+    """An advancement lost its expected-cursor compare and swap."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -166,8 +181,25 @@ class IndexStore:
                 watermark = projection.watermark
                 database.execute(
                     """
-                    INSERT INTO source_watermarks VALUES (
-                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                    INSERT INTO source_watermarks (
+                        session_id,
+                        registry_updated_at,
+                        lifecycle_sequence,
+                        gateway_session_id,
+                        gateway_source_id,
+                        gateway_sequence,
+                        agent_source_id,
+                        agent_offset,
+                        agent_next_line,
+                        operator_source_id,
+                        operator_revision,
+                        operator_message_count,
+                        operator_history_digest,
+                        operator_state,
+                        experiment_revision,
+                        knowledge_revision
+                    ) VALUES (
+                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                     )
                     """,
                     (
@@ -175,82 +207,375 @@ class IndexStore:
                         watermark.registry_updated_at,
                         watermark.lifecycle_sequence,
                         watermark.gateway_session_id,
+                        watermark.gateway_source_id,
                         watermark.gateway_sequence,
                         watermark.agent_source_id,
                         watermark.agent_offset,
                         watermark.agent_next_line,
                         watermark.operator_source_id,
                         watermark.operator_revision,
+                        watermark.operator_message_count,
+                        watermark.operator_history_digest,
+                        watermark.operator_state,
                         watermark.experiment_revision,
+                        watermark.knowledge_revision,
                     ),
                 )
-                database.executemany(
-                    """
-                    INSERT INTO entities (
-                        id, session_id, player_id, kind, source_anchor,
-                        parent_id, goal_id, turn_id, iteration_id, ordinal,
-                        occurred_at, title, source_ref
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        (
-                            entity.id,
-                            entity.session_id,
-                            entity.player_id,
-                            entity.kind,
-                            entity.source_anchor,
-                            entity.parent_id,
-                            entity.goal_id,
-                            entity.turn_id,
-                            entity.iteration_id,
-                            entity.ordinal,
-                            entity.occurred_at,
-                            entity.title,
-                            entity.source_ref,
-                        )
-                        for entity in projection.entities
-                    ),
-                )
-                database.executemany(
-                    """
-                    INSERT INTO search_documents (
-                        entity_id, session_id, player_id, kind,
-                        occurred_at, title, body
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        (
-                            document.entity_id,
-                            document.session_id,
-                            document.player_id,
-                            document.kind,
-                            document.occurred_at,
-                            document.title,
-                            document.body,
-                        )
-                        for document in projection.search_documents
-                    ),
+                _insert_entities(
+                    database,
+                    projection.entities,
+                    projection.search_documents,
                 )
                 if projection.experiment is not None:
-                    link = projection.experiment
-                    database.execute(
-                        """
-                        INSERT INTO experiment_correlations (
-                            id, experiment_id, run_id, session_id
-                        ) VALUES (?, ?, ?, ?)
-                        """,
-                        (
-                            link.id,
-                            link.experiment_id,
-                            link.run_id,
-                            link.session_id,
-                        ),
-                    )
+                    _insert_experiment(database, projection.experiment)
                 database.commit()
             except sqlite3.Error as error:
                 database.rollback()
                 raise IndexProjectionError(
                     f"session {projection.session_id!r} was not replaced"
+                ) from error
+        return generation
+
+    def checkpoint(self, session_id: str) -> SessionCheckpoint | None:
+        """Read one committed session cursor and summary without source access."""
+        with closing(self._read_connection()) as database:
+            row = database.execute(
+                """
+                SELECT
+                    s.session_id, s.state, s.updated_at, s.ended_at,
+                    s.capture_status, s.latest_goal_id, s.latest_goal,
+                    s.goal_count, s.nudge_count, s.turn_count,
+                    s.iteration_count, s.record_count, s.generation,
+                    s.capture_gaps, w.*
+                FROM sessions AS s
+                JOIN source_watermarks AS w USING (session_id)
+                WHERE s.session_id = ?
+                """,
+                (session_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        try:
+            gaps_value = json.loads(str(row["capture_gaps"]))
+        except json.JSONDecodeError as error:
+            raise IndexCorruptionError(
+                f"session {session_id!r} has invalid capture gaps"
+            ) from error
+        if not isinstance(gaps_value, list) or not all(
+            isinstance(value, str) for value in gaps_value
+        ):
+            raise IndexCorruptionError(
+                f"session {session_id!r} has invalid capture gaps"
+            )
+        return SessionCheckpoint(
+            session_id=str(row["session_id"]),
+            state=str(row["state"]),
+            updated_at=str(row["updated_at"]),
+            ended_at=None if row["ended_at"] is None else str(row["ended_at"]),
+            capture_status=str(row["capture_status"]),
+            latest_goal_id=(
+                None if row["latest_goal_id"] is None else str(row["latest_goal_id"])
+            ),
+            latest_goal=(
+                None if row["latest_goal"] is None else str(row["latest_goal"])
+            ),
+            goal_count=int(row["goal_count"]),
+            nudge_count=int(row["nudge_count"]),
+            turn_count=int(row["turn_count"]),
+            iteration_count=int(row["iteration_count"]),
+            record_count=int(row["record_count"]),
+            generation=int(row["generation"]),
+            watermark=_watermark(row),
+            capture_gaps=tuple(gaps_value),
+        )
+
+    def hierarchy_context(self, session_id: str) -> HierarchyContext:
+        """Read only the committed ancestry needed for one appended suffix."""
+        with closing(self._read_connection()) as database:
+            session_row = database.execute(
+                """
+                SELECT id
+                FROM entities
+                WHERE session_id = ? AND kind = 'session'
+                LIMIT 1
+                """,
+                (session_id,),
+            ).fetchone()
+            if session_row is None:
+                raise IndexCorruptionError(
+                    f"session {session_id!r} has no indexed root"
+                )
+            initial = database.execute(
+                """
+                SELECT id, title
+                FROM entities
+                WHERE session_id = ?
+                  AND kind = 'goal'
+                  AND source_anchor GLOB 'agent:*:initial'
+                ORDER BY ordinal
+                LIMIT 1
+                """,
+                (session_id,),
+            ).fetchone()
+            tail = database.execute(
+                """
+                SELECT goal_id, turn_id, iteration_id, occurred_at
+                FROM entities
+                WHERE session_id = ?
+                  AND kind = 'record'
+                  AND source_anchor GLOB 'agent:*'
+                ORDER BY ordinal DESC
+                LIMIT 1
+                """,
+                (session_id,),
+            ).fetchone()
+        return HierarchyContext(
+            session_entity_id=str(session_row["id"]),
+            initial_goal_id=(None if initial is None else str(initial["id"])),
+            initial_goal_title=(None if initial is None else str(initial["title"])),
+            scoped_goal_id=(
+                None
+                if tail is None or tail["goal_id"] is None
+                else str(tail["goal_id"])
+            ),
+            current_turn_id=(
+                None
+                if tail is None or tail["turn_id"] is None
+                else str(tail["turn_id"])
+            ),
+            current_iteration_id=(
+                None
+                if tail is None or tail["iteration_id"] is None
+                else str(tail["iteration_id"])
+            ),
+            last_agent_at=(
+                None
+                if tail is None or not str(tail["occurred_at"])
+                else str(tail["occurred_at"])
+            ),
+        )
+
+    def entity_ids_for_anchors(
+        self,
+        session_id: str,
+        anchors: tuple[str, ...],
+    ) -> dict[str, str]:
+        """Resolve a bounded requested anchor set without scanning entities."""
+        if len(anchors) > 2_000:
+            raise ValueError("anchor lookup is limited to 2,000 values")
+        if not anchors:
+            return {}
+        placeholders = ",".join("?" for _ in anchors)
+        with closing(self._read_connection()) as database:
+            rows = database.execute(
+                f"""
+                SELECT source_anchor, id
+                FROM entities
+                WHERE session_id = ?
+                  AND source_anchor IN ({placeholders})
+                """,
+                (session_id, *anchors),
+            ).fetchall()
+        return {str(row["source_anchor"]): str(row["id"]) for row in rows}
+
+    def append_session(
+        self,
+        *,
+        expected: SourceWatermark,
+        increment: SessionIncrement,
+    ) -> int:
+        """Commit one validated suffix if its expected cursor is still current."""
+        with closing(self._connect()) as database:
+            try:
+                database.execute("BEGIN IMMEDIATE")
+                row = database.execute(
+                    """
+                    SELECT s.generation, w.*
+                    FROM sessions AS s
+                    JOIN source_watermarks AS w USING (session_id)
+                    WHERE s.session_id = ?
+                    """,
+                    (increment.session_id,),
+                ).fetchone()
+                if row is None or _watermark(row) != expected:
+                    raise IndexProjectionConflict(
+                        f"session {increment.session_id!r} cursor changed"
+                    )
+                generation = int(row["generation"]) + 1
+                counts = {
+                    "goal": 0,
+                    "nudge": 0,
+                    "turn": 0,
+                    "iteration": 0,
+                    "record": 0,
+                }
+                for entity in increment.entities:
+                    if entity.kind in counts:
+                        counts[entity.kind] += 1
+                database.execute(
+                    """
+                    UPDATE sessions
+                    SET state = ?,
+                        updated_at = ?,
+                        ended_at = ?,
+                        capture_status = ?,
+                        latest_goal_id = ?,
+                        latest_goal = ?,
+                        goal_count = goal_count + ?,
+                        nudge_count = nudge_count + ?,
+                        turn_count = turn_count + ?,
+                        iteration_count = iteration_count + ?,
+                        record_count = record_count + ?,
+                        generation = ?,
+                        capture_gaps = ?
+                    WHERE session_id = ?
+                    """,
+                    (
+                        increment.state,
+                        increment.updated_at,
+                        increment.ended_at,
+                        increment.capture_status,
+                        increment.latest_goal_id,
+                        increment.latest_goal,
+                        counts["goal"],
+                        counts["nudge"],
+                        counts["turn"],
+                        counts["iteration"],
+                        counts["record"],
+                        generation,
+                        json.dumps(
+                            increment.capture_gaps,
+                            separators=(",", ":"),
+                        ),
+                        increment.session_id,
+                    ),
+                )
+                watermark = increment.watermark
+                database.execute(
+                    """
+                    UPDATE source_watermarks
+                    SET registry_updated_at = ?,
+                        lifecycle_sequence = ?,
+                        gateway_session_id = ?,
+                        gateway_source_id = ?,
+                        gateway_sequence = ?,
+                        agent_source_id = ?,
+                        agent_offset = ?,
+                        agent_next_line = ?,
+                        operator_source_id = ?,
+                        operator_revision = ?,
+                        operator_message_count = ?,
+                        operator_history_digest = ?,
+                        operator_state = ?,
+                        experiment_revision = ?,
+                        knowledge_revision = ?
+                    WHERE session_id = ?
+                    """,
+                    (
+                        watermark.registry_updated_at,
+                        watermark.lifecycle_sequence,
+                        watermark.gateway_session_id,
+                        watermark.gateway_source_id,
+                        watermark.gateway_sequence,
+                        watermark.agent_source_id,
+                        watermark.agent_offset,
+                        watermark.agent_next_line,
+                        watermark.operator_source_id,
+                        watermark.operator_revision,
+                        watermark.operator_message_count,
+                        watermark.operator_history_digest,
+                        watermark.operator_state,
+                        watermark.experiment_revision,
+                        watermark.knowledge_revision,
+                        increment.session_id,
+                    ),
+                )
+                _insert_entities(
+                    database,
+                    increment.entities,
+                    increment.search_documents,
+                )
+                if increment.experiment is not None:
+                    existing = database.execute(
+                        """
+                        SELECT experiment_id, run_id
+                        FROM experiment_correlations
+                        WHERE session_id = ?
+                        """,
+                        (increment.session_id,),
+                    ).fetchone()
+                    if existing is None:
+                        _insert_experiment(database, increment.experiment)
+                    elif (
+                        str(existing["experiment_id"]),
+                        str(existing["run_id"]),
+                    ) != (
+                        increment.experiment.experiment_id,
+                        increment.experiment.run_id,
+                    ):
+                        raise IndexProjectionError(
+                            "experiment correlation changed after indexing"
+                        )
+                database.commit()
+            except (IndexProjectionConflict, IndexProjectionError):
+                database.rollback()
+                raise
+            except sqlite3.Error as error:
+                database.rollback()
+                raise IndexProjectionError(
+                    f"session {increment.session_id!r} suffix was not committed"
+                ) from error
+        return generation
+
+    def record_capture_fault(self, session_id: str, code: str) -> int:
+        """Record one safe fault without advancing or deleting prior evidence."""
+        with closing(self._connect()) as database:
+            try:
+                database.execute("BEGIN IMMEDIATE")
+                row = database.execute(
+                    """
+                    SELECT generation, capture_status, capture_gaps
+                    FROM sessions
+                    WHERE session_id = ?
+                    """,
+                    (session_id,),
+                ).fetchone()
+                if row is None:
+                    raise KeyError(f"unknown indexed session {session_id!r}")
+                value = json.loads(str(row["capture_gaps"]))
+                gaps = (
+                    [item for item in value if isinstance(item, str)]
+                    if isinstance(value, list)
+                    else []
+                )
+                if code in gaps and str(row["capture_status"]) == "fault":
+                    database.rollback()
+                    return int(row["generation"])
+                if code not in gaps:
+                    gaps.append(code)
+                generation = int(row["generation"]) + 1
+                database.execute(
+                    """
+                    UPDATE sessions
+                    SET capture_status = 'fault',
+                        capture_gaps = ?,
+                        generation = ?
+                    WHERE session_id = ?
+                    """,
+                    (
+                        json.dumps(gaps, separators=(",", ":")),
+                        generation,
+                        session_id,
+                    ),
+                )
+                database.commit()
+            except KeyError:
+                database.rollback()
+                raise
+            except (json.JSONDecodeError, sqlite3.Error) as error:
+                database.rollback()
+                raise IndexProjectionError(
+                    f"session {session_id!r} capture fault was not recorded"
                 ) from error
         return generation
 
@@ -456,7 +781,7 @@ class IndexStore:
         try:
             with closing(self._connect()) as database:
                 version = int(database.execute("PRAGMA user_version").fetchone()[0])
-                if version not in {0, INDEX_SCHEMA_VERSION}:
+                if version < 0 or version > INDEX_SCHEMA_VERSION:
                     raise UnsupportedIndexSchemaError(
                         f"index schema {version} is unsupported, "
                         f"expected {INDEX_SCHEMA_VERSION}"
@@ -467,9 +792,20 @@ class IndexStore:
                         raise IndexCorruptionError(
                             f"index quick check failed: {result}"
                         )
-                database.executescript(SCHEMA)
                 if version == 0:
+                    database.executescript(SCHEMA)
                     database.execute(f"PRAGMA user_version={INDEX_SCHEMA_VERSION}")
+                else:
+                    while version < INDEX_SCHEMA_VERSION:
+                        migration = MIGRATIONS.get(version)
+                        if migration is None:
+                            raise UnsupportedIndexSchemaError(
+                                f"index schema {version} has no migration"
+                            )
+                        database.executescript(migration)
+                        version += 1
+                        database.execute(f"PRAGMA user_version={version}")
+                    database.executescript(SCHEMA)
                 database.commit()
         except (UnsupportedIndexSchemaError, IndexCorruptionError):
             raise
@@ -542,3 +878,104 @@ def _literal_match(query: str) -> str:
         bounded = token[:128].replace('"', '""')
         framed.append(f'"{bounded}"')
     return " AND ".join(framed)
+
+
+def _watermark(row: sqlite3.Row) -> SourceWatermark:
+    return SourceWatermark(
+        registry_updated_at=str(row["registry_updated_at"]),
+        lifecycle_sequence=int(row["lifecycle_sequence"]),
+        gateway_session_id=str(row["gateway_session_id"]),
+        gateway_source_id=str(row["gateway_source_id"]),
+        gateway_sequence=int(row["gateway_sequence"]),
+        agent_source_id=str(row["agent_source_id"]),
+        agent_offset=int(row["agent_offset"]),
+        agent_next_line=int(row["agent_next_line"]),
+        operator_source_id=str(row["operator_source_id"]),
+        operator_revision=str(row["operator_revision"]),
+        operator_message_count=int(row["operator_message_count"]),
+        operator_history_digest=str(row["operator_history_digest"]),
+        operator_state=str(row["operator_state"]),
+        experiment_revision=(
+            None
+            if row["experiment_revision"] is None
+            else str(row["experiment_revision"])
+        ),
+        knowledge_revision=(
+            None
+            if row["knowledge_revision"] is None
+            else str(row["knowledge_revision"])
+        ),
+    )
+
+
+def _insert_entities(
+    database: sqlite3.Connection,
+    entities: tuple[IndexedEntity, ...],
+    documents: tuple[SearchDocument, ...],
+) -> None:
+    database.executemany(
+        """
+        INSERT INTO entities (
+            id, session_id, player_id, kind, source_anchor,
+            parent_id, goal_id, turn_id, iteration_id, ordinal,
+            occurred_at, title, source_ref
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            (
+                entity.id,
+                entity.session_id,
+                entity.player_id,
+                entity.kind,
+                entity.source_anchor,
+                entity.parent_id,
+                entity.goal_id,
+                entity.turn_id,
+                entity.iteration_id,
+                entity.ordinal,
+                entity.occurred_at,
+                entity.title,
+                entity.source_ref,
+            )
+            for entity in entities
+        ),
+    )
+    database.executemany(
+        """
+        INSERT INTO search_documents (
+            entity_id, session_id, player_id, kind,
+            occurred_at, title, body
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            (
+                document.entity_id,
+                document.session_id,
+                document.player_id,
+                document.kind,
+                document.occurred_at,
+                document.title,
+                document.body,
+            )
+            for document in documents
+        ),
+    )
+
+
+def _insert_experiment(
+    database: sqlite3.Connection,
+    link: ExperimentCorrelation,
+) -> None:
+    database.execute(
+        """
+        INSERT INTO experiment_correlations (
+            id, experiment_id, run_id, session_id
+        ) VALUES (?, ?, ?, ?)
+        """,
+        (
+            link.id,
+            link.experiment_id,
+            link.run_id,
+            link.session_id,
+        ),
+    )

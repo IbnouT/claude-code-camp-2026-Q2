@@ -27,6 +27,8 @@ flowchart LR
 - Pydantic, OpenAPI, generated TypeScript, and Zod share one public contract.
 - A disposable index provides stable hierarchy identities, bounded catalog
   reads, sanitized search, and canonical experiment-to-session correlation.
+- A demand-aware materializer advances selected sessions from composite source
+  cursors without reparsing their committed agent or gateway prefixes.
 
 ## Commands
 

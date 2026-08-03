@@ -48,6 +48,25 @@ class LifecycleRepository:
             ) from error
         return tuple(self._record(row) for row in rows)
 
+    def latest_sequence(self, session_id: str) -> int:
+        """Read one session's retained lifecycle high water."""
+        try:
+            with open_readonly_database(self.source) as database:
+                row = database.execute(
+                    """
+                    SELECT COALESCE(MAX(id), 0)
+                    FROM lifecycle
+                    WHERE session_id = ?
+                    """,
+                    (session_id,),
+                ).fetchone()
+        except sqlite3.Error as error:
+            raise MalformedSourceError(
+                self.source,
+                "lifecycle high water cannot be read",
+            ) from error
+        return 0 if row is None else int(row[0])
+
     def _record(self, row: sqlite3.Row) -> LifecycleRecord:
         try:
             detail = json.loads(str(row["detail"]))

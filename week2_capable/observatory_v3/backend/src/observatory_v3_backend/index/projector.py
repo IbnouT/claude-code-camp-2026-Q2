@@ -17,10 +17,15 @@ from ..repositories import (
     RegistryDatabase,
     SessionLookupRepository,
 )
+from ..repositories.operator import (
+    operator_application_state,
+    operator_history_digest,
+)
 from .identity import EntityKind, stable_entity_id
 from .models import (
     ExperimentCorrelation,
     IndexedEntity,
+    ProjectionReadMetrics,
     SearchDocument,
     SessionProjection,
     SourceWatermark,
@@ -89,12 +94,23 @@ class SessionIndexProjector:
 
     def project(self, session: SessionRecord) -> SessionProjection:
         """Prepare a complete logical replacement before opening a write."""
+        agent_source = session.session_dir / "agent.jsonl"
+        gateway_source = session.session_dir / "gateway.db"
+        operator_source = session.session_dir / "operator-messages.json"
+        agent_source_id = _source_identity(agent_source)
+        gateway_source_id = _source_identity(gateway_source)
+        operator_source_id = _source_identity(operator_source)
         agent_records, agent_offset, agent_next_line, incomplete_tail = (
             self._agent_records(session)
         )
         operator = OperatorRepository(session).snapshot()
         gateway_records = self._gateway_records(session)
-        lifecycle_sequence = self._lifecycle_sequence(session.session_id)
+        lifecycle_sequence, lifecycle_records = self._lifecycle_position(
+            session.session_id
+        )
+        _confirm_projection_source(agent_source, agent_source_id, "agent")
+        _confirm_projection_source(gateway_source, gateway_source_id, "gateway")
+        _confirm_projection_source(operator_source, operator_source_id, "operator")
         entities, documents, latest_goal_id, latest_goal, gaps = _entities(
             session,
             agent_records,
@@ -108,14 +124,16 @@ class SessionIndexProjector:
             registry_updated_at=session.updated_at,
             lifecycle_sequence=lifecycle_sequence,
             gateway_session_id=session.gateway_session_id,
+            gateway_source_id=gateway_source_id,
             gateway_sequence=(gateway_records[-1].sequence if gateway_records else 0),
-            agent_source_id=_source_identity(session.session_dir / "agent.jsonl"),
+            agent_source_id=agent_source_id,
             agent_offset=agent_offset,
             agent_next_line=agent_next_line,
-            operator_source_id=_source_identity(
-                session.session_dir / "operator-messages.json"
-            ),
+            operator_source_id=operator_source_id,
             operator_revision=operator.revision,
+            operator_message_count=len(operator.messages),
+            operator_history_digest=operator_history_digest(operator.messages),
+            operator_state=operator_application_state(operator.messages),
             experiment_revision=(
                 None
                 if experiment is None
@@ -123,6 +141,7 @@ class SessionIndexProjector:
                     f"{experiment.experiment_id}\0{experiment.run_id}".encode()
                 ).hexdigest()
             ),
+            knowledge_revision=None,
         )
         return SessionProjection(
             session_id=session.session_id,
@@ -145,6 +164,11 @@ class SessionIndexProjector:
             search_documents=documents,
             experiment=experiment,
             capture_gaps=tuple(dict.fromkeys(gaps)),
+            read_metrics=ProjectionReadMetrics(
+                agent_records=len(agent_records),
+                gateway_records=len(gateway_records),
+                lifecycle_records=lifecycle_records,
+            ),
         )
 
     @staticmethod
@@ -188,16 +212,18 @@ class SessionIndexProjector:
             after = page[-1].sequence
         return tuple(records)
 
-    def _lifecycle_sequence(self, session_id: str) -> int:
+    def _lifecycle_position(self, session_id: str) -> tuple[int, int]:
         repository = LifecycleRepository(self.registry)
         after = 0
+        count = 0
         while True:
             page = repository.page(session_id, after=after, limit=250)
             if not page:
-                return after
+                return after, count
+            count += len(page)
             after = page[-1].sequence
             if len(page) < 250:
-                return after
+                return after, count
 
 
 def _entities(
@@ -634,6 +660,15 @@ def _source_identity(source: Path) -> str:
     except FileNotFoundError:
         return "missing"
     return f"{stat.st_dev}:{stat.st_ino}"
+
+
+def _confirm_projection_source(
+    source: Path,
+    expected: str,
+    label: str,
+) -> None:
+    if _source_identity(source) != expected:
+        raise IndexBuildError(f"{label}_source_changed_during_projection")
 
 
 def _positive_int(value: object) -> int:

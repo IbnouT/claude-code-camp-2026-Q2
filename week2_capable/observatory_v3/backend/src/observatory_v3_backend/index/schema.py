@@ -2,8 +2,24 @@
 
 from __future__ import annotations
 
-INDEX_SCHEMA_VERSION = 1
+INDEX_SCHEMA_VERSION = 2
 PROJECTOR_VERSION = 1
+
+MIGRATIONS = {
+    1: """
+        ALTER TABLE source_watermarks
+        ADD COLUMN gateway_source_id TEXT NOT NULL DEFAULT 'unknown';
+        ALTER TABLE source_watermarks
+        ADD COLUMN knowledge_revision TEXT;
+        ALTER TABLE source_watermarks
+        ADD COLUMN operator_message_count INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE source_watermarks
+        ADD COLUMN operator_history_digest TEXT NOT NULL
+            DEFAULT '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945';
+        ALTER TABLE source_watermarks
+        ADD COLUMN operator_state TEXT NOT NULL DEFAULT '[]';
+    """,
+}
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS sessions (
@@ -69,13 +85,19 @@ CREATE TABLE IF NOT EXISTS source_watermarks (
     registry_updated_at TEXT NOT NULL,
     lifecycle_sequence INTEGER NOT NULL CHECK (lifecycle_sequence >= 0),
     gateway_session_id TEXT NOT NULL,
+    gateway_source_id TEXT NOT NULL,
     gateway_sequence INTEGER NOT NULL CHECK (gateway_sequence >= 0),
     agent_source_id TEXT NOT NULL,
     agent_offset INTEGER NOT NULL CHECK (agent_offset >= 0),
     agent_next_line INTEGER NOT NULL CHECK (agent_next_line >= 1),
     operator_source_id TEXT NOT NULL,
     operator_revision TEXT NOT NULL,
-    experiment_revision TEXT
+    operator_message_count INTEGER NOT NULL
+        CHECK (operator_message_count >= 0),
+    operator_history_digest TEXT NOT NULL,
+    operator_state TEXT NOT NULL,
+    experiment_revision TEXT,
+    knowledge_revision TEXT
 );
 
 CREATE TABLE IF NOT EXISTS entities (

@@ -80,13 +80,54 @@ def test_unknown_and_corrupt_indexes_require_explicit_recreation(
 
     with IndexStore.recreate(source):
         with sqlite3.connect(source) as database:
-            assert database.execute("PRAGMA user_version").fetchone()[0] == 1
+            assert database.execute("PRAGMA user_version").fetchone()[0] == 2
 
     source.write_bytes(b"not a sqlite database")
     with pytest.raises(IndexCorruptionError):
         IndexStore(source)
     with IndexStore.recreate(source):
         assert source.is_file()
+
+
+def test_schema_one_watermarks_migrate_without_discarding_identity(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "observatory" / "index-v1.sqlite3"
+    source.parent.mkdir(parents=True)
+    with sqlite3.connect(source) as database:
+        database.execute(
+            """
+            CREATE TABLE source_watermarks (
+                session_id TEXT PRIMARY KEY,
+                registry_updated_at TEXT NOT NULL,
+                lifecycle_sequence INTEGER NOT NULL,
+                gateway_session_id TEXT NOT NULL,
+                gateway_sequence INTEGER NOT NULL,
+                agent_source_id TEXT NOT NULL,
+                agent_offset INTEGER NOT NULL,
+                agent_next_line INTEGER NOT NULL,
+                operator_source_id TEXT NOT NULL,
+                operator_revision TEXT NOT NULL,
+                experiment_revision TEXT
+            )
+            """
+        )
+        database.execute("PRAGMA user_version=1")
+
+    with IndexStore(source):
+        with sqlite3.connect(source) as database:
+            assert database.execute("PRAGMA user_version").fetchone()[0] == 2
+            columns = {
+                str(row[1])
+                for row in database.execute("PRAGMA table_info(source_watermarks)")
+            }
+    assert {
+        "gateway_source_id",
+        "knowledge_revision",
+        "operator_message_count",
+        "operator_history_digest",
+        "operator_state",
+    } <= columns
 
 
 def test_rebuild_is_deterministic_append_stable_and_experiment_linked(

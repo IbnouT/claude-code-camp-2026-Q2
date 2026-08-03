@@ -44,6 +44,7 @@ from .experiments import fork_one_variable, sample_queue, validate_definition
 from .incidents import build_capsule
 from .index import IndexStore
 from .knowledge_contracts import KnowledgeRecoveryRequest
+from .materialization import SessionMaterializer
 from .projections.history import diagnostic_history
 from .projections.knowledge import project_knowledge
 from .projections.session import (
@@ -52,6 +53,7 @@ from .projections.session import (
 )
 from .queries import answer
 from .queries.model import ModelTranslator
+from .repositories import RegistryDatabase
 from .runtime_views import RuntimeReadService
 from .settings import Settings
 from .sources.atlas import AtlasSource
@@ -1168,15 +1170,22 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(application: Starlette) -> AsyncIterator[None]:
-        index = (
-            None
-            if active.runtime_root is None
-            else IndexStore.for_runtime(active.runtime_root)
-        )
-        application.state.session_index = index
+        index: IndexStore | None = None
+        materializer: SessionMaterializer | None = None
         try:
+            if active.runtime_root is not None:
+                index = IndexStore.for_runtime(active.runtime_root)
+                if (active.runtime_root / "registry.db").is_file():
+                    materializer = SessionMaterializer(
+                        RegistryDatabase(active.runtime_root),
+                        index,
+                    )
+            application.state.session_index = index
+            application.state.session_materializer = materializer
             yield
         finally:
+            if materializer is not None:
+                await materializer.close()
             if index is not None:
                 index.close()
             await storage.close()

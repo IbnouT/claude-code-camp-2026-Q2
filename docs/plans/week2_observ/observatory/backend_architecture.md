@@ -604,7 +604,7 @@ The index lifecycle is owner controlled:
 - one Observatory process holds the writer lock
 - SQLite foreign keys, uniqueness constraints, WAL, a bounded busy timeout,
   and automatic WAL checkpoints are enabled
-- schema version 1 belongs only to the Observatory
+- schema version 2 belongs only to the Observatory
 - an absent index creates an empty schema at application startup
 - startup never scans or rebuilds retained sessions
 - an unknown schema or corrupt database fails closed
