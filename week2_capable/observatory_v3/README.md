@@ -25,6 +25,8 @@ flowchart LR
 - The web foundation and contract boundary are implemented under `web/`.
 - The bounded source repositories and versioned API live under `backend/`.
 - Pydantic, OpenAPI, generated TypeScript, and Zod share one public contract.
+- A disposable index provides stable hierarchy identities, bounded catalog
+  reads, sanitized search, and canonical experiment-to-session correlation.
 
 ## Commands
 

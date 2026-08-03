@@ -35,6 +35,27 @@ flowchart LR
 The compatibility projections and routes preserve the accepted Observatory
 behavior while `/api/v1` exposes the canonical public contract.
 
+## Disposable index
+
+```mermaid
+flowchart LR
+    Selected["Selected session"] --> Validate["Validate retained sources"]
+    Validate --> Project["Stable hierarchy and search projection"]
+    Project --> Replace["Atomic session replacement"]
+    Replace --> Index["Observatory index"]
+    Index --> Catalog["Bounded catalog"]
+    Index --> Search["Sanitized search"]
+```
+
+- `.boukensha/observatory/index-v1.sqlite3` is derived and disposable.
+- Startup creates an empty schema and never scans retained sessions.
+- An explicit rebuild reads one selected session before opening its transaction.
+- UUIDv5 identities use retained source anchors, not display counters.
+- Catalog reads use keyset pagination and never compute a total count.
+- Full-text search indexes an explicit sanitized allowlist.
+- The launcher registry and gateway journals remain query-only.
+- Unknown or corrupt index schemas require explicit recreation.
+
 ## Public contract
 
 ```mermaid

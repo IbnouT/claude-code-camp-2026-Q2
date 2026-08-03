@@ -86,6 +86,20 @@ class AgentPage:
 
 
 @dataclass(frozen=True, slots=True)
+class OperatorSnapshot:
+    """One validated operator-message file and its retained revision."""
+
+    messages: tuple[dict[str, Any], ...]
+    revision: str
+
+    def __str__(self) -> str:
+        return (
+            f"<OperatorSnapshot messages={len(self.messages)} "
+            f"revision={self.revision[:12]}>"
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class LifecycleRecord:
     """One launcher lifecycle transition."""
 

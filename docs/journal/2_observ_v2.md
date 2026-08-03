@@ -303,6 +303,21 @@ must pass Pydantic and browser validation.
 - Full legacy investigations remain compatibility-only until bounded hierarchy
   handlers exist.
 
+### 13. Display numbers were not durable evidence identities
+
+Turn and Iteration numbers can restart after a retry or another Goal. Using
+them as keys merged distinct evidence even when the interface looked correct.
+The derived index now identifies hierarchy nodes from their retained source
+coordinates and replaces one validated session atomically.
+
+- Appending evidence preserves existing identities.
+- A reader sees the complete prior or next generation, never half of each.
+- Search text is sanitized and allowlisted before indexing, while every result
+  still targets the retained entity that produced it.
+
+The identity and index lifecycle are specified in
+[the backend architecture plan](../plans/week2_observ/observatory/backend_architecture.md).
+
 ## Technical Conclusions
 
 - The gateway hypothesis held. Owning the wire made raw evidence, typed

@@ -533,11 +533,151 @@ Contract toolchain:
 Build:
 
 - Add the Observatory-owned versioned index.
-- Store direct catalog summaries and composite source checkpoints.
+- Store direct catalog summaries and typed source-native watermarks.
 - Project stable Goal, Nudge, Turn, Iteration, record, trace, and experiment
   correlation ids.
 - Add structured and full-text search indexes.
 - Implement explicit per-session rebuild.
+
+B3 does not encode or compare the public composite cursor. B4 owns cursor
+ordering, source replacement, truncation detection, and missed-change recovery.
+The B3 watermark stores only native retained coordinates:
+
+- registry update and lifecycle sequence
+- gateway session identity and sequence
+- agent source identity, complete byte offset, and next line
+- operator source identity and content revision
+- experiment correlation revision when present
+
+Identity contract version 1 uses UUIDv5 namespace
+`814aad32-1ecc-578f-b5ce-aa70dd5a93bb`. The canonical UTF-8 name is:
+
+```text
+v1\0<byte length>:<session id>\0<byte length>:<kind>\0<byte length>:<anchor>
+```
+
+Lengths are unsigned canonical decimal without leading zeroes. Source line and
+sequence coordinates use unsigned canonical decimal. Text is used exactly as
+retained after source validation, with no case or Unicode normalization. IDs
+use the form `obs1_<kind>_<lowercase UUID hex>`.
+
+| Entity kind | Exact anchor | Example id for `session-000` | Parent |
+| --- | --- | --- | --- |
+| `session` | `registry:<session id>` | `obs1_session_c9a4fe2ceb8059faaa27501347780400` | none |
+| `goal` initial | `agent:<line>:initial` | `obs1_goal_19f6dc0153ed53ecbb0de56d5f012673` for line 1 | session |
+| `goal` revised | `operator:<request id>:revise` | `obs1_goal_df44b85d5f43561bb36bf08787045c98` for `goal-1` | session |
+| `nudge` | `operator:<request id>:guide` | `obs1_nudge_a6f47210541a5db4b82a1e3dc50e74a4` for `nudge-1` | active Goal |
+| `turn` | `agent:<line>` | `obs1_turn_6e934d3e47e05b8d8c3d76367e0046f6` for line 2 | active Goal |
+| `iteration` | `agent:<line>` | `obs1_iteration_9b654f7a9829567c91b6583a8d2d13ef` for line 3 | retained Turn |
+| `record` agent | `agent:<line>` | `obs1_record_156b56a530a05c829945f02b4522e696` for line 4 | nearest hierarchy ancestor |
+| `record` gateway | `gateway:<gateway session id>:<sequence>` | `obs1_record_a8dc0c0310e2553ea510b7be3ef47f46` for gateway `gateway-000` sequence 7 | trace when present |
+| `trace` | `gateway:<gateway session id>:trace:<trace id>` | `obs1_trace_a5303451fa3e527b9ce7b28bc866bea2` for `trace-1` | session |
+| `experiment_sample` | `experiment:<experiment id>:run:<run id>` | `obs1_experiment_sample_ecc0e530fcda5dda9aea4fdb34935d23` for `job-1` and `sample-1` | canonical session |
+
+Turn and Iteration display numbers never participate in identity. A repeated
+Turn number, retry, undo, or per-Turn Iteration reset therefore produces a
+distinct id. A missing trace id stays uncorrelated. Synthetic trace
+correlation is forbidden. A primary-key or source-anchor collision is a
+capture fault, never a suffix or silent merge. B4 handles source replacement
+and truncation before asking B3 to index new coordinates.
+
+Goal and Nudge application follows retained application order:
+
+- an accepted directive without `applied_at` and `applied_iteration` is pending
+  metadata, not hierarchy
+- a revised Goal begins when the retained directive is applied
+- a Nudge belongs to the Goal active when the retained directive is applied
+- file order breaks ties for directives at one Iteration boundary
+- revise then guide attaches the guide to the new Goal
+- guide then revise attaches the guide to the previous Goal
+- a duplicate request id is idempotent only when every retained field agrees
+- contradictory duplicates and missing ownership produce a capture fault
+- completing the retained initial objective in its existing source line keeps
+  the initial Goal id stable
+- an older session without operator metadata uses only its retained initial
+  Goal and agent hierarchy
+
+The index lifecycle is owner controlled:
+
+- default path is `.boukensha/observatory/index-v1.sqlite3`
+- the directory is mode `0700` and the database and lock are mode `0600`
+- one Observatory process holds the writer lock
+- SQLite foreign keys, uniqueness constraints, WAL, a bounded busy timeout,
+  and automatic WAL checkpoints are enabled
+- schema version 1 belongs only to the Observatory
+- an absent index creates an empty schema at application startup
+- startup never scans or rebuilds retained sessions
+- an unknown schema or corrupt database fails closed
+- explicit reset removes the disposable database, WAL, and shared-memory
+  files before recreating the current schema
+- a rebuild reads and validates one selected session before `BEGIN IMMEDIATE`
+- one transaction replaces that session, its hierarchy, search rows, and
+  correlation rows
+- failed validation or insertion preserves the previous complete generation
+- WAL readers observe the old or new generation, never a partial replacement
+- request handlers never trigger an implicit rebuild
+- launcher and gateway databases remain query-only
+
+Catalog and rebuild gates are measurable:
+
+- catalog pagination is keyset based on `updated_at` and session id
+- session id is the immutable final ordering tie-breaker
+- catalog queries use the catalog covering index and request `limit + 1`
+- no catalog query computes a total count
+- no catalog query opens a retained session directory or journal
+- explicit rebuild work is proportional only to the selected session evidence
+- append-only evidence preserves every prior id
+- delete and rebuild reproduces the same canonical logical row dump
+- deterministic tests compare logical rows, not SQLite file bytes
+- malformed selected evidence cannot change another indexed session
+
+Search is an index, not a second identity system:
+
+- searchable classes are Goal, Nudge, Turn, agent record, and the exact
+  gateway allowlist below
+- agent fields are `objective.title`, `instruction`, `text`, `task`,
+  `stop_reason`, `model`, `name`, `args`, and `result`
+- gateway `command` indexes `line`
+- gateway `poll` and `unsolicited` index `text`
+- gateway `parser_input` indexes `text`
+- gateway `wire_text` indexes `text` only when `redacted` is exactly `false`
+- gateway `observation` and `unparsed` index `text`, `title`,
+  `description[]`, `exits[]`, `mobs[]`, and `objects[]`
+- gateway `tool_call` and `tool_result` index `tool` and `capability`
+- gateway `observer_probe` indexes `command` and `reason`
+- gateway `capability_gap` indexes `line` and `reason`
+- all other gateway kinds and fields are excluded
+- raw wire bodies, headers, digests, local paths, credentials, secret-shaped
+  fields, and control metadata are excluded
+- each allowlisted scalar passes through `redaction.sanitize_evidence`
+- key names `api_key`, `apikey`, `authorization`, `credential`,
+  `credentials`, `password`, `secret`, and `token` are always redacted
+- strings matching an `sk-ant-` token, a key, password, token, or
+  authorization assignment, or a hexadecimal value of at least 32 characters
+  are replaced with `[REDACTED]`
+- absolute user, home, private temporary, and Windows user paths are replaced
+  with `[LOCAL_PATH]`
+- every indexed field is capped at 16 KiB after sanitization
+- FTS5 uses `unicode61` with diacritic folding
+- user text is tokenized into quoted literal terms before `MATCH`
+- ranking uses computed BM25, then retained time, then stable entity id
+- player, session, and entity kind remain structured scope columns
+- every result navigates through its stable entity id
+- fixtures cover redacted wire text, an authorization assignment, an
+  `sk-ant-` token, a 32-character hexadecimal value, and a local path
+
+Experiment correlation is source conservative:
+
+- a direct run with no experiment id stays uncorrelated
+- registry experiment id and stable run id jointly identify a retained sample
+- the link becomes authoritative only when both values name one canonical
+  launcher session
+- a pending or setup-failed sample without a run id creates no synthetic link
+- one experiment and run pair maps to one session
+- conflicting registry links fail indexing
+- a later explicit rebuild adds a correlation when the retained run id arrives
+- B8 adds durable job and queued-sample reconciliation without changing the
+  canonical session link
 
 Gate:
 
@@ -546,6 +686,10 @@ Gate:
 - Goal revision and Nudge semantics match retained application boundaries.
 - An experiment sample resolves to its canonical session.
 - Index removal followed by rebuild reproduces the same derived identities.
+- Query-plan evidence proves catalog keyset reads use the intended index.
+- Search order and navigation targets are identical after rebuild.
+- A failed rebuild preserves the prior complete indexed generation.
+- Selected-session rebuild opens no unrelated retained source.
 
 Quality bar:
 

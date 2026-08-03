@@ -42,6 +42,7 @@ from .execution import ExperimentExecutor, ExperimentRequestConflict
 from .experiment_catalog import experiment_registry, experiment_scenarios
 from .experiments import fork_one_variable, sample_queue, validate_definition
 from .incidents import build_capsule
+from .index import IndexStore
 from .knowledge_contracts import KnowledgeRecoveryRequest
 from .projections.history import diagnostic_history
 from .projections.knowledge import project_knowledge
@@ -1166,9 +1167,19 @@ def create_app(
         return JSONResponse(error.model_dump(mode="json"), status_code=404)
 
     @asynccontextmanager
-    async def lifespan(_application: Starlette) -> AsyncIterator[None]:
-        yield
-        await storage.close()
+    async def lifespan(application: Starlette) -> AsyncIterator[None]:
+        index = (
+            None
+            if active.runtime_root is None
+            else IndexStore.for_runtime(active.runtime_root)
+        )
+        application.state.session_index = index
+        try:
+            yield
+        finally:
+            if index is not None:
+                index.close()
+            await storage.close()
 
     versioned_handlers = {
         "health": health,

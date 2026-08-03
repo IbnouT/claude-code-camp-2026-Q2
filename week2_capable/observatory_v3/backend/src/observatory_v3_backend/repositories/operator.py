@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import json
+from hashlib import sha256
 from typing import Any
 
 from ..errors import MalformedSourceError
-from ..models import SessionRecord
+from ..models import OperatorSnapshot, SessionRecord
 
 
 class OperatorRepository:
@@ -19,10 +20,15 @@ class OperatorRepository:
         """Return retained messages in file order."""
         if not 1 <= limit <= 1_000:
             raise ValueError("operator limit must be between 1 and 1,000")
+        return self.snapshot().messages[:limit]
+
+    def snapshot(self) -> OperatorSnapshot:
+        """Read and validate the complete retained file once."""
         if not self.source.is_file():
-            return ()
+            return OperatorSnapshot(messages=(), revision=sha256(b"").hexdigest())
         try:
-            value = json.loads(self.source.read_text(encoding="utf-8"))
+            encoded = self.source.read_bytes()
+            value = json.loads(encoded)
         except (OSError, json.JSONDecodeError) as error:
             raise MalformedSourceError(
                 self.source,
@@ -40,7 +46,8 @@ class OperatorRepository:
                 "operator messages must be a list",
             )
         messages: list[dict[str, Any]] = []
-        for index, message in enumerate(raw_messages[:limit]):
+        seen: dict[str, dict[str, Any]] = {}
+        for index, message in enumerate(raw_messages):
             if not isinstance(message, dict):
                 raise MalformedSourceError(
                     self.source,
@@ -67,14 +74,25 @@ class OperatorRepository:
                     self.source,
                     f"operator message {index} has invalid fields",
                 )
-            messages.append(
-                {
-                    "request_id": request_id,
-                    "action": action,
-                    "instruction": instruction,
-                    "sent_at": sent_at,
-                    "applied_iteration": applied_iteration,
-                    "applied_at": applied_at,
-                }
-            )
-        return tuple(messages)
+            normalized = {
+                "request_id": request_id,
+                "action": action,
+                "instruction": instruction,
+                "sent_at": sent_at,
+                "applied_iteration": applied_iteration,
+                "applied_at": applied_at,
+            }
+            previous = seen.get(request_id)
+            if previous is not None:
+                if previous != normalized:
+                    raise MalformedSourceError(
+                        self.source,
+                        f"operator request {request_id!r} is contradictory",
+                    )
+                continue
+            seen[request_id] = normalized
+            messages.append(normalized)
+        return OperatorSnapshot(
+            messages=tuple(messages),
+            revision=sha256(encoded).hexdigest(),
+        )
