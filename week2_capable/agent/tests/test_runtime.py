@@ -191,6 +191,28 @@ def test_same_character_is_rejected_with_a_typed_error() -> None:
             first.close()
 
 
+def test_experiment_run_identity_maps_to_one_launcher_session() -> None:
+    with tempfile.TemporaryDirectory() as temporary:
+        config = _config(Path(temporary))
+        first = RuntimeSession.create(
+            config,
+            player_id="alpha",
+            character="Alpha",
+            experiment_id="experiment-1",
+            run_id="sample-1",
+        )
+        first.close()
+
+        with pytest.raises(RuntimeIdentityError, match="already registered"):
+            RuntimeSession.create(
+                config,
+                player_id="beta",
+                character="Beta",
+                experiment_id="experiment-1",
+                run_id="sample-1",
+            )
+
+
 def test_restricted_child_environment_keeps_only_selected_secrets() -> None:
     with tempfile.TemporaryDirectory() as temporary:
         config = _config(Path(temporary))

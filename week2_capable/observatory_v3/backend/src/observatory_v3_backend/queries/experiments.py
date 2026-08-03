@@ -33,35 +33,24 @@ def samples(
         ),
     )
     subject = request.scope.subject_id
-    if executor is not None and subject in executor.jobs:
-        job = executor.require(subject)
-        job_selected = [
-            sample
-            for sample in job.samples.values()
-            if values_match_filters(
-                {
-                    "arm_id": sample["arm_id"],
-                    "state": sample["state"],
-                    "cost_usd": sample["cost_usd"],
-                },
-                query,
-            )
-        ]
-        if query.order == "cost_desc":
-            job_selected.sort(
-                key=lambda sample: float(sample["cost_usd"]),
-                reverse=True,
-            )
+    durable_selection = None
+    if executor is not None and subject is not None:
+        try:
+            durable_selection = executor.query_samples(subject, query)
+        except KeyError:
+            pass
+    if durable_selection is not None:
+        job, job_selected = durable_selection
         citations = tuple(
             EvidenceCitation(
-                id=f"experiment:{job.id}:{sample['id']}",
+                id=f"experiment:{job.id}:{sample.id}",
                 source="experiments",
-                label=f"{sample['arm_id']} sample {sample['ordinal']}",
+                label=f"{sample.arm_id} sample {sample.ordinal}",
                 sequence=None,
                 trace_id=None,
-                excerpt=(f"state={sample['state']} cost={sample['cost_usd']}"),
+                excerpt=f"state={sample.state} cost={sample.cost_usd}",
             )
-            for sample in job_selected[: query.limit]
+            for sample in job_selected
         )
         return AskResponse(
             tier="deterministic",

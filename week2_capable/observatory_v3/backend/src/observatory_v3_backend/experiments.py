@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import math
 from typing import Any
 
 from .contracts import (
@@ -58,6 +59,17 @@ def validate_definition(
                 if issue:
                     issues.append(f"Arm {arm.id}, {feature.label}: {issue}")
             if (
+                feature_id == "policy.max_iterations"
+                and feature is not None
+                and isinstance(value, int)
+                and not isinstance(value, bool)
+                and value > definition.stop.max_iterations_per_sample
+            ):
+                issues.append(
+                    f"Arm {arm.id}, {feature.label}: exceeds the definition "
+                    "iteration stop."
+                )
+            if (
                 execution_available
                 and feature is not None
                 and not feature.execution_supported
@@ -87,7 +99,12 @@ def validate_definition(
         )
     if definition.repetitions_per_arm < 1:
         issues.append("Every arm needs at least one repetition.")
-    if definition.per_sample_spend_ceiling_usd <= 0:
+    if not 1 <= definition.concurrency <= 4:
+        issues.append("Concurrency must be between one and four.")
+    if (
+        not math.isfinite(definition.per_sample_spend_ceiling_usd)
+        or definition.per_sample_spend_ceiling_usd <= 0
+    ):
         issues.append("The per-sample spend ceiling must be positive.")
     calculated = (
         len(definition.arms)
@@ -99,7 +116,9 @@ def validate_definition(
             "Effective maximum spend does not match arms x repetitions x "
             "per-sample ceiling."
         )
-    if calculated > definition.stop.max_total_cost_usd:
+    if not math.isfinite(calculated):
+        issues.append("Calculated maximum spend must be finite.")
+    elif calculated > definition.stop.max_total_cost_usd:
         issues.append("Calculated maximum spend exceeds the definition cap.")
     if definition.stop.success_target > (
         len(definition.arms) * definition.repetitions_per_arm
@@ -111,7 +130,10 @@ def validate_definition(
         issues.append("The iteration stop must be positive.")
     if definition.stop.max_wall_seconds_per_sample < 1:
         issues.append("The wall-time stop must be positive.")
-    if definition.stop.max_total_cost_usd <= 0:
+    if (
+        not math.isfinite(definition.stop.max_total_cost_usd)
+        or definition.stop.max_total_cost_usd <= 0
+    ):
         issues.append("The total-cost stop must be positive.")
     if not definition.stop.verified_predicate_required:
         issues.append("Agent claims cannot replace the verified predicate.")
@@ -248,6 +270,8 @@ def _value_issue(feature: ExperimentFeature, value: Any) -> str | None:
         and isinstance(value, int | float)
         and not isinstance(value, bool)
     ):
+        if not math.isfinite(float(value)):
+            return "must be finite"
         if feature.minimum is not None and value < feature.minimum:
             return f"must be at least {feature.minimum:g}"
         if feature.maximum is not None and value > feature.maximum:

@@ -115,6 +115,26 @@
     "getExperimentCatalog"
   ],
   [
+    "POST",
+    "/api/v1/experiments/run",
+    "runExperiment"
+  ],
+  [
+    "GET",
+    "/api/v1/experiments/jobs",
+    "getExperimentJobs"
+  ],
+  [
+    "GET",
+    "/api/v1/experiments/jobs/{job_id}",
+    "getExperimentJob"
+  ],
+  [
+    "POST",
+    "/api/v1/experiments/jobs/{job_id}/control",
+    "controlExperiment"
+  ],
+  [
     "GET",
     "/api/v1/experiments/{experiment_id}",
     "getExperimentDetail"

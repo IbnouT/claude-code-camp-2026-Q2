@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
+import asyncio
 
 import pytest
 
 from observatory_v3_backend.execution import (
     ExperimentExecutor,
     ExperimentRequestConflict,
+    SampleResult,
 )
 from observatory_v3_backend.experiments import (
     fork_one_variable,
@@ -15,7 +15,6 @@ from observatory_v3_backend.experiments import (
     sample_queue,
     validate_definition,
 )
-from observatory_v3_backend.sources.benchmark import stable_run_id
 from observatory_v3_backend.sources.comparison import (
     experiment_registry,
     rendering_definition,
@@ -147,23 +146,18 @@ def test_executor_persists_idempotent_jobs_and_recovers_running_as_stopped(
     )
     first.state = "running"
     executor._persist(first)
-    definition_path = (
-        tmp_path
-        / "state"
-        / "definitions"
-        / f"{definition.id}-v{definition.version}.json"
-    )
-
-    recovered = ExperimentExecutor(
+    recovered_executor = ExperimentExecutor(
         tmp_path / "state",
         benchmark_root=tmp_path / "benchmarks",
         storage=StorageExecutor(capacity=1),
         repository_root=tmp_path,
-    ).require(first.id)
+    )
+    asyncio.run(recovered_executor.reconcile())
+    recovered = recovered_executor.require(first.id)
 
-    assert duplicate is first
+    assert duplicate.id == first.id
     assert first.public()["definition"]["id"] == definition.id
-    assert definition_path.is_file()
+    assert (tmp_path / "state" / "experiments-v1.sqlite3").is_file()
     assert len(first.samples) == 30
     assert recovered.state == "stopped"
     assert list(recovered.samples) == list(first.samples)
@@ -233,21 +227,45 @@ def test_executor_command_is_direct_argv_and_routes_evidence_to_sessions(
     assert command[command.index("--max-sample-cost") + 1] == "0.6"
     assert command[command.index("--output-dir") + 1] == str(output)
     assert not any("|" in argument or ";" in argument for argument in command)
-    persisted = json.loads(
-        (tmp_path / "state" / "jobs" / job.id / "job.json").read_text()
-    )
-    assert persisted["definition"]["id"] == definition.id
+    persisted = executor.require(job.id)
+    assert persisted.definition.id == definition.id
 
 
 async def test_executor_retains_success_as_a_standard_sessions_run(
     tmp_path,
-    monkeypatch,
 ):
+    launches: list[str] = []
+
+    class Runner:
+        def dry_run(self, job, sample):
+            return (
+                ("runner", "--sample", sample.id),
+                {
+                    "BOUKENSHA_EXPERIMENT_ID": job.id,
+                    "BOUKENSHA_RUN_ID": sample.id,
+                },
+            )
+
+        async def run(self, _job, sample):
+            launches.append(sample.id)
+            return SampleResult(
+                state="success",
+                detail="completed",
+                cost_usd=0.12,
+                turns=11,
+                calls=17,
+            )
+
+        async def stop(self, _job_id):
+            return None
+
     executor = ExperimentExecutor(
         tmp_path / "state",
         benchmark_root=tmp_path / "benchmarks",
         storage=StorageExecutor(capacity=1),
         repository_root=tmp_path,
+        runner=Runner(),
+        session_resolver=lambda _experiment_id, run_id: f"session-{run_id}",
     )
     definition = rendering_definition().model_copy(
         update={"repetitions_per_arm": 1, "effective_max_spend_usd": 1.8}
@@ -258,44 +276,16 @@ async def test_executor_retains_success_as_a_standard_sessions_run(
         player_profile="alice",
         confirmed_max_spend_usd=definition.effective_max_spend_usd,
     )
-    sample = next(iter(job.samples.values()))
+    await executor.start(job.id)
+    task = executor.tasks[job.id]
+    await task
+    retained = executor.require(job.id)
+    sample = next(iter(retained.samples.values()))
 
-    class Process:
-        pid = 12345
-        returncode = 0
-
-        async def wait(self):
-            return 0
-
-    async def create_process(*command, **_options):
-        output = Path(command[command.index("--output-dir") + 1])
-        output.mkdir(parents=True, exist_ok=True)  # noqa: ASYNC240
-        (output / "attempts.jsonl").write_text(
-            json.dumps(
-                {
-                    "attempt_id": "20260730-001",
-                    "success": True,
-                    "setup_failure": False,
-                    "cost_usd": 0.12,
-                    "iterations": 11,
-                    "tool_calls": 17,
-                    "stop_reason": "completed",
-                }
-            )
-            + "\n",
-            encoding="utf-8",
-        )
-        return Process()
-
-    monkeypatch.setattr(
-        "observatory_v3_backend.execution.asyncio.create_subprocess_exec",
-        create_process,
-    )
-    await executor._run_sample(job, sample)
-
-    ledger_name = f"observatory-{job.id}-{sample['id']}"
-    assert sample["state"] == "success"
-    assert sample["cost_usd"] == 0.12
-    assert sample["turns"] == 11
-    assert sample["calls"] == 17
-    assert sample["run_id"] == stable_run_id(ledger_name, "20260730-001")
+    assert sample.state == "success"
+    assert sample.cost_usd == 0.12
+    assert sample.turns == 11
+    assert sample.calls == 17
+    assert sample.run_id == sample.id
+    assert sample.session_id == f"session-{sample.id}"
+    assert launches == list(retained.samples)

@@ -688,6 +688,111 @@
         "title": "EvidenceRecordResponse",
         "type": "object"
       },
+      "ExperimentAggregates": {
+        "additionalProperties": false,
+        "description": "Exact derived counts and retained spend for one experiment job.",
+        "properties": {
+          "cancelled": {
+            "minimum": 0,
+            "title": "Cancelled",
+            "type": "integer"
+          },
+          "excluded": {
+            "minimum": 0,
+            "title": "Excluded",
+            "type": "integer"
+          },
+          "failed": {
+            "minimum": 0,
+            "title": "Failed",
+            "type": "integer"
+          },
+          "planned": {
+            "minimum": 0,
+            "title": "Planned",
+            "type": "integer"
+          },
+          "queued": {
+            "minimum": 0,
+            "title": "Queued",
+            "type": "integer"
+          },
+          "running": {
+            "minimum": 0,
+            "title": "Running",
+            "type": "integer"
+          },
+          "spent_usd": {
+            "minimum": 0,
+            "title": "Spent Usd",
+            "type": "number"
+          },
+          "success": {
+            "minimum": 0,
+            "title": "Success",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "planned",
+          "queued",
+          "running",
+          "success",
+          "failed",
+          "cancelled",
+          "excluded",
+          "spent_usd"
+        ],
+        "title": "ExperimentAggregates",
+        "type": "object"
+      },
+      "ExperimentArmDefinition": {
+        "additionalProperties": false,
+        "description": "One immutable arm and its effective registered configuration.",
+        "properties": {
+          "id": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "values": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "maxProperties": 64,
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "values"
+        ],
+        "title": "ExperimentArmDefinition",
+        "type": "object"
+      },
       "ExperimentCatalogPage": {
         "additionalProperties": false,
         "description": "One bounded experiment catalog page.",
@@ -782,6 +887,173 @@
           "jobs"
         ],
         "title": "ExperimentCatalogPage",
+        "type": "object"
+      },
+      "ExperimentControlRequest": {
+        "additionalProperties": false,
+        "description": "A reversible experiment lifecycle command.",
+        "properties": {
+          "action": {
+            "enum": [
+              "stop",
+              "resume"
+            ],
+            "title": "Action",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "ExperimentControlRequest",
+        "type": "object"
+      },
+      "ExperimentDefinition": {
+        "additionalProperties": false,
+        "description": "A versioned, reproducible controlled-test definition.",
+        "properties": {
+          "arms": {
+            "items": {
+              "$ref": "#/components/schemas/ExperimentArmDefinition"
+            },
+            "maxItems": 20,
+            "minItems": 2,
+            "title": "Arms",
+            "type": "array"
+          },
+          "changed_feature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Changed Feature"
+          },
+          "concurrency": {
+            "default": 1,
+            "maximum": 4,
+            "minimum": 1,
+            "title": "Concurrency",
+            "type": "integer"
+          },
+          "effective_max_spend_usd": {
+            "exclusiveMinimum": 0,
+            "maximum": 1000,
+            "title": "Effective Max Spend Usd",
+            "type": "number"
+          },
+          "id": {
+            "maxLength": 160,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "journey": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Journey",
+            "type": "string"
+          },
+          "objective": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Objective",
+            "type": "string"
+          },
+          "parent_definition_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Parent Definition Id"
+          },
+          "per_sample_spend_ceiling_usd": {
+            "exclusiveMinimum": 0,
+            "maximum": 100,
+            "title": "Per Sample Spend Ceiling Usd",
+            "type": "number"
+          },
+          "repetitions_per_arm": {
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Repetitions Per Arm",
+            "type": "integer"
+          },
+          "reset_identity": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Reset Identity",
+            "type": "string"
+          },
+          "reset_strategy": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Reset Strategy",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "imported_evidence",
+              "executable_definition"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "starting_state": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Starting State",
+            "type": "string"
+          },
+          "stop": {
+            "$ref": "#/components/schemas/ExperimentStopCriteria"
+          },
+          "success_predicate": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Success Predicate",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "version": {
+            "minimum": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "title",
+          "objective",
+          "success_predicate",
+          "journey",
+          "starting_state",
+          "reset_strategy",
+          "reset_identity",
+          "arms",
+          "repetitions_per_arm",
+          "per_sample_spend_ceiling_usd",
+          "stop",
+          "effective_max_spend_usd",
+          "source"
+        ],
+        "title": "ExperimentDefinition",
         "type": "object"
       },
       "ExperimentDefinitionSummary": {
@@ -949,6 +1221,142 @@
         "title": "ExperimentDetailResponse",
         "type": "object"
       },
+      "ExperimentJobResponse": {
+        "additionalProperties": false,
+        "description": "One persisted and resumable experiment job.",
+        "properties": {
+          "aggregates": {
+            "$ref": "#/components/schemas/ExperimentAggregates"
+          },
+          "concurrency": {
+            "minimum": 1,
+            "title": "Concurrency",
+            "type": "integer"
+          },
+          "confirmed_max_spend_usd": {
+            "minimum": 0,
+            "title": "Confirmed Max Spend Usd",
+            "type": "number"
+          },
+          "continuation_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Continuation Cursor"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "current_sample": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Sample"
+          },
+          "definition": {
+            "$ref": "#/components/schemas/ExperimentDefinition"
+          },
+          "definition_id": {
+            "title": "Definition Id",
+            "type": "string"
+          },
+          "definition_version": {
+            "minimum": 1,
+            "title": "Definition Version",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "launch_blocked": {
+            "title": "Launch Blocked",
+            "type": "boolean"
+          },
+          "player_profile": {
+            "title": "Player Profile",
+            "type": "string"
+          },
+          "request_id": {
+            "title": "Request Id",
+            "type": "string"
+          },
+          "samples": {
+            "items": {
+              "$ref": "#/components/schemas/ExperimentSampleState"
+            },
+            "maxItems": 100,
+            "title": "Samples",
+            "type": "array"
+          },
+          "spent_usd": {
+            "minimum": 0,
+            "title": "Spent Usd",
+            "type": "number"
+          },
+          "state": {
+            "enum": [
+              "queued",
+              "running",
+              "stopping",
+              "stopped",
+              "completed",
+              "failed",
+              "cancelled"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "terminal_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Terminal Reason"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "request_id",
+          "player_profile",
+          "definition_id",
+          "definition_version",
+          "definition",
+          "state",
+          "confirmed_max_spend_usd",
+          "spent_usd",
+          "current_sample",
+          "concurrency",
+          "launch_blocked",
+          "terminal_reason",
+          "created_at",
+          "updated_at",
+          "samples",
+          "aggregates"
+        ],
+        "title": "ExperimentJobResponse",
+        "type": "object"
+      },
       "ExperimentJobSummary": {
         "additionalProperties": false,
         "description": "One bounded retained job summary when a source is available.",
@@ -977,9 +1385,212 @@
         "title": "ExperimentJobSummary",
         "type": "object"
       },
+      "ExperimentJobsResponse": {
+        "additionalProperties": false,
+        "description": "All locally persisted experiment jobs.",
+        "properties": {
+          "continuation_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Continuation Cursor"
+          },
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/ExperimentJobResponse"
+            },
+            "maxItems": 50,
+            "title": "Jobs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "jobs"
+        ],
+        "title": "ExperimentJobsResponse",
+        "type": "object"
+      },
+      "ExperimentRunRequest": {
+        "additionalProperties": false,
+        "description": "An explicit paid-execution confirmation for one validated definition.",
+        "properties": {
+          "confirmed": {
+            "title": "Confirmed",
+            "type": "boolean"
+          },
+          "confirmed_max_spend_usd": {
+            "exclusiveMinimum": 0,
+            "title": "Confirmed Max Spend Usd",
+            "type": "number"
+          },
+          "definition": {
+            "$ref": "#/components/schemas/ExperimentDefinition"
+          },
+          "player_profile": {
+            "pattern": "^[A-Za-z][A-Za-z0-9_-]*$",
+            "title": "Player Profile",
+            "type": "string"
+          },
+          "request_id": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_id",
+          "definition",
+          "player_profile",
+          "confirmed",
+          "confirmed_max_spend_usd"
+        ],
+        "title": "ExperimentRunRequest",
+        "type": "object"
+      },
+      "ExperimentSampleState": {
+        "additionalProperties": false,
+        "description": "One sample in a persisted experiment job.",
+        "properties": {
+          "arm_id": {
+            "title": "Arm Id",
+            "type": "string"
+          },
+          "calls": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calls"
+          },
+          "cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Usd"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "effective_config": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "title": "Effective Config",
+            "type": "object"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "ordinal": {
+            "minimum": 1,
+            "title": "Ordinal",
+            "type": "integer"
+          },
+          "queue_position": {
+            "minimum": 0,
+            "title": "Queue Position",
+            "type": "integer"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "state": {
+            "enum": [
+              "queued",
+              "launching",
+              "running",
+              "success",
+              "agent_failure",
+              "setup_failure",
+              "cancelled",
+              "interrupted",
+              "excluded"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "turns": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Turns"
+          }
+        },
+        "required": [
+          "id",
+          "arm_id",
+          "ordinal",
+          "queue_position",
+          "state",
+          "run_id",
+          "session_id",
+          "cost_usd",
+          "turns",
+          "calls",
+          "detail",
+          "effective_config"
+        ],
+        "title": "ExperimentSampleState",
+        "type": "object"
+      },
       "ExperimentSampleSummary": {
         "additionalProperties": false,
-        "description": "One experiment sample linked to a canonical session.",
+        "description": "One experiment sample and its canonical session when retained.",
         "properties": {
           "cost_usd": {
             "minimum": 0,
@@ -995,8 +1606,15 @@
             "type": "string"
           },
           "session_id": {
-            "title": "Session Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
           },
           "state": {
             "title": "State",
@@ -1022,6 +1640,54 @@
           "turns"
         ],
         "title": "ExperimentSampleSummary",
+        "type": "object"
+      },
+      "ExperimentStopCriteria": {
+        "additionalProperties": false,
+        "description": "The six independent boundaries that can stop experiment execution.",
+        "properties": {
+          "max_iterations_per_sample": {
+            "maximum": 10000,
+            "minimum": 1,
+            "title": "Max Iterations Per Sample",
+            "type": "integer"
+          },
+          "max_total_cost_usd": {
+            "exclusiveMinimum": 0,
+            "maximum": 1000,
+            "title": "Max Total Cost Usd",
+            "type": "number"
+          },
+          "max_wall_seconds_per_sample": {
+            "maximum": 14400,
+            "minimum": 1,
+            "title": "Max Wall Seconds Per Sample",
+            "type": "integer"
+          },
+          "operator_stop_enabled": {
+            "title": "Operator Stop Enabled",
+            "type": "boolean"
+          },
+          "success_target": {
+            "maximum": 2000,
+            "minimum": 1,
+            "title": "Success Target",
+            "type": "integer"
+          },
+          "verified_predicate_required": {
+            "title": "Verified Predicate Required",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success_target",
+          "verified_predicate_required",
+          "max_iterations_per_sample",
+          "max_wall_seconds_per_sample",
+          "max_total_cost_usd",
+          "operator_stop_enabled"
+        ],
+        "title": "ExperimentStopCriteria",
         "type": "object"
       },
       "ExperimentSummary": {
@@ -3958,6 +4624,326 @@
               }
             },
             "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "experiments"
+        ]
+      }
+    },
+    "/api/v1/experiments/jobs": {
+      "get": {
+        "operationId": "getExperimentJobs",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "maxLength": 2048,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentJobsResponse"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "experiments"
+        ]
+      }
+    },
+    "/api/v1/experiments/jobs/{job_id}": {
+      "get": {
+        "operationId": "getExperimentJob",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "maxLength": 160,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "maxLength": 2048,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentJobResponse"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "experiments"
+        ]
+      }
+    },
+    "/api/v1/experiments/jobs/{job_id}/control": {
+      "post": {
+        "operationId": "controlExperiment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "maxLength": 160,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "maxLength": 2048,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExperimentControlRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentJobResponse"
+                }
+              }
+            },
+            "description": "Experiment lifecycle updated"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Experiment job not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Experiment state conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Invalid control request"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Experiment execution unavailable"
+          }
+        },
+        "tags": [
+          "experiments"
+        ]
+      }
+    },
+    "/api/v1/experiments/run": {
+      "post": {
+        "operationId": "runExperiment",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExperimentRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentJobResponse"
+                }
+              }
+            },
+            "description": "Durable experiment accepted"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Confirmation or idempotency conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Experiment validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Experiment execution unavailable"
           }
         },
         "tags": [

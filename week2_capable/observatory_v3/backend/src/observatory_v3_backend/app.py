@@ -28,6 +28,9 @@ from .api_v1 import api_v1_routes, openapi_document
 from .api_v1.contracts import (
     ApiError,
     CommandResponse,
+    ExperimentControlRequest,
+    ExperimentJobResponse,
+    ExperimentJobsResponse,
     ResourceChangeTarget,
     SessionCommandRequest,
     StartCommandRequest,
@@ -56,7 +59,14 @@ from .contracts import (
     ObservatoryQuery,
     RuntimeSessionWireEvidence,
 )
-from .execution import ExperimentExecutor, ExperimentRequestConflict
+from .database import open_readonly_database
+from .execution import (
+    ExperimentDefinitionConflict,
+    ExperimentExecutor,
+    ExperimentJob,
+    ExperimentRequestConflict,
+    ExperimentStateConflict,
+)
 from .experiment_catalog import experiment_registry, experiment_scenarios
 from .experiments import fork_one_variable, sample_queue, validate_definition
 from .incidents import build_capsule
@@ -86,7 +96,13 @@ from .projections.session import (
 from .queries import answer
 from .queries.model import ModelTranslator
 from .repositories import RegistryDatabase
-from .resources.cursor import InvalidCursorError
+from .resources.bounds import content_identity
+from .resources.cursor import (
+    CursorCoordinates,
+    InvalidCursorError,
+    decode_cursor,
+    encode_cursor,
+)
 from .resources.handlers import ReadResourceHandlers
 from .resources.knowledge import KnowledgeResourceRepository
 from .runtime_views import RuntimeReadService
@@ -224,6 +240,11 @@ def create_app(
                     materializer=candidate_materializer,
                     storage=storage,
                     knowledge=KnowledgeResourceRepository(active.runtime_root),
+                    experiment_store=(
+                        None
+                        if experiment_executor is None
+                        else experiment_executor.store
+                    ),
                 )
                 candidate_notifications = SessionNotificationService(
                     registry=registry,
@@ -274,6 +295,72 @@ def create_app(
             result_session_id=command.result_session_id,
         )
 
+    def experiment_job_payload(
+        request: Request,
+        job: ExperimentJob,
+        *,
+        include_samples: bool = True,
+    ) -> dict[str, object]:
+        if experiment_executor is not None and request.url.path.startswith("/api/v1/"):
+            job = experiment_executor.store.get(job.id, sample_limit=0)
+        payload = job.public()
+        payload["aggregates"] = (
+            job.aggregates()
+            if experiment_executor is None
+            else experiment_executor.store.aggregates(job.id)
+        )
+        payload["continuation_cursor"] = None
+        if not request.url.path.startswith("/api/v1/"):
+            return payload
+        if not include_samples:
+            payload["samples"] = []
+            return payload
+        raw_limit = request.query_params.get("limit", "50")
+        try:
+            limit = int(raw_limit)
+        except ValueError as error:
+            raise InvalidCursorError("limit is not an integer") from error
+        if not 1 <= limit <= 100:
+            raise InvalidCursorError("limit must be between 1 and 100")
+        resource_id = f"experiment-job:{job.id}"
+        raw_cursor = request.query_params.get("cursor")
+        after = (
+            None
+            if raw_cursor is None
+            else decode_cursor(raw_cursor, resource=resource_id)
+        )
+        if experiment_executor is None:
+            samples = tuple(job.samples.values())
+        else:
+            samples = experiment_executor.store.list_samples(
+                job.id,
+                after_position=None if after is None else int(after.primary),
+                limit=limit + 1,
+            )
+        page = samples[:limit]
+        payload["samples"] = [sample.public() for sample in page]
+        if len(samples) > limit and page:
+            last = page[-1]
+            payload["continuation_cursor"] = encode_cursor(
+                CursorCoordinates(
+                    resource=resource_id,
+                    primary=str(last.queue_position),
+                    secondary=last.id,
+                )
+            )
+        return payload
+
+    def experiment_job_response(
+        payload: dict[str, object],
+        *,
+        status_code: int = 200,
+    ) -> JSONResponse:
+        validated = ExperimentJobResponse.model_validate(payload)
+        return JSONResponse(
+            validated.model_dump(mode="json"),
+            status_code=status_code,
+        )
+
     async def publish_command(command: Command) -> None:
         payload = command_response(command)
         await notification_hub.publish(
@@ -288,6 +375,89 @@ def create_app(
                 ),
             )
         )
+
+    async def publish_experiment(job: ExperimentJob) -> None:
+        if experiment_executor is None:
+            return
+        public = experiment_executor.store.get(job.id, sample_limit=0).public()
+        public["aggregates"] = experiment_executor.store.aggregates(job.id)
+        version, source_cursor = content_identity("obe8", public)
+        targets = [
+            ResourceChangeTarget(
+                resource_kind="experiment_job",
+                resource_id=f"experiment-job:{public['id']}",
+                resource_version=version,
+                source_cursor=source_cursor,
+                player_id=str(public["player_profile"]),
+            )
+        ]
+        if resources is not None:
+            catalog = await storage.run(
+                resources.resources.experiment_catalog,
+                cursor=None,
+                limit=20,
+            )
+            detail = await storage.run(
+                resources.resources.experiment_detail,
+                job.id,
+                cursor=None,
+                limit=50,
+            )
+            targets.extend(
+                (
+                    ResourceChangeTarget(
+                        resource_kind="experiment_catalog",
+                        resource_id=catalog.resource_id,
+                        resource_version=catalog.resource_version,
+                        source_cursor=catalog.source_cursor,
+                    ),
+                    ResourceChangeTarget(
+                        resource_kind="experiment",
+                        resource_id=detail.resource_id,
+                        resource_version=detail.resource_version,
+                        source_cursor=detail.source_cursor,
+                        player_id=job.player_profile,
+                    ),
+                )
+            )
+        await notification_hub.publish(tuple(targets))
+
+    async def resolve_experiment_session(
+        experiment_id: str,
+        run_id: str,
+    ) -> str | None:
+        runtime_root = active.runtime_root
+        if runtime_root is None:
+            return None
+        registry_path = runtime_root / "registry.db"
+        if not registry_path.is_file():
+            return None
+
+        def read_identity() -> str | None:
+            with open_readonly_database(registry_path) as database:
+                rows = database.execute(
+                    """
+                    SELECT session_id FROM sessions
+                    WHERE experiment_id = ? AND run_id = ?
+                    ORDER BY session_id
+                    LIMIT 2
+                    """,
+                    (experiment_id, run_id),
+                ).fetchall()
+            if len(rows) > 1:
+                raise RuntimeSourceError(
+                    "experiment and run identity maps to multiple sessions"
+                )
+            return None if not rows else str(rows[0]["session_id"])
+
+        session_id = await storage.run(read_identity)
+        if session_id is not None:
+            if not await ensure_runtime_services() or materializer is None:
+                raise RuntimeSourceError(
+                    "runtime services are unavailable after experiment launch"
+                )
+            await materializer.materialize(session_id)
+        return session_id
 
     async def prepare_command_result(
         command: Command,
@@ -1092,38 +1262,103 @@ def create_app(
                 player_profile=payload.player_profile,
                 confirmed_max_spend_usd=payload.confirmed_max_spend_usd,
             )
+        except ExperimentDefinitionConflict as error:
+            return JSONResponse(
+                {
+                    "error": "immutable_definition_conflict",
+                    "detail": str(error),
+                },
+                status_code=409,
+            )
         except ExperimentRequestConflict as error:
             return JSONResponse(
                 {"error": "request_conflict", "detail": str(error)},
                 status_code=409,
             )
         await experiment_executor.start(job.id)
-        return JSONResponse(job.public(), status_code=202)
+        try:
+            response_payload = experiment_job_payload(request, job)
+        except InvalidCursorError as error:
+            return JSONResponse(
+                {"error": "invalid_request", "detail": str(error)},
+                status_code=422,
+            )
+        return experiment_job_response(response_payload, status_code=202)
 
     async def experiment_job(request: Request) -> JSONResponse:
         if experiment_executor is None:
             return JSONResponse({"error": "not_found"}, status_code=404)
         try:
-            job = experiment_executor.require(request.path_params["job_id"])
+            job = experiment_executor.store.get(
+                request.path_params["job_id"],
+                sample_limit=0,
+            )
         except KeyError:
             return JSONResponse({"error": "not_found"}, status_code=404)
-        return JSONResponse(job.public())
+        try:
+            response_payload = experiment_job_payload(request, job)
+        except InvalidCursorError as error:
+            return JSONResponse(
+                {"error": "invalid_request", "detail": str(error)},
+                status_code=422,
+            )
+        return experiment_job_response(response_payload)
 
     async def experiment_jobs(request: Request) -> JSONResponse:
-        del request
-        jobs = (
-            []
-            if experiment_executor is None
-            else [
-                job.public()
-                for job in sorted(
-                    experiment_executor.jobs.values(),
-                    key=lambda candidate: candidate.id,
-                    reverse=True,
+        if experiment_executor is None:
+            return JSONResponse({"continuation_cursor": None, "jobs": []})
+        continuation = None
+        if request.url.path.startswith("/api/v1/"):
+            raw_limit = request.query_params.get("limit", "20")
+            try:
+                limit = int(raw_limit)
+                if not 1 <= limit <= 50:
+                    raise ValueError
+                raw_cursor = request.query_params.get("cursor")
+                after = (
+                    None
+                    if raw_cursor is None
+                    else decode_cursor(raw_cursor, resource="experiment-jobs")
                 )
-            ]
-        )
-        return JSONResponse({"jobs": jobs})
+            except (ValueError, InvalidCursorError):
+                return JSONResponse(
+                    {
+                        "error": "invalid_request",
+                        "detail": "limit or cursor is invalid",
+                    },
+                    status_code=422,
+                )
+            ordered = experiment_executor.store.list_jobs(
+                after_id=None if after is None else after.primary,
+                limit=limit + 1,
+                include_samples=False,
+            )
+            visible = ordered[:limit]
+            if len(ordered) > limit and visible:
+                continuation = encode_cursor(
+                    CursorCoordinates(
+                        resource="experiment-jobs",
+                        primary=visible[-1].id,
+                        secondary="",
+                    )
+                )
+        else:
+            visible = tuple(reversed(experiment_executor.store.list_jobs()))
+        response_payload = {
+            "continuation_cursor": continuation,
+            "jobs": [
+                experiment_job_payload(
+                    request,
+                    job,
+                    include_samples=not request.url.path.startswith("/api/v1/"),
+                )
+                for job in visible
+            ],
+        }
+        if not request.url.path.startswith("/api/v1/"):
+            return JSONResponse(response_payload)
+        validated = ExperimentJobsResponse.model_validate(response_payload)
+        return JSONResponse(validated.model_dump(mode="json"))
 
     async def control_experiment(request: Request) -> JSONResponse:
         if experiment_executor is None:
@@ -1133,20 +1368,44 @@ def create_app(
         except KeyError:
             return JSONResponse({"error": "not_found"}, status_code=404)
         try:
-            payload = await request.json()
-        except ValueError:
-            return JSONResponse({"error": "invalid_control"}, status_code=422)
-        action = payload.get("action") if isinstance(payload, dict) else None
+            payload = ExperimentControlRequest.model_validate(await request.json())
+        except (ValidationError, ValueError) as error:
+            return JSONResponse(
+                {"error": "invalid_control", "detail": str(error)},
+                status_code=422,
+            )
+        action = payload.action
         if action == "stop":
-            await experiment_executor.stop(job.id)
+            job = await experiment_executor.stop(job.id)
         elif action == "resume":
-            await experiment_executor.start(job.id)
+            if not active.experiment_execution_enabled:
+                return JSONResponse(
+                    {
+                        "error": "execution_disabled",
+                        "detail": "Experiment execution is disabled by local policy.",
+                    },
+                    status_code=503,
+                )
+            try:
+                job = await experiment_executor.start(job.id)
+            except ExperimentStateConflict as error:
+                return JSONResponse(
+                    {"error": "state_conflict", "detail": str(error)},
+                    status_code=409,
+                )
         else:
             return JSONResponse(
                 {"error": "invalid_control", "detail": "Use stop or resume."},
                 status_code=422,
             )
-        return JSONResponse(job.public())
+        try:
+            response_payload = experiment_job_payload(request, job)
+        except InvalidCursorError as error:
+            return JSONResponse(
+                {"error": "invalid_request", "detail": str(error)},
+                status_code=422,
+            )
+        return experiment_job_response(response_payload)
 
     async def validate_experiment(request: Request) -> JSONResponse:
         try:
@@ -1544,6 +1803,10 @@ def create_app(
                     )
                     await commands.start()
                 await ensure_runtime_services()
+            if experiment_executor is not None:
+                experiment_executor.set_observer(publish_experiment)
+                experiment_executor.set_session_resolver(resolve_experiment_session)
+                await experiment_executor.reconcile()
             application.state.session_index = index_store
             application.state.session_materializer = materializer
             application.state.read_resources = resources
@@ -1555,6 +1818,8 @@ def create_app(
                 await commands.close()
             if command_store is not None:
                 await asyncio.to_thread(command_store.close)
+            if experiment_executor is not None:
+                await experiment_executor.close()
             if notifications is not None:
                 await notifications.close()
             if resources is not None:
@@ -1573,6 +1838,10 @@ def create_app(
         "start_command": start_command,
         "session_command": session_command,
         "command_status": command_status,
+        "run_experiment": run_experiment,
+        "experiment_jobs": experiment_jobs,
+        "experiment_job": experiment_job,
+        "control_experiment": control_experiment,
         **{
             name: versioned_resource_handler(name)
             for name in (

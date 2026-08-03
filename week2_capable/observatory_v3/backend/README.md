@@ -211,6 +211,46 @@ sequenceDiagram
 - Forced stop requires a live registry PID that is its own process-group leader.
 - Command resources expose no control token, credential, or local socket path.
 
+## Durable experiments
+
+```mermaid
+flowchart LR
+    Definition["Immutable typed definition"] --> Queue["Stable sample queue"]
+    Queue --> Supervisor["Experiment supervisor"]
+    Supervisor --> Launcher["Canonical launcher session"]
+    Launcher --> Registry["Experiment and run correlation"]
+    Registry --> Sessions["Sessions resources"]
+```
+
+- `experiments-v1.sqlite3` owns definitions, jobs, queue order, outcomes, and
+  spend accounting.
+- Definitions lock when execution starts. A changed payload needs a new version.
+- Every sample id exists before launch and becomes the canonical run id.
+- Runner input is typed direct argv. Arbitrary command fragments are rejected.
+- The installed model catalog and numeric definition limits constrain every
+  effective runner configuration before process creation.
+- Definition-owned concurrency is bounded from one to four sample processes.
+- A sample becomes terminal before its job can expose a terminal state.
+- Success completion excludes unneeded queue entries after active processes
+  exit.
+- Restart marks uncertain in-flight work interrupted and never launches it
+  twice.
+- Stop and resume preserve sample identity, queue position, and retained spend.
+- Stop sends TERM, waits for a bounded interval, and escalates to KILL when an
+  owned process does not exit.
+- Spend is rebuilt from retained sample rows. A per-sample or total overspend
+  permanently blocks further launches.
+- The launcher retains the complete experiment and run identity pair.
+- Session links become visible only when the launcher registry contains the
+  canonical pair.
+- Aggregates are derived from retained sample rows and can be rebuilt.
+- Catalog, job, definition, and queue growth use indexed keyset pages with one
+  lookahead row.
+- Experiment resource notifications share the existing bounded SSE replay and
+  reconciliation channel.
+- Dry-run and acceptance tests construct commands without model or external
+  service calls.
+
 ## Public contract
 
 ```mermaid

@@ -69,6 +69,9 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE UNIQUE INDEX IF NOT EXISTS one_live_character
 ON sessions(character)
 WHERE state IN ('starting', 'running', 'draining', 'quarantined');
+CREATE UNIQUE INDEX IF NOT EXISTS one_experiment_run
+ON sessions(experiment_id, run_id)
+WHERE experiment_id IS NOT NULL AND run_id IS NOT NULL;
 CREATE TABLE IF NOT EXISTS lifecycle (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     session_id TEXT NOT NULL,
@@ -318,6 +321,18 @@ class SessionRegistry:
                 ),
             )
         except sqlite3.IntegrityError as error:
+            if identity.experiment_id is not None and identity.run_id is not None:
+                existing = self._db.execute(
+                    """
+                    SELECT 1 FROM sessions
+                    WHERE experiment_id = ? AND run_id = ?
+                    """,
+                    (identity.experiment_id, identity.run_id),
+                ).fetchone()
+                if existing is not None:
+                    raise RuntimeIdentityError(
+                        "experiment and run identity is already registered"
+                    ) from error
             raise CharacterAlreadyRunning(
                 f"character {identity.character!r} is already registered live"
             ) from error

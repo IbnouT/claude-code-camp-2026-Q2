@@ -1178,9 +1178,9 @@ class ExperimentArmDefinition(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    id: str
-    label: str
-    values: dict[str, bool | int | float | str]
+    id: str = Field(min_length=1, max_length=80, pattern=r"^[A-Za-z0-9_-]+$")
+    label: str = Field(min_length=1, max_length=160)
+    values: dict[str, bool | int | float | str] = Field(max_length=64)
 
 
 class ExperimentStopCriteria(BaseModel):
@@ -1188,11 +1188,11 @@ class ExperimentStopCriteria(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    success_target: int
+    success_target: int = Field(ge=1, le=2_000)
     verified_predicate_required: bool
-    max_iterations_per_sample: int
-    max_wall_seconds_per_sample: int
-    max_total_cost_usd: float
+    max_iterations_per_sample: int = Field(ge=1, le=10_000)
+    max_wall_seconds_per_sample: int = Field(ge=1, le=14_400)
+    max_total_cost_usd: float = Field(gt=0, le=1_000)
     operator_stop_enabled: bool
 
 
@@ -1201,20 +1201,24 @@ class ExperimentDefinition(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    id: str
-    version: int
-    title: str
-    objective: str
-    success_predicate: str
-    journey: str
-    starting_state: str
-    reset_strategy: str
-    reset_identity: str
-    arms: tuple[ExperimentArmDefinition, ...]
-    repetitions_per_arm: int
-    per_sample_spend_ceiling_usd: float
+    id: str = Field(min_length=1, max_length=160, pattern=r"^[A-Za-z0-9_-]+$")
+    version: int = Field(ge=1)
+    title: str = Field(min_length=1, max_length=240)
+    objective: str = Field(min_length=1, max_length=4_096)
+    success_predicate: str = Field(min_length=1, max_length=4_096)
+    journey: str = Field(min_length=1, max_length=80)
+    starting_state: str = Field(min_length=1, max_length=1_024)
+    reset_strategy: str = Field(min_length=1, max_length=1_024)
+    reset_identity: str = Field(min_length=1, max_length=240)
+    arms: tuple[ExperimentArmDefinition, ...] = Field(
+        min_length=2,
+        max_length=20,
+    )
+    repetitions_per_arm: int = Field(ge=1, le=100)
+    concurrency: int = Field(default=1, ge=1, le=4)
+    per_sample_spend_ceiling_usd: float = Field(gt=0, le=100)
     stop: ExperimentStopCriteria
-    effective_max_spend_usd: float
+    effective_max_spend_usd: float = Field(gt=0, le=1_000)
     source: Literal["imported_evidence", "executable_definition"]
     parent_definition_id: str | None = None
     changed_feature: str | None = None

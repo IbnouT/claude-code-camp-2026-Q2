@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from .contracts import ExperimentFeature, ExperimentScenario
+from .experiment_jobs.execution_config import installed_models
 
 RENDER_MODES = ("raw", "minimal", "full")
 
@@ -45,9 +48,12 @@ def experiment_registry() -> tuple[ExperimentFeature, ...]:
             id="model.id",
             label="Agent model",
             group="model",
-            kind="text",
+            kind="enum",
             description="Uses a priced model from the agent model catalog.",
             default="claude-haiku-4-5",
+            options=tuple(
+                sorted(installed_models(Path(__file__).resolve().parents[5]))
+            ),
             source="agent model catalog",
             execution_supported=True,
         ),
@@ -81,6 +87,7 @@ def experiment_registry() -> tuple[ExperimentFeature, ...]:
             description="Stops one sample before an unbounded agent loop.",
             default=60,
             minimum=1,
+            maximum=10_000,
             source="agent task limits",
             execution_supported=True,
         ),

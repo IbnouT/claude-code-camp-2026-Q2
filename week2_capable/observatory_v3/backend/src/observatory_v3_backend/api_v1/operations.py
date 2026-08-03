@@ -12,7 +12,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response, StreamingResponse
 from starlette.routing import Route
 
-from ..contracts import ObservatoryCapabilities
+from ..contracts import ExperimentRunRequest, ObservatoryCapabilities
 from ..resources.contracts import (
     CostRangeResponse,
     EntityPageResponse,
@@ -37,6 +37,9 @@ from ..resources.contracts import (
 from .contracts import (
     ApiError,
     CommandResponse,
+    ExperimentControlRequest,
+    ExperimentJobResponse,
+    ExperimentJobsResponse,
     HealthResponse,
     ResourceNotification,
     SessionCatalogResponse,
@@ -523,6 +526,70 @@ API_V1_OPERATIONS: tuple[OperationSpec, ...] = (
         "experiments",
         ExperimentCatalogPage,
         parameters=(CURSOR, PAGE_LIMIT_50),
+    ),
+    OperationSpec(
+        method="POST",
+        path="/experiments/run",
+        operation_id="runExperiment",
+        handler="run_experiment",
+        tags=("experiments",),
+        request_model=ExperimentRunRequest,
+        responses=(
+            ResponseSpec(202, "Durable experiment accepted", ExperimentJobResponse),
+            ResponseSpec(409, "Confirmation or idempotency conflict", ApiError),
+            ResponseSpec(422, "Experiment validation failed", ApiError),
+            ResponseSpec(503, "Experiment execution unavailable", ApiError),
+        ),
+    ),
+    _get(
+        "/experiments/jobs",
+        "getExperimentJobs",
+        "experiment_jobs",
+        "experiments",
+        ExperimentJobsResponse,
+        parameters=(CURSOR, PAGE_LIMIT_50),
+    ),
+    _get(
+        "/experiments/jobs/{job_id:str}",
+        "getExperimentJob",
+        "experiment_job",
+        "experiments",
+        ExperimentJobResponse,
+        parameters=(
+            ParameterSpec(
+                "job_id",
+                "path",
+                {"type": "string", "minLength": 1, "maxLength": 160},
+                required=True,
+            ),
+            CURSOR,
+            PAGE_LIMIT_100,
+        ),
+    ),
+    OperationSpec(
+        method="POST",
+        path="/experiments/jobs/{job_id:str}/control",
+        operation_id="controlExperiment",
+        handler="control_experiment",
+        tags=("experiments",),
+        request_model=ExperimentControlRequest,
+        responses=(
+            ResponseSpec(200, "Experiment lifecycle updated", ExperimentJobResponse),
+            ResponseSpec(409, "Experiment state conflict", ApiError),
+            ResponseSpec(404, "Experiment job not found", ApiError),
+            ResponseSpec(422, "Invalid control request", ApiError),
+            ResponseSpec(503, "Experiment execution unavailable", ApiError),
+        ),
+        parameters=(
+            ParameterSpec(
+                "job_id",
+                "path",
+                {"type": "string", "minLength": 1, "maxLength": 160},
+                required=True,
+            ),
+            CURSOR,
+            PAGE_LIMIT_100,
+        ),
     ),
     _get(
         "/experiments/{experiment_id:str}",

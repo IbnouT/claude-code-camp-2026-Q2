@@ -5,9 +5,8 @@ import sys
 
 import pytest
 
-from boukensha import run_dsl
-from boukensha import launcher
-from boukensha import runtime_child
+from boukensha import launcher, run_dsl, runtime_child
+from boukensha.errors import ConfigError
 
 
 def test_persistent_initial_task_consumes_one_line_and_keeps_input_open(
@@ -45,6 +44,18 @@ def test_one_shot_launch_task_keeps_using_run(
     runtime_child.main()
 
     assert captured["task"] == "Run once."
+
+
+def test_launcher_accepts_only_complete_experiment_correlation() -> None:
+    assert launcher._experiment_correlation(
+        {
+            "BOUKENSHA_EXPERIMENT_ID": "experiment-1",
+            "BOUKENSHA_RUN_ID": "sample-1",
+        }
+    ) == ("experiment-1", "sample-1")
+    assert launcher._experiment_correlation({}) == (None, None)
+    with pytest.raises(ConfigError, match="requires both"):
+        launcher._experiment_correlation({"BOUKENSHA_EXPERIMENT_ID": "experiment-1"})
 
 
 @pytest.mark.parametrize(

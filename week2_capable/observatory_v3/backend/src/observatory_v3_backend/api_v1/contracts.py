@@ -14,12 +14,22 @@ from ..contracts import (
     RecordedSessionCatalogItem,
     RunSummary,
 )
+from ..experiment_jobs.models import (
+    ExperimentJobState,
+)
+from ..experiment_jobs.models import (
+    ExperimentSampleState as DurableExperimentSampleState,
+)
 
 
 class PublicContract(BaseModel):
     """Strict immutable base for authored public envelopes."""
 
-    model_config = ConfigDict(extra="forbid", frozen=True)
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+        allow_inf_nan=False,
+    )
 
 
 class ApiError(PublicContract):
@@ -134,13 +144,28 @@ class ExperimentSampleState(PublicContract):
     id: str
     arm_id: str
     ordinal: int = Field(ge=1)
-    state: str
+    queue_position: int = Field(ge=0)
+    state: DurableExperimentSampleState
     run_id: str | None
+    session_id: str | None
     cost_usd: float | None
     turns: int | None
     calls: int | None
     detail: str
     effective_config: dict[str, bool | int | float | str]
+
+
+class ExperimentAggregates(PublicContract):
+    """Exact derived counts and retained spend for one experiment job."""
+
+    planned: int = Field(ge=0)
+    queued: int = Field(ge=0)
+    running: int = Field(ge=0)
+    success: int = Field(ge=0)
+    failed: int = Field(ge=0)
+    cancelled: int = Field(ge=0)
+    excluded: int = Field(ge=0)
+    spent_usd: float = Field(ge=0)
 
 
 class ExperimentJobResponse(PublicContract):
@@ -150,18 +175,27 @@ class ExperimentJobResponse(PublicContract):
     request_id: str
     player_profile: str
     definition_id: str
+    definition_version: int = Field(ge=1)
     definition: ExperimentDefinition
-    state: str
+    state: ExperimentJobState
     confirmed_max_spend_usd: float = Field(ge=0)
     spent_usd: float = Field(ge=0)
     current_sample: str | None
-    samples: tuple[ExperimentSampleState, ...]
+    concurrency: int = Field(ge=1)
+    launch_blocked: bool
+    terminal_reason: str | None
+    created_at: str
+    updated_at: str
+    continuation_cursor: str | None = None
+    samples: tuple[ExperimentSampleState, ...] = Field(max_length=100)
+    aggregates: ExperimentAggregates
 
 
 class ExperimentJobsResponse(PublicContract):
     """All locally persisted experiment jobs."""
 
-    jobs: tuple[ExperimentJobResponse, ...]
+    continuation_cursor: str | None = None
+    jobs: tuple[ExperimentJobResponse, ...] = Field(max_length=50)
 
 
 class ExperimentControlRequest(PublicContract):

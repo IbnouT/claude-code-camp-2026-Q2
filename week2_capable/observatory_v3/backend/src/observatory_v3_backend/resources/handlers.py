@@ -17,6 +17,7 @@ from ..api_v1.contracts import (
     SessionCatalogItem,
     SessionCatalogResponse,
 )
+from ..experiment_jobs import ExperimentStore
 from ..index import IndexStore
 from ..materialization import (
     MaterializerBusyError,
@@ -50,12 +51,13 @@ class ReadResourceHandlers:
         materializer: SessionMaterializer,
         storage: StorageExecutor,
         knowledge: KnowledgeResourceRepository | None,
+        experiment_store: ExperimentStore | None = None,
     ) -> None:
         self.index = index
         self.registry = registry
         self.materializer = materializer
         self.storage = storage
-        self.resources = ResourceRepository(index, registry)
+        self.resources = ResourceRepository(index, registry, experiment_store)
         self.knowledge = knowledge
         self._pending_materializations: dict[
             str,

@@ -32,6 +32,7 @@ from observatory_v3_backend.notifications.service import (
     SessionNotificationService,
 )
 from observatory_v3_backend.notifications.transport import (
+    _session_filter,
     session_notification_response,
 )
 from observatory_v3_backend.settings import Settings
@@ -76,6 +77,53 @@ async def test_cursor_coalescing_and_inside_epoch_replay() -> None:
     assert replayed.payload.source_cursor == "cursor-2"
     assert replayed.event_id == f"{EPOCH}:2"
     await subscription.close()
+    await hub.close()
+
+
+async def test_experiment_notifications_cross_selected_session_filter() -> None:
+    hub = ResourceNotificationHub(epoch=EPOCH, replay_capacity=8)
+    experiment = _target(
+        "experiment_job",
+        "experiment-job:job-1",
+        1,
+        "cursor-experiment",
+    )
+    unrelated = _target(
+        "summary",
+        "session:other:summary",
+        1,
+        "cursor-other",
+    )
+    live = await hub.subscribe(
+        None,
+        target_filter=_session_filter("selected"),
+    )
+    published = await hub.publish((experiment, unrelated), at=1.0)
+    delivered = await asyncio.wait_for(live.next(), timeout=1)
+    assert isinstance(delivered.payload, ResourceChangedNotification)
+    assert delivered.payload.resource_kind == "experiment_job"
+    await live.close()
+
+    replay = await hub.subscribe(
+        f"{EPOCH}:0",
+        target_filter=_session_filter("selected"),
+    )
+    replayed = await asyncio.wait_for(replay.next(), timeout=1)
+
+    assert len(published) == 2
+    assert isinstance(replayed.payload, ResourceChangedNotification)
+    assert replayed.payload.resource_kind == "experiment_job"
+    await replay.close()
+    reconciliation = await hub.subscribe(
+        f"{'f' * 32}:2",
+        target_filter=_session_filter("selected"),
+    )
+    reconciled = await asyncio.wait_for(reconciliation.next(), timeout=1)
+    assert isinstance(reconciled.payload, ResourceReconciliationNotification)
+    assert [target.resource_kind for target in reconciled.payload.resources] == [
+        "experiment_job"
+    ]
+    await reconciliation.close()
     await hub.close()
 
 

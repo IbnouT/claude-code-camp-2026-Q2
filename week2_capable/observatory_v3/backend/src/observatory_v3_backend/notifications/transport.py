@@ -12,6 +12,9 @@ from .hub import ResourceNotificationHub, ResourceNotificationSubscription
 from .service import SessionNotificationLease, SessionNotificationService
 
 SSE_RETRY_MS = 1_000
+GLOBAL_EXPERIMENT_KINDS = frozenset(
+    {"experiment", "experiment_catalog", "experiment_job"}
+)
 
 
 async def session_notification_response(
@@ -75,6 +78,7 @@ def _session_filter(
             target.session_id == session_id
             or target.resource_id.startswith(prefix)
             or target.resource_kind == "session_catalog"
+            or target.resource_kind in GLOBAL_EXPERIMENT_KINDS
         )
 
     return matches

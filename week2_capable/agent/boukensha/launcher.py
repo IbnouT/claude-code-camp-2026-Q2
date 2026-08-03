@@ -7,8 +7,8 @@ import os
 import signal
 import subprocess
 import sys
+from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Sequence
 
 from .config import Config
 from .errors import ConfigError
@@ -128,12 +128,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not profile:
         raise ConfigError(f"unknown player profile {player_id!r}")
     character = str(profile.get("character") or player_id)
+    experiment_id, run_id = _experiment_correlation(os.environ)
 
     try:
         runtime = RuntimeSession.create(
             config.dir,
             player_id=player_id,
             character=character,
+            experiment_id=experiment_id,
+            run_id=run_id,
         )
     except CharacterAlreadyRunning as error:
         parser.error(str(error))
@@ -216,6 +219,19 @@ def _child_secrets(
         for name in names
         if (value := config.secret(name, profile_id=player_id))
     }
+
+
+def _experiment_correlation(
+    environment: Mapping[str, str],
+) -> tuple[str | None, str | None]:
+    experiment_id = environment.get("BOUKENSHA_EXPERIMENT_ID")
+    run_id = environment.get("BOUKENSHA_RUN_ID")
+    if bool(experiment_id) != bool(run_id):
+        raise ConfigError(
+            "experiment identity requires both BOUKENSHA_EXPERIMENT_ID "
+            "and BOUKENSHA_RUN_ID"
+        )
+    return experiment_id, run_id
 
 
 def _wait(process: subprocess.Popen) -> int:

@@ -333,10 +333,10 @@ class ExperimentCatalogPage(ResourceMetadata):
 
 
 class ExperimentSampleSummary(ResourceContract):
-    """One experiment sample linked to a canonical session."""
+    """One experiment sample and its canonical session when retained."""
 
     run_id: str
-    session_id: str
+    session_id: str | None
     player_id: str
     state: str
     updated_at: str
