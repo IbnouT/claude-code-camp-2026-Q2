@@ -25,9 +25,26 @@ from starlette.responses import (
 from starlette.routing import Route
 
 from .api_v1 import api_v1_routes, openapi_document
-from .api_v1.contracts import ApiError
+from .api_v1.contracts import (
+    ApiError,
+    CommandResponse,
+    ResourceChangeTarget,
+    SessionCommandRequest,
+    StartCommandRequest,
+)
 from .api_v1.operations import Handler
 from .capabilities import discover
+from .commands import (
+    Command,
+    CommandConflictError,
+    CommandEffects,
+    CommandNotFoundError,
+    CommandService,
+    CommandStore,
+    CommandSubmission,
+    CommandUnavailableError,
+    RuntimeCommandEffects,
+)
 from .contracts import (
     AskRequest,
     ExperimentForkRequest,
@@ -46,6 +63,7 @@ from .incidents import build_capsule
 from .index import IndexStore
 from .knowledge_contracts import KnowledgeRecoveryRequest
 from .materialization import SessionMaterializer
+from .materialization.cursor import CompositeSourceCursor
 from .notifications import (
     NotificationHubClosedError,
     NotificationSubscriberLimitError,
@@ -95,6 +113,7 @@ def create_app(
     gateway_transport: httpx.AsyncBaseTransport | None = None,
     copilot_transport: httpx.AsyncBaseTransport | None = None,
     voice_transport: httpx.AsyncBaseTransport | None = None,
+    command_effects: CommandEffects | None = None,
 ) -> Starlette:
     active = settings or Settings.from_environment()
     gateway = GatewaySource(
@@ -172,6 +191,216 @@ def create_app(
         cache_root=active.voice_cache_root,
         transport=voice_transport,
     )
+    notification_hub = ResourceNotificationHub()
+    commands: CommandService | None = None
+    command_store: CommandStore | None = None
+    index_store: IndexStore | None = None
+    materializer: SessionMaterializer | None = None
+    resources: ReadResourceHandlers | None = None
+    notifications: SessionNotificationService | None = None
+    application_ref: Starlette | None = None
+    runtime_services_lock = asyncio.Lock()
+
+    async def ensure_runtime_services() -> bool:
+        """Attach registry-owned read services once after the first start."""
+        nonlocal materializer, resources, notifications
+        if (
+            resources is not None
+            or active.runtime_root is None
+            or index_store is None
+            or not (active.runtime_root / "registry.db").is_file()
+        ):
+            return resources is not None
+        async with runtime_services_lock:
+            if resources is not None:
+                return True
+            registry = RegistryDatabase(active.runtime_root)
+            candidate_materializer = SessionMaterializer(registry, index_store)
+            candidate_resources: ReadResourceHandlers | None = None
+            try:
+                candidate_resources = ReadResourceHandlers(
+                    index=index_store,
+                    registry=registry,
+                    materializer=candidate_materializer,
+                    storage=storage,
+                    knowledge=KnowledgeResourceRepository(active.runtime_root),
+                )
+                candidate_notifications = SessionNotificationService(
+                    registry=registry,
+                    index=index_store,
+                    resources=candidate_resources.resources,
+                    catalog_target=candidate_resources.notification_catalog_target,
+                    materializer=candidate_materializer,
+                    storage=storage,
+                    hub=notification_hub,
+                )
+            except BaseException:
+                if candidate_resources is not None:
+                    await candidate_resources.close()
+                await candidate_materializer.close()
+                raise
+            materializer = candidate_materializer
+            resources = candidate_resources
+            notifications = candidate_notifications
+            if application_ref is not None:
+                application_ref.state.session_materializer = materializer
+                application_ref.state.read_resources = resources
+                application_ref.state.session_notifications = notifications
+            return True
+
+    def command_response(command: Command) -> CommandResponse:
+        source_cursor = ":".join(
+            (
+                command.state,
+                command.finished_at or command.started_at or command.submitted_at,
+            )
+        )
+        return CommandResponse(
+            resource_id=f"command:{command.id}",
+            source_cursor=source_cursor,
+            command_id=command.id,
+            idempotency_key=command.idempotency_key,
+            action=command.action,
+            actor=command.actor,
+            player_id=command.player_id,
+            session_id=command.session_id,
+            expected_cursor=command.expected_cursor,
+            state=command.state,
+            submitted_at=command.submitted_at,
+            started_at=command.started_at,
+            finished_at=command.finished_at,
+            result_code=command.result_code,
+            result_detail=command.result_detail,
+            result_session_id=command.result_session_id,
+        )
+
+    async def publish_command(command: Command) -> None:
+        payload = command_response(command)
+        await notification_hub.publish(
+            (
+                ResourceChangeTarget(
+                    resource_kind="command",
+                    resource_id=payload.resource_id,
+                    resource_version=payload.resource_version,
+                    source_cursor=payload.source_cursor,
+                    session_id=command.result_session_id or command.session_id,
+                    player_id=command.player_id,
+                ),
+            )
+        )
+
+    async def prepare_command_result(
+        command: Command,
+        result_session_id: str | None,
+    ) -> None:
+        if command.action == "start" and result_session_id is not None:
+            if not await ensure_runtime_services():
+                raise RuntimeSourceError(
+                    "runtime services are unavailable after session start"
+                )
+
+    async def start_command(request: Request) -> JSONResponse:
+        if commands is None:
+            return JSONResponse(
+                {"error": "command_unavailable", "detail": "runtime is not configured"},
+                status_code=503,
+            )
+        try:
+            body = StartCommandRequest.model_validate(await request.json())
+            command = await commands.submit(
+                CommandSubmission(
+                    idempotency_key=body.idempotency_key,
+                    action="start",
+                    actor=body.actor,
+                    player_id=body.player_id,
+                    session_id=None,
+                    expected_cursor=None,
+                    instruction=body.instruction,
+                )
+            )
+        except ValidationError as error:
+            return JSONResponse(
+                {"error": "invalid_request", "detail": str(error)},
+                status_code=422,
+            )
+        except CommandConflictError as error:
+            return JSONResponse(
+                {"error": "command_conflict", "detail": str(error)},
+                status_code=409,
+            )
+        except CommandUnavailableError as error:
+            return JSONResponse(
+                {"error": "command_unavailable", "detail": str(error)},
+                status_code=503,
+            )
+        return JSONResponse(
+            command_response(command).model_dump(mode="json"),
+            status_code=202,
+        )
+
+    async def session_command(request: Request) -> JSONResponse:
+        if commands is None:
+            return JSONResponse(
+                {"error": "command_unavailable", "detail": "runtime is not configured"},
+                status_code=503,
+            )
+        try:
+            body = SessionCommandRequest.model_validate(await request.json())
+            if body.action in {"guide", "revise"} and not (
+                body.instruction and body.instruction.strip()
+            ):
+                raise ValueError(f"{body.action} requires an instruction")
+            command = await commands.submit(
+                CommandSubmission(
+                    idempotency_key=body.idempotency_key,
+                    action=body.action,
+                    actor=body.actor,
+                    player_id=body.player_id,
+                    session_id=request.path_params["session_id"],
+                    expected_cursor=body.expected_cursor,
+                    instruction=body.instruction,
+                    force=body.force,
+                )
+            )
+        except (ValidationError, ValueError) as error:
+            return JSONResponse(
+                {"error": "invalid_request", "detail": str(error)},
+                status_code=422,
+            )
+        except CommandConflictError as error:
+            return JSONResponse(
+                {"error": "command_conflict", "detail": str(error)},
+                status_code=409,
+            )
+        except CommandUnavailableError as error:
+            return JSONResponse(
+                {"error": "command_unavailable", "detail": str(error)},
+                status_code=503,
+            )
+        return JSONResponse(
+            command_response(command).model_dump(mode="json"),
+            status_code=202,
+        )
+
+    async def command_status(request: Request) -> JSONResponse:
+        if commands is None:
+            return JSONResponse(
+                {"error": "command_unavailable", "detail": "runtime is not configured"},
+                status_code=503,
+            )
+        try:
+            command = await commands.get(request.path_params["command_id"])
+        except CommandNotFoundError:
+            return JSONResponse(
+                {"error": "not_found", "detail": "command does not exist"},
+                status_code=404,
+            )
+        except CommandUnavailableError as error:
+            return JSONResponse(
+                {"error": "command_unavailable", "detail": str(error)},
+                status_code=503,
+            )
+        return JSONResponse(command_response(command).model_dump(mode="json"))
 
     async def health(_request: Request) -> JSONResponse:
         return JSONResponse(
@@ -1270,43 +1499,62 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(application: Starlette) -> AsyncIterator[None]:
-        index: IndexStore | None = None
-        materializer: SessionMaterializer | None = None
-        resources: ReadResourceHandlers | None = None
-        notification_hub = ResourceNotificationHub()
-        notifications: SessionNotificationService | None = None
+        nonlocal application_ref, commands, command_store, index_store
         try:
+            application_ref = application
             if active.runtime_root is not None:
-                index = IndexStore.for_runtime(active.runtime_root)
-                if (active.runtime_root / "registry.db").is_file():
-                    registry = RegistryDatabase(active.runtime_root)
-                    materializer = SessionMaterializer(
-                        registry,
-                        index,
+                index_store = IndexStore.for_runtime(active.runtime_root)
+                if runtime is not None:
+
+                    def resolve_command_cursor(
+                        session_id: str,
+                        expected_cursor: str,
+                    ) -> int:
+                        if index_store is None:
+                            raise RuntimeSourceError(
+                                "the selected session index is unavailable"
+                            )
+                        checkpoint = index_store.checkpoint(session_id)
+                        if checkpoint is None:
+                            raise RuntimeSourceError(
+                                "the selected session is not materialized"
+                            )
+                        current = CompositeSourceCursor.from_watermark(
+                            checkpoint.watermark
+                        )
+                        if current.token != expected_cursor:
+                            raise RuntimeSourceError(
+                                "the selected session advanced, refresh before "
+                                "controlling it"
+                            )
+                        return current.gateway_sequence
+
+                    command_store = CommandStore(active.runtime_root)
+                    commands = CommandService(
+                        command_store,
+                        RuntimeCommandEffects(
+                            active.runtime_root,
+                            runtime,
+                            cursor_resolver=resolve_command_cursor,
+                        )
+                        if command_effects is None
+                        else command_effects,
+                        observer=publish_command,
+                        prepare_result=prepare_command_result,
                     )
-                    resources = ReadResourceHandlers(
-                        index=index,
-                        registry=registry,
-                        materializer=materializer,
-                        storage=storage,
-                        knowledge=KnowledgeResourceRepository(active.runtime_root),
-                    )
-                    notifications = SessionNotificationService(
-                        registry=registry,
-                        index=index,
-                        resources=resources.resources,
-                        catalog_target=resources.notification_catalog_target,
-                        materializer=materializer,
-                        storage=storage,
-                        hub=notification_hub,
-                    )
-            application.state.session_index = index
+                    await commands.start()
+                await ensure_runtime_services()
+            application.state.session_index = index_store
             application.state.session_materializer = materializer
             application.state.read_resources = resources
             application.state.resource_notification_hub = notification_hub
             application.state.session_notifications = notifications
             yield
         finally:
+            if commands is not None:
+                await commands.close()
+            if command_store is not None:
+                await asyncio.to_thread(command_store.close)
             if notifications is not None:
                 await notifications.close()
             if resources is not None:
@@ -1314,14 +1562,17 @@ def create_app(
             if materializer is not None:
                 await materializer.close()
             await notification_hub.close()
-            if index is not None:
-                index.close()
+            if index_store is not None:
+                index_store.close()
             await storage.close()
 
     versioned_handlers: dict[str, Handler] = {
         "health": health,
         "capabilities": capabilities,
         "resource_notifications": resource_notifications,
+        "start_command": start_command,
+        "session_command": session_command,
+        "command_status": command_status,
         **{
             name: versioned_resource_handler(name)
             for name in (

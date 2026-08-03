@@ -99,13 +99,14 @@ def test_public_schema_excludes_legacy_complete_investigations() -> None:
     assert isinstance(schemas, dict)
     assert {
         "ApiError",
-        "CommandAccepted",
+        "CommandResponse",
         "ResourceChangedNotification",
         "ResourceChangeTarget",
         "ResourceNotification",
         "ResourceReconciliationNotification",
         "SessionCommandRequest",
         "SessionCatalogResponse",
+        "StartCommandRequest",
     } <= set(schemas)
     assert {
         "Investigation",

@@ -179,6 +179,8 @@ class ResourceNotificationHub:
                     resource_id=target.resource_id,
                     resource_version=target.resource_version,
                     source_cursor=target.source_cursor,
+                    session_id=target.session_id,
+                    player_id=target.player_id,
                     at=timestamp,
                 )
                 self._history.append(payload)
@@ -282,6 +284,8 @@ class ResourceNotificationHub:
                         resource_id=payload.resource_id,
                         resource_version=payload.resource_version,
                         source_cursor=payload.source_cursor,
+                        session_id=payload.session_id,
+                        player_id=payload.player_id,
                     )
                     if subscription._target_filter(target):
                         return NotificationEnvelope(

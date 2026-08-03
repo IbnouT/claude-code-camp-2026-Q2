@@ -35,19 +35,65 @@
         "title": "ApiError",
         "type": "object"
       },
-      "CommandAccepted": {
+      "CommandResponse": {
         "additionalProperties": false,
-        "description": "Future durable acknowledgement for one accepted session command.",
+        "description": "Bounded public-safe state for one durable command.",
         "properties": {
+          "action": {
+            "enum": [
+              "start",
+              "guide",
+              "revise",
+              "pause",
+              "resume",
+              "stop"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "actor": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Actor",
+            "type": "string"
+          },
           "command_id": {
             "minLength": 1,
             "title": "Command Id",
             "type": "string"
           },
-          "request_id": {
+          "expected_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Cursor"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "idempotency_key": {
             "maxLength": 128,
             "minLength": 8,
-            "title": "Request Id",
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "player_id": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Player Id",
             "type": "string"
           },
           "resource_id": {
@@ -55,9 +101,82 @@
             "title": "Resource Id",
             "type": "string"
           },
+          "resource_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Resource Version",
+            "type": "integer"
+          },
+          "result_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Code"
+          },
+          "result_detail": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Result Detail"
+          },
+          "result_session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Session Id"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "source_cursor": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Source Cursor",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
           "state": {
-            "const": "queued",
-            "default": "queued",
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "failed"
+            ],
             "title": "State",
             "type": "string"
           },
@@ -68,12 +187,23 @@
           }
         },
         "required": [
-          "command_id",
-          "request_id",
           "resource_id",
-          "submitted_at"
+          "source_cursor",
+          "command_id",
+          "idempotency_key",
+          "action",
+          "actor",
+          "player_id",
+          "session_id",
+          "expected_cursor",
+          "state",
+          "submitted_at",
+          "started_at",
+          "finished_at",
+          "result_code",
+          "result_session_id"
         ],
-        "title": "CommandAccepted",
+        "title": "CommandResponse",
         "type": "object"
       },
       "CostContributor": {
@@ -2091,6 +2221,20 @@
         "additionalProperties": false,
         "description": "One committed bounded resource identified for refetch.",
         "properties": {
+          "player_id": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Player Id"
+          },
           "resource_id": {
             "maxLength": 512,
             "minLength": 1,
@@ -2107,6 +2251,20 @@
             "minimum": 1,
             "title": "Resource Version",
             "type": "integer"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Session Id"
           },
           "source_cursor": {
             "maxLength": 256,
@@ -2149,6 +2307,20 @@
             "title": "Event",
             "type": "string"
           },
+          "player_id": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Player Id"
+          },
           "resource_id": {
             "maxLength": 512,
             "minLength": 1,
@@ -2170,6 +2342,20 @@
             "pattern": "^[0-9a-f]{32}$",
             "title": "Server Epoch",
             "type": "string"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Session Id"
           },
           "source_cursor": {
             "maxLength": 256,
@@ -2679,7 +2865,7 @@
       },
       "SessionCommandRequest": {
         "additionalProperties": false,
-        "description": "Future optimistic command against one exact session cursor.",
+        "description": "Durable optimistic command against one exact session cursor.",
         "properties": {
           "action": {
             "enum": [
@@ -2692,9 +2878,27 @@
             "title": "Action",
             "type": "string"
           },
+          "actor": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Actor",
+            "type": "string"
+          },
           "expected_cursor": {
+            "maxLength": 2048,
             "minLength": 1,
             "title": "Expected Cursor",
+            "type": "string"
+          },
+          "force": {
+            "default": false,
+            "title": "Force",
+            "type": "boolean"
+          },
+          "idempotency_key": {
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Idempotency Key",
             "type": "string"
           },
           "instruction": {
@@ -2710,15 +2914,17 @@
             "default": null,
             "title": "Instruction"
           },
-          "request_id": {
-            "maxLength": 128,
-            "minLength": 8,
-            "title": "Request Id",
+          "player_id": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Player Id",
             "type": "string"
           }
         },
         "required": [
-          "request_id",
+          "idempotency_key",
+          "actor",
+          "player_id",
           "action",
           "expected_cursor"
         ],
@@ -3022,6 +3228,50 @@
           "detail"
         ],
         "title": "SourceStatus",
+        "type": "object"
+      },
+      "StartCommandRequest": {
+        "additionalProperties": false,
+        "description": "Durable asynchronous request for one player runtime.",
+        "properties": {
+          "actor": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Actor",
+            "type": "string"
+          },
+          "idempotency_key": {
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "instruction": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Instruction"
+          },
+          "player_id": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Player Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "idempotency_key",
+          "actor",
+          "player_id"
+        ],
+        "title": "StartCommandRequest",
         "type": "object"
       },
       "TracePageResponse": {
@@ -3516,6 +3766,129 @@
         },
         "tags": [
           "system"
+        ]
+      }
+    },
+    "/api/v1/commands/start": {
+      "post": {
+        "operationId": "startSession",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartCommandRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResponse"
+                }
+              }
+            },
+            "description": "Durable command accepted"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Idempotency or session conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Command service unavailable"
+          }
+        },
+        "tags": [
+          "commands"
+        ]
+      }
+    },
+    "/api/v1/commands/{command_id}": {
+      "get": {
+        "operationId": "getCommand",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "command_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResponse"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "commands"
         ]
       }
     },
@@ -4373,6 +4746,78 @@
         },
         "tags": [
           "sessions"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/commands": {
+      "post": {
+        "operationId": "controlSession",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionCommandRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResponse"
+                }
+              }
+            },
+            "description": "Durable command accepted"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Idempotency or session conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Command service unavailable"
+          }
+        },
+        "tags": [
+          "commands"
         ]
       }
     },

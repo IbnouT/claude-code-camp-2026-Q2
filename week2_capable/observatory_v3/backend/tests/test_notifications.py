@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import sqlite3
+import threading
 from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Any, cast
@@ -22,6 +23,7 @@ from observatory_v3_backend.api_v1.contracts import (
     ResourceReconciliationNotification,
 )
 from observatory_v3_backend.app import create_app
+from observatory_v3_backend.commands import Command, CommandSubmission
 from observatory_v3_backend.notifications import (
     NotificationSubscriberLimitError,
     ResourceNotificationHub,
@@ -38,6 +40,23 @@ from .fixtures import build_retained_fixture
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 EPOCH = "0123456789abcdef0123456789abcdef"
+
+
+class BlockingCommandEffects:
+    """Hold one command after running publication until the test releases it."""
+
+    def __init__(self) -> None:
+        self.release = threading.Event()
+
+    def validate(self, _value: CommandSubmission) -> None:
+        return
+
+    def apply(self, command: Command) -> str | None:
+        self.release.wait(timeout=2)
+        return command.session_id
+
+    def reconcile(self, command: Command) -> str | None:
+        return self.apply(command)
 
 
 async def test_cursor_coalescing_and_inside_epoch_replay() -> None:
@@ -205,6 +224,84 @@ async def test_sse_frame_targets_are_readable_before_delivery(
         await _wait_for_teardown(hub, service)
         assert hub.subscriber_count == 0
         assert service.active_session_count == 0
+
+
+async def test_session_sse_delivers_queued_running_and_terminal_commands(
+    tmp_path: Path,
+) -> None:
+    fixture = build_retained_fixture(tmp_path, session_count=1)
+    effects = BlockingCommandEffects()
+    application = create_app(
+        Settings(runtime_root=fixture.config_dir, web_dist=tmp_path / "web"),
+        command_effects=effects,
+    )
+    async with application.router.lifespan_context(application):
+        hub = cast(
+            ResourceNotificationHub,
+            application.state.resource_notification_hub,
+        )
+        service = cast(
+            SessionNotificationService,
+            application.state.session_notifications,
+        )
+        seed = await service.acquire(fixture.selected_session_id)
+        await seed.wait_ready()
+        baseline = hub.change_counter
+        await seed.close()
+        response = await session_notification_response(
+            _request(
+                application,
+                session_id=fixture.selected_session_id,
+                last_event_id=f"{hub.epoch}:{baseline}",
+            ),
+            hub=hub,
+            service=service,
+        )
+        body = cast(AsyncGenerator[bytes, None], response.body_iterator)
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=application),
+            base_url="http://observatory",
+        ) as client:
+            accepted = await client.post(
+                f"/api/v1/sessions/{fixture.selected_session_id}/commands",
+                json={
+                    "idempotency_key": "notification-command-01",
+                    "actor": "operator",
+                    "player_id": "alpha",
+                    "action": "pause",
+                    "expected_cursor": "opaque-test-cursor",
+                },
+            )
+            assert accepted.status_code == 202
+            queued = _frame_payload(await asyncio.wait_for(anext(body), timeout=2))
+            running = _frame_payload(await asyncio.wait_for(anext(body), timeout=2))
+            effects.release.set()
+            terminal = _frame_payload(await asyncio.wait_for(anext(body), timeout=2))
+            command_id = accepted.json()["command_id"]
+            readable = await client.get(f"/api/v1/commands/{command_id}")
+
+        payloads = tuple(
+            ResourceNotification.model_validate(value).root
+            for value in (queued, running, terminal)
+        )
+        assert all(isinstance(value, ResourceChangedNotification) for value in payloads)
+        changed = cast(
+            tuple[ResourceChangedNotification, ...],
+            payloads,
+        )
+        assert [value.source_cursor.split(":", 1)[0] for value in changed] == [
+            "queued",
+            "running",
+            "succeeded",
+        ]
+        assert all(
+            value.resource_id == f"command:{accepted.json()['command_id']}"
+            for value in changed
+        )
+        assert all(value.session_id == fixture.selected_session_id for value in changed)
+        assert readable.status_code == 200
+        await body.aclose()
+        await _wait_for_teardown(hub, service)
 
 
 async def test_cold_unsupported_schema_records_and_publishes_readable_fault(

@@ -203,6 +203,8 @@ class ResourceChangeTarget(PublicContract):
     resource_id: str = Field(min_length=1, max_length=512)
     resource_version: int = Field(ge=1)
     source_cursor: str = Field(min_length=1, max_length=256)
+    session_id: str | None = Field(default=None, min_length=1, max_length=200)
+    player_id: str | None = Field(default=None, min_length=1, max_length=120)
 
 
 class ResourceChangedNotification(PublicContract):
@@ -216,6 +218,8 @@ class ResourceChangedNotification(PublicContract):
     resource_id: str = Field(min_length=1, max_length=512)
     resource_version: int = Field(ge=1)
     source_cursor: str = Field(min_length=1, max_length=256)
+    session_id: str | None = Field(default=None, min_length=1, max_length=200)
+    player_id: str | None = Field(default=None, min_length=1, max_length=120)
     at: float
 
 
@@ -248,31 +252,56 @@ class ResourceNotification(
 
 
 class SessionCommandRequest(PublicContract):
-    """Future optimistic command against one exact session cursor."""
+    """Durable optimistic command against one exact session cursor."""
 
-    request_id: str = Field(min_length=8, max_length=128)
+    idempotency_key: str = Field(min_length=8, max_length=128)
+    actor: str = Field(min_length=1, max_length=120)
+    player_id: str = Field(min_length=1, max_length=120)
     action: Literal["guide", "revise", "pause", "resume", "stop"]
     instruction: str | None = Field(default=None, max_length=4_000)
-    expected_cursor: str = Field(min_length=1)
+    expected_cursor: str = Field(min_length=1, max_length=2_048)
+    force: bool = False
 
 
-class CommandAccepted(PublicContract):
-    """Future durable acknowledgement for one accepted session command."""
+class StartCommandRequest(PublicContract):
+    """Durable asynchronous request for one player runtime."""
 
-    command_id: str = Field(min_length=1)
-    request_id: str = Field(min_length=8, max_length=128)
+    idempotency_key: str = Field(min_length=8, max_length=128)
+    actor: str = Field(min_length=1, max_length=120)
+    player_id: str = Field(min_length=1, max_length=120)
+    instruction: str | None = Field(default=None, max_length=4_000)
+
+
+class CommandResponse(PublicContract):
+    """Bounded public-safe state for one durable command."""
+
     resource_id: str = Field(min_length=1)
-    state: Literal["queued"] = "queued"
+    resource_version: Literal[1] = 1
+    source_cursor: str = Field(min_length=1, max_length=256)
+    command_id: str = Field(min_length=1)
+    idempotency_key: str = Field(min_length=8, max_length=128)
+    action: Literal["start", "guide", "revise", "pause", "resume", "stop"]
+    actor: str = Field(min_length=1, max_length=120)
+    player_id: str = Field(min_length=1, max_length=120)
+    session_id: str | None
+    expected_cursor: str | None
+    state: Literal["queued", "running", "succeeded", "failed"]
     submitted_at: str = Field(min_length=1)
+    started_at: str | None
+    finished_at: str | None
+    result_code: str | None
+    result_detail: str | None = Field(default=None, max_length=500)
+    result_session_id: str | None
 
 
 PUBLIC_COMPONENT_MODELS: tuple[type[BaseModel], ...] = (
     ApiError,
-    CommandAccepted,
+    CommandResponse,
     HealthResponse,
     ResourceChangedNotification,
     ResourceNotification,
     ResourceReconciliationNotification,
     SessionCommandRequest,
     SessionCatalogResponse,
+    StartCommandRequest,
 )

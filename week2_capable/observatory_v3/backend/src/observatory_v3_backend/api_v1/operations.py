@@ -36,9 +36,12 @@ from ..resources.contracts import (
 )
 from .contracts import (
     ApiError,
+    CommandResponse,
     HealthResponse,
     ResourceNotification,
     SessionCatalogResponse,
+    SessionCommandRequest,
+    StartCommandRequest,
 )
 
 HttpMethod = Literal["GET", "POST"]
@@ -218,6 +221,50 @@ API_V1_OPERATIONS: tuple[OperationSpec, ...] = (
                 {"type": "string", "minLength": 1, "maxLength": 120},
             ),
         ),
+    ),
+    OperationSpec(
+        method="POST",
+        path="/commands/start",
+        operation_id="startSession",
+        handler="start_command",
+        tags=("commands",),
+        request_model=StartCommandRequest,
+        responses=(
+            ResponseSpec(202, "Durable command accepted", CommandResponse),
+            ResponseSpec(409, "Idempotency or session conflict", ApiError),
+            ResponseSpec(422, "Request validation failed", ApiError),
+            ResponseSpec(503, "Command service unavailable", ApiError),
+        ),
+    ),
+    _get(
+        "/commands/{command_id:str}",
+        "getCommand",
+        "command_status",
+        "commands",
+        CommandResponse,
+        parameters=(
+            ParameterSpec(
+                "command_id",
+                "path",
+                {"type": "string", "minLength": 1, "maxLength": 64},
+                required=True,
+            ),
+        ),
+    ),
+    OperationSpec(
+        method="POST",
+        path="/sessions/{session_id:str}/commands",
+        operation_id="controlSession",
+        handler="session_command",
+        tags=("commands",),
+        request_model=SessionCommandRequest,
+        responses=(
+            ResponseSpec(202, "Durable command accepted", CommandResponse),
+            ResponseSpec(409, "Idempotency or session conflict", ApiError),
+            ResponseSpec(422, "Request validation failed", ApiError),
+            ResponseSpec(503, "Command service unavailable", ApiError),
+        ),
+        parameters=(SESSION_ID,),
     ),
     _get(
         "/sessions/{session_id:str}",

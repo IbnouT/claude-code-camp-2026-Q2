@@ -123,6 +123,7 @@ class RuntimeSource:
         return self.registry.is_file()
 
     def sessions(self) -> tuple[RuntimeSession, ...]:
+        self._ensure_registry()
         if self._catalog is None:
             return ()
         try:
@@ -144,6 +145,7 @@ class RuntimeSource:
         return tuple(self._session(record) for record in records)
 
     def session(self, session_id: str) -> RuntimeSession | None:
+        self._ensure_registry()
         if self._lookup is None:
             return None
         try:
@@ -155,6 +157,15 @@ class RuntimeSource:
         except ObservatoryRepositoryError as error:
             raise RuntimeSourceError("runtime registry is unreadable") from error
         return None if record is None else self._session(record)
+
+    def _ensure_registry(self) -> None:
+        """Attach a registry created by the first durable start after API boot."""
+        if self._registry is not None or not self.registry.is_file():
+            return
+        self._registry = RegistryDatabase(self.config_dir)
+        self._catalog = SessionCatalogRepository(self._registry)
+        self._lookup = SessionLookupRepository(self._registry)
+        self._lifecycle = LifecycleRepository(self._registry)
 
     def events(
         self,
@@ -383,6 +394,15 @@ class RuntimeSource:
                 str(value.get("error") or "the agent rejected control")
             )
         return value
+
+    def process_id(self, session_id: str, *, player_id: str) -> int:
+        """Return one registry-owned PID after validating the selected player."""
+        record = self._session_record(session_id)
+        if record.player_id != player_id:
+            raise RuntimeSourceError("the selected session belongs to another player")
+        if record.pid is None:
+            raise RuntimeSourceError("process ownership cannot be verified")
+        return record.pid
 
     def recover_knowledge(
         self,

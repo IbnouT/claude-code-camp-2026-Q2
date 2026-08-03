@@ -175,6 +175,42 @@ The transport has fixed in-memory bounds.
 | Committed root targets per session pass | 14 |
 | SSE retry hint | 1,000 ms |
 
+## Durable lifecycle commands
+
+```mermaid
+sequenceDiagram
+    participant Browser
+    participant Store as Command store
+    participant Supervisor
+    participant Runtime
+
+    Browser->>Store: submit idempotent command
+    Store->>Store: persist queued state
+    Store-->>Browser: 202 and command resource
+    Store->>Supervisor: bounded work item
+    Supervisor->>Runtime: launcher or authenticated socket
+    Runtime-->>Supervisor: retained result
+    Supervisor->>Store: terminal state
+    Store-->>Browser: resource_changed
+```
+
+- `.boukensha/observatory/commands-v1.sqlite3` owns command identity and results.
+- Command database reads and writes run off the event loop with a bounded busy
+  timeout and typed unavailable responses.
+- Start, stop, Goal, Nudge, pause, and resume persist before their effects.
+- Repeated idempotency keys return the original command without applying twice.
+- Session commands validate the selected player and expected cursor.
+- Command status remains readable at `/api/v1/commands/{command_id}` from the
+  first queued start state through its terminal result.
+- Notification targets carry explicit session and player association while
+  keeping the command resource identity stable and readable.
+- API restart reconciles queued and running work with the launcher registry.
+- A registry created by the first start attaches read and notification services
+  once before the command becomes terminal-visible.
+- Cooperative control reuses the authenticated per-session operator socket.
+- Forced stop requires a live registry PID that is its own process-group leader.
+- Command resources expose no control token, credential, or local socket path.
+
 ## Public contract
 
 ```mermaid
@@ -190,7 +226,7 @@ flowchart LR
 - `/api/v1/health` and `/api/v1/capabilities` are the first callable resources.
 - Resource notification and reconciliation shapes are reusable components on
   the callable SSE route.
-- Future optimistic command and durable receipt shapes follow the same rule.
+- Optimistic command and durable status shapes follow the same rule.
 - `openapi/observatory-v1.json` is the deterministic generation input.
 - `openapi/operations.json` is the stable operation manifest.
 - Unknown prior and future API versions return typed JSON errors.

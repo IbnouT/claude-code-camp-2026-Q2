@@ -20,6 +20,21 @@
     "getSessionCatalog"
   ],
   [
+    "POST",
+    "/api/v1/commands/start",
+    "startSession"
+  ],
+  [
+    "GET",
+    "/api/v1/commands/{command_id}",
+    "getCommand"
+  ],
+  [
+    "POST",
+    "/api/v1/sessions/{session_id}/commands",
+    "controlSession"
+  ],
+  [
     "GET",
     "/api/v1/sessions/{session_id}",
     "getSessionSummary"

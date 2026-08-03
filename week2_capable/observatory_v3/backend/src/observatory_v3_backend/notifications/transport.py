@@ -72,7 +72,8 @@ def _session_filter(
 
     def matches(target: ResourceChangeTarget) -> bool:
         return (
-            target.resource_id.startswith(prefix)
+            target.session_id == session_id
+            or target.resource_id.startswith(prefix)
             or target.resource_kind == "session_catalog"
         )
 
