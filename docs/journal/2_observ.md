@@ -303,3 +303,10 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
   transport whose pause is just a URL parameter. Verification agents on
   each section caught what reading had missed, a preflight weight here,
   a missing guard state there, before any of it hardened.
+- The map closed the Live screen the way the whole rebuild wanted to
+  work. The layout, camera, and projection mathematics ported as pure
+  modules, byte identical to the reference except imports, with their
+  own tests riding along. The orchestrator then became a composition
+  problem instead of an invention problem, and the first live session
+  drew one glowing room with three frontier stubs, a working inspector,
+  and an atlas reference, all from retained evidence.
