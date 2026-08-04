@@ -33,7 +33,12 @@ function AskDialog({ open, onClose, playerId, sessionId }: AskDialogProps) {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (open) inputRef.current?.focus()
+    if (open) {
+      setQuestion("")
+      setAnswer(null)
+      setError("")
+      inputRef.current?.focus()
+    }
   }, [open])
 
   const submit = async (event: React.FormEvent) => {
@@ -119,6 +124,10 @@ function AskDialog({ open, onClose, playerId, sessionId }: AskDialogProps) {
             Whole session evidence. Answers cite retained records. Model use is
             off.
           </small>
+          <small className="text-[10px] text-content-quiet">
+            Try: “Why did it stop?”, “Find the north gate”, or “Which positions
+            were ambiguous?”
+          </small>
         </div>
         {error === "" ? null : (
           <p role="alert" className="border-t border-line p-4 text-danger">
@@ -139,6 +148,7 @@ function AskDialog({ open, onClose, playerId, sessionId }: AskDialogProps) {
             <small className="text-[10px] text-content-quiet">
               {answer.citations.length} evidence citations
             </small>
+            {answer.citations.length === 0 ? null : (
             <ul className="mt-[5px] grid list-none gap-[7px] p-0">
               {answer.citations.map((citation, index) => (
                 <li
@@ -156,6 +166,7 @@ function AskDialog({ open, onClose, playerId, sessionId }: AskDialogProps) {
                 </li>
               ))}
             </ul>
+            )}
           </div>
         )}
       </DialogContent>

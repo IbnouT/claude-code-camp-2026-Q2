@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { useLivePartition } from "@/data/live-partitions"
-import { MessageFailedError, useOperatorMessage } from "@/data/message-command"
+import { useOperatorMessage } from "@/data/message-command"
 import { cn } from "@/lib/utils"
 
 type MessageAgentDialogProps = {
@@ -83,9 +83,16 @@ function MessageAgentDialog({
       setPendingText(null)
     }
   }, [entries.length, pendingText])
+  const resetMessage = message.reset
   useEffect(() => {
-    if (open) textareaRef.current?.focus()
-  }, [open])
+    if (open) {
+      setAction(objectiveAvailable ? "guide" : "revise")
+      setInstruction("")
+      setPendingText(null)
+      resetMessage()
+      textareaRef.current?.focus()
+    }
+  }, [open, objectiveAvailable, resetMessage])
 
   const sending = message.isPending
   const canSend = sessionRunning && controlAvailable && !sending
@@ -199,7 +206,7 @@ function MessageAgentDialog({
           )}
           {message.isError ? (
             <p role="alert" className="text-[11px] leading-normal text-danger">
-              {message.error instanceof MessageFailedError
+              {message.error instanceof Error
                 ? message.error.message
                 : "Message failed"}
             </p>
