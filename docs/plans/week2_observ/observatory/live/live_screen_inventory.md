@@ -102,6 +102,13 @@ Build order:
   reference additionally required a controllable followed session.
 - The revision label counts retained goal items, bounded at the goals
   page size of twenty. The reference read a server revision number.
+- The economics block shows one retained token total. The reference
+  split tokens in and out and showed the cache hit rate, both return
+  with the usage fields in the backend batch, with the spend caps and
+  the context fill.
+- The rail's last command line and the progress diagnostics wait for
+  the journey resource. The progress block shows the guard states.
+- The Ask dialog resets on every open. The reference remounted it.
 - The context switcher, stop dialog, and header actions are the already
   built v3 components, not the reference markup.
 - Small tint and radius adjustments follow the built header and launcher

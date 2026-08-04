@@ -149,23 +149,23 @@ function AskDialog({ open, onClose, playerId, sessionId }: AskDialogProps) {
               {answer.citations.length} evidence citations
             </small>
             {answer.citations.length === 0 ? null : (
-            <ul className="mt-[5px] grid list-none gap-[7px] p-0">
-              {answer.citations.map((citation, index) => (
-                <li
-                  key={citation.id ?? index}
-                  className="grid gap-0.5 rounded-[8px] border border-line bg-surface px-2.5 py-2"
-                >
-                  <strong className="text-[11px] text-content-primary">
-                    {citation.label ?? citation.id ?? "Evidence"}
-                  </strong>
-                  {citation.excerpt ? (
-                    <span className="text-[11px] text-content-muted">
-                      {citation.excerpt}
-                    </span>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
+              <ul className="mt-[5px] grid list-none gap-[7px] p-0">
+                {answer.citations.map((citation, index) => (
+                  <li
+                    key={citation.id ?? index}
+                    className="grid gap-0.5 rounded-[8px] border border-line bg-surface px-2.5 py-2"
+                  >
+                    <strong className="text-[11px] text-content-primary">
+                      {citation.label ?? citation.id ?? "Evidence"}
+                    </strong>
+                    {citation.excerpt ? (
+                      <span className="text-[11px] text-content-muted">
+                        {citation.excerpt}
+                      </span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         )}

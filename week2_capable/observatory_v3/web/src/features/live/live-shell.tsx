@@ -4,6 +4,7 @@ import { useLiveSessionLiveness } from "@/data/live-session-liveness"
 import { useSessionGoals } from "@/data/session-goals"
 import { cn } from "@/lib/utils"
 
+import { EvidenceRail } from "./evidence-rail"
 import { ObjectiveStrip } from "./objective-strip"
 import { projectObjective } from "./objective-model"
 
@@ -11,6 +12,7 @@ type LiveShellProps = {
   sessionId: string | undefined
   catalogObjective: string | null
   sessionRunning: boolean
+  lifecycle: string
 }
 
 /**
@@ -22,6 +24,7 @@ function LiveShell({
   sessionId,
   catalogObjective,
   sessionRunning,
+  lifecycle,
 }: LiveShellProps) {
   useLiveSessionLiveness(sessionId)
   const goals = useSessionGoals(sessionId)
@@ -37,7 +40,7 @@ function LiveShell({
       <ObjectiveStrip objective={objective} evidence={evidence} />
       <main
         aria-label="Live workspace"
-        className="relative min-h-0 flex-1 overflow-hidden bg-[image:radial-gradient(1200px_600px_at_60%_30%,var(--live-workspace-glow),transparent)] bg-canvas [--live-rail-width:320px] [--live-timeline-height:110px] max-[1040px]:[--live-rail-width:260px] max-[700px]:[--live-rail-width:0px] max-[700px]:[--live-timeline-height:64px]"
+        className="relative min-h-0 flex-1 overflow-hidden bg-canvas bg-[image:radial-gradient(1200px_600px_at_60%_30%,var(--live-workspace-glow),transparent)] [--live-rail-width:320px] [--live-timeline-height:110px] max-[1040px]:[--live-rail-width:260px] max-[700px]:[--live-rail-width:0px] max-[700px]:[--live-timeline-height:64px]"
       >
         <div
           aria-label="Learned world map"
@@ -69,9 +72,11 @@ function LiveShell({
           >
             Evidence
           </button>
-          <p className="mx-4 mt-[42px] text-[11px] text-content-quiet">
-            Retained evidence arrives with the rail section.
-          </p>
+          <EvidenceRail
+            sessionId={sessionId}
+            lifecycle={lifecycle}
+            sessionRunning={sessionRunning}
+          />
         </aside>
         <section
           aria-label="Causal timeline"

@@ -50,6 +50,7 @@ function LiveRouteScreen({ playerId, sessionId }: LiveRouteScreenProps) {
         sessionId={selected?.id}
         catalogObjective={selected?.objective ?? null}
         sessionRunning={running}
+        lifecycle={selected === null ? "idle" : sessionLifecycle(selected)}
       />
       {selected === null ? null : (
         <>

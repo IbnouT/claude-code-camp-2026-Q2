@@ -11,6 +11,7 @@ const LIVE_RESOURCE_KINDS = [
   "session-goals",
   "live-partition",
   "session-map",
+  "session-cost",
 ] as const
 
 /**
