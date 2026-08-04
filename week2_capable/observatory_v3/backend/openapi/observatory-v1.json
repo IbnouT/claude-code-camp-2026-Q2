@@ -1,6 +1,39 @@
 {
   "components": {
     "schemas": {
+      "AnswerClaim": {
+        "additionalProperties": false,
+        "description": "One answer claim with inspectable support.",
+        "properties": {
+          "citations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "confidence": {
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Confidence",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "confidence",
+          "citations"
+        ],
+        "title": "AnswerClaim",
+        "type": "object"
+      },
       "ApiError": {
         "additionalProperties": false,
         "description": "One stable machine-readable API failure.",
@@ -33,6 +66,178 @@
           "error"
         ],
         "title": "ApiError",
+        "type": "object"
+      },
+      "AskRequest": {
+        "additionalProperties": false,
+        "description": "One question or exact query constrained to an explicit evidence scope.",
+        "properties": {
+          "allow_model": {
+            "default": false,
+            "title": "Allow Model",
+            "type": "boolean"
+          },
+          "allow_summary": {
+            "default": false,
+            "title": "Allow Summary",
+            "type": "boolean"
+          },
+          "query": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObservatoryQuery"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "question": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Question",
+            "type": "string"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/QueryScope"
+          }
+        },
+        "required": [
+          "question",
+          "scope"
+        ],
+        "title": "AskRequest",
+        "type": "object"
+      },
+      "AskResponse": {
+        "additionalProperties": false,
+        "description": "A grounded answer whose plan and evidence remain inspectable.",
+        "properties": {
+          "answer": {
+            "title": "Answer",
+            "type": "string"
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceCitation"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "claims": {
+            "items": {
+              "$ref": "#/components/schemas/AnswerClaim"
+            },
+            "title": "Claims",
+            "type": "array"
+          },
+          "hypotheses": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Hypotheses",
+            "type": "array"
+          },
+          "missing": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "model_cost_usd": {
+            "default": 0,
+            "title": "Model Cost Usd",
+            "type": "number"
+          },
+          "model_input_tokens": {
+            "default": 0,
+            "title": "Model Input Tokens",
+            "type": "integer"
+          },
+          "model_output_tokens": {
+            "default": 0,
+            "title": "Model Output Tokens",
+            "type": "integer"
+          },
+          "model_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Model Summary"
+          },
+          "model_summary_citations": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Model Summary Citations",
+            "type": "array"
+          },
+          "plan": {
+            "items": {
+              "$ref": "#/components/schemas/QueryStep"
+            },
+            "title": "Plan",
+            "type": "array"
+          },
+          "query": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObservatoryQuery"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "scope_record_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Scope Record Id"
+          },
+          "tier": {
+            "enum": [
+              "deterministic",
+              "model_translated",
+              "model_summarized",
+              "model_disabled",
+              "unsupported"
+            ],
+            "title": "Tier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tier",
+          "question",
+          "plan",
+          "answer",
+          "claims",
+          "citations"
+        ],
+        "title": "AskResponse",
         "type": "object"
       },
       "CommandResponse": {
@@ -576,6 +781,68 @@
           "source_ref"
         ],
         "title": "EntitySummary",
+        "type": "object"
+      },
+      "EvidenceCitation": {
+        "additionalProperties": false,
+        "description": "One exact piece of evidence behind a diagnostic or lens value.",
+        "properties": {
+          "excerpt": {
+            "title": "Excerpt",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "sequence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Sequence"
+          },
+          "source": {
+            "enum": [
+              "agent",
+              "gateway",
+              "benchmark",
+              "runtime",
+              "experiments",
+              "knowledge"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Trace Id"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "label",
+          "excerpt"
+        ],
+        "title": "EvidenceCitation",
         "type": "object"
       },
       "EvidenceRecordResponse": {
@@ -2417,6 +2684,887 @@
         "title": "LifecycleSummary",
         "type": "object"
       },
+      "LiveAgentExcerpt": {
+        "additionalProperties": false,
+        "description": "One retained agent statement with its exact log provenance.",
+        "properties": {
+          "evidence": {
+            "title": "Evidence",
+            "type": "string"
+          },
+          "line": {
+            "title": "Line",
+            "type": "integer"
+          },
+          "observed_at": {
+            "title": "Observed At",
+            "type": "string"
+          },
+          "phase": {
+            "enum": [
+              "reasoning",
+              "plan",
+              "tool_call"
+            ],
+            "title": "Phase",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "phase",
+          "observed_at",
+          "line",
+          "evidence"
+        ],
+        "title": "LiveAgentExcerpt",
+        "type": "object"
+      },
+      "LiveCombatEpisode": {
+        "additionalProperties": false,
+        "description": "One command-and-response combat episode in the selected prefix.",
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "command_trace": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Command Trace"
+          },
+          "evidence": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "first_observed_turn": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Observed Turn"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/LiveCombatLine"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "observed_exchanges": {
+            "title": "Observed Exchanges",
+            "type": "integer"
+          },
+          "opponent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opponent"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "enum": [
+                  "victory",
+                  "defeated",
+                  "fled",
+                  "ended",
+                  "unresolved"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          }
+        },
+        "required": [
+          "active",
+          "opponent",
+          "first_observed_turn",
+          "observed_exchanges",
+          "outcome",
+          "command_trace",
+          "lines",
+          "evidence"
+        ],
+        "title": "LiveCombatEpisode",
+        "type": "object"
+      },
+      "LiveCombatLine": {
+        "additionalProperties": false,
+        "description": "One parsed combat line linked to retained gateway evidence.",
+        "properties": {
+          "confidence": {
+            "title": "Confidence",
+            "type": "string"
+          },
+          "evidence": {
+            "title": "Evidence",
+            "type": "string"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "observed_at": {
+            "title": "Observed At",
+            "type": "number"
+          },
+          "sequence": {
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "sequence",
+          "observed_at",
+          "confidence",
+          "method",
+          "evidence"
+        ],
+        "title": "LiveCombatLine",
+        "type": "object"
+      },
+      "LiveEconomicsPoint": {
+        "additionalProperties": false,
+        "description": "One retained model response in the selected Live prefix.",
+        "properties": {
+          "at": {
+            "title": "At",
+            "type": "string"
+          },
+          "context_tokens": {
+            "title": "Context Tokens",
+            "type": "integer"
+          },
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "cumulative_cost_usd": {
+            "title": "Cumulative Cost Usd",
+            "type": "number"
+          },
+          "response": {
+            "title": "Response",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "response",
+          "at",
+          "cost_usd",
+          "cumulative_cost_usd",
+          "context_tokens"
+        ],
+        "title": "LiveEconomicsPoint",
+        "type": "object"
+      },
+      "LiveFrictionDiagnostic": {
+        "additionalProperties": false,
+        "description": "Prefix-local navigation friction using the recorded-session rules.",
+        "properties": {
+          "distinct_places": {
+            "title": "Distinct Places",
+            "type": "integer"
+          },
+          "evidence": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "iterations": {
+            "title": "Iterations",
+            "type": "integer"
+          },
+          "iterations_since_new_place": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iterations Since New Place"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "confusion_loop",
+                  "progress_stall"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "new_places": {
+            "title": "New Places",
+            "type": "integer"
+          },
+          "repeated_command": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repeated Command"
+          },
+          "repeated_count": {
+            "title": "Repeated Count",
+            "type": "integer"
+          },
+          "threshold": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threshold"
+          },
+          "window_iterations": {
+            "title": "Window Iterations",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "repeated_command",
+          "repeated_count",
+          "distinct_places",
+          "iterations",
+          "new_places",
+          "window_iterations",
+          "iterations_since_new_place",
+          "threshold",
+          "evidence"
+        ],
+        "title": "LiveFrictionDiagnostic",
+        "type": "object"
+      },
+      "LiveJourneySnapshot": {
+        "additionalProperties": false,
+        "description": "One deterministic Live projection at an exact gateway sequence.",
+        "properties": {
+          "agent_belief": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LiveAgentExcerpt"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "agent_thought": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LiveAgentExcerpt"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "agent_turn_active": {
+            "title": "Agent Turn Active",
+            "type": "boolean"
+          },
+          "capture_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Capture Gaps",
+            "type": "array"
+          },
+          "character": {
+            "title": "Character",
+            "type": "string"
+          },
+          "combat": {
+            "title": "Combat",
+            "type": "boolean"
+          },
+          "combat_episode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LiveCombatEpisode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "context_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Limit"
+          },
+          "control_state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Control State"
+          },
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "current_room": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Room"
+          },
+          "current_turn_cost_usd": {
+            "title": "Current Turn Cost Usd",
+            "type": "number"
+          },
+          "economics": {
+            "items": {
+              "$ref": "#/components/schemas/LiveEconomicsPoint"
+            },
+            "title": "Economics",
+            "type": "array"
+          },
+          "following_live": {
+            "title": "Following Live",
+            "type": "boolean"
+          },
+          "friction": {
+            "$ref": "#/components/schemas/LiveFrictionDiagnostic"
+          },
+          "gateway_session_id": {
+            "title": "Gateway Session Id",
+            "type": "string"
+          },
+          "iteration": {
+            "title": "Iteration",
+            "type": "integer"
+          },
+          "latest_sequence": {
+            "title": "Latest Sequence",
+            "type": "integer"
+          },
+          "lifecycle": {
+            "title": "Lifecycle",
+            "type": "string"
+          },
+          "milestones": {
+            "items": {
+              "$ref": "#/components/schemas/LiveMilestone"
+            },
+            "title": "Milestones",
+            "type": "array"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "objective": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objective"
+          },
+          "objective_context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LiveObjectiveContext"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "objective_initial": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LiveObjectiveContext"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "operator_messages": {
+            "items": {
+              "$ref": "#/components/schemas/LiveOperatorMessage"
+            },
+            "title": "Operator Messages",
+            "type": "array"
+          },
+          "parse_miss_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parse Miss Rate"
+          },
+          "player_id": {
+            "title": "Player Id",
+            "type": "string"
+          },
+          "player_status": {
+            "$ref": "#/components/schemas/LivePlayerStatus"
+          },
+          "position_confidence": {
+            "title": "Position Confidence",
+            "type": "string"
+          },
+          "position_method": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position Method"
+          },
+          "recent_path": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LiveRecentPath"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "room_economics": {
+            "items": {
+              "$ref": "#/components/schemas/LiveRoomEconomics"
+            },
+            "title": "Room Economics",
+            "type": "array"
+          },
+          "rooms": {
+            "items": {
+              "$ref": "#/components/schemas/LiveRoom"
+            },
+            "title": "Rooms",
+            "type": "array"
+          },
+          "selected_at": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected At"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "spend_cap_scope": {
+            "anyOf": [
+              {
+                "enum": [
+                  "session",
+                  "turn"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spend Cap Scope"
+          },
+          "spend_cap_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spend Cap Usd"
+          },
+          "suggested_action": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LiveSuggestedAction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "through_sequence": {
+            "title": "Through Sequence",
+            "type": "integer"
+          },
+          "timeline": {
+            "items": {
+              "$ref": "#/components/schemas/LiveTimelineItem"
+            },
+            "title": "Timeline",
+            "type": "array"
+          },
+          "tools": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tools",
+            "type": "array"
+          },
+          "turn": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Turn"
+          },
+          "unattributed_room_economics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LiveUnattributedEconomics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "usage": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Usage",
+            "type": "object"
+          },
+          "vitals": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Vitals",
+            "type": "object"
+          },
+          "world": {
+            "$ref": "#/components/schemas/WorldProjection"
+          },
+          "zone": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LiveZoneContext"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "session_id",
+          "gateway_session_id",
+          "player_id",
+          "character",
+          "lifecycle",
+          "control_state",
+          "agent_turn_active",
+          "following_live",
+          "through_sequence",
+          "latest_sequence",
+          "selected_at",
+          "objective",
+          "objective_initial",
+          "objective_context",
+          "suggested_action",
+          "recent_path",
+          "agent_thought",
+          "agent_belief",
+          "model",
+          "tools",
+          "turn",
+          "iteration",
+          "context_limit",
+          "current_room",
+          "zone",
+          "position_confidence",
+          "position_method",
+          "combat",
+          "combat_episode",
+          "friction",
+          "vitals",
+          "player_status",
+          "cost_usd",
+          "current_turn_cost_usd",
+          "spend_cap_usd",
+          "spend_cap_scope",
+          "economics",
+          "room_economics",
+          "unattributed_room_economics",
+          "usage",
+          "milestones",
+          "parse_miss_rate",
+          "rooms",
+          "world",
+          "timeline",
+          "operator_messages",
+          "capture_gaps"
+        ],
+        "title": "LiveJourneySnapshot",
+        "type": "object"
+      },
+      "LiveMilestone": {
+        "additionalProperties": false,
+        "description": "One evidence-backed player progression transition.",
+        "properties": {
+          "at": {
+            "title": "At",
+            "type": "number"
+          },
+          "current": {
+            "title": "Current",
+            "type": "integer"
+          },
+          "evidence": {
+            "title": "Evidence",
+            "type": "string"
+          },
+          "kind": {
+            "const": "level_up",
+            "title": "Kind",
+            "type": "string"
+          },
+          "previous": {
+            "title": "Previous",
+            "type": "integer"
+          },
+          "sequence": {
+            "title": "Sequence",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "sequence",
+          "at",
+          "previous",
+          "current",
+          "evidence"
+        ],
+        "title": "LiveMilestone",
+        "type": "object"
+      },
+      "LiveObjectiveContext": {
+        "additionalProperties": false,
+        "description": "Structured authored objective metadata retained by the agent.",
+        "properties": {
+          "clue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clue"
+          },
+          "evidence": {
+            "title": "Evidence",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "source_kind": {
+            "enum": [
+              "benchmark",
+              "operator"
+            ],
+            "title": "Source Kind",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "clue",
+          "source_kind",
+          "revision",
+          "evidence"
+        ],
+        "title": "LiveObjectiveContext",
+        "type": "object"
+      },
+      "LiveObservedValue": {
+        "additionalProperties": false,
+        "description": "One player-state value and the observation that supports it.",
+        "properties": {
+          "confidence": {
+            "title": "Confidence",
+            "type": "string"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "observed_at": {
+            "title": "Observed At",
+            "type": "number"
+          },
+          "sequence": {
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "value",
+          "sequence",
+          "observed_at",
+          "confidence",
+          "method"
+        ],
+        "title": "LiveObservedValue",
+        "type": "object"
+      },
+      "LiveOperatorMessage": {
+        "additionalProperties": false,
+        "description": "One retained operator message at the selected Live prefix.",
+        "properties": {
+          "action": {
+            "enum": [
+              "guide",
+              "revise"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "applied_iteration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applied Iteration"
+          },
+          "instruction": {
+            "title": "Instruction",
+            "type": "string"
+          },
+          "sent_at": {
+            "title": "Sent At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "instruction",
+          "sent_at",
+          "applied_iteration"
+        ],
+        "title": "LiveOperatorMessage",
+        "type": "object"
+      },
       "LivePartitionResponse": {
         "additionalProperties": false,
         "description": "One independently replaceable Live projection partition.",
@@ -2509,6 +3657,383 @@
           "values"
         ],
         "title": "LivePartitionResponse",
+        "type": "object"
+      },
+      "LivePlayerStatus": {
+        "additionalProperties": false,
+        "description": "Observed player state at the selected prefix, without defaults.",
+        "properties": {
+          "capture_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Capture Gaps",
+            "type": "array"
+          },
+          "fields": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/LiveObservedValue"
+            },
+            "title": "Fields",
+            "type": "object"
+          }
+        },
+        "required": [
+          "fields",
+          "capture_gaps"
+        ],
+        "title": "LivePlayerStatus",
+        "type": "object"
+      },
+      "LiveRecentPath": {
+        "additionalProperties": false,
+        "description": "Latest contiguous retained transition chain ending at current room.",
+        "properties": {
+          "edge_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Edge Ids",
+            "type": "array"
+          },
+          "gateway_sequences": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Gateway Sequences",
+            "type": "array"
+          }
+        },
+        "required": [
+          "edge_ids",
+          "gateway_sequences"
+        ],
+        "title": "LiveRecentPath",
+        "type": "object"
+      },
+      "LiveRoom": {
+        "additionalProperties": false,
+        "description": "One observed spatial identity in the selected evidence prefix.",
+        "properties": {
+          "confidence": {
+            "title": "Confidence",
+            "type": "string"
+          },
+          "exits": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Exits",
+            "type": "array"
+          },
+          "first_sequence": {
+            "title": "First Sequence",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_sequence": {
+            "title": "Last Sequence",
+            "type": "integer"
+          },
+          "place": {
+            "title": "Place",
+            "type": "integer"
+          },
+          "state": {
+            "enum": [
+              "observed",
+              "current"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "visits": {
+            "title": "Visits",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "place",
+          "title",
+          "exits",
+          "first_sequence",
+          "last_sequence",
+          "visits",
+          "state",
+          "confidence"
+        ],
+        "title": "LiveRoom",
+        "type": "object"
+      },
+      "LiveRoomEconomics": {
+        "additionalProperties": false,
+        "description": "Model-response cost attributed to one observed room.",
+        "properties": {
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "evidence": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "first_response": {
+            "title": "First Response",
+            "type": "integer"
+          },
+          "last_response": {
+            "title": "Last Response",
+            "type": "integer"
+          },
+          "node_id": {
+            "title": "Node Id",
+            "type": "string"
+          },
+          "response_count": {
+            "title": "Response Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "node_id",
+          "response_count",
+          "cost_usd",
+          "first_response",
+          "last_response",
+          "evidence"
+        ],
+        "title": "LiveRoomEconomics",
+        "type": "object"
+      },
+      "LiveSuggestedAction": {
+        "additionalProperties": false,
+        "description": "One previewable control grounded in retained route or intent evidence.",
+        "properties": {
+          "evidence": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "expected_sequence": {
+            "title": "Expected Sequence",
+            "type": "integer"
+          },
+          "instruction": {
+            "title": "Instruction",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "route",
+              "continue_plan"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "label",
+          "instruction",
+          "reason",
+          "evidence",
+          "expected_sequence"
+        ],
+        "title": "LiveSuggestedAction",
+        "type": "object"
+      },
+      "LiveTimelineItem": {
+        "additionalProperties": false,
+        "description": "One causal item placed on the selected gateway clock.",
+        "properties": {
+          "at": {
+            "title": "At",
+            "type": "number"
+          },
+          "cost_usd": {
+            "default": 0,
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "quiet_cohort": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Quiet Cohort"
+          },
+          "sequence": {
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "source": {
+            "enum": [
+              "agent",
+              "gateway"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "tokens": {
+            "default": 0,
+            "title": "Tokens",
+            "type": "integer"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Trace Id"
+          }
+        },
+        "required": [
+          "id",
+          "sequence",
+          "at",
+          "source",
+          "kind",
+          "label"
+        ],
+        "title": "LiveTimelineItem",
+        "type": "object"
+      },
+      "LiveUnattributedEconomics": {
+        "additionalProperties": false,
+        "description": "Model-response cost without a safe room correlation.",
+        "properties": {
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "evidence": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "response_count": {
+            "title": "Response Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "response_count",
+          "cost_usd",
+          "evidence"
+        ],
+        "title": "LiveUnattributedEconomics",
+        "type": "object"
+      },
+      "LiveViewResponse": {
+        "additionalProperties": false,
+        "description": "One derived Live view of a session, whole or through a prefix.",
+        "properties": {
+          "capture_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Capture Gaps",
+            "type": "array"
+          },
+          "completeness": {
+            "enum": [
+              "complete",
+              "partial",
+              "degraded"
+            ],
+            "title": "Completeness",
+            "type": "string"
+          },
+          "resource_id": {
+            "maxLength": 512,
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_version": {
+            "minimum": 1,
+            "title": "Resource Version",
+            "type": "integer"
+          },
+          "session_id": {
+            "maxLength": 512,
+            "title": "Session Id",
+            "type": "string"
+          },
+          "source_cursor": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Source Cursor",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "Source Refs",
+            "type": "array"
+          },
+          "view": {
+            "$ref": "#/components/schemas/LiveJourneySnapshot"
+          }
+        },
+        "required": [
+          "resource_id",
+          "resource_version",
+          "source_cursor",
+          "completeness",
+          "capture_gaps",
+          "source_refs",
+          "session_id",
+          "view"
+        ],
+        "title": "LiveViewResponse",
         "type": "object"
       },
       "LiveVitalsResponse": {
@@ -2622,6 +4147,77 @@
           "detail"
         ],
         "title": "LiveVoiceCapability",
+        "type": "object"
+      },
+      "LiveZoneContext": {
+        "additionalProperties": false,
+        "description": "Observer-truth zone correlation for the selected current room.",
+        "properties": {
+          "atlas_digest": {
+            "title": "Atlas Digest",
+            "type": "string"
+          },
+          "confidence": {
+            "enum": [
+              "high",
+              "medium"
+            ],
+            "title": "Confidence",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "form": {
+            "const": "truth",
+            "title": "Form",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "movement_sequences": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Movement Sequences",
+            "type": "array"
+          },
+          "reset_sequence": {
+            "title": "Reset Sequence",
+            "type": "integer"
+          },
+          "room_vnum": {
+            "title": "Room Vnum",
+            "type": "integer"
+          },
+          "sector": {
+            "title": "Sector",
+            "type": "string"
+          },
+          "zone_id": {
+            "title": "Zone Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "zone_id",
+          "label",
+          "room_vnum",
+          "sector",
+          "form",
+          "confidence",
+          "reset_sequence",
+          "movement_sequences",
+          "atlas_digest",
+          "evidence"
+        ],
+        "title": "LiveZoneContext",
         "type": "object"
       },
       "MapEdge": {
@@ -2937,6 +4533,65 @@
         "title": "ObservatoryCapabilities",
         "type": "object"
       },
+      "ObservatoryQuery": {
+        "additionalProperties": false,
+        "description": "A versioned, read-only query accepted by the evidence engine.",
+        "properties": {
+          "filters": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/QueryFilter"
+            },
+            "title": "Filters",
+            "type": "array"
+          },
+          "limit": {
+            "default": 25,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "operation": {
+            "enum": [
+              "diagnose_stop",
+              "summarize_live",
+              "list_position_candidates",
+              "compare_rendering",
+              "list_experiment_samples",
+              "search_evidence",
+              "search_knowledge"
+            ],
+            "title": "Operation",
+            "type": "string"
+          },
+          "order": {
+            "default": "causal",
+            "enum": [
+              "causal",
+              "chronological",
+              "cost_desc"
+            ],
+            "title": "Order",
+            "type": "string"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/QueryScope"
+          },
+          "version": {
+            "const": 1,
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "operation",
+          "scope"
+        ],
+        "title": "ObservatoryQuery",
+        "type": "object"
+      },
       "ObservedPlayerValue": {
         "additionalProperties": false,
         "description": "One observed player-state value and its supporting observation.",
@@ -3010,6 +4665,223 @@
           "label"
         ],
         "title": "PlayerOption",
+        "type": "object"
+      },
+      "QueryFilter": {
+        "additionalProperties": false,
+        "description": "One allowlisted field predicate in a typed Observatory query.",
+        "properties": {
+          "field": {
+            "enum": [
+              "source",
+              "kind",
+              "room",
+              "trace_id",
+              "state",
+              "arm_id",
+              "cost_usd",
+              "confidence"
+            ],
+            "title": "Field",
+            "type": "string"
+          },
+          "operator": {
+            "enum": [
+              "eq",
+              "contains",
+              "gte",
+              "lte"
+            ],
+            "title": "Operator",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "field",
+          "operator",
+          "value"
+        ],
+        "title": "QueryFilter",
+        "type": "object"
+      },
+      "QueryScope": {
+        "additionalProperties": false,
+        "description": "The complete evidence boundary for one investigation query.",
+        "properties": {
+          "comparison_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Comparison Id"
+          },
+          "lens": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Lens"
+          },
+          "live_session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Live Session Id"
+          },
+          "player_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Player Id"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Run Id"
+          },
+          "selected_record_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Selected Record Id"
+          },
+          "space": {
+            "enum": [
+              "live",
+              "sessions",
+              "experiments",
+              "knowledge"
+            ],
+            "title": "Space",
+            "type": "string"
+          },
+          "subject_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Subject Id"
+          },
+          "through_sequence": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Through Sequence"
+          }
+        },
+        "required": [
+          "space"
+        ],
+        "title": "QueryScope",
+        "type": "object"
+      },
+      "QueryStep": {
+        "additionalProperties": false,
+        "description": "One visible step in a validated investigation plan.",
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "operation": {
+            "enum": [
+              "diagnose_stop",
+              "summarize_live",
+              "locate_final_claim",
+              "verify_objective",
+              "list_position_candidates",
+              "compare_rendering",
+              "list_experiment_samples",
+              "search_evidence",
+              "search_knowledge",
+              "validate_scope"
+            ],
+            "title": "Operation",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "agent",
+              "benchmark",
+              "gateway",
+              "runtime",
+              "experiments",
+              "knowledge"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "operation",
+          "source",
+          "detail"
+        ],
+        "title": "QueryStep",
         "type": "object"
       },
       "ResourceChangeTarget": {
@@ -4546,6 +6418,563 @@
         ],
         "title": "WireBodyResponse",
         "type": "object"
+      },
+      "WorldAtlasRoomContext": {
+        "additionalProperties": false,
+        "description": "Verified observer-truth correlation for one learned-world node.",
+        "properties": {
+          "atlas_digest": {
+            "title": "Atlas Digest",
+            "type": "string"
+          },
+          "confidence": {
+            "enum": [
+              "high",
+              "medium"
+            ],
+            "title": "Confidence",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "sector": {
+            "title": "Sector",
+            "type": "string"
+          },
+          "vnum": {
+            "title": "Vnum",
+            "type": "integer"
+          },
+          "zone_id": {
+            "title": "Zone Id",
+            "type": "integer"
+          },
+          "zone_label": {
+            "title": "Zone Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "vnum",
+          "zone_id",
+          "zone_label",
+          "sector",
+          "atlas_digest",
+          "confidence",
+          "evidence"
+        ],
+        "title": "WorldAtlasRoomContext",
+        "type": "object"
+      },
+      "WorldCandidate": {
+        "additionalProperties": false,
+        "description": "One unresolved place candidate with its spatial evidence.",
+        "properties": {
+          "conflicting_exits": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Conflicting Exits",
+            "type": "array"
+          },
+          "evidence": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "node_id": {
+            "title": "Node Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "supporting_exits": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Supporting Exits",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "node_id",
+          "title",
+          "supporting_exits",
+          "conflicting_exits",
+          "reason",
+          "evidence"
+        ],
+        "title": "WorldCandidate",
+        "type": "object"
+      },
+      "WorldDuplicateTitle": {
+        "additionalProperties": false,
+        "description": "Distinct spatial identities that share one rendered title.",
+        "properties": {
+          "node_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Node Ids",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "node_ids"
+        ],
+        "title": "WorldDuplicateTitle",
+        "type": "object"
+      },
+      "WorldEdge": {
+        "additionalProperties": false,
+        "description": "One observed transition between distinct inferred places.",
+        "properties": {
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          },
+          "traversals": {
+            "title": "Traversals",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "target",
+          "direction",
+          "traversals",
+          "evidence"
+        ],
+        "title": "WorldEdge",
+        "type": "object"
+      },
+      "WorldFrontier": {
+        "additionalProperties": false,
+        "description": "One observed exit without a retained traversal.",
+        "properties": {
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "direction",
+          "evidence"
+        ],
+        "title": "WorldFrontier",
+        "type": "object"
+      },
+      "WorldNode": {
+        "additionalProperties": false,
+        "description": "One distinct inferred place, never just a room title.",
+        "properties": {
+          "atlas": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorldAtlasRoomContext"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorldRoomDescription"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "evidence": {
+            "default": [],
+            "items": {
+              "type": "integer"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "exits": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Exits",
+            "type": "array"
+          },
+          "first_seq": {
+            "title": "First Seq",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_seq": {
+            "title": "Last Seq",
+            "type": "integer"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "mob_sightings": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/WorldSighting"
+            },
+            "title": "Mob Sightings",
+            "type": "array"
+          },
+          "mobs": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Mobs",
+            "type": "array"
+          },
+          "object_sightings": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/WorldSighting"
+            },
+            "title": "Object Sightings",
+            "type": "array"
+          },
+          "objects": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Objects",
+            "type": "array"
+          },
+          "place": {
+            "title": "Place",
+            "type": "integer"
+          },
+          "state": {
+            "enum": [
+              "observed",
+              "candidate",
+              "current"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "visits": {
+            "title": "Visits",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "place",
+          "title",
+          "exits",
+          "visits",
+          "first_seq",
+          "last_seq",
+          "state",
+          "confidence",
+          "method"
+        ],
+        "title": "WorldNode",
+        "type": "object"
+      },
+      "WorldObjectiveBeacon": {
+        "additionalProperties": false,
+        "description": "One objective location supported by a retained entity sighting.",
+        "properties": {
+          "evidence": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "node_id": {
+            "title": "Node Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "node_id",
+          "label",
+          "reason",
+          "evidence"
+        ],
+        "title": "WorldObjectiveBeacon",
+        "type": "object"
+      },
+      "WorldParseMiss": {
+        "additionalProperties": false,
+        "description": "One retained parser miss that weakens spatial certainty.",
+        "properties": {
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "sequence": {
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Id"
+          }
+        },
+        "required": [
+          "sequence",
+          "trace_id",
+          "reason"
+        ],
+        "title": "WorldParseMiss",
+        "type": "object"
+      },
+      "WorldProjection": {
+        "additionalProperties": false,
+        "description": "The evidence-backed journey graph and its unresolved current state.",
+        "properties": {
+          "candidate_details": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/WorldCandidate"
+            },
+            "title": "Candidate Details",
+            "type": "array"
+          },
+          "candidates": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "current_confidence": {
+            "title": "Current Confidence",
+            "type": "string"
+          },
+          "current_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Title"
+          },
+          "duplicate_titles": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/WorldDuplicateTitle"
+            },
+            "title": "Duplicate Titles",
+            "type": "array"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/WorldEdge"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "frontier": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/WorldFrontier"
+            },
+            "title": "Frontier",
+            "type": "array"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/WorldNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "objective_beacons": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/WorldObjectiveBeacon"
+            },
+            "title": "Objective Beacons",
+            "type": "array"
+          },
+          "parse_miss_rate": {
+            "title": "Parse Miss Rate",
+            "type": "number"
+          },
+          "parse_misses": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/WorldParseMiss"
+            },
+            "title": "Parse Misses",
+            "type": "array"
+          },
+          "unknown_positions": {
+            "title": "Unknown Positions",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "nodes",
+          "edges",
+          "current_title",
+          "current_confidence",
+          "candidates",
+          "parse_miss_rate",
+          "unknown_positions"
+        ],
+        "title": "WorldProjection",
+        "type": "object"
+      },
+      "WorldRoomDescription": {
+        "additionalProperties": false,
+        "description": "Latest retained room description with its observation evidence.",
+        "properties": {
+          "evidence": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "evidence"
+        ],
+        "title": "WorldRoomDescription",
+        "type": "object"
+      },
+      "WorldSighting": {
+        "additionalProperties": false,
+        "description": "Repeated sightings of one named entity in one inferred place.",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "evidence": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "first_seq": {
+            "title": "First Seq",
+            "type": "integer"
+          },
+          "last_seq": {
+            "title": "Last Seq",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "count",
+          "first_seq",
+          "last_seq",
+          "evidence"
+        ],
+        "title": "WorldSighting",
+        "type": "object"
       }
     }
   },
@@ -4556,6 +6985,47 @@
   },
   "openapi": "3.1.1",
   "paths": {
+    "/api/v1/ask": {
+      "post": {
+        "operationId": "askEvidence",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AskResponse"
+                }
+              }
+            },
+            "description": "Evidence answer"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "tags": [
+          "ask"
+        ]
+      }
+    },
     "/api/v1/capabilities": {
       "get": {
         "operationId": "getCapabilities",
@@ -5598,6 +8068,77 @@
         },
         "tags": [
           "knowledge"
+        ]
+      }
+    },
+    "/api/v1/live/{session_id}/view": {
+      "get": {
+        "operationId": "getLiveView",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "through",
+            "required": false,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveViewResponse"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "live"
         ]
       }
     },

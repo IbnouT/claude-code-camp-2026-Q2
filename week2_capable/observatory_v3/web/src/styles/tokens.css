@@ -17,6 +17,13 @@
   --live-workspace-glow: #0d1622;
   --live-track: #0c1320;
   --live-cell: #0c131d;
+  --vital-hit-from: #ff5d6c;
+  --vital-hit-to: #f5c463;
+  --vital-mana-from: #2b5f8f;
+  --vital-mana-to: #7ec3f0;
+  --vital-move-from: #2e7d5b;
+  --vital-move-to: #8bdfa9;
+  --sparkline-stroke: #4fd6c9;
   --scene-core: #10192a;
   --scene-mid: #0a0f18;
   --scene-link: #203550;

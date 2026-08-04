@@ -7,6 +7,15 @@
  */
 import * as zod from 'zod/mini';
 
+export const AnswerClaim = /*#__PURE__*/ zod.strictObject({
+  "citations": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()),
+  "confidence": /*#__PURE__*/ zod.enum(['high', 'medium', 'low']),
+  "text": /*#__PURE__*/ zod.string()
+}).check(/*#__PURE__*/ zod.describe('One answer claim with inspectable support.'));
+
+export type AnswerClaim = zod.input<typeof AnswerClaim>;
+export type AnswerClaimOutput = zod.output<typeof AnswerClaim>;
+
 export const apiErrorContractVersionDefault = `v1`;
 export const apiErrorDetailDefault = null;
 
@@ -19,6 +28,134 @@ export const ApiError = /*#__PURE__*/ zod.strictObject({
 
 export type ApiError = zod.input<typeof ApiError>;
 export type ApiErrorOutput = zod.output<typeof ApiError>;
+
+export const QueryFilter = /*#__PURE__*/ zod.strictObject({
+  "field": /*#__PURE__*/ zod.enum(['source', 'kind', 'room', 'trace_id', 'state', 'arm_id', 'cost_usd', 'confidence']),
+  "operator": /*#__PURE__*/ zod.enum(['eq', 'contains', 'gte', 'lte']),
+  "value": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.int(),/*#__PURE__*/ zod.number(),/*#__PURE__*/ zod.boolean()])
+}).check(/*#__PURE__*/ zod.describe('One allowlisted field predicate in a typed Observatory query.'));
+
+export type QueryFilter = zod.input<typeof QueryFilter>;
+export type QueryFilterOutput = zod.output<typeof QueryFilter>;
+
+export const queryScopeComparisonIdDefault = null;
+export const queryScopeLensDefault = null;
+export const queryScopeLiveSessionIdDefault = null;
+export const queryScopePlayerIdDefault = null;
+export const queryScopeRunIdDefault = null;
+export const queryScopeSelectedRecordIdDefault = null;
+export const queryScopeSubjectIdDefault = null;
+export const queryScopeThroughSequenceOneMin = 0;
+
+export const queryScopeThroughSequenceDefault = null;
+
+export const QueryScope = /*#__PURE__*/ zod.strictObject({
+  "comparison_id": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]), queryScopeComparisonIdDefault),
+  "lens": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]), queryScopeLensDefault),
+  "live_session_id": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]), queryScopeLiveSessionIdDefault),
+  "player_id": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]), queryScopePlayerIdDefault),
+  "run_id": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]), queryScopeRunIdDefault),
+  "selected_record_id": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]), queryScopeSelectedRecordIdDefault),
+  "space": /*#__PURE__*/ zod.enum(['live', 'sessions', 'experiments', 'knowledge']),
+  "subject_id": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]), queryScopeSubjectIdDefault),
+  "through_sequence": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(queryScopeThroughSequenceOneMin)),/*#__PURE__*/ zod.null()]), queryScopeThroughSequenceDefault)
+}).check(/*#__PURE__*/ zod.describe('The complete evidence boundary for one investigation query.'));
+
+export type QueryScope = zod.input<typeof QueryScope>;
+export type QueryScopeOutput = zod.output<typeof QueryScope>;
+
+export const observatoryQueryFiltersDefault = [];
+export const observatoryQueryLimitDefault = 25;
+export const observatoryQueryLimitMax = 100;
+
+export const observatoryQueryOrderDefault = `causal`;
+export const observatoryQueryVersionDefault = 1;
+
+export const ObservatoryQuery = /*#__PURE__*/ zod.strictObject({
+  "filters": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.array(QueryFilter), observatoryQueryFiltersDefault),
+  "limit": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(observatoryQueryLimitMax)), observatoryQueryLimitDefault),
+  "operation": /*#__PURE__*/ zod.enum(['diagnose_stop', 'summarize_live', 'list_position_candidates', 'compare_rendering', 'list_experiment_samples', 'search_evidence', 'search_knowledge']),
+  "order": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.enum(['causal', 'chronological', 'cost_desc']), observatoryQueryOrderDefault),
+  "scope": QueryScope,
+  "version": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.literal(1), observatoryQueryVersionDefault)
+}).check(/*#__PURE__*/ zod.describe('A versioned, read-only query accepted by the evidence engine.'));
+
+export type ObservatoryQuery = zod.input<typeof ObservatoryQuery>;
+export type ObservatoryQueryOutput = zod.output<typeof ObservatoryQuery>;
+
+export const askRequestAllowModelDefault = false;
+export const askRequestAllowSummaryDefault = false;
+export const askRequestQueryDefault = null;
+export const askRequestQuestionMin = 3;
+export const askRequestQuestionMax = 500;
+
+
+
+export const AskRequest = /*#__PURE__*/ zod.strictObject({
+  "allow_model": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.boolean(), askRequestAllowModelDefault),
+  "allow_summary": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.boolean(), askRequestAllowSummaryDefault),
+  "query": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([ObservatoryQuery,/*#__PURE__*/ zod.null()]), askRequestQueryDefault),
+  "question": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(askRequestQuestionMin)).check(/*#__PURE__*/ zod.maxLength(askRequestQuestionMax)),
+  "scope": QueryScope
+}).check(/*#__PURE__*/ zod.describe('One question or exact query constrained to an explicit evidence scope.'));
+
+export type AskRequest = zod.input<typeof AskRequest>;
+export type AskRequestOutput = zod.output<typeof AskRequest>;
+
+export const evidenceCitationSequenceDefault = null;
+export const evidenceCitationTraceIdDefault = null;
+
+export const EvidenceCitation = /*#__PURE__*/ zod.strictObject({
+  "excerpt": /*#__PURE__*/ zod.string(),
+  "id": /*#__PURE__*/ zod.string(),
+  "label": /*#__PURE__*/ zod.string(),
+  "sequence": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.int(),/*#__PURE__*/ zod.null()]), evidenceCitationSequenceDefault),
+  "source": /*#__PURE__*/ zod.enum(['agent', 'gateway', 'benchmark', 'runtime', 'experiments', 'knowledge']),
+  "trace_id": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]), evidenceCitationTraceIdDefault)
+}).check(/*#__PURE__*/ zod.describe('One exact piece of evidence behind a diagnostic or lens value.'));
+
+export type EvidenceCitation = zod.input<typeof EvidenceCitation>;
+export type EvidenceCitationOutput = zod.output<typeof EvidenceCitation>;
+
+export const QueryStep = /*#__PURE__*/ zod.strictObject({
+  "detail": /*#__PURE__*/ zod.string(),
+  "operation": /*#__PURE__*/ zod.enum(['diagnose_stop', 'summarize_live', 'locate_final_claim', 'verify_objective', 'list_position_candidates', 'compare_rendering', 'list_experiment_samples', 'search_evidence', 'search_knowledge', 'validate_scope']),
+  "source": /*#__PURE__*/ zod.enum(['agent', 'benchmark', 'gateway', 'runtime', 'experiments', 'knowledge'])
+}).check(/*#__PURE__*/ zod.describe('One visible step in a validated investigation plan.'));
+
+export type QueryStep = zod.input<typeof QueryStep>;
+export type QueryStepOutput = zod.output<typeof QueryStep>;
+
+export const askResponseHypothesesDefault = [];
+export const askResponseMissingDefault = [];
+export const askResponseModelCostUsdDefault = 0;
+export const askResponseModelInputTokensDefault = 0;
+export const askResponseModelOutputTokensDefault = 0;
+export const askResponseModelSummaryDefault = null;
+export const askResponseModelSummaryCitationsDefault = [];
+export const askResponseQueryDefault = null;
+export const askResponseScopeRecordIdDefault = null;
+
+export const AskResponse = /*#__PURE__*/ zod.strictObject({
+  "answer": /*#__PURE__*/ zod.string(),
+  "citations": /*#__PURE__*/ zod.array(EvidenceCitation),
+  "claims": /*#__PURE__*/ zod.array(AnswerClaim),
+  "hypotheses": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()), askResponseHypothesesDefault),
+  "missing": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()), askResponseMissingDefault),
+  "model_cost_usd": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.number(), askResponseModelCostUsdDefault),
+  "model_input_tokens": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int(), askResponseModelInputTokensDefault),
+  "model_output_tokens": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int(), askResponseModelOutputTokensDefault),
+  "model_summary": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]), askResponseModelSummaryDefault),
+  "model_summary_citations": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()), askResponseModelSummaryCitationsDefault),
+  "plan": /*#__PURE__*/ zod.array(QueryStep),
+  "query": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([ObservatoryQuery,/*#__PURE__*/ zod.null()]), askResponseQueryDefault),
+  "question": /*#__PURE__*/ zod.string(),
+  "scope_record_id": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]), askResponseScopeRecordIdDefault),
+  "tier": /*#__PURE__*/ zod.enum(['deterministic', 'model_translated', 'model_summarized', 'model_disabled', 'unsupported'])
+}).check(/*#__PURE__*/ zod.describe('A grounded answer whose plan and evidence remain inspectable.'));
+
+export type AskResponse = zod.input<typeof AskResponse>;
+export type AskResponseOutput = zod.output<typeof AskResponse>;
 
 export const commandResponseActorMax = 120;
 
@@ -790,6 +927,416 @@ export const LifecyclePageResponse = /*#__PURE__*/ zod.strictObject({
 export type LifecyclePageResponse = zod.input<typeof LifecyclePageResponse>;
 export type LifecyclePageResponseOutput = zod.output<typeof LifecyclePageResponse>;
 
+export const LiveAgentExcerpt = /*#__PURE__*/ zod.strictObject({
+  "evidence": /*#__PURE__*/ zod.string(),
+  "line": /*#__PURE__*/ zod.int(),
+  "observed_at": /*#__PURE__*/ zod.string(),
+  "phase": /*#__PURE__*/ zod.enum(['reasoning', 'plan', 'tool_call']),
+  "text": /*#__PURE__*/ zod.string()
+}).check(/*#__PURE__*/ zod.describe('One retained agent statement with its exact log provenance.'));
+
+export type LiveAgentExcerpt = zod.input<typeof LiveAgentExcerpt>;
+export type LiveAgentExcerptOutput = zod.output<typeof LiveAgentExcerpt>;
+
+export const LiveCombatLine = /*#__PURE__*/ zod.strictObject({
+  "confidence": /*#__PURE__*/ zod.string(),
+  "evidence": /*#__PURE__*/ zod.string(),
+  "method": /*#__PURE__*/ zod.string(),
+  "observed_at": /*#__PURE__*/ zod.number(),
+  "sequence": /*#__PURE__*/ zod.int(),
+  "text": /*#__PURE__*/ zod.string()
+}).check(/*#__PURE__*/ zod.describe('One parsed combat line linked to retained gateway evidence.'));
+
+export type LiveCombatLine = zod.input<typeof LiveCombatLine>;
+export type LiveCombatLineOutput = zod.output<typeof LiveCombatLine>;
+
+export const LiveCombatEpisode = /*#__PURE__*/ zod.strictObject({
+  "active": /*#__PURE__*/ zod.boolean(),
+  "command_trace": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "evidence": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.int()),
+  "first_observed_turn": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.int(),/*#__PURE__*/ zod.null()]),
+  "lines": /*#__PURE__*/ zod.array(LiveCombatLine),
+  "observed_exchanges": /*#__PURE__*/ zod.int(),
+  "opponent": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "outcome": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.enum(['victory', 'defeated', 'fled', 'ended', 'unresolved']),/*#__PURE__*/ zod.null()])
+}).check(/*#__PURE__*/ zod.describe('One command-and-response combat episode in the selected prefix.'));
+
+export type LiveCombatEpisode = zod.input<typeof LiveCombatEpisode>;
+export type LiveCombatEpisodeOutput = zod.output<typeof LiveCombatEpisode>;
+
+export const LiveEconomicsPoint = /*#__PURE__*/ zod.strictObject({
+  "at": /*#__PURE__*/ zod.string(),
+  "context_tokens": /*#__PURE__*/ zod.int(),
+  "cost_usd": /*#__PURE__*/ zod.number(),
+  "cumulative_cost_usd": /*#__PURE__*/ zod.number(),
+  "response": /*#__PURE__*/ zod.int()
+}).check(/*#__PURE__*/ zod.describe('One retained model response in the selected Live prefix.'));
+
+export type LiveEconomicsPoint = zod.input<typeof LiveEconomicsPoint>;
+export type LiveEconomicsPointOutput = zod.output<typeof LiveEconomicsPoint>;
+
+export const LiveFrictionDiagnostic = /*#__PURE__*/ zod.strictObject({
+  "distinct_places": /*#__PURE__*/ zod.int(),
+  "evidence": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.int()),
+  "iterations": /*#__PURE__*/ zod.int(),
+  "iterations_since_new_place": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.int(),/*#__PURE__*/ zod.null()]),
+  "kind": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.enum(['confusion_loop', 'progress_stall']),/*#__PURE__*/ zod.null()]),
+  "new_places": /*#__PURE__*/ zod.int(),
+  "repeated_command": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "repeated_count": /*#__PURE__*/ zod.int(),
+  "threshold": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "window_iterations": /*#__PURE__*/ zod.int()
+}).check(/*#__PURE__*/ zod.describe('Prefix-local navigation friction using the recorded-session rules.'));
+
+export type LiveFrictionDiagnostic = zod.input<typeof LiveFrictionDiagnostic>;
+export type LiveFrictionDiagnosticOutput = zod.output<typeof LiveFrictionDiagnostic>;
+
+export const LiveMilestone = /*#__PURE__*/ zod.strictObject({
+  "at": /*#__PURE__*/ zod.number(),
+  "current": /*#__PURE__*/ zod.int(),
+  "evidence": /*#__PURE__*/ zod.string(),
+  "kind": /*#__PURE__*/ zod.literal("level_up"),
+  "previous": /*#__PURE__*/ zod.int(),
+  "sequence": /*#__PURE__*/ zod.int()
+}).check(/*#__PURE__*/ zod.describe('One evidence-backed player progression transition.'));
+
+export type LiveMilestone = zod.input<typeof LiveMilestone>;
+export type LiveMilestoneOutput = zod.output<typeof LiveMilestone>;
+
+export const LiveObjectiveContext = /*#__PURE__*/ zod.strictObject({
+  "clue": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "evidence": /*#__PURE__*/ zod.string(),
+  "revision": /*#__PURE__*/ zod.int(),
+  "source_kind": /*#__PURE__*/ zod.enum(['benchmark', 'operator']),
+  "title": /*#__PURE__*/ zod.string()
+}).check(/*#__PURE__*/ zod.describe('Structured authored objective metadata retained by the agent.'));
+
+export type LiveObjectiveContext = zod.input<typeof LiveObjectiveContext>;
+export type LiveObjectiveContextOutput = zod.output<typeof LiveObjectiveContext>;
+
+export const LiveOperatorMessage = /*#__PURE__*/ zod.strictObject({
+  "action": /*#__PURE__*/ zod.enum(['guide', 'revise']),
+  "applied_iteration": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.int(),/*#__PURE__*/ zod.null()]),
+  "instruction": /*#__PURE__*/ zod.string(),
+  "sent_at": /*#__PURE__*/ zod.string()
+}).check(/*#__PURE__*/ zod.describe('One retained operator message at the selected Live prefix.'));
+
+export type LiveOperatorMessage = zod.input<typeof LiveOperatorMessage>;
+export type LiveOperatorMessageOutput = zod.output<typeof LiveOperatorMessage>;
+
+export const LiveObservedValue = /*#__PURE__*/ zod.strictObject({
+  "confidence": /*#__PURE__*/ zod.string(),
+  "method": /*#__PURE__*/ zod.string(),
+  "observed_at": /*#__PURE__*/ zod.number(),
+  "sequence": /*#__PURE__*/ zod.int(),
+  "value": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.int(),/*#__PURE__*/ zod.boolean(),/*#__PURE__*/ zod.string()])
+}).check(/*#__PURE__*/ zod.describe('One player-state value and the observation that supports it.'));
+
+export type LiveObservedValue = zod.input<typeof LiveObservedValue>;
+export type LiveObservedValueOutput = zod.output<typeof LiveObservedValue>;
+
+export const LivePlayerStatus = /*#__PURE__*/ zod.strictObject({
+  "capture_gaps": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()),
+  "fields": /*#__PURE__*/ zod.record(/*#__PURE__*/ zod.string(), LiveObservedValue)
+}).check(/*#__PURE__*/ zod.describe('Observed player state at the selected prefix, without defaults.'));
+
+export type LivePlayerStatus = zod.input<typeof LivePlayerStatus>;
+export type LivePlayerStatusOutput = zod.output<typeof LivePlayerStatus>;
+
+export const LiveRecentPath = /*#__PURE__*/ zod.strictObject({
+  "edge_ids": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()),
+  "gateway_sequences": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.int())
+}).check(/*#__PURE__*/ zod.describe('Latest contiguous retained transition chain ending at current room.'));
+
+export type LiveRecentPath = zod.input<typeof LiveRecentPath>;
+export type LiveRecentPathOutput = zod.output<typeof LiveRecentPath>;
+
+export const LiveRoomEconomics = /*#__PURE__*/ zod.strictObject({
+  "cost_usd": /*#__PURE__*/ zod.number(),
+  "evidence": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()),
+  "first_response": /*#__PURE__*/ zod.int(),
+  "last_response": /*#__PURE__*/ zod.int(),
+  "node_id": /*#__PURE__*/ zod.string(),
+  "response_count": /*#__PURE__*/ zod.int()
+}).check(/*#__PURE__*/ zod.describe('Model-response cost attributed to one observed room.'));
+
+export type LiveRoomEconomics = zod.input<typeof LiveRoomEconomics>;
+export type LiveRoomEconomicsOutput = zod.output<typeof LiveRoomEconomics>;
+
+export const LiveRoom = /*#__PURE__*/ zod.strictObject({
+  "confidence": /*#__PURE__*/ zod.string(),
+  "exits": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()),
+  "first_sequence": /*#__PURE__*/ zod.int(),
+  "id": /*#__PURE__*/ zod.string(),
+  "last_sequence": /*#__PURE__*/ zod.int(),
+  "place": /*#__PURE__*/ zod.int(),
+  "state": /*#__PURE__*/ zod.enum(['observed', 'current']),
+  "title": /*#__PURE__*/ zod.string(),
+  "visits": /*#__PURE__*/ zod.int()
+}).check(/*#__PURE__*/ zod.describe('One observed spatial identity in the selected evidence prefix.'));
+
+export type LiveRoom = zod.input<typeof LiveRoom>;
+export type LiveRoomOutput = zod.output<typeof LiveRoom>;
+
+export const LiveSuggestedAction = /*#__PURE__*/ zod.strictObject({
+  "evidence": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()),
+  "expected_sequence": /*#__PURE__*/ zod.int(),
+  "instruction": /*#__PURE__*/ zod.string(),
+  "kind": /*#__PURE__*/ zod.enum(['route', 'continue_plan']),
+  "label": /*#__PURE__*/ zod.string(),
+  "reason": /*#__PURE__*/ zod.string()
+}).check(/*#__PURE__*/ zod.describe('One previewable control grounded in retained route or intent evidence.'));
+
+export type LiveSuggestedAction = zod.input<typeof LiveSuggestedAction>;
+export type LiveSuggestedActionOutput = zod.output<typeof LiveSuggestedAction>;
+
+export const liveTimelineItemCostUsdDefault = 0;
+export const liveTimelineItemQuietCohortDefault = null;
+export const liveTimelineItemTokensDefault = 0;
+export const liveTimelineItemTraceIdDefault = null;
+
+export const LiveTimelineItem = /*#__PURE__*/ zod.strictObject({
+  "at": /*#__PURE__*/ zod.number(),
+  "cost_usd": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.number(), liveTimelineItemCostUsdDefault),
+  "id": /*#__PURE__*/ zod.string(),
+  "kind": /*#__PURE__*/ zod.string(),
+  "label": /*#__PURE__*/ zod.string(),
+  "quiet_cohort": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]), liveTimelineItemQuietCohortDefault),
+  "sequence": /*#__PURE__*/ zod.int(),
+  "source": /*#__PURE__*/ zod.enum(['agent', 'gateway']),
+  "tokens": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int(), liveTimelineItemTokensDefault),
+  "trace_id": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]), liveTimelineItemTraceIdDefault)
+}).check(/*#__PURE__*/ zod.describe('One causal item placed on the selected gateway clock.'));
+
+export type LiveTimelineItem = zod.input<typeof LiveTimelineItem>;
+export type LiveTimelineItemOutput = zod.output<typeof LiveTimelineItem>;
+
+export const LiveUnattributedEconomics = /*#__PURE__*/ zod.strictObject({
+  "cost_usd": /*#__PURE__*/ zod.number(),
+  "evidence": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()),
+  "response_count": /*#__PURE__*/ zod.int()
+}).check(/*#__PURE__*/ zod.describe('Model-response cost without a safe room correlation.'));
+
+export type LiveUnattributedEconomics = zod.input<typeof LiveUnattributedEconomics>;
+export type LiveUnattributedEconomicsOutput = zod.output<typeof LiveUnattributedEconomics>;
+
+export const WorldCandidate = /*#__PURE__*/ zod.strictObject({
+  "conflicting_exits": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()),
+  "evidence": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.int()),
+  "node_id": /*#__PURE__*/ zod.string(),
+  "reason": /*#__PURE__*/ zod.string(),
+  "supporting_exits": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()),
+  "title": /*#__PURE__*/ zod.string()
+}).check(/*#__PURE__*/ zod.describe('One unresolved place candidate with its spatial evidence.'));
+
+export type WorldCandidate = zod.input<typeof WorldCandidate>;
+export type WorldCandidateOutput = zod.output<typeof WorldCandidate>;
+
+export const WorldDuplicateTitle = /*#__PURE__*/ zod.strictObject({
+  "node_ids": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()),
+  "title": /*#__PURE__*/ zod.string()
+}).check(/*#__PURE__*/ zod.describe('Distinct spatial identities that share one rendered title.'));
+
+export type WorldDuplicateTitle = zod.input<typeof WorldDuplicateTitle>;
+export type WorldDuplicateTitleOutput = zod.output<typeof WorldDuplicateTitle>;
+
+export const WorldEdge = /*#__PURE__*/ zod.strictObject({
+  "direction": /*#__PURE__*/ zod.string(),
+  "evidence": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.int()),
+  "id": /*#__PURE__*/ zod.string(),
+  "source": /*#__PURE__*/ zod.string(),
+  "target": /*#__PURE__*/ zod.string(),
+  "traversals": /*#__PURE__*/ zod.int()
+}).check(/*#__PURE__*/ zod.describe('One observed transition between distinct inferred places.'));
+
+export type WorldEdge = zod.input<typeof WorldEdge>;
+export type WorldEdgeOutput = zod.output<typeof WorldEdge>;
+
+export const WorldFrontier = /*#__PURE__*/ zod.strictObject({
+  "direction": /*#__PURE__*/ zod.string(),
+  "evidence": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.int()),
+  "id": /*#__PURE__*/ zod.string(),
+  "source": /*#__PURE__*/ zod.string()
+}).check(/*#__PURE__*/ zod.describe('One observed exit without a retained traversal.'));
+
+export type WorldFrontier = zod.input<typeof WorldFrontier>;
+export type WorldFrontierOutput = zod.output<typeof WorldFrontier>;
+
+export const WorldAtlasRoomContext = /*#__PURE__*/ zod.strictObject({
+  "atlas_digest": /*#__PURE__*/ zod.string(),
+  "confidence": /*#__PURE__*/ zod.enum(['high', 'medium']),
+  "evidence": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()),
+  "sector": /*#__PURE__*/ zod.string(),
+  "vnum": /*#__PURE__*/ zod.int(),
+  "zone_id": /*#__PURE__*/ zod.int(),
+  "zone_label": /*#__PURE__*/ zod.string()
+}).check(/*#__PURE__*/ zod.describe('Verified observer-truth correlation for one learned-world node.'));
+
+export type WorldAtlasRoomContext = zod.input<typeof WorldAtlasRoomContext>;
+export type WorldAtlasRoomContextOutput = zod.output<typeof WorldAtlasRoomContext>;
+
+export const WorldRoomDescription = /*#__PURE__*/ zod.strictObject({
+  "evidence": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.int()),
+  "text": /*#__PURE__*/ zod.string()
+}).check(/*#__PURE__*/ zod.describe('Latest retained room description with its observation evidence.'));
+
+export type WorldRoomDescription = zod.input<typeof WorldRoomDescription>;
+export type WorldRoomDescriptionOutput = zod.output<typeof WorldRoomDescription>;
+
+export const WorldSighting = /*#__PURE__*/ zod.strictObject({
+  "count": /*#__PURE__*/ zod.int(),
+  "evidence": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.int()),
+  "first_seq": /*#__PURE__*/ zod.int(),
+  "last_seq": /*#__PURE__*/ zod.int(),
+  "name": /*#__PURE__*/ zod.string()
+}).check(/*#__PURE__*/ zod.describe('Repeated sightings of one named entity in one inferred place.'));
+
+export type WorldSighting = zod.input<typeof WorldSighting>;
+export type WorldSightingOutput = zod.output<typeof WorldSighting>;
+
+export const worldNodeAtlasDefault = null;
+export const worldNodeDescriptionDefault = null;
+export const worldNodeEvidenceDefault = [];
+export const worldNodeMobSightingsDefault = [];
+export const worldNodeMobsDefault = [];
+export const worldNodeObjectSightingsDefault = [];
+export const worldNodeObjectsDefault = [];
+
+export const WorldNode = /*#__PURE__*/ zod.strictObject({
+  "atlas": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([WorldAtlasRoomContext,/*#__PURE__*/ zod.null()]), worldNodeAtlasDefault),
+  "confidence": /*#__PURE__*/ zod.string(),
+  "description": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([WorldRoomDescription,/*#__PURE__*/ zod.null()]), worldNodeDescriptionDefault),
+  "evidence": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.array(/*#__PURE__*/ zod.int()), worldNodeEvidenceDefault),
+  "exits": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()),
+  "first_seq": /*#__PURE__*/ zod.int(),
+  "id": /*#__PURE__*/ zod.string(),
+  "last_seq": /*#__PURE__*/ zod.int(),
+  "method": /*#__PURE__*/ zod.string(),
+  "mob_sightings": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.array(WorldSighting), worldNodeMobSightingsDefault),
+  "mobs": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()), worldNodeMobsDefault),
+  "object_sightings": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.array(WorldSighting), worldNodeObjectSightingsDefault),
+  "objects": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()), worldNodeObjectsDefault),
+  "place": /*#__PURE__*/ zod.int(),
+  "state": /*#__PURE__*/ zod.enum(['observed', 'candidate', 'current']),
+  "title": /*#__PURE__*/ zod.string(),
+  "visits": /*#__PURE__*/ zod.int()
+}).check(/*#__PURE__*/ zod.describe('One distinct inferred place, never just a room title.'));
+
+export type WorldNode = zod.input<typeof WorldNode>;
+export type WorldNodeOutput = zod.output<typeof WorldNode>;
+
+export const WorldObjectiveBeacon = /*#__PURE__*/ zod.strictObject({
+  "evidence": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.int()),
+  "label": /*#__PURE__*/ zod.string(),
+  "node_id": /*#__PURE__*/ zod.string(),
+  "reason": /*#__PURE__*/ zod.string()
+}).check(/*#__PURE__*/ zod.describe('One objective location supported by a retained entity sighting.'));
+
+export type WorldObjectiveBeacon = zod.input<typeof WorldObjectiveBeacon>;
+export type WorldObjectiveBeaconOutput = zod.output<typeof WorldObjectiveBeacon>;
+
+export const WorldParseMiss = /*#__PURE__*/ zod.strictObject({
+  "reason": /*#__PURE__*/ zod.string(),
+  "sequence": /*#__PURE__*/ zod.int(),
+  "trace_id": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()])
+}).check(/*#__PURE__*/ zod.describe('One retained parser miss that weakens spatial certainty.'));
+
+export type WorldParseMiss = zod.input<typeof WorldParseMiss>;
+export type WorldParseMissOutput = zod.output<typeof WorldParseMiss>;
+
+export const worldProjectionCandidateDetailsDefault = [];
+export const worldProjectionDuplicateTitlesDefault = [];
+export const worldProjectionFrontierDefault = [];
+export const worldProjectionObjectiveBeaconsDefault = [];
+export const worldProjectionParseMissesDefault = [];
+
+export const WorldProjection = /*#__PURE__*/ zod.strictObject({
+  "candidate_details": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.array(WorldCandidate), worldProjectionCandidateDetailsDefault),
+  "candidates": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()),
+  "current_confidence": /*#__PURE__*/ zod.string(),
+  "current_title": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "duplicate_titles": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.array(WorldDuplicateTitle), worldProjectionDuplicateTitlesDefault),
+  "edges": /*#__PURE__*/ zod.array(WorldEdge),
+  "frontier": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.array(WorldFrontier), worldProjectionFrontierDefault),
+  "nodes": /*#__PURE__*/ zod.array(WorldNode),
+  "objective_beacons": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.array(WorldObjectiveBeacon), worldProjectionObjectiveBeaconsDefault),
+  "parse_miss_rate": /*#__PURE__*/ zod.number(),
+  "parse_misses": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.array(WorldParseMiss), worldProjectionParseMissesDefault),
+  "unknown_positions": /*#__PURE__*/ zod.int()
+}).check(/*#__PURE__*/ zod.describe('The evidence-backed journey graph and its unresolved current state.'));
+
+export type WorldProjection = zod.input<typeof WorldProjection>;
+export type WorldProjectionOutput = zod.output<typeof WorldProjection>;
+
+export const LiveZoneContext = /*#__PURE__*/ zod.strictObject({
+  "atlas_digest": /*#__PURE__*/ zod.string(),
+  "confidence": /*#__PURE__*/ zod.enum(['high', 'medium']),
+  "evidence": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()),
+  "form": /*#__PURE__*/ zod.literal("truth"),
+  "label": /*#__PURE__*/ zod.string(),
+  "movement_sequences": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.int()),
+  "reset_sequence": /*#__PURE__*/ zod.int(),
+  "room_vnum": /*#__PURE__*/ zod.int(),
+  "sector": /*#__PURE__*/ zod.string(),
+  "zone_id": /*#__PURE__*/ zod.int()
+}).check(/*#__PURE__*/ zod.describe('Observer-truth zone correlation for the selected current room.'));
+
+export type LiveZoneContext = zod.input<typeof LiveZoneContext>;
+export type LiveZoneContextOutput = zod.output<typeof LiveZoneContext>;
+
+export const LiveJourneySnapshot = /*#__PURE__*/ zod.strictObject({
+  "agent_belief": /*#__PURE__*/ zod.union([LiveAgentExcerpt,/*#__PURE__*/ zod.null()]),
+  "agent_thought": /*#__PURE__*/ zod.union([LiveAgentExcerpt,/*#__PURE__*/ zod.null()]),
+  "agent_turn_active": /*#__PURE__*/ zod.boolean(),
+  "capture_gaps": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()),
+  "character": /*#__PURE__*/ zod.string(),
+  "combat": /*#__PURE__*/ zod.boolean(),
+  "combat_episode": /*#__PURE__*/ zod.union([LiveCombatEpisode,/*#__PURE__*/ zod.null()]),
+  "context_limit": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.int(),/*#__PURE__*/ zod.null()]),
+  "control_state": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "cost_usd": /*#__PURE__*/ zod.number(),
+  "current_room": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "current_turn_cost_usd": /*#__PURE__*/ zod.number(),
+  "economics": /*#__PURE__*/ zod.array(LiveEconomicsPoint),
+  "following_live": /*#__PURE__*/ zod.boolean(),
+  "friction": LiveFrictionDiagnostic,
+  "gateway_session_id": /*#__PURE__*/ zod.string(),
+  "iteration": /*#__PURE__*/ zod.int(),
+  "latest_sequence": /*#__PURE__*/ zod.int(),
+  "lifecycle": /*#__PURE__*/ zod.string(),
+  "milestones": /*#__PURE__*/ zod.array(LiveMilestone),
+  "model": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "objective": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "objective_context": /*#__PURE__*/ zod.union([LiveObjectiveContext,/*#__PURE__*/ zod.null()]),
+  "objective_initial": /*#__PURE__*/ zod.union([LiveObjectiveContext,/*#__PURE__*/ zod.null()]),
+  "operator_messages": /*#__PURE__*/ zod.array(LiveOperatorMessage),
+  "parse_miss_rate": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.number(),/*#__PURE__*/ zod.null()]),
+  "player_id": /*#__PURE__*/ zod.string(),
+  "player_status": LivePlayerStatus,
+  "position_confidence": /*#__PURE__*/ zod.string(),
+  "position_method": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "recent_path": /*#__PURE__*/ zod.union([LiveRecentPath,/*#__PURE__*/ zod.null()]),
+  "room_economics": /*#__PURE__*/ zod.array(LiveRoomEconomics),
+  "rooms": /*#__PURE__*/ zod.array(LiveRoom),
+  "selected_at": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.number(),/*#__PURE__*/ zod.null()]),
+  "session_id": /*#__PURE__*/ zod.string(),
+  "spend_cap_scope": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.enum(['session', 'turn']),/*#__PURE__*/ zod.null()]),
+  "spend_cap_usd": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.number(),/*#__PURE__*/ zod.null()]),
+  "suggested_action": /*#__PURE__*/ zod.union([LiveSuggestedAction,/*#__PURE__*/ zod.null()]),
+  "through_sequence": /*#__PURE__*/ zod.int(),
+  "timeline": /*#__PURE__*/ zod.array(LiveTimelineItem),
+  "tools": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()),
+  "turn": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.int(),/*#__PURE__*/ zod.null()]),
+  "unattributed_room_economics": /*#__PURE__*/ zod.union([LiveUnattributedEconomics,/*#__PURE__*/ zod.null()]),
+  "usage": /*#__PURE__*/ zod.record(/*#__PURE__*/ zod.string(), /*#__PURE__*/ zod.int()),
+  "vitals": /*#__PURE__*/ zod.record(/*#__PURE__*/ zod.string(), /*#__PURE__*/ zod.int()),
+  "world": WorldProjection,
+  "zone": /*#__PURE__*/ zod.union([LiveZoneContext,/*#__PURE__*/ zod.null()])
+}).check(/*#__PURE__*/ zod.describe('One deterministic Live projection at an exact gateway sequence.'));
+
+export type LiveJourneySnapshot = zod.input<typeof LiveJourneySnapshot>;
+export type LiveJourneySnapshotOutput = zod.output<typeof LiveJourneySnapshot>;
+
 export const livePartitionResponseCaptureGapsMax = 32;
 
 export const livePartitionResponseResourceIdMax = 512;
@@ -817,6 +1364,33 @@ export const LivePartitionResponse = /*#__PURE__*/ zod.strictObject({
 
 export type LivePartitionResponse = zod.input<typeof LivePartitionResponse>;
 export type LivePartitionResponseOutput = zod.output<typeof LivePartitionResponse>;
+
+export const liveViewResponseCaptureGapsMax = 32;
+
+export const liveViewResponseResourceIdMax = 512;
+
+
+export const liveViewResponseSessionIdMax = 512;
+
+export const liveViewResponseSourceCursorMax = 256;
+
+export const liveViewResponseSourceRefsMax = 16;
+
+
+
+export const LiveViewResponse = /*#__PURE__*/ zod.strictObject({
+  "capture_gaps": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(liveViewResponseCaptureGapsMax)),
+  "completeness": /*#__PURE__*/ zod.enum(['complete', 'partial', 'degraded']),
+  "resource_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(liveViewResponseResourceIdMax)),
+  "resource_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "session_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(liveViewResponseSessionIdMax)),
+  "source_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(liveViewResponseSourceCursorMax)),
+  "source_refs": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(liveViewResponseSourceRefsMax)),
+  "view": LiveJourneySnapshot
+}).check(/*#__PURE__*/ zod.describe('One derived Live view of a session, whole or through a prefix.'));
+
+export type LiveViewResponse = zod.input<typeof LiveViewResponse>;
+export type LiveViewResponseOutput = zod.output<typeof LiveViewResponse>;
 
 export const observedPlayerValueConfidenceMax = 64;
 
@@ -1535,6 +2109,13 @@ export const WireBodyResponse = /*#__PURE__*/ zod.strictObject({
 
 export type WireBodyResponse = zod.input<typeof WireBodyResponse>;
 export type WireBodyResponseOutput = zod.output<typeof WireBodyResponse>;
+export const AskEvidenceBody = AskRequest
+
+export const AskEvidence200Response = AskResponse
+
+export const AskEvidence422Response = ApiError
+
+
 export const GetCapabilities200Response = ObservatoryCapabilities
 
 export const GetCapabilities404Response = ApiError
@@ -1834,6 +2415,30 @@ export const GetKnowledgeDetail404Response = ApiError
 export const GetKnowledgeDetail422Response = ApiError
 
 export const GetKnowledgeDetail503Response = ApiError
+
+
+export const getLiveViewPathSessionIdMax = 200;
+
+
+
+export const GetLiveViewParams = /*#__PURE__*/ zod.strictObject({
+  "session_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getLiveViewPathSessionIdMax))
+})
+
+
+
+
+export const GetLiveViewQueryParams = /*#__PURE__*/ zod.strictObject({
+  "through": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)))
+})
+
+export const GetLiveView200Response = LiveViewResponse
+
+export const GetLiveView404Response = ApiError
+
+export const GetLiveView422Response = ApiError
+
+export const GetLiveView503Response = ApiError
 
 
 export const getLiveVitalsPathSessionIdMax = 200;

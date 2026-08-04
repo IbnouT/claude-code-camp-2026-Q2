@@ -12,7 +12,12 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response, StreamingResponse
 from starlette.routing import Route
 
-from ..contracts import ExperimentRunRequest, ObservatoryCapabilities
+from ..contracts import (
+    AskRequest,
+    AskResponse,
+    ExperimentRunRequest,
+    ObservatoryCapabilities,
+)
 from ..resources.contracts import (
     CostRangeResponse,
     EntityPageResponse,
@@ -42,6 +47,7 @@ from .contracts import (
     ExperimentJobResponse,
     ExperimentJobsResponse,
     HealthResponse,
+    LiveViewResponse,
     ResourceNotification,
     SessionCatalogResponse,
     SessionCommandRequest,
@@ -228,6 +234,18 @@ API_V1_OPERATIONS: tuple[OperationSpec, ...] = (
                 "query",
                 {"type": "string", "minLength": 1, "maxLength": 120},
             ),
+        ),
+    ),
+    OperationSpec(
+        method="POST",
+        path="/ask",
+        operation_id="askEvidence",
+        handler="ask",
+        tags=("ask",),
+        request_model=AskRequest,
+        responses=(
+            ResponseSpec(200, "Evidence answer", AskResponse),
+            ResponseSpec(422, "Request validation failed", ApiError),
         ),
     ),
     OperationSpec(
@@ -503,6 +521,21 @@ API_V1_OPERATIONS: tuple[OperationSpec, ...] = (
         "live",
         LiveVitalsResponse,
         parameters=(SESSION_ID,),
+    ),
+    _get(
+        "/live/{session_id:str}/view",
+        "getLiveView",
+        "live_view",
+        "live",
+        LiveViewResponse,
+        parameters=(
+            SESSION_ID,
+            ParameterSpec(
+                "through",
+                "query",
+                {"type": "integer", "minimum": 1},
+            ),
+        ),
     ),
     _get(
         "/live/{session_id:str}/{partition:str}",

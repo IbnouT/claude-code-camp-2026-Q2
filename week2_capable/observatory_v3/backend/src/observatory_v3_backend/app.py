@@ -30,6 +30,7 @@ from .api_v1.contracts import (
     ExperimentControlRequest,
     ExperimentJobResponse,
     ExperimentJobsResponse,
+    LiveViewResponse,
     ResourceChangeTarget,
     SessionCommandRequest,
     StartCommandRequest,
@@ -733,6 +734,46 @@ def create_app(
                 )
                 for name, value in status.fields.items()
             },
+        )
+        return JSONResponse(response.model_dump(mode="json"))
+
+    async def live_view(request: Request) -> JSONResponse:
+        if runtime is None or not runtime.available:
+            return JSONResponse(
+                {
+                    "error": "runtime_unavailable",
+                    "detail": "No launcher runtime registry is available",
+                },
+                status_code=503,
+            )
+        session_id = request.path_params["session_id"]
+        try:
+            through_value = request.query_params.get("through")
+            through = int(through_value) if through_value else None
+            assert runtime_reads is not None
+            result = await storage.run(
+                runtime_reads.live,
+                session_id,
+                through=through,
+            )
+            if result is None:
+                return JSONResponse({"error": "not_found"}, status_code=404)
+        except (RuntimeSourceError, ValueError) as error:
+            return _runtime_error(error)
+        payload = result.model_dump(mode="json")
+        version, source_cursor = content_identity(
+            "obl1",
+            {"session_id": session_id, "through": through, "view": payload},
+        )
+        response = LiveViewResponse(
+            resource_id=f"session:{session_id}:live:view",
+            resource_version=version,
+            source_cursor=source_cursor,
+            completeness="partial" if result.capture_gaps else "complete",
+            capture_gaps=tuple(result.capture_gaps)[:32],
+            source_refs=("gateway.db events", "agent.jsonl"),
+            session_id=session_id,
+            view=result,
         )
         return JSONResponse(response.model_dump(mode="json"))
 
@@ -1703,9 +1744,7 @@ def create_app(
                 },
                 status_code=422,
             )
-        if scope is None and (
-            session_id is None or not 1 <= len(session_id) <= 200
-        ):
+        if scope is None and (session_id is None or not 1 <= len(session_id) <= 200):
             return JSONResponse(
                 {
                     "error": "invalid_request",
@@ -1872,6 +1911,8 @@ def create_app(
         "session_command": session_command,
         "command_status": command_status,
         "live_vitals": live_vitals,
+        "live_view": live_view,
+        "ask": ask,
         "run_experiment": run_experiment,
         "experiment_jobs": experiment_jobs,
         "experiment_job": experiment_job,

@@ -49,7 +49,7 @@ function AskDialog({ open, onClose, playerId, sessionId }: AskDialogProps) {
     setAnswer(null)
     setError("")
     try {
-      const response = await fetch("/api/ask", {
+      const response = await fetch("/api/v1/ask", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

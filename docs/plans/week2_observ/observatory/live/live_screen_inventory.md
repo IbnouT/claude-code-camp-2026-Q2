@@ -80,9 +80,12 @@ Build order:
    endpoints exist.
 3. Evidence rail: status, posture, vitals, facts, conditions now,
    economics sub block after the backend batch.
-4. Backend batch: full world nodes, journey resource (timeline,
-   milestones, friction), economics series and usage, room economics,
-   `through` parameter.
+4. Backend batch: the retained Live projection is exposed whole as
+   `GET /api/v1/live/{id}/view` with the `through` bound, and ask moved
+   to `POST /api/v1/ask`. The projection modules already lived in the
+   backend, the batch routed them.
+   A live parity spec against the reference stays required before any
+   Live checklist line closes.
 5. Causal timeline with transport.
 6. Map cluster with ported layout, camera, presentation modules.
 7. Thought dock, combat panel, friction block completion.
@@ -107,7 +110,11 @@ Build order:
   with the usage fields in the backend batch, with the spend caps and
   the context fill.
 - The rail's last command line and the progress diagnostics wait for
-  the journey resource. The progress block shows the guard states.
+  the journey resource. The progress block shows the stopped state only,
+  the crashed, paused, reconnecting, and capture gap guards land with
+  the journey work.
+- The fighting posture override and the historical prefix status on the
+  Now block land with the pinned prefix and combat sections.
 - The Ask dialog resets on every open. The reference remounted it.
 - The context switcher, stop dialog, and header actions are the already
   built v3 components, not the reference markup.

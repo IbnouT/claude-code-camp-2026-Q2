@@ -116,10 +116,10 @@ function VitalBar({
       : 0
   const fill =
     tone === "hit"
-      ? "bg-[image:linear-gradient(90deg,#ff5d6c,#f5c463)]"
+      ? "bg-[image:linear-gradient(90deg,var(--vital-hit-from),var(--vital-hit-to))]"
       : tone === "mana"
-        ? "bg-[image:linear-gradient(90deg,#2b5f8f,#7ec3f0)]"
-        : "bg-[image:linear-gradient(90deg,#2e7d5b,#8bdfa9)]"
+        ? "bg-[image:linear-gradient(90deg,var(--vital-mana-from),var(--vital-mana-to))]"
+        : "bg-[image:linear-gradient(90deg,var(--vital-move-from),var(--vital-move-to))]"
   return (
     <div className="grid grid-cols-[44px_minmax(0,1fr)_72px] items-center gap-2.5 text-[12px]">
       <span className="text-content-muted">{label}</span>
@@ -132,7 +132,7 @@ function VitalBar({
           style={{ width: `${ratio * 100}%` }}
         />
       </span>
-      <strong className="col-start-3 w-[72px] text-right font-mono text-[12px] text-content-muted">
+      <strong className="col-start-3 w-[72px] text-right font-mono text-[12px] font-medium text-content-muted">
         {!observed
           ? "Not observed"
           : maximum === null
@@ -201,7 +201,7 @@ function EvidenceRail({
       if (record?.kind === "agent:tool_call") {
         return {
           text: String(record.title ?? ""),
-          at: String(record.occurred_at ?? ""),
+          at: (record.occurred_at ?? "") as string | number,
         }
       }
     }
@@ -248,7 +248,7 @@ function EvidenceRail({
       >
         {posture === undefined ? null : (
           <span
-            className="w-fit rounded-[7px] border border-line bg-surface-soft px-2.5 py-[3px] text-[11px] text-success capitalize"
+            className="w-fit rounded-[7px] border border-line bg-surface-soft px-[9px] py-[3px] text-[11px] text-success capitalize"
             title={evidenceTitle(posture)}
           >
             {String(posture.value)}
@@ -310,7 +310,7 @@ function EvidenceRail({
             <small className="text-[10px] font-semibold tracking-[0.1em] text-content-quiet uppercase">
               Session spend
             </small>
-            <strong className="text-[15px] font-semibold text-content-primary">
+            <strong className="font-mono text-[15px] font-semibold text-content-primary">
               {cost.data === undefined
                 ? "Not retained"
                 : money(cost.data.total_cost_usd ?? 0)}
@@ -360,14 +360,14 @@ function EvidenceRail({
             >
               <polyline
                 points={sparkPoints}
-                className="fill-none stroke-[#4fd6c9] stroke-[1.6] [vector-effect:non-scaling-stroke]"
+                className="fill-none stroke-(--sparkline-stroke) stroke-[1.6] [vector-effect:non-scaling-stroke]"
               />
             </svg>
           )}
         </figure>
       </RailBlock>
       <RailBlock title="Progress">
-        <div className="grid gap-1.5">
+        <div className="grid min-h-[126px] content-start gap-1.5">
           {sessionRunning ? (
             <p className="m-0 text-[11px] leading-[1.45] text-content-muted">
               Spatial progress arrives with the journey resource.

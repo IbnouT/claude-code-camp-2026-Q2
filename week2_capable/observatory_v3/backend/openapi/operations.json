@@ -21,6 +21,11 @@
   ],
   [
     "POST",
+    "/api/v1/ask",
+    "askEvidence"
+  ],
+  [
+    "POST",
     "/api/v1/commands/start",
     "startSession"
   ],
@@ -108,6 +113,11 @@
     "GET",
     "/api/v1/live/{session_id}/vitals",
     "getLiveVitals"
+  ],
+  [
+    "GET",
+    "/api/v1/live/{session_id}/view",
+    "getLiveView"
   ],
   [
     "GET",

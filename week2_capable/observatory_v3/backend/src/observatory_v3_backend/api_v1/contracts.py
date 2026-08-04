@@ -11,6 +11,7 @@ from ..contracts import (
     ExperimentFeature,
     ExperimentScenario,
     ExperimentValidation,
+    LiveJourneySnapshot,
     RecordedSessionCatalogItem,
     RunSummary,
 )
@@ -246,6 +247,19 @@ class LiveControlReceipt(PublicContract):
     insertion: str
 
 
+class LiveViewResponse(PublicContract):
+    """One derived Live view of a session, whole or through a prefix."""
+
+    resource_id: str = Field(max_length=512)
+    resource_version: int = Field(ge=1)
+    source_cursor: str = Field(min_length=1, max_length=256)
+    completeness: Literal["complete", "partial", "degraded"]
+    capture_gaps: tuple[str, ...] = Field(max_length=32)
+    source_refs: tuple[str, ...] = Field(max_length=16)
+    session_id: str = Field(max_length=512)
+    view: LiveJourneySnapshot
+
+
 class ResourceChangeTarget(PublicContract):
     """One committed bounded resource identified for refetch."""
 
@@ -309,9 +323,7 @@ class SessionCommandRequest(PublicContract):
     player_id: str = Field(min_length=1, max_length=120)
     action: Literal["guide", "revise", "pause", "resume", "stop"]
     instruction: str | None = Field(default=None, max_length=4_000)
-    expected_cursor: str | None = Field(
-        default=None, min_length=1, max_length=2_048
-    )
+    expected_cursor: str | None = Field(default=None, min_length=1, max_length=2_048)
     force: bool = False
 
 
