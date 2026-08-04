@@ -10,6 +10,8 @@
 .boukensha/gateway/
 .boukensha/sessions/
 .boukensha/benchmarks/
+.boukensha/observatory/
+.boukensha/experiments/
 
 # macOS
 .DS_Store

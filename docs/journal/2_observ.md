@@ -228,3 +228,13 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
 ## Key Takeaway
 
 - Filled at week's end.
+
+## Observations, gateway EOF
+
+- The gateway EOF fix closed the loop on the day's theme: a stale flag is
+  not a status. The transport now treats remote EOF as a fact that marks
+  the connection dead, a session reconnects once and only before a command
+  is sent, and a command whose send already began is never replayed. The
+  queued output from a dead connection is drained and recorded first, so
+  even a broken link leaves honest evidence.
+

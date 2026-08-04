@@ -216,6 +216,11 @@ boukensha-gateway-api
 
 - The transport preserves arbitrary socket chunk boundaries.
 - Telnet negotiation bytes are filtered from game text and answered safely.
+- Remote EOF marks the transport and logged-in session disconnected.
+- EOF detected before a command triggers one fresh login. A command is never
+  replayed after its send begins.
+- Tool failures distinguish a lost established connection from a failed
+  pre-command reconnect.
 - Login follows name, password, MOTD, menu choice, then the vitals prompt.
 - The password is replaced with a length-preserving redacted event before
   anything is persisted.

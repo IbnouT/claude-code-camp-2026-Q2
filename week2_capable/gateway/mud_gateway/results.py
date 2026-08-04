@@ -28,6 +28,8 @@ class CommandFailure(BaseModel):
         "permission_denied",
         "capability_unavailable",
         "invalid_arguments",
+        "connection_lost",
+        "reconnect_failed",
         "command_failed",
     ]
     message: str

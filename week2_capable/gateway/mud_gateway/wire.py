@@ -154,6 +154,10 @@ class NotConnected(TransportError):
     pass
 
 
+class ConnectionLost(NotConnected):
+    """The peer closed or broke an established connection."""
+
+
 class Transport:
     """An asyncio connection to the game, with every byte recorded.
 
@@ -174,21 +178,29 @@ class Transport:
     # -- lifecycle ----------------------------------------------------------
 
     async def connect(self) -> None:
+        await self.close()
+        self._framer = Framer()
         self._reader, self._writer = await asyncio.wait_for(
             asyncio.open_connection(self.host, self.port), timeout=self.timeout)
 
     async def close(self) -> None:
-        if self._writer is not None:
-            self._writer.close()
+        writer = self._writer
+        self._reader = self._writer = None
+        if writer is not None:
+            writer.close()
             try:
-                await self._writer.wait_closed()
+                await writer.wait_closed()
             except (ConnectionError, OSError):
                 pass
-        self._reader = self._writer = None
 
     @property
     def closed(self) -> bool:
-        return self._writer is None
+        return (
+            self._reader is None
+            or self._writer is None
+            or self._reader.at_eof()
+            or self._writer.is_closing()
+        )
 
     # -- traffic ------------------------------------------------------------
 
@@ -198,8 +210,12 @@ class Transport:
             raise NotConnected("transport is closed")
         payload = (line + "\n").encode("latin-1")
         self._record(Direction.OUT, payload, redacted=secret)
-        self._writer.write(payload)
-        await self._writer.drain()
+        try:
+            self._writer.write(payload)
+            await self._writer.drain()
+        except (ConnectionError, OSError) as error:
+            self._mark_disconnected()
+            raise ConnectionLost("connection lost while sending") from error
 
     async def read_until(self, pattern: re.Pattern[bytes], *, quiet: float | None,
                          deadline: float | None = None) -> bytes:
@@ -221,8 +237,12 @@ class Transport:
                 if quiet is not None and collected:
                     break
                 continue
+            except (ConnectionError, OSError) as error:
+                self._mark_disconnected()
+                raise ConnectionLost("connection lost while receiving") from error
             if not chunk:
-                break
+                self._mark_disconnected()
+                raise ConnectionLost("connection closed before the reply completed")
             self._record(Direction.IN, chunk)
             collected += self._framer.feed(chunk)
             await self._answer_negotiations()
@@ -245,11 +265,18 @@ class Transport:
                 chunk = await asyncio.wait_for(self._reader.read(4096), timeout=window)
             except asyncio.TimeoutError:
                 break
+            except (ConnectionError, OSError):
+                self._mark_disconnected()
+                break
             if not chunk:
+                self._mark_disconnected()
                 break
             self._record(Direction.IN, chunk)
             collected += self._framer.feed(chunk)
-            await self._answer_negotiations()
+            try:
+                await self._answer_negotiations()
+            except ConnectionLost:
+                break
         return bytes(collected)
 
     # -- internals ----------------------------------------------------------
@@ -260,8 +287,20 @@ class Transport:
             if self._writer is None:
                 return
             self._record(Direction.OUT, reply)
-            self._writer.write(reply)
-            await self._writer.drain()
+            try:
+                self._writer.write(reply)
+                await self._writer.drain()
+            except (ConnectionError, OSError) as error:
+                self._mark_disconnected()
+                raise ConnectionLost(
+                    "connection lost during telnet negotiation"
+                ) from error
+
+    def _mark_disconnected(self) -> None:
+        writer = self._writer
+        self._reader = self._writer = None
+        if writer is not None:
+            writer.close()
 
     def _record(self, direction: Direction, payload: bytes, *,
                 redacted: bool = False) -> None:

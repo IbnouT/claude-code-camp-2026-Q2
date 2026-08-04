@@ -9,12 +9,24 @@ the failure is invisible in the output: text still looks like text.
 from __future__ import annotations
 
 import asyncio
-import re
 
 import pytest
-
-from mud_gateway.wire import (DO, DONT, IAC, PROMPT, SB, SE, WILL, WONT, Direction, Framer,
-                          Transport, WireEvent, strip_ansi)
+from mud_gateway.wire import (
+    DO,
+    DONT,
+    IAC,
+    PROMPT,
+    SB,
+    SE,
+    WILL,
+    WONT,
+    ConnectionLost,
+    Direction,
+    Framer,
+    Transport,
+    WireEvent,
+    strip_ansi,
+)
 
 PROMPT_BYTES = b"\r\n24H 100M 82V (news) (motd) > "
 
@@ -151,6 +163,31 @@ class FakeGame:
             await self._server.wait_closed()
 
 
+class ClosingGame:
+    """A server that sends once and closes without waiting for a client command."""
+
+    def __init__(self, payload: bytes) -> None:
+        self.payload = payload
+        self._server: asyncio.AbstractServer | None = None
+        self.port = 0
+
+    async def start(self) -> None:
+        self._server = await asyncio.start_server(self._serve, "127.0.0.1", 0)
+        self.port = self._server.sockets[0].getsockname()[1]
+
+    async def _serve(self, _reader: asyncio.StreamReader,
+                     writer: asyncio.StreamWriter) -> None:
+        writer.write(self.payload)
+        await writer.drain()
+        writer.close()
+        await writer.wait_closed()
+
+    async def stop(self) -> None:
+        if self._server is not None:
+            self._server.close()
+            await self._server.wait_closed()
+
+
 class TestTransport:
     async def test_it_reads_a_reply_and_records_both_directions(self):
         game = FakeGame([b"The Bakery" + PROMPT_BYTES])
@@ -241,6 +278,32 @@ class TestTransport:
             await transport.read_until(PROMPT, quiet=0.3)
             assert seen
             assert all(isinstance(event, WireEvent) for event in seen)
+        finally:
+            await transport.close()
+            await game.stop()
+
+    async def test_eof_before_a_complete_reply_is_a_connection_failure(self):
+        game = ClosingGame(b"partial reply\r\n")
+        await game.start()
+        transport = Transport(port=game.port, timeout=2)
+        await transport.connect()
+        try:
+            with pytest.raises(ConnectionLost, match="before the reply completed"):
+                await transport.read_until(PROMPT, quiet=None)
+            assert transport.closed
+        finally:
+            await transport.close()
+            await game.stop()
+
+    async def test_pending_output_is_kept_when_eof_follows_it(self):
+        game = ClosingGame(b"Three hours of queued output.\r\n")
+        await game.start()
+        transport = Transport(port=game.port, timeout=2)
+        await transport.connect()
+        try:
+            pending = await transport.drain_pending(window=0.5)
+            assert pending == b"Three hours of queued output.\r\n"
+            assert transport.closed
         finally:
             await transport.close()
             await game.stop()

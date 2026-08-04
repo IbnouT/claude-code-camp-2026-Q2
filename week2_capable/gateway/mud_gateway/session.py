@@ -27,10 +27,10 @@ from typing import AsyncIterator
 
 from .journal import Journal
 from .knowledge_projection import KnowledgeProjector
-from .observe import Observation, WireReference
 from .observation_pipeline import ObservationPipeline
+from .observe import Observation, WireReference
 from .position import PositionObservation
-from .wire import PROMPT, Direction, Transport, WireEvent, strip_ansi
+from .wire import PROMPT, NotConnected, Transport, WireEvent, strip_ansi
 
 #: Login prompts, matched loosely because the banner wording changes between builds.
 NAME_PROMPT = re.compile(rb"by what name|name:", re.I)
@@ -48,6 +48,10 @@ ENTRY_STEPS = 6
 
 class LoginFailed(Exception):
     pass
+
+
+class ReconnectFailed(NotConnected):
+    """A dead game connection could not be restored before a command."""
 
 
 class SessionPaused(RuntimeError):
@@ -114,6 +118,7 @@ class Session:
 
     async def open(self) -> None:
         """Connect and walk the whole entry sequence."""
+        self._logged_in = False
         await self.transport.connect()
         self.journal.append(self.id, "session_open",
                             {"character": self.name,
@@ -152,7 +157,7 @@ class Session:
 
     @property
     def logged_in(self) -> bool:
-        return self._logged_in
+        return self._logged_in and not self.transport.closed
 
     @property
     def control_state(self) -> str:
@@ -250,14 +255,7 @@ class Session:
         """Reconnect the selected character without opening a second mortal session."""
         if not self._command_lock.locked():
             raise RuntimeError("reset reconnect requires the paused command boundary")
-        await self.transport.close()
-        self._logged_in = False
-        self.journal.append(
-            self.id,
-            "session_reconnect",
-            {"character": self.name, "reason": "verified_reset"},
-        )
-        await self.open()
+        await self._reconnect("verified_reset")
 
     # -- internals ----------------------------------------------------------
 
@@ -285,7 +283,12 @@ class Session:
         trace: str | None,
     ) -> Reply:
         source_after = self.journal.last_seq(self.id)
-        pending = await self.transport.drain_pending()
+        pending = b""
+        reconnect_required = False
+        try:
+            pending = await self.transport.drain_pending()
+        except NotConnected:
+            reconnect_required = True
         if pending:
             unsolicited = self.journal.append(
                 self.id,
@@ -306,6 +309,9 @@ class Session:
                 pending_ref,
                 trace_id=trace,
             )
+            source_after = self.journal.last_seq(self.id)
+        if reconnect_required or self.transport.closed:
+            await self._reconnect("connection_lost_before_command")
             source_after = self.journal.last_seq(self.id)
         await self.transport.send(line)
         raw = await self.transport.read_until(PROMPT, quiet=0.6)
@@ -341,6 +347,36 @@ class Session:
             observations=observations,
             position=position,
         )
+
+    async def _reconnect(self, reason: str) -> None:
+        """Restore a dead connection only before the next command is sent."""
+        self._logged_in = False
+        self.journal.append(
+            self.id,
+            "session_reconnect",
+            {"character": self.name, "reason": reason},
+        )
+        try:
+            await self.transport.close()
+            await self.open()
+        except (LoginFailed, NotConnected, OSError, TimeoutError) as error:
+            self._logged_in = False
+            try:
+                await self.transport.close()
+            except (ConnectionError, OSError):
+                pass
+            self.journal.append(
+                self.id,
+                "session_reconnect_failed",
+                {
+                    "character": self.name,
+                    "reason": reason,
+                    "error": type(error).__name__,
+                },
+            )
+            raise ReconnectFailed(
+                f"could not reconnect {self.name!r} to the game: {error}"
+            ) from error
 
     @asynccontextmanager
     async def _capture_trace(
@@ -398,5 +434,5 @@ class Session:
         return WireReference.from_bytes(self.id, first, last, raw)
 
     def __str__(self) -> str:
-        state = "logged in" if self._logged_in else "not logged in"
+        state = "logged in" if self.logged_in else "not logged in"
         return f"<Session {self.id} {self.name} {state}>"
