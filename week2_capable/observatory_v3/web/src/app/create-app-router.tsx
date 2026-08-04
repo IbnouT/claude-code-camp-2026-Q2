@@ -58,6 +58,7 @@ const liveSearchSchema = z.object({
   ...contextSearchShape,
   view: z.enum(["overview", "activity"]).catch("overview").default("overview"),
   through: z.number().int().positive().optional().catch(undefined),
+  room: z.string().max(200).optional().catch(undefined),
 })
 
 const sessionsSearchSchema = z.object({
@@ -129,12 +130,13 @@ function createAppRouter(options: CreateAppRouterOptions = {}) {
     errorComponent: RouteErrorBoundary,
     pendingComponent: RoutePendingBoundary,
     component: function LiveRoute() {
-      const { player, session, through } = liveRoute.useSearch()
+      const { player, session, through, room } = liveRoute.useSearch()
       return (
         <LiveRouteScreen
           playerId={player}
           sessionId={session}
           through={through ?? null}
+          room={room ?? null}
         />
       )
     },

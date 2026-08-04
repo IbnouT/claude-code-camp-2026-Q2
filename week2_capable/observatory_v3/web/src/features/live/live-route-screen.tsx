@@ -13,6 +13,7 @@ type LiveRouteScreenProps = {
   playerId: string | undefined
   sessionId: string | undefined
   through: number | null
+  room: string | null
 }
 
 /**
@@ -23,10 +24,24 @@ function LiveRouteScreen({
   playerId,
   sessionId,
   through,
+  room,
 }: LiveRouteScreenProps) {
   const catalog = useSessionCatalog({ playerId, sessionId })
   const dialogs = useLiveActions()
   const navigate = useNavigate()
+  const onSelectRoom = useCallback(
+    (roomId: string | null) => {
+      void navigate({
+        to: ".",
+        replace: true,
+        search: (previous: Record<string, unknown>) => ({
+          ...previous,
+          room: roomId ?? undefined,
+        }),
+      })
+    },
+    [navigate]
+  )
   const onSelectThrough = useCallback(
     (sequence: number | null) => {
       void navigate({
@@ -74,6 +89,8 @@ function LiveRouteScreen({
         captureStatus={selected?.capture_status ?? null}
         through={through}
         onSelectThrough={onSelectThrough}
+        selectedRoomId={room}
+        onSelectRoom={onSelectRoom}
       />
       {selected === null ? null : (
         <>

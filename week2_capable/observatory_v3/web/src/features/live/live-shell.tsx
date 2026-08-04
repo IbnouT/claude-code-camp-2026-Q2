@@ -7,9 +7,8 @@ import { cn } from "@/lib/utils"
 import { useLiveView } from "@/data/live-view"
 
 import { CausalTimeline } from "./causal-timeline"
-import { CombatPanel } from "./combat-panel"
 import { EvidenceRail } from "./evidence-rail"
-import { ThoughtDock } from "./thought-dock"
+import { LiveMap } from "./map/live-map"
 import { ObjectiveStrip } from "./objective-strip"
 import { projectObjective } from "./objective-model"
 
@@ -21,6 +20,8 @@ type LiveShellProps = {
   captureStatus: string | null
   through: number | null
   onSelectThrough: (sequence: number | null) => void
+  selectedRoomId: string | null
+  onSelectRoom: (roomId: string | null) => void
 }
 
 /**
@@ -36,6 +37,8 @@ function LiveShell({
   captureStatus,
   through,
   onSelectThrough,
+  selectedRoomId,
+  onSelectRoom,
 }: LiveShellProps) {
   useLiveSessionLiveness(sessionId)
   const goals = useSessionGoals(sessionId)
@@ -45,9 +48,6 @@ function LiveShell({
     through
   )
   const [railOpen, setRailOpen] = useState(
-    () => typeof window === "undefined" || window.innerWidth > 700
-  )
-  const [thoughtExpanded, setThoughtExpanded] = useState(
     () => typeof window === "undefined" || window.innerWidth > 700
   )
   const pinned = through === null ? null : (pinnedView.data?.view ?? null)
@@ -67,17 +67,11 @@ function LiveShell({
           aria-label="Learned world map"
           className="absolute top-0 right-(--live-rail-width) bottom-(--live-timeline-height) left-0 grid min-h-0 min-w-0 overflow-hidden max-[700px]:right-0"
         >
-          <p
-            role="status"
-            className="place-self-center text-[13px] text-content-muted"
-          >
-            The learned world arrives with the map section.
-          </p>
-          <CombatPanel episode={activeView?.combat_episode ?? null} />
-          <ThoughtDock
-            expanded={thoughtExpanded}
-            thought={activeView?.agent_thought ?? null}
-            onToggle={() => setThoughtExpanded((current) => !current)}
+          <LiveMap
+            view={activeView}
+            reconnecting={latestView.isError}
+            selectedRoomId={selectedRoomId}
+            onSelectRoom={onSelectRoom}
           />
         </div>
         <aside
