@@ -134,6 +134,10 @@ Build order:
   built v3 components, not the reference markup.
 - Small tint and radius adjustments follow the built header and launcher
   token scale where the reference used one off values.
+- The light map palette deepens the reference values, which washed out
+  against the light canvas: room fills gain saturation, sector lines and
+  links gain depth, the workspace glow firms, bar tracks darken a step,
+  and the sparkline uses the accent teal. Dark values are untouched.
 
 ### Map deviations, accepted after review
 

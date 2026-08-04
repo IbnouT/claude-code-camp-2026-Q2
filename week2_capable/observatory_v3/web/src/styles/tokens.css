@@ -189,8 +189,9 @@
   --header-surface: var(--surface);
 
   /* Launcher scene, v3 light values (no v2 light precedent) */
-  --live-workspace-glow: #dfe9f2;
-  --live-track: var(--surface-soft);
+  --live-workspace-glow: #d7e3ef;
+  --live-track: #dce4ee;
+  --sparkline-stroke: #0c8f88;
   --live-cell: var(--surface-raised);
   --violet: #6f58b8;
   --fighting-bg: #f7dcdd;
@@ -244,38 +245,41 @@
   --map-grid: rgb(12 143 136 / 7%);
   --map-glow: rgb(12 143 136 / 15%);
 
-  /* v2 [data-theme="light"] map custom properties */
-  --map-link: #aab8c8;
-  --map-frontier: #647993;
+  /*
+   * Map palette, light: deepened from the v2 values, which washed out
+   * against the light canvas. Fills gain saturation, lines gain depth.
+   */
+  --map-link: #93a7bb;
+  --map-frontier: #57718d;
   --map-vertical: #426e9f;
-  --map-room: #dce8f5;
-  --map-room-line: #7696b8;
-  --map-current: #d3efed;
+  --map-room: #cfdff0;
+  --map-room-line: #5b82ac;
+  --map-current: #bfe8e3;
   --map-current-line: #0c8f88;
-  --map-temple: #dcefe3;
-  --map-temple-line: #5d9b78;
-  --map-shop: #f4ead2;
-  --map-shop-line: #a78642;
-  --map-dark: #e9e0f0;
-  --map-dark-line: #8d70a4;
-  --map-route: #aad1e4;
-  --map-route-line: #4d9ec7;
-  --map-interior: #dedbe6;
-  --map-interior-line: #9b93b4;
+  --map-temple: #cde8d8;
+  --map-temple-line: #4c8f6a;
+  --map-shop: #f0e3c0;
+  --map-shop-line: #97772f;
+  --map-dark: #e3d5ee;
+  --map-dark-line: #7f5f99;
+  --map-route: #9ecbe2;
+  --map-route-line: #3e93bf;
+  --map-interior: #d6d2e2;
+  --map-interior-line: #8a81a8;
   --map-underground: #d3ad92;
   --map-underground-line: #a76d44;
   --map-urban: #81dada;
   --map-urban-line: #32aeae;
-  --map-open-land: #deeac3;
-  --map-open-land-line: #adca68;
-  --map-water: #d7f4f1;
-  --map-water-line: #78d9d1;
+  --map-open-land: #d6e6b1;
+  --map-open-land-line: #9cbc50;
+  --map-water: #c8efeb;
+  --map-water-line: #57cdc2;
   --map-highland: #ddbbd3;
   --map-highland-line: #b5699e;
   --map-woodland: #8cd99f;
   --map-woodland-line: #3bb058;
-  --map-commerce: #efe2bd;
-  --map-commerce-line: #d8b75a;
+  --map-commerce: #ecdcab;
+  --map-commerce-line: #cfa93e;
   --map-civic: #a3a3db;
   --map-civic-line: #4b4bb9;
   --map-sacred: #c58ed7;
