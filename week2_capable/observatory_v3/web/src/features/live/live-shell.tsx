@@ -16,7 +16,6 @@ type LiveShellProps = {
   sessionId: string | undefined
   catalogObjective: string | null
   sessionRunning: boolean
-  lifecycle: string
   captureStatus: string | null
   through: number | null
   onSelectThrough: (sequence: number | null) => void
@@ -33,7 +32,6 @@ function LiveShell({
   sessionId,
   catalogObjective,
   sessionRunning,
-  lifecycle,
   captureStatus,
   through,
   onSelectThrough,
@@ -95,9 +93,6 @@ function LiveShell({
             Evidence
           </button>
           <EvidenceRail
-            sessionId={sessionId}
-            lifecycle={lifecycle}
-            sessionRunning={sessionRunning}
             view={activeView}
             captureStatus={captureStatus}
             reconnecting={latestView.isError}

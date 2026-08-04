@@ -1,6 +1,47 @@
+import type { LiveJourney } from "@/data/live-view"
 import type { VitalsFields } from "@/data/session-vitals"
 
 type ObservedField = VitalsFields[string]
+
+type SpendProjection = {
+  amount: number
+  cap: number | null
+  scope: "session" | "turn" | null
+}
+
+/** The spend figure matching the configured cap scope. */
+function projectSpend(view: LiveJourney): SpendProjection {
+  const scope = view.spend_cap_scope
+  return {
+    amount: scope === "turn" ? view.current_turn_cost_usd : view.cost_usd,
+    cap: view.spend_cap_usd,
+    scope,
+  }
+}
+
+/** Total input tokens: fresh plus cache reads and writes. */
+function tokensIn(usage: Record<string, number>): number {
+  return (
+    (usage.fresh_input ?? 0) +
+    (usage.cache_read ?? 0) +
+    (usage.cache_write ?? 0)
+  )
+}
+
+/** Cache read share of total input, null when nothing came in. */
+function cacheHit(usage: Record<string, number>): number | null {
+  const total = tokensIn(usage)
+  if (total === 0) return null
+  return (usage.cache_read ?? 0) / total
+}
+
+/** The last response's context share of the window, unclamped. */
+function latestContextFill(view: LiveJourney): number | null {
+  const latest = view.economics.at(-1)
+  if (latest === undefined) return null
+  if (view.context_limit === null || view.context_limit <= 0) return null
+  return latest.context_tokens / view.context_limit
+}
 
 /** Humanized age of an observation, from seconds to hours. */
 function formatAge(observedAt: string | number, now = Date.now()): string {
@@ -51,11 +92,15 @@ function responseTrend(costs: readonly number[]): number | null {
 }
 
 export {
+  cacheHit,
   evidenceTitle,
   formatAge,
   latestCommand,
+  latestContextFill,
   money,
   observedNumber,
+  projectSpend,
   responseTrend,
+  tokensIn,
   type ObservedField,
 }

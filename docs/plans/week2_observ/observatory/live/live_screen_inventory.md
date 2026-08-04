@@ -105,16 +105,11 @@ Build order:
   reference additionally required a controllable followed session.
 - The revision label counts retained goal items, bounded at the goals
   page size of twenty. The reference read a server revision number.
-- The economics block shows one retained token total. The reference
-  split tokens in and out and showed the cache hit rate, both return
-  with the usage fields in the backend batch, with the spend caps and
-  the context fill.
-- The rail's last command line and the progress diagnostics wait for
-  the journey resource. The progress block shows the stopped state only,
-  the crashed, paused, reconnecting, and capture gap guards land with
-  the journey work.
-- The fighting posture override and the historical prefix status on the
-  Now block land with the pinned prefix and combat sections.
+- The rail reads the derived Live view whole, like the reference read
+  its snapshot: vitals with their maxima, the spend scope with its cap
+  bar, the four usage cells, the sparkline, and the context fill. The
+  earlier per endpoint reads lost early observations to the vitals
+  tail bound.
 - The Ask dialog resets on every open. The reference remounted it.
 - The transport buttons render at weight 400 with a normal line height.
   The reference stylesheet asked for 500/1 through a font shorthand

@@ -19,6 +19,11 @@ const FROZEN_PAIRS: [string, string][] = [
   ["transport", ".live-timeline-transport button"],
   ["jump", ".live-timeline-return"],
   ["scrubTrack", ".live-timeline-track"],
+  ["railBlock", ".live-rail-block"],
+  ["econCell", ".live-economics-grid > div"],
+  ["vitalRow", ".live-vital"],
+  ["spendValue", ".live-spend strong"],
+  ["roomRect", ".live-map-room rect"],
 ]
 
 const V3_PAIRS: [string, string][] = [
@@ -35,6 +40,14 @@ const V3_PAIRS: [string, string][] = [
   ["transport", '[aria-label="Timeline transport"] button'],
   ["jump", '[aria-label="Jump to live"]'],
   ["scrubTrack", '[aria-label="Causal timeline"] .group'],
+  ["railBlock", '[aria-label="Live evidence rail"] section'],
+  [
+    "econCell",
+    '[aria-label="Live evidence rail"] .grid-cols-2 > div',
+  ],
+  ["vitalRow", '[aria-label="Live evidence rail"] .grid-cols-\\[44px_minmax\\(0\\,1fr\\)_72px\\]'],
+  ["spendValue", '[aria-label="Live evidence rail"] section:nth-of-type(3) strong'],
+  ["roomRect", "[data-room-id] rect"],
 ]
 
 /** Values that never depend on retained session data. */
@@ -49,6 +62,11 @@ const PROPERTIES: Record<string, string[]> = {
   transport: ["minHeight", "borderRadius", "fontSize", "fontWeight"],
   jump: ["fontSize", "whiteSpace"],
   scrubTrack: ["height", "marginTop", "cursor"],
+  railBlock: ["paddingTop", "paddingLeft", "borderBottomWidth", "rowGap"],
+  econCell: ["paddingTop", "paddingLeft", "borderRadius", "borderTopWidth"],
+  vitalRow: ["gridTemplateColumns", "columnGap", "fontSize"],
+  spendValue: ["fontSize", "fontWeight"],
+  roomRect: ["WIDTH"],
 }
 
 async function measure(
@@ -76,8 +94,10 @@ async function measure(
         }
         const cs = getComputedStyle(el)
         out[key] = properties[key]
-          .map(
-            (name) => `${name}:${cs[name as keyof CSSStyleDeclaration]}`
+          .map((name) =>
+            name === "WIDTH"
+              ? `w:${Math.round(el.getBoundingClientRect().width)}`
+              : `${name}:${cs[name as keyof CSSStyleDeclaration]}`
           )
           .join(" ")
       }

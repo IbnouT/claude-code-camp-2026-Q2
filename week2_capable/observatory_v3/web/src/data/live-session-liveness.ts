@@ -11,7 +11,6 @@ const LIVE_RESOURCE_KINDS = [
   "session-goals",
   "live-partition",
   "session-map",
-  "session-cost",
   "live-view",
 ] as const
 

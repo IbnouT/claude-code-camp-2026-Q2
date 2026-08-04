@@ -1,25 +1,24 @@
-import { useMemo, type ReactNode } from "react"
+import { type ReactNode } from "react"
 
 import type { LiveJourney } from "@/data/live-view"
-import { useLivePartition } from "@/data/live-partitions"
-import { useSessionCost } from "@/data/session-cost"
-import { useSessionVitals, type VitalsFields } from "@/data/session-vitals"
+import type { VitalsFields } from "@/data/session-vitals"
 import { cn } from "@/lib/utils"
 
 import { FrictionBlock } from "./friction-block"
 import {
+  cacheHit,
   evidenceTitle,
   formatAge,
   latestCommand,
+  latestContextFill,
   money,
   observedNumber,
+  projectSpend,
   responseTrend,
+  tokensIn,
 } from "./live-evidence"
 
 type EvidenceRailProps = {
-  sessionId: string | undefined
-  lifecycle: string
-  sessionRunning: boolean
   view: LiveJourney | null
   captureStatus: string | null
   reconnecting: boolean
@@ -111,11 +110,11 @@ function VitalBar({
   tone,
 }: {
   label: string
-  value: number | null
+  value: number | undefined
   maximum: number | null
   tone: "hit" | "mana" | "move"
 }) {
-  const observed = value !== null
+  const observed = typeof value === "number"
   const ratio =
     observed && maximum !== null && maximum > 0
       ? Math.min(Math.max(value / maximum, 0), 1)
@@ -181,46 +180,41 @@ function ObservedFact({
   )
 }
 
-/**
- * The retained evidence rail: current status, observed character state,
- * and live economics, every value carrying its provenance.
- */
-function EvidenceRail({
-  sessionId,
-  lifecycle,
-  sessionRunning,
-  view,
-  captureStatus,
-  reconnecting,
-}: EvidenceRailProps) {
-  const vitals = useSessionVitals(sessionId)
-  const cost = useSessionCost(sessionId)
-  const thoughts = useLivePartition(sessionId, "thought-activity")
+function EconomicFact({
+  label,
+  meta,
+  value,
+}: {
+  label: string
+  meta?: string
+  value: string
+}) {
+  return (
+    <div className="grid min-w-0 gap-[3px] rounded-[10px] border border-line bg-(--live-cell) px-[11px] py-2.5">
+      <small className="text-[10px] font-semibold tracking-[0.1em] text-content-quiet uppercase">
+        {label}
+      </small>
+      <strong className="font-mono text-[14px] font-semibold text-content-primary">
+        {value}
+      </strong>
+      {meta === undefined ? null : (
+        <em className="text-[10px] text-content-quiet not-italic">{meta}</em>
+      )}
+    </div>
+  )
+}
 
-  const fields = vitals.data?.fields ?? {}
-  const hasVitals = vitals.data !== undefined
-
-  const latestTool = useMemo(() => {
-    const values = thoughts.data?.values
-    if (typeof values !== "object" || values === null) return null
-    const list = (values as { records?: unknown }).records
-    if (!Array.isArray(list)) return null
-    for (let index = list.length - 1; index >= 0; index -= 1) {
-      const record = list[index] as Record<string, unknown>
-      if (record?.kind === "agent:tool_call") {
-        return {
-          text: String(record.title ?? ""),
-          at: (record.occurred_at ?? "") as string | number,
-        }
-      }
-    }
-    return null
-  }, [thoughts.data?.values])
-
-  const contributors = cost.data?.contributors ?? []
-  const costs = contributors.map((entry) => entry.cost_usd ?? 0)
+function LiveEconomics({ view }: { view: LiveJourney }) {
+  const spend = projectSpend(view)
+  const capRatio =
+    spend.cap === null || spend.cap <= 0
+      ? null
+      : Math.max(spend.amount / spend.cap, 0)
+  const costs = view.economics.map((point) => point.cost_usd)
   const latestCost = costs.at(-1) ?? null
   const trend = responseTrend(costs)
+  const hit = cacheHit(view.usage)
+  const contextFill = latestContextFill(view)
   const spark = costs.slice(-20)
   const sparkMax = Math.max(...spark, 0.000001)
   const sparkPoints = spark
@@ -231,7 +225,107 @@ function EvidenceRail({
     })
     .join(" ")
 
-  if (!hasVitals) {
+  return (
+    <RailBlock title="Live economics">
+      <div className="grid gap-[9px]">
+        <div className="flex items-center justify-between gap-2.5">
+          <small className="text-[10px] font-semibold tracking-[0.1em] text-content-quiet uppercase">
+            {spend.scope === "turn" ? "Turn spend" : "Session spend"}
+          </small>
+          <strong className="text-[15px] font-semibold text-content-primary">
+            {money(spend.amount)}
+            {spend.cap === null ? "" : ` / ${money(spend.cap)}`}
+          </strong>
+        </div>
+        {capRatio === null ? null : (
+          <span
+            aria-label={`${Math.round(capRatio * 100)} percent of cap`}
+            className="h-2 overflow-hidden rounded-[6px] bg-(--live-track)"
+          >
+            <i
+              className="block h-full rounded-[inherit] bg-warning"
+              style={{ width: `${Math.min(capRatio, 1) * 100}%` }}
+            />
+          </span>
+        )}
+      </div>
+      <div className="mt-1 grid grid-cols-2 gap-2.5">
+        <EconomicFact
+          label="Latest response"
+          value={latestCost === null ? "Not retained" : money(latestCost)}
+          meta={
+            trend === null
+              ? undefined
+              : `${trend >= 0 ? "+" : ""}${Math.round(trend * 100)}% vs prior`
+          }
+        />
+        <EconomicFact
+          label="Tokens in"
+          value={tokensIn(view.usage).toLocaleString()}
+        />
+        <EconomicFact
+          label="Tokens out"
+          value={(view.usage.output ?? 0).toLocaleString()}
+        />
+        <EconomicFact
+          label="Cache hit"
+          value={hit === null ? "Not observed" : `${Math.round(hit * 100)}%`}
+        />
+      </div>
+      <figure className="m-0 grid gap-[5px]">
+        <figcaption className="text-[10px] font-semibold tracking-[0.1em] text-content-quiet uppercase">
+          Cost per response: last 20
+        </figcaption>
+        {spark.length === 0 ? (
+          <span className="text-[11px] text-content-muted">
+            No response costs retained
+          </span>
+        ) : (
+          <svg
+            role="img"
+            aria-label="Cost per response sparkline"
+            viewBox="0 0 240 36"
+            className="h-[26px] w-full overflow-visible"
+          >
+            <polyline
+              points={sparkPoints}
+              className="fill-none stroke-(--sparkline-stroke) stroke-[1.6] [vector-effect:non-scaling-stroke]"
+            />
+          </svg>
+        )}
+      </figure>
+      {contextFill === null ? null : (
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2.5">
+          <small className="text-[10px] font-semibold tracking-[0.1em] text-content-quiet uppercase">
+            Latest response context
+          </small>
+          <strong className="font-mono text-[12px] font-medium text-content-primary">
+            {Math.round(contextFill * 100)}%
+          </strong>
+          <span className="col-span-full h-2 overflow-hidden rounded-[6px] bg-(--live-track)">
+            <i
+              className="block h-full rounded-[inherit] bg-warning"
+              style={{
+                width: `${Math.min(Math.max(contextFill, 0), 1) * 100}%`,
+              }}
+            />
+          </span>
+        </div>
+      )}
+    </RailBlock>
+  )
+}
+
+/**
+ * The retained evidence rail, reading the derived Live view whole: the
+ * current status, observed character state, and live economics.
+ */
+function EvidenceRail({
+  view,
+  captureStatus,
+  reconnecting,
+}: EvidenceRailProps) {
+  if (view === null) {
     return (
       <p className="mx-4 mt-[42px] text-[11px] text-content-quiet">
         Waiting for retained evidence…
@@ -239,25 +333,27 @@ function EvidenceRail({
     )
   }
 
+  const fields = (view.player_status?.fields ?? {}) as VitalsFields
   const conditions = Object.entries(conditionPresentations).flatMap(
     ([key, presentation]) =>
       fields[key]?.value === true ? [{ key, ...presentation }] : []
   )
   const posture = fields.posture
+  const command = latestCommand(view.timeline)
 
   return (
     <div className="grid min-h-full content-start bg-surface">
       <RailBlock
         title="Now"
         status={
-          view !== null && !view.following_live
+          !view.following_live
             ? { label: "Historical prefix", tone: "history" }
-            : sessionRunning
+            : view.lifecycle === "running"
               ? { label: "Live", tone: "live" }
-              : { label: lifecycleLabel(lifecycle), tone: "history" }
+              : { label: lifecycleLabel(view.lifecycle), tone: "history" }
         }
       >
-        {view?.combat ? (
+        {view.combat ? (
           <span className="w-fit rounded-[7px] border border-line bg-(--fighting-bg) px-[9px] py-[3px] text-[11px] text-danger capitalize">
             fighting
           </span>
@@ -271,34 +367,36 @@ function EvidenceRail({
         )}
         <EvidenceText
           label="Latest tool action"
-          meta={latestTool === null ? undefined : formatAge(latestTool.at)}
-          value={latestTool?.text || "No tool action retained"}
+          meta={
+            view.agent_belief === null
+              ? undefined
+              : formatAge(view.agent_belief.observed_at)
+          }
+          title={view.agent_belief?.evidence}
+          value={view.agent_belief?.text || "No tool action retained"}
         />
         <EvidenceText
           label="Last command"
-          value={
-            (view === null ? null : latestCommand(view.timeline)) ??
-            "No command retained"
-          }
+          value={command ?? "No command retained"}
         />
       </RailBlock>
       <RailBlock title="Character">
         <VitalBar
           label="HP"
           tone="hit"
-          value={observedNumber(fields, "hit")}
+          value={view.vitals.hit}
           maximum={observedNumber(fields, "max_hit")}
         />
         <VitalBar
           label="Mana"
           tone="mana"
-          value={observedNumber(fields, "mana")}
+          value={view.vitals.mana}
           maximum={observedNumber(fields, "max_mana")}
         />
         <VitalBar
           label="Move"
           tone="move"
-          value={observedNumber(fields, "move")}
+          value={view.vitals.move}
           maximum={observedNumber(fields, "max_move")}
         />
         <div className="flex items-center gap-4 py-px">
@@ -326,75 +424,12 @@ function EvidenceRail({
           </div>
         )}
       </RailBlock>
-      <RailBlock title="Live economics">
-        <div className="grid gap-[9px]">
-          <div className="flex items-center justify-between gap-2.5">
-            <small className="text-[10px] font-semibold tracking-[0.1em] text-content-quiet uppercase">
-              Session spend
-            </small>
-            <strong className="font-mono text-[15px] font-semibold text-content-primary">
-              {cost.data === undefined
-                ? "Not retained"
-                : money(cost.data.total_cost_usd ?? 0)}
-            </strong>
-          </div>
-        </div>
-        <div className="mt-1 grid grid-cols-2 gap-2.5">
-          <div className="grid min-w-0 gap-[3px] rounded-[10px] border border-line bg-(--live-cell) px-[11px] py-2.5">
-            <small className="text-[10px] font-semibold tracking-[0.1em] text-content-quiet uppercase">
-              Latest response
-            </small>
-            <strong className="font-mono text-[14px] font-semibold text-content-primary">
-              {latestCost === null ? "Not retained" : money(latestCost)}
-            </strong>
-            {trend === null ? null : (
-              <em className="text-[10px] text-content-quiet not-italic">
-                {trend >= 0 ? "+" : ""}
-                {Math.round(trend * 100)}% vs prior
-              </em>
-            )}
-          </div>
-          <div className="grid min-w-0 gap-[3px] rounded-[10px] border border-line bg-(--live-cell) px-[11px] py-2.5">
-            <small className="text-[10px] font-semibold tracking-[0.1em] text-content-quiet uppercase">
-              Tokens
-            </small>
-            <strong className="font-mono text-[14px] font-semibold text-content-primary">
-              {cost.data === undefined
-                ? "Not observed"
-                : (cost.data.total_tokens ?? 0).toLocaleString()}
-            </strong>
-          </div>
-        </div>
-        <figure className="m-0 grid gap-[5px]">
-          <figcaption className="text-[10px] font-semibold tracking-[0.1em] text-content-quiet uppercase">
-            Cost per response: last 20
-          </figcaption>
-          {spark.length === 0 ? (
-            <span className="text-[11px] text-content-muted">
-              No response costs retained
-            </span>
-          ) : (
-            <svg
-              role="img"
-              aria-label="Cost per response sparkline"
-              viewBox="0 0 240 36"
-              className="h-[26px] w-full overflow-visible"
-            >
-              <polyline
-                points={sparkPoints}
-                className="fill-none stroke-(--sparkline-stroke) stroke-[1.6] [vector-effect:non-scaling-stroke]"
-              />
-            </svg>
-          )}
-        </figure>
-      </RailBlock>
-      {view === null ? null : (
-        <FrictionBlock
-          view={view}
-          captureStatus={captureStatus}
-          reconnecting={reconnecting}
-        />
-      )}
+      <LiveEconomics view={view} />
+      <FrictionBlock
+        view={view}
+        captureStatus={captureStatus}
+        reconnecting={reconnecting}
+      />
     </div>
   )
 }
