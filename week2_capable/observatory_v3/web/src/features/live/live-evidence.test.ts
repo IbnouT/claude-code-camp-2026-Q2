@@ -22,8 +22,20 @@ describe("live evidence helpers", () => {
 
   it("reads only numeric observed values", () => {
     const fields = {
-      hit: { value: 12, sequence: 1, observed_at: 0, confidence: "high", method: "m" },
-      posture: { value: "standing", sequence: 2, observed_at: 0, confidence: "high", method: "m" },
+      hit: {
+        value: 12,
+        sequence: 1,
+        observed_at: 0,
+        confidence: "high",
+        method: "m",
+      },
+      posture: {
+        value: "standing",
+        sequence: 2,
+        observed_at: 0,
+        confidence: "high",
+        method: "m",
+      },
     } as unknown as VitalsFields
     expect(observedNumber(fields, "hit")).toBe(12)
     expect(observedNumber(fields, "posture")).toBeNull()

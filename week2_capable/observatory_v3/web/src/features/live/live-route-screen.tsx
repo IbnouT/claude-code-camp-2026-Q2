@@ -1,4 +1,5 @@
-import { useEffect } from "react"
+import { useNavigate } from "@tanstack/react-router"
+import { useCallback, useEffect } from "react"
 
 import { useLiveActions } from "@/app/live-actions-context"
 import { selectedSession, sessionLifecycle } from "@/app/session-context-model"
@@ -11,15 +12,34 @@ import { MessageAgentDialog } from "./message-agent-dialog"
 type LiveRouteScreenProps = {
   playerId: string | undefined
   sessionId: string | undefined
+  through: number | null
 }
 
 /**
  * The Live route: resolves the observed session from the catalog and
  * mounts the workspace shell for it.
  */
-function LiveRouteScreen({ playerId, sessionId }: LiveRouteScreenProps) {
+function LiveRouteScreen({
+  playerId,
+  sessionId,
+  through,
+}: LiveRouteScreenProps) {
   const catalog = useSessionCatalog({ playerId, sessionId })
   const dialogs = useLiveActions()
+  const navigate = useNavigate()
+  const onSelectThrough = useCallback(
+    (sequence: number | null) => {
+      void navigate({
+        to: ".",
+        replace: true,
+        search: (previous: Record<string, unknown>) => ({
+          ...previous,
+          through: sequence ?? undefined,
+        }),
+      })
+    },
+    [navigate]
+  )
   const data =
     catalog.result.status === "loading" || catalog.result.status === "error"
       ? undefined
@@ -51,6 +71,8 @@ function LiveRouteScreen({ playerId, sessionId }: LiveRouteScreenProps) {
         catalogObjective={selected?.objective ?? null}
         sessionRunning={running}
         lifecycle={selected === null ? "idle" : sessionLifecycle(selected)}
+        through={through}
+        onSelectThrough={onSelectThrough}
       />
       {selected === null ? null : (
         <>

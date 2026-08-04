@@ -4,6 +4,9 @@ import { useLiveSessionLiveness } from "@/data/live-session-liveness"
 import { useSessionGoals } from "@/data/session-goals"
 import { cn } from "@/lib/utils"
 
+import { useLiveView } from "@/data/live-view"
+
+import { CausalTimeline } from "./causal-timeline"
 import { EvidenceRail } from "./evidence-rail"
 import { ObjectiveStrip } from "./objective-strip"
 import { projectObjective } from "./objective-model"
@@ -13,6 +16,8 @@ type LiveShellProps = {
   catalogObjective: string | null
   sessionRunning: boolean
   lifecycle: string
+  through: number | null
+  onSelectThrough: (sequence: number | null) => void
 }
 
 /**
@@ -25,9 +30,16 @@ function LiveShell({
   catalogObjective,
   sessionRunning,
   lifecycle,
+  through,
+  onSelectThrough,
 }: LiveShellProps) {
   useLiveSessionLiveness(sessionId)
   const goals = useSessionGoals(sessionId)
+  const latestView = useLiveView(sessionId)
+  const pinnedView = useLiveView(
+    through === null ? undefined : sessionId,
+    through
+  )
   const [railOpen, setRailOpen] = useState(
     () => typeof window === "undefined" || window.innerWidth > 700
   )
@@ -82,9 +94,12 @@ function LiveShell({
           aria-label="Causal timeline"
           className="absolute right-0 bottom-0 left-0 z-[8] h-(--live-timeline-height) border-t border-line bg-surface px-[18px] py-3 max-[700px]:px-3"
         >
-          <div className="grid h-full place-items-center text-[10px] text-content-quiet">
-            The causal timeline arrives with its section.
-          </div>
+          <CausalTimeline
+            latest={latestView.data?.view ?? null}
+            pinned={through === null ? null : (pinnedView.data?.view ?? null)}
+            reconnecting={latestView.isError}
+            onSelectThrough={onSelectThrough}
+          />
         </section>
       </main>
     </div>

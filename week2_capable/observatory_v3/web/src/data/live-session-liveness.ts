@@ -12,6 +12,7 @@ const LIVE_RESOURCE_KINDS = [
   "live-partition",
   "session-map",
   "session-cost",
+  "live-view",
 ] as const
 
 /**

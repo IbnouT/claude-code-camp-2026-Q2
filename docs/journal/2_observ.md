@@ -294,3 +294,12 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
   is sent, and a command whose send already began is never replayed. The
   queued output from a dead connection is drained and recorded first, so
   even a broken link leaves honest evidence.
+- The Live rebuild found its data story late but decisively. The frozen
+  projections were already carried inside the v3 backend, unrouted, so
+  the feared porting batch collapsed into one bounded resource: the
+  whole derived Live view, prefix bound included, behind one v1 path.
+  The screen then assembled section by section, shell and objective
+  strip, dialogs on durable commands, the evidence rail, and a timeline
+  transport whose pause is just a URL parameter. Verification agents on
+  each section caught what reading had missed, a preflight weight here,
+  a missing guard state there, before any of it hardened.

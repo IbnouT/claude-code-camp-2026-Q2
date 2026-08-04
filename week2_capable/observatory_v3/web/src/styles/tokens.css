@@ -24,6 +24,7 @@
   --vital-move-from: #2e7d5b;
   --vital-move-to: #8bdfa9;
   --sparkline-stroke: #4fd6c9;
+  --violet: #b7a7ff;
   --scene-core: #10192a;
   --scene-mid: #0a0f18;
   --scene-link: #203550;
@@ -187,6 +188,7 @@
   --live-workspace-glow: #dfe9f2;
   --live-track: var(--surface-soft);
   --live-cell: var(--surface-raised);
+  --violet: #6f58b8;
   --scene-core: #d5e0ec;
   --scene-mid: #e2eaf2;
   --scene-link: #b9c8d8;
