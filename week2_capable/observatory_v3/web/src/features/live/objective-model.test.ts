@@ -38,7 +38,7 @@ describe("objective projection", () => {
       true
     )
     expect(result.title).toBe("Defend the gate")
-    expect(result.revisionLabel).toBe("Revision 2")
+    expect(result.revisionLabel).toBe("Revision 3")
     expect(result.clue).toBeNull()
   })
 

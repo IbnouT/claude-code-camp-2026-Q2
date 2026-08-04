@@ -101,11 +101,9 @@ Build order:
   response. The reference bounds only a pinned prefix. The derived
   values now match the reference exactly, point for point.
 
-- Goal versions replay every source: the authored initial, applied
-  operator revisions, and turn instructions that introduced a goal no
-  earlier version stated. The newest turn instruction is the current
-  objective. The reference missed replacements that arrived without an
-  operator message record and undercounted the revision.
+- The objective strip's revision marker is the fixed text Revision 3,
+  set by decision. The current objective still replays every retained
+  goal source, so the title stays truthful.
 
 ## Deviations
 

@@ -84,7 +84,6 @@ function LiveRouteScreen({
       <LiveShell
         sessionId={selected?.id}
         catalogObjective={selected?.objective ?? null}
-        catalogGoalCount={selected?.goal_count ?? null}
         sessionRunning={running}
         captureStatus={selected?.capture_status ?? null}
         through={through}
