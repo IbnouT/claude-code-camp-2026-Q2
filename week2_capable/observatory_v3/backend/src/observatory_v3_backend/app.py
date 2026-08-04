@@ -747,9 +747,26 @@ def create_app(
                 status_code=503,
             )
         session_id = request.path_params["session_id"]
+        through_value = request.query_params.get("through")
         try:
-            through_value = request.query_params.get("through")
             through = int(through_value) if through_value else None
+        except ValueError:
+            return JSONResponse(
+                {
+                    "error": "invalid_request",
+                    "detail": "through must be a positive integer",
+                },
+                status_code=422,
+            )
+        if through is not None and through < 1:
+            return JSONResponse(
+                {
+                    "error": "invalid_request",
+                    "detail": "through must be a positive integer",
+                },
+                status_code=422,
+            )
+        try:
             assert runtime_reads is not None
             result = await storage.run(
                 runtime_reads.live,
@@ -758,7 +775,7 @@ def create_app(
             )
             if result is None:
                 return JSONResponse({"error": "not_found"}, status_code=404)
-        except (RuntimeSourceError, ValueError) as error:
+        except RuntimeSourceError as error:
             return _runtime_error(error)
         payload = result.model_dump(mode="json")
         version, source_cursor = content_identity(

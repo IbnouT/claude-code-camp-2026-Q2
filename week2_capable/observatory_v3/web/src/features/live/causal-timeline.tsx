@@ -63,7 +63,7 @@ function CausalTimeline({
   const following = view.following_live
 
   const transportButton =
-    "min-h-7 rounded-[8px] border border-line-strong bg-surface-raised px-[11px] py-[5px] text-[11.5px] font-medium text-content-muted disabled:cursor-default disabled:opacity-35"
+    "min-h-7 rounded-[8px] border border-line-strong bg-surface-raised px-[11px] py-[5px] text-[11.5px] leading-none font-medium text-content-muted disabled:cursor-default disabled:opacity-35"
 
   return (
     <>
@@ -101,6 +101,7 @@ function CausalTimeline({
         >
           <button
             type="button"
+            aria-label={following ? "Pause timeline" : "Resume timeline"}
             className={transportButton}
             onClick={() =>
               following
@@ -112,6 +113,7 @@ function CausalTimeline({
           </button>
           <button
             type="button"
+            aria-label="Step to previous event"
             disabled={previousEvent === undefined}
             className={transportButton}
             onClick={() =>
@@ -124,6 +126,7 @@ function CausalTimeline({
           </button>
           <button
             type="button"
+            aria-label="Step to next event"
             disabled={following || nextEvent === undefined}
             className={transportButton}
             onClick={() =>
@@ -134,6 +137,7 @@ function CausalTimeline({
           </button>
           <button
             type="button"
+            aria-label="Jump to live"
             disabled={following}
             className={cn(
               transportButton,
@@ -145,8 +149,8 @@ function CausalTimeline({
           </button>
         </div>
       </div>
-      <div className="relative mt-2.5 h-[52px] cursor-pointer">
-        <div className="absolute top-[30px] right-0 left-0 h-px bg-line-strong" />
+      <div className="group relative mt-2.5 h-[52px] cursor-pointer has-[input:focus-visible]:outline has-[input:focus-visible]:outline-offset-[3px] has-[input:focus-visible]:outline-accent">
+        <div className="absolute top-[30px] right-0 left-0 h-px bg-line-strong transition-colors duration-120 group-hover:bg-[color-mix(in_srgb,var(--accent)_34%,var(--line-strong))]" />
         {curve === "" ? null : (
           <svg
             role="img"
@@ -161,25 +165,37 @@ function CausalTimeline({
             />
           </svg>
         )}
-        {landmarks.map((landmark) => (
-          <button
-            key={landmark.id}
-            type="button"
-            title={`${landmark.kind === "level_up" ? "Level up" : landmark.kind === "operator_message" ? "Your message" : landmark.kind === "friction" ? "Friction" : "Room"}: ${landmark.label}, sequence ${landmark.sequence}`}
-            style={{
-              left: `${trackPosition(landmark.sequence, firstSequence, lastSequence)}%`,
-            }}
-            className={cn(
-              "absolute z-[3] -translate-x-1/2 cursor-pointer rounded-[50%] border border-canvas transition-transform hover:scale-125 focus-visible:outline-2 focus-visible:outline-content-primary",
-              landmarkTone[landmark.kind]
-            )}
-            onClick={() =>
-              onSelectThrough(
-                landmark.sequence === lastSequence ? null : landmark.sequence
-              )
-            }
-          />
-        ))}
+        {landmarks.map((landmark) => {
+          const kindLabel =
+            landmark.kind === "level_up"
+              ? "Level up"
+              : landmark.kind === "operator_message"
+                ? "Operator message"
+                : landmark.kind === "friction"
+                  ? "Friction"
+                  : "Room"
+          const description = `${kindLabel}: ${landmark.label}, ${landmark.kind === "operator_message" ? "retained at " : ""}sequence ${landmark.sequence}`
+          return (
+            <button
+              key={landmark.id}
+              type="button"
+              aria-label={description}
+              title={description}
+              style={{
+                left: `${trackPosition(landmark.sequence, firstSequence, lastSequence)}%`,
+              }}
+              className={cn(
+                "absolute z-[3] -translate-x-1/2 cursor-pointer rounded-[50%] border border-canvas transition-[box-shadow,transform] duration-120 hover:scale-125 hover:shadow-[0_0_0_4px_color-mix(in_srgb,currentColor_24%,transparent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-content-primary",
+                landmarkTone[landmark.kind]
+              )}
+              onClick={() =>
+                onSelectThrough(
+                  landmark.sequence === lastSequence ? null : landmark.sequence
+                )
+              }
+            />
+          )
+        })}
         {labelled.map((landmark) => (
           <span
             key={`label-${landmark.id}`}
