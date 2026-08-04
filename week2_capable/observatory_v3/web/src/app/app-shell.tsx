@@ -208,7 +208,9 @@ function AppShell({ navigation }: AppShellProps) {
           className={
             isReviewRoute || isLauncherRoute
               ? "min-w-0 flex-1 outline-none"
-              : "min-w-0 flex-1 p-5 outline-none sm:p-8"
+              : pathname === "/live"
+                ? "flex min-h-0 min-w-0 flex-1 flex-col outline-none"
+                : "min-w-0 flex-1 p-5 outline-none sm:p-8"
           }
         >
           <Outlet />

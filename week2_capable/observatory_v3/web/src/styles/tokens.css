@@ -14,6 +14,7 @@
   --header-surface: #070b10;
 
   /* v2 launcher.css scene values */
+  --live-workspace-glow: #0d1622;
   --scene-core: #10192a;
   --scene-mid: #0a0f18;
   --scene-link: #203550;
@@ -174,6 +175,7 @@
   --header-surface: var(--surface);
 
   /* Launcher scene, v3 light values (no v2 light precedent) */
+  --live-workspace-glow: #dfe9f2;
   --scene-core: #d5e0ec;
   --scene-mid: #e2eaf2;
   --scene-link: #b9c8d8;

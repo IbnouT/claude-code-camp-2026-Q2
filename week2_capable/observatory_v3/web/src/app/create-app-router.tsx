@@ -16,6 +16,7 @@ import {
 } from "lucide-react"
 
 import { AppShell } from "@/app/app-shell"
+import { LiveRouteScreen } from "@/features/live/live-route-screen"
 import {
   RouteErrorBoundary,
   RouteNotFoundBoundary,
@@ -122,8 +123,8 @@ function createAppRouter(options: CreateAppRouterOptions = {}) {
     errorComponent: RouteErrorBoundary,
     pendingComponent: RoutePendingBoundary,
     component: function LiveRoute() {
-      const { view } = liveRoute.useSearch()
-      return <RoutePlaceholder title="Live" routeState={`view=${view}`} />
+      const { player, session } = liveRoute.useSearch()
+      return <LiveRouteScreen playerId={player} sessionId={session} />
     },
   })
 

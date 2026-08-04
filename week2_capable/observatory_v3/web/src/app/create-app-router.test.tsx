@@ -103,7 +103,7 @@ describe("typed application router", () => {
     )
 
     expect(
-      await screen.findByRole("heading", { name: "Live" })
+      await screen.findByLabelText("Live workspace")
     ).toBeInTheDocument()
     await user.click(screen.getByRole("link", { name: "Experiments" }))
 
@@ -127,7 +127,7 @@ describe("typed application router", () => {
     const router = renderRoute("/live", () => routePreparation)
 
     expect(
-      await screen.findByRole("heading", { name: "Live" })
+      await screen.findByLabelText("Live workspace")
     ).toBeInTheDocument()
     const shell = screen.getByTestId("application-shell")
     const routeContent = screen.getByTestId("route-content")
