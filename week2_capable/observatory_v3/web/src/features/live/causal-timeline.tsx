@@ -63,7 +63,7 @@ function CausalTimeline({
   const following = view.following_live
 
   const transportButton =
-    "min-h-7 rounded-[8px] border border-line-strong bg-surface-raised px-[11px] py-[5px] text-[11.5px] leading-none font-medium text-content-muted disabled:cursor-default disabled:opacity-35"
+    "min-h-7 rounded-[8px] border border-line-strong bg-surface-raised px-[11px] py-[5px] text-[11.5px] font-normal text-content-muted disabled:cursor-default disabled:opacity-35"
 
   return (
     <>

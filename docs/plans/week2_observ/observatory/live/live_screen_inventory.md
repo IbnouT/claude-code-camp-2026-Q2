@@ -116,6 +116,10 @@ Build order:
 - The fighting posture override and the historical prefix status on the
   Now block land with the pinned prefix and combat sections.
 - The Ask dialog resets on every open. The reference remounted it.
+- The transport buttons render at weight 400 with a normal line height.
+  The reference stylesheet asked for 500/1 through a font shorthand
+  whose family variable was never defined, so the shorthand never
+  applied. The measured rendering is the authority.
 - The context switcher, stop dialog, and header actions are the already
   built v3 components, not the reference markup.
 - Small tint and radius adjustments follow the built header and launcher
