@@ -36,7 +36,15 @@ async function measure(
   pairs: [string, string][]
 ): Promise<Record<string, string>> {
   await page.goto(url)
-  await page.waitForTimeout(1500)
+  // The roster hydrates from the catalog; wait for a sigil before
+  // measuring so a slow first paint cannot fail the comparison.
+  const sigil = pairs.find(([key]) => key === "sigil")?.[1]
+  if (sigil !== undefined && !sigil.startsWith("@")) {
+    await page
+      .waitForSelector(sigil, { timeout: 20000 })
+      .catch(() => undefined)
+  }
+  await page.waitForTimeout(800)
   return page.evaluate((spec) => {
     const bySection = (label: string) =>
       [...document.querySelectorAll("main section")].find((section) =>
@@ -78,12 +86,26 @@ async function measure(
 }
 
 test("launcher elements match the reference measurements", async ({ page }) => {
+  // The reference's default selection leads; v3 pins the same player so
+  // both stacks measure the same roster state regardless of who is live.
   const frozen = await measure(page, `${REFERENCE}/`, FROZEN_PAIRS)
-  const v3 = await measure(page, "/", V3_PAIRS)
+  const selectedId = await page.evaluate(async () => {
+    const pressed = document.querySelector('button[aria-pressed="true"]')
+    const label = pressed?.textContent ?? ""
+    const response = await fetch("/api/sessions")
+    const data = (await response.json()) as {
+      players: { id: string; label: string }[]
+    }
+    const match = data.players.find((p) => label.includes(p.label))
+    return match?.id ?? null
+  })
+  const v3 = await measure(
+    page,
+    selectedId === null ? "/" : `/?player=${selectedId}`,
+    V3_PAIRS
+  )
   for (const [key] of FROZEN_PAIRS) {
-    // The start card may render in a different live state than the reference
-    // only if the same session data diverged between reads; both read the
-    // same runtime, so measured pairs must agree.
+    // Measured pairs must agree; both stacks read the same runtime.
     expect(v3[key], key).toBe(frozen[key])
   }
 })
