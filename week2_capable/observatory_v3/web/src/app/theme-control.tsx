@@ -27,7 +27,7 @@ function ThemeControl() {
     <button
       type="button"
       aria-label={`Use ${nextTheme} theme`}
-      className="grid size-[34px] flex-none place-items-center rounded-[11px] border border-line bg-surface-raised text-accent outline-none hover:border-line-strong hover:bg-surface-soft focus-visible:border-accent focus-visible:[box-shadow:var(--focus-ring)]"
+      className="inline-flex size-[34px] flex-none items-center justify-center gap-[7px] rounded-[11px] border border-line bg-surface-raised px-1.5 py-px text-accent outline-none hover:border-line-strong hover:bg-surface-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       onClick={() => setTheme(nextTheme)}
     >
       {theme === "dark" ? (

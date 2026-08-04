@@ -272,6 +272,28 @@ npm run build
 npm run test:readiness
 ```
 
+## Launcher
+
+The first product screen. `/` renders the Launcher as a full-bleed scene with
+the theme control top right and no application header.
+
+- Behavior inventory and status live in
+  `docs/plans/week2_observ/observatory/launcher/launcher_parity_checklist.md`.
+  Every listed behavior is closed.
+- Roster, players, and live state come from the bounded session catalog.
+  Turn numbers are the session's true latest sequence.
+- Selected-row stat bars read `/api/v1/live/{session_id}/vitals`.
+- Live transitions arrive over the catalog notification scope and invalidate
+  the catalog queries. No polling.
+- Start submits a durable command, follows the receipt to a terminal state,
+  surfaces the typed failure detail, and opens Live for the resulting session.
+- Feature modules: `src/features/launcher/` (model, view, backdrop, container).
+  Data modules: `src/data/session-vitals.ts`, `src/data/start-command.ts`,
+  catalog liveness in `src/data/session-catalog.ts`.
+- Launcher type and radius tokens are theme entries in `src/index.css`;
+  the scene palette is theme aware in `src/styles/tokens.css` with a designed
+  light variant.
+
 ## Boundaries
 
 - No runtime import may leave this package.

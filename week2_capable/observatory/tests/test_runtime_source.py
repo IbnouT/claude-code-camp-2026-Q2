@@ -462,6 +462,14 @@ async def test_objective_revisions_and_nudges_remain_distinct_everywhere(
         base_url="http://observatory",
     ) as client:
         catalog = (await client.get("/api/sessions")).json()
+        live = (
+            await client.get("/api/sessions/session-alpha/snapshot")
+        ).json()
+        historical = (
+            await client.get(
+                "/api/sessions/session-alpha/snapshot?through=2"
+            )
+        ).json()
         investigation = (
             await client.get("/api/sessions/session-alpha/investigation")
         ).json()
@@ -470,6 +478,12 @@ async def test_objective_revisions_and_nudges_remain_distinct_everywhere(
     assert session["objective"] == "Practice at the warrior guild"
     assert session["goal_count"] == 3
     assert session["nudge_count"] == 1
+    assert live["objective_context"]["title"] == (
+        "Practice at the warrior guild"
+    )
+    assert len(live["operator_messages"]) == 3
+    assert historical["objective_context"]["title"] == "Find the temple"
+    assert len(historical["operator_messages"]) == 1
     assert investigation["objective"] == "Practice at the warrior guild"
     assert investigation["run"]["goal_epochs"] == 3
     controls = {

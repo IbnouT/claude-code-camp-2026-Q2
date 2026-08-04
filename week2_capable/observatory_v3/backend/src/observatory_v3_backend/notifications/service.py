@@ -70,6 +70,25 @@ class SessionNotificationLease:
         await self._service._wait_ready(self.session_id)
 
 
+class CatalogNotificationLease:
+    """One browser demand reference for the shared session-catalog watcher."""
+
+    def __init__(self, service: SessionNotificationService) -> None:
+        self._service = service
+        self._closed = False
+
+    async def close(self) -> None:
+        """Release this browser reference without cancelling shared work."""
+        if self._closed:
+            return
+        self._closed = True
+        await self._service._release_catalog()
+
+    async def wait_ready(self) -> None:
+        """Wait for the first published catalog target."""
+        await self._service._wait_catalog_ready()
+
+
 class SessionNotificationService:
     """Share bounded source advancement across notification subscribers."""
 
@@ -106,6 +125,7 @@ class SessionNotificationService:
         self.session_capacity = session_capacity
         self._lock = asyncio.Lock()
         self._demands: dict[str, _SessionDemand] = {}
+        self._catalog_demand: _SessionDemand | None = None
         self._closed = False
 
     @property
@@ -153,6 +173,96 @@ class SessionNotificationService:
             demand.subscribers += 1
         return SessionNotificationLease(self, session_id)
 
+    async def acquire_catalog(self) -> CatalogNotificationLease:
+        """Join or start the shared session-catalog watcher.
+
+        The catalog watcher announces roster-level changes: a session appearing,
+        going live, or ending. It publishes the catalog change target through
+        the hub, which suppresses unchanged versions, so subscribers hear only
+        real transitions.
+        """
+        async with self._lock:
+            if self._closed:
+                raise NotificationDemandClosedError(
+                    "notification demand service is closed"
+                )
+            demand = self._catalog_demand
+            if demand is None or demand.task.done():
+                changed = asyncio.Event()
+                demand = _SessionDemand(
+                    task=asyncio.create_task(
+                        self._watch_catalog(changed),
+                        name="observatory-notifications:catalog",
+                    ),
+                    subscribers=demand.subscribers if demand is not None else 0,
+                    changed=changed,
+                    ready=asyncio.Event(),
+                )
+                self._catalog_demand = demand
+            demand.subscribers += 1
+        return CatalogNotificationLease(self)
+
+    async def _watch_catalog(self, changed: asyncio.Event) -> None:
+        try:
+            while True:
+                try:
+                    target = await self._catalog_target()
+                    await self._hub.publish((target,))
+                except NotificationHubClosedError:
+                    return
+                except Exception:
+                    # A transient catalog read failure must not end roster
+                    # liveness; the next tick retries against the source.
+                    target = None
+                if target is not None:
+                    async with self._lock:
+                        demand = self._catalog_demand
+                        if demand is not None:
+                            demand.ready.set()
+                changed.clear()
+                try:
+                    await asyncio.wait_for(
+                        changed.wait(),
+                        timeout=self.poll_interval,
+                    )
+                except TimeoutError:
+                    pass
+                async with self._lock:
+                    demand = self._catalog_demand
+                    if self._closed or demand is None or demand.subscribers == 0:
+                        return
+        finally:
+            async with self._lock:
+                demand = self._catalog_demand
+                if (
+                    demand is not None
+                    and demand.task is asyncio.current_task()
+                    and demand.subscribers == 0
+                ):
+                    self._catalog_demand = None
+
+    async def _release_catalog(self) -> None:
+        async with self._lock:
+            demand = self._catalog_demand
+            if demand is None:
+                return
+            demand.subscribers -= 1
+            if demand.subscribers <= 0:
+                demand.changed.set()
+
+    async def _wait_catalog_ready(self) -> None:
+        async with self._lock:
+            demand = self._catalog_demand
+            if demand is None:
+                raise NotificationSeedError("catalog notification demand vanished")
+            ready = demand.ready
+        try:
+            await asyncio.wait_for(ready.wait(), timeout=self.seed_timeout)
+        except TimeoutError as error:
+            raise NotificationSeedError(
+                "catalog notification seeding timed out"
+            ) from error
+
     async def source_changed(self, session_id: str) -> None:
         """Request one coalesced follow-up for an already demanded session."""
         await self._materializer.notify_source_changed(session_id)
@@ -166,6 +276,8 @@ class SessionNotificationService:
         async with self._lock:
             self._closed = True
             demands = tuple(self._demands.values())
+            if self._catalog_demand is not None:
+                demands = (*demands, self._catalog_demand)
             for demand in demands:
                 demand.changed.set()
         if demands:
@@ -175,6 +287,7 @@ class SessionNotificationService:
             )
         async with self._lock:
             self._demands.clear()
+            self._catalog_demand = None
 
     async def _release(self, session_id: str) -> None:
         async with self._lock:

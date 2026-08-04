@@ -33,10 +33,12 @@ function isNewerTarget(
   incoming: ResourceChangeTargetOutput,
   current: ResourceChangeTargetOutput
 ): boolean {
+  // Resource versions are content hashes, not ordered counters. Ordering is
+  // enforced upstream by the notification change counter, so any accepted
+  // notification whose identity differs is a genuinely newer state.
   return (
-    incoming.resource_version > current.resource_version ||
-    (incoming.resource_version === current.resource_version &&
-      incoming.source_cursor !== current.source_cursor)
+    incoming.resource_version !== current.resource_version ||
+    incoming.source_cursor !== current.source_cursor
   )
 }
 

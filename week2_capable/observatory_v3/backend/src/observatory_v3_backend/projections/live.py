@@ -193,7 +193,7 @@ def project_live(
         ),
         None,
     )
-    player_status = _player_status(gateway_prefix, vitals_event)
+    player_status = derive_player_status(gateway_prefix, vitals_event)
     spend_cap, spend_scope = _spend_cap(session_start)
     metric = next(
         (event for event in reversed(gateway_prefix) if event.kind == "parse_metric"),
@@ -1135,7 +1135,7 @@ def _turn_at(
     return count or None
 
 
-def _player_status(
+def derive_player_status(
     events: list[Event],
     vitals_event: Event | None,
 ) -> LivePlayerStatus:

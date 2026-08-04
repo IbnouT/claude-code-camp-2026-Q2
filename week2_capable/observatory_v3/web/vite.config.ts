@@ -13,4 +13,13 @@ export default defineConfig({
       "@": sourceDirectory,
     },
   },
+  server: {
+    proxy: {
+      "/api": {
+        // Local review backend; started by the documented review command.
+        target: "http://127.0.0.1:8793",
+        changeOrigin: true,
+      },
+    },
+  },
 })

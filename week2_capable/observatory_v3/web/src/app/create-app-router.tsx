@@ -2,7 +2,6 @@ import {
   createRoute,
   createRootRoute,
   createRouter,
-  redirect,
   type AnyRootRoute,
   type AnyRoute,
 } from "@tanstack/react-router"
@@ -23,6 +22,7 @@ import {
   RoutePendingBoundary,
 } from "@/app/route-boundaries"
 import { RoutePlaceholder } from "@/app/route-placeholder"
+import { Launcher } from "@/features/launcher/launcher"
 
 type DevelopmentRouteExtension = {
   label: string
@@ -42,6 +42,15 @@ const contextSearchShape = {
   player: z.string().max(120).optional().catch(undefined),
   session: z.string().max(200).optional().catch(undefined),
 }
+
+const indexSearchSchema = z.object({
+  player: z.string().max(120).optional().catch(undefined),
+  // The search parser reads ?load=1 as a number; accept both spellings.
+  load: z
+    .union([z.literal(1), z.literal("1")])
+    .optional()
+    .catch(undefined),
+})
 
 const liveSearchSchema = z.object({
   ...contextSearchShape,
@@ -64,18 +73,21 @@ const knowledgeSearchSchema = z.object({
   query: z.string().max(120).catch("").default(""),
 })
 
-const sessionSearchSchema = z.object(contextSearchShape)
+const sessionSearchSchema = z.object({
+  ...contextSearchShape,
+  view: z.enum(["story", "map", "cost"]).catch("story").default("story"),
+})
 
 const sessionParamsSchema = z.object({
   sessionId: z.string().regex(/^[a-z0-9][a-z0-9-]{2,63}$/),
 })
 
 const navigationClassName =
-  "rounded-sm border px-3 py-2 text-sm font-medium outline-none transition-colors focus-visible:border-accent focus-visible:[box-shadow:var(--focus-ring)]"
+  "gap-[7px] rounded-[10px] border-0 px-3.5 py-2 text-center text-[13.5px] font-medium outline-none transition-colors focus-visible:[box-shadow:var(--focus-ring)]"
 const activeNavigationClassName =
-  "border-action-border bg-accent-soft text-content-primary"
+  "bg-accent-soft text-accent shadow-[inset_0_0_0_1px_rgb(104_225_220/18%)]"
 const inactiveNavigationClassName =
-  "border-transparent text-content-muted hover:bg-surface-soft hover:text-content-primary"
+  "text-content-muted hover:bg-surface-raised hover:text-content-primary"
 
 function contextFromSearch(previous: Record<string, unknown>) {
   return {
@@ -95,9 +107,11 @@ function createAppRouter(options: CreateAppRouterOptions = {}) {
   const indexRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/",
-    beforeLoad: () => {
-      throw redirect({ to: "/live", replace: true })
-    },
+    validateSearch: indexSearchSchema,
+    beforeLoad: options.prepareRoute,
+    errorComponent: RouteErrorBoundary,
+    pendingComponent: RoutePendingBoundary,
+    component: Launcher,
   })
 
   const liveRoute = createRoute({
@@ -144,10 +158,11 @@ function createAppRouter(options: CreateAppRouterOptions = {}) {
     },
     component: function SessionRoute() {
       const { sessionId } = sessionRoute.useParams()
+      const { view } = sessionRoute.useSearch()
       return (
         <RoutePlaceholder
           title="Session"
-          routeState={`sessionId=${sessionId}`}
+          routeState={`sessionId=${sessionId};view=${view}`}
         />
       )
     },
@@ -260,17 +275,6 @@ function createAppRouter(options: CreateAppRouterOptions = {}) {
         <BookOpenIcon aria-hidden="true" className="size-[15px]" />
         <span>Knowledge</span>
       </rootRoute.Link>
-      {development === undefined ? null : (
-        <rootRoute.Link
-          to={development.to}
-          activeOptions={{ exact: true, includeSearch: false }}
-          className={navigationClassName}
-          activeProps={{ className: activeNavigationClassName }}
-          inactiveProps={{ className: inactiveNavigationClassName }}
-        >
-          {development.label}
-        </rootRoute.Link>
-      )}
     </>
   )
 

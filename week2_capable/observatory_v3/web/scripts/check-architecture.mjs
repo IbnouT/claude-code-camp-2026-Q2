@@ -39,6 +39,8 @@ const prohibitedLegacyReferences = [
 const allowedPresentationDataImports = new Set([
   "@/data/capabilities",
   "@/data/session-catalog",
+  "@/data/start-command",
+  "@/data/session-vitals",
   "@/data/server-state-provider",
 ])
 
@@ -128,8 +130,11 @@ const failures = []
 
 for (const { contents, file } of sourceContents) {
   const relativeFile = path.relative(packageRoot, file)
+  // Test scaffolding under src/test provides environment stand-ins (for
+  // example an EventSource stub); runtime rules target product code only.
   const isRuntimeSource =
-    file === sourceRoot || file.startsWith(`${sourceRoot}${path.sep}`)
+    (file === sourceRoot || file.startsWith(`${sourceRoot}${path.sep}`)) &&
+    !file.startsWith(`${path.join(sourceRoot, "test")}${path.sep}`)
 
   if (isRuntimeSource) {
     for (const match of contents.matchAll(

@@ -35,12 +35,18 @@ def validate_database_schema(
     *,
     expected_version: int,
     required_columns: Mapping[str, Collection[str]],
+    also_accept: Collection[int] = (),
 ) -> None:
-    """Validate one source once without mutating or negotiating its schema."""
+    """Validate one source once without mutating or negotiating its schema.
+
+    ``also_accept`` lists additional legacy versions that are read-compatible
+    with the current layout. Their required columns are still enforced, so a
+    structurally valid legacy source is read rather than rejected on the stamp.
+    """
     try:
         with open_readonly_database(source) as database:
             actual_version = int(database.execute("PRAGMA user_version").fetchone()[0])
-            if actual_version != expected_version:
+            if actual_version != expected_version and actual_version not in also_accept:
                 raise UnsupportedSchemaError(
                     source,
                     actual=actual_version,

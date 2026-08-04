@@ -48,6 +48,9 @@ class RegistryDatabase:
             self.source,
             expected_version=REGISTRY_SCHEMA_VERSION,
             required_columns=REQUIRED_REGISTRY_COLUMNS,
+            # A legacy version 0 registry has the same columns and is read the
+            # same way (columns are selected by name), so it is read, not rejected.
+            also_accept=(0,),
         )
 
     def session_record(self, row: Sequence[object]) -> SessionRecord:

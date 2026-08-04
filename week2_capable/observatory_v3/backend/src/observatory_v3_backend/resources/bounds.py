@@ -20,7 +20,9 @@ def canonical_bytes(value: object) -> bytes:
 def content_identity(prefix: str, value: object) -> tuple[int, str]:
     """Return a stable positive version and opaque cursor for exact content."""
     digest = sha256(prefix.encode() + b"\0" + canonical_bytes(value)).digest()
-    version = int.from_bytes(digest[:8], "big") & ((1 << 63) - 1)
+    # Bounded to the JavaScript safe-integer range: browsers parse JSON numbers
+    # as IEEE 754 doubles, so anything wider silently loses precision.
+    version = int.from_bytes(digest[:8], "big") & ((1 << 53) - 1)
     return max(1, version), f"{prefix}_{digest.hex()}"
 
 

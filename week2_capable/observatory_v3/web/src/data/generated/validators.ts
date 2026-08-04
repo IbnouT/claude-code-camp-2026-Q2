@@ -818,6 +818,52 @@ export const LivePartitionResponse = /*#__PURE__*/ zod.strictObject({
 export type LivePartitionResponse = zod.input<typeof LivePartitionResponse>;
 export type LivePartitionResponseOutput = zod.output<typeof LivePartitionResponse>;
 
+export const observedPlayerValueConfidenceMax = 64;
+
+export const observedPlayerValueMethodMax = 64;
+
+export const observedPlayerValueSequenceMin = 0;
+
+
+
+export const ObservedPlayerValue = /*#__PURE__*/ zod.strictObject({
+  "confidence": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(observedPlayerValueConfidenceMax)),
+  "method": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(observedPlayerValueMethodMax)),
+  "observed_at": /*#__PURE__*/ zod.number(),
+  "sequence": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(observedPlayerValueSequenceMin)),
+  "value": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.boolean(),/*#__PURE__*/ zod.int(),/*#__PURE__*/ zod.string()])
+}).check(/*#__PURE__*/ zod.describe('One observed player-state value and its supporting observation.'));
+
+export type ObservedPlayerValue = zod.input<typeof ObservedPlayerValue>;
+export type ObservedPlayerValueOutput = zod.output<typeof ObservedPlayerValue>;
+
+export const liveVitalsResponseCaptureGapsMax = 32;
+
+export const liveVitalsResponsePlayerIdMax = 512;
+
+export const liveVitalsResponseResourceIdMax = 512;
+
+
+
+export const liveVitalsResponseSourceRefsMax = 16;
+
+
+
+export const LiveVitalsResponse = /*#__PURE__*/ zod.strictObject({
+  "capture_gaps": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(liveVitalsResponseCaptureGapsMax)),
+  "completeness": /*#__PURE__*/ zod.enum(['complete', 'partial', 'degraded']),
+  "fields": /*#__PURE__*/ zod.record(/*#__PURE__*/ zod.string(), ObservedPlayerValue),
+  "player_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(liveVitalsResponsePlayerIdMax)),
+  "resource_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(liveVitalsResponseResourceIdMax)),
+  "resource_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "session_id": /*#__PURE__*/ zod.string(),
+  "source_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
+  "source_refs": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(liveVitalsResponseSourceRefsMax))
+}).check(/*#__PURE__*/ zod.describe('The selected session\'s observed player state for roster vitals.'));
+
+export type LiveVitalsResponse = zod.input<typeof LiveVitalsResponse>;
+export type LiveVitalsResponseOutput = zod.output<typeof LiveVitalsResponse>;
+
 export const liveVoiceCapabilityEndpointTemplateDefault = null;
 export const liveVoiceCapabilityMaxCharactersDefault = 400;
 
@@ -954,11 +1000,12 @@ export const playerOptionIdMax = 512;
 
 export const playerOptionLabelMax = 512;
 
-
+export const playerOptionStartAvailableDefault = false;
 
 export const PlayerOption = /*#__PURE__*/ zod.strictObject({
   "id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(playerOptionIdMax)),
-  "label": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(playerOptionLabelMax))
+  "label": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(playerOptionLabelMax)),
+  "start_available": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.boolean(), playerOptionStartAvailableDefault)
 }).check(/*#__PURE__*/ zod.describe('One player represented in the session catalog.'));
 
 export type PlayerOption = zod.input<typeof PlayerOption>;
@@ -1111,6 +1158,9 @@ export const sessionCatalogItemGoalCountOneMin = 0;
 export const sessionCatalogItemGoalCountDefault = null;
 export const sessionCatalogItemIdMax = 512;
 
+export const sessionCatalogItemIterationCountOneMin = 0;
+
+export const sessionCatalogItemIterationCountDefault = null;
 export const sessionCatalogItemLatestSeqOneMin = 0;
 
 export const sessionCatalogItemLatestSeqDefault = null;
@@ -1129,6 +1179,9 @@ export const sessionCatalogItemStateMax = 128;
 export const sessionCatalogItemStopModeOneMax = 128;
 
 export const sessionCatalogItemStopModeDefault = null;
+export const sessionCatalogItemTurnCountOneMin = 0;
+
+export const sessionCatalogItemTurnCountDefault = null;
 export const sessionCatalogItemUpdatedAtMax = 128;
 
 
@@ -1144,6 +1197,7 @@ export const SessionCatalogItem = /*#__PURE__*/ zod.strictObject({
   "gateway_session_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionCatalogItemGatewaySessionIdMax)),
   "goal_count": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(sessionCatalogItemGoalCountOneMin)),/*#__PURE__*/ zod.null()]), sessionCatalogItemGoalCountDefault),
   "id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionCatalogItemIdMax)),
+  "iteration_count": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(sessionCatalogItemIterationCountOneMin)),/*#__PURE__*/ zod.null()]), sessionCatalogItemIterationCountDefault),
   "latest_seq": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(sessionCatalogItemLatestSeqOneMin)),/*#__PURE__*/ zod.null()]), sessionCatalogItemLatestSeqDefault),
   "legacy": /*#__PURE__*/ zod.boolean(),
   "live": /*#__PURE__*/ zod.boolean(),
@@ -1154,6 +1208,7 @@ export const SessionCatalogItem = /*#__PURE__*/ zod.strictObject({
   "projection_status": /*#__PURE__*/ zod.enum(['available', 'pending', 'fault']),
   "state": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionCatalogItemStateMax)),
   "stop_mode": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionCatalogItemStopModeOneMax)),/*#__PURE__*/ zod.null()]), sessionCatalogItemStopModeDefault),
+  "turn_count": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(sessionCatalogItemTurnCountOneMin)),/*#__PURE__*/ zod.null()]), sessionCatalogItemTurnCountDefault),
   "updated_at": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionCatalogItemUpdatedAtMax))
 }).check(/*#__PURE__*/ zod.describe('One launcher session without loading its retained evidence.'));
 
@@ -1189,8 +1244,9 @@ export type SessionCatalogResponseOutput = zod.output<typeof SessionCatalogRespo
 
 export const sessionCommandRequestActorMax = 120;
 
-export const sessionCommandRequestExpectedCursorMax = 2048;
+export const sessionCommandRequestExpectedCursorOneMax = 2048;
 
+export const sessionCommandRequestExpectedCursorDefault = null;
 export const sessionCommandRequestForceDefault = false;
 export const sessionCommandRequestIdempotencyKeyMin = 8;
 export const sessionCommandRequestIdempotencyKeyMax = 128;
@@ -1205,7 +1261,7 @@ export const sessionCommandRequestPlayerIdMax = 120;
 export const SessionCommandRequest = /*#__PURE__*/ zod.strictObject({
   "action": /*#__PURE__*/ zod.enum(['guide', 'revise', 'pause', 'resume', 'stop']),
   "actor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(sessionCommandRequestActorMax)),
-  "expected_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(sessionCommandRequestExpectedCursorMax)),
+  "expected_cursor": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(sessionCommandRequestExpectedCursorOneMax)),/*#__PURE__*/ zod.null()]), sessionCommandRequestExpectedCursorDefault),
   "force": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.boolean(), sessionCommandRequestForceDefault),
   "idempotency_key": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(sessionCommandRequestIdempotencyKeyMin)).check(/*#__PURE__*/ zod.maxLength(sessionCommandRequestIdempotencyKeyMax)),
   "instruction": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionCommandRequestInstructionOneMax)),/*#__PURE__*/ zod.null()]), sessionCommandRequestInstructionDefault),
@@ -1316,13 +1372,14 @@ export const startCommandRequestInstructionOneMax = 4000;
 export const startCommandRequestInstructionDefault = null;
 export const startCommandRequestPlayerIdMax = 120;
 
-
+export const startCommandRequestResetDefault = `none`;
 
 export const StartCommandRequest = /*#__PURE__*/ zod.strictObject({
   "actor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(startCommandRequestActorMax)),
   "idempotency_key": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(startCommandRequestIdempotencyKeyMin)).check(/*#__PURE__*/ zod.maxLength(startCommandRequestIdempotencyKeyMax)),
   "instruction": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(startCommandRequestInstructionOneMax)),/*#__PURE__*/ zod.null()]), startCommandRequestInstructionDefault),
-  "player_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(startCommandRequestPlayerIdMax))
+  "player_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(startCommandRequestPlayerIdMax)),
+  "reset": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.enum(['none', 'temple', 'baseline']), startCommandRequestResetDefault)
 }).check(/*#__PURE__*/ zod.describe('Durable asynchronous request for one player runtime.'));
 
 export type StartCommandRequest = zod.input<typeof StartCommandRequest>;
@@ -1779,6 +1836,23 @@ export const GetKnowledgeDetail422Response = ApiError
 export const GetKnowledgeDetail503Response = ApiError
 
 
+export const getLiveVitalsPathSessionIdMax = 200;
+
+
+
+export const GetLiveVitalsParams = /*#__PURE__*/ zod.strictObject({
+  "session_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getLiveVitalsPathSessionIdMax))
+})
+
+export const GetLiveVitals200Response = LiveVitalsResponse
+
+export const GetLiveVitals404Response = ApiError
+
+export const GetLiveVitals422Response = ApiError
+
+export const GetLiveVitals503Response = ApiError
+
+
 export const getLivePartitionPathSessionIdMax = 200;
 
 
@@ -1802,7 +1876,8 @@ export const getResourceNotificationsQuerySessionIdMax = 200;
 
 
 export const GetResourceNotificationsQueryParams = /*#__PURE__*/ zod.strictObject({
-  "session_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getResourceNotificationsQuerySessionIdMax))
+  "session_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getResourceNotificationsQuerySessionIdMax))),
+  "scope": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.enum(['catalog']))
 })
 
 export const getResourceNotificationsHeaderLastEventIDRegExp = new RegExp('^[0-9a-f]{32}:[0-9]+$');

@@ -1,20 +1,23 @@
-import {
-  Link,
-  Outlet,
-  useNavigate,
-  useRouterState,
-} from "@tanstack/react-router"
+import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router"
 import { useEffect, useRef, type ReactNode } from "react"
 
+import { MessageSquareTextIcon, SearchIcon } from "lucide-react"
+
 import { ApplicationHeader } from "@/app/application-header"
+import { cn } from "@/lib/utils"
+import { ThemeControl } from "@/app/theme-control"
 import { selectedSession } from "@/app/session-context-model"
-import { useSessionCatalog } from "@/data/session-catalog"
+import {
+  useSessionCatalog,
+  useSessionCatalogLiveness,
+} from "@/data/session-catalog"
 
 type AppShellProps = {
   navigation: ReactNode
 }
 
 function AppShell({ navigation }: AppShellProps) {
+  useSessionCatalogLiveness()
   const contentRef = useRef<HTMLElement>(null)
   const location = useRouterState({
     select: (state) => state.location,
@@ -22,6 +25,9 @@ function AppShell({ navigation }: AppShellProps) {
   const navigate = useNavigate()
   const pathname = location.pathname
   const isReviewRoute = pathname === "/review"
+  // The launcher is a full-bleed scene: no header, the theme control floats
+  // top right.
+  const isLauncherRoute = pathname === "/"
   const contextSearch =
     typeof location.search === "object" && location.search !== null
       ? (location.search as Record<string, unknown>)
@@ -103,51 +109,73 @@ function AppShell({ navigation }: AppShellProps) {
     })
   }
 
-  const actions =
-    selected === null ? null : selected.live ? (
-      pathname === "/live" ? (
-        <span className="rounded-[9px] border border-success/30 bg-success-soft px-2.5 py-2 text-[10px] text-content-primary">
-          Live context
-        </span>
-      ) : (
-        <Link
-          to="/live"
-          search={{
-            player: selected.player_id,
-            session: selected.id,
-            view: "overview",
-          }}
-          className="rounded-[9px] border border-action-border px-3 py-2 text-[11px] font-medium text-accent outline-none hover:bg-accent-soft focus-visible:[box-shadow:var(--focus-ring)]"
-        >
-          Open Live
-        </Link>
-      )
-    ) : pathname === `/sessions/${selected.id}` ? (
-      <span className="rounded-[9px] border border-line bg-surface-soft px-2.5 py-2 text-[10px] text-content-muted">
-        Recording selected
-      </span>
-    ) : (
-      <Link
-        to="/sessions/$sessionId"
-        params={{ sessionId: selected.id }}
-        search={{
-          player: selected.player_id,
-          session: selected.id,
-        }}
-        className="rounded-[9px] border border-line px-3 py-2 text-[11px] font-medium text-content-primary outline-none hover:bg-surface-soft focus-visible:[box-shadow:var(--focus-ring)]"
+  const headerActionClassName =
+    "inline-flex h-[34px] items-center justify-center gap-[7px] rounded-[11px] border border-line bg-surface-raised px-[13px] py-2 text-[12.5px] whitespace-nowrap outline-none hover:border-line-strong hover:bg-surface-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-[0.56] max-[1440px]:[&>span]:hidden"
+  const liveActions = (
+    <>
+      <button
+        type="button"
+        data-header-action="message"
+        aria-label="Message agent"
+        className={cn(
+          headerActionClassName,
+          "border-[color-mix(in_srgb,var(--warning)_34%,var(--line))] text-warning"
+        )}
+        disabled
+        title={
+          selected?.control_available
+            ? "Messaging lands with the Live controls"
+            : "Messaging requires a running, controllable session"
+        }
       >
-        View recording
-      </Link>
-    )
+        <MessageSquareTextIcon aria-hidden="true" className="size-3.5" />
+        <span>Message agent</span>
+      </button>
+      <button
+        type="button"
+        data-header-action="ask"
+        aria-label="Ask about this session"
+        className={cn(
+          headerActionClassName,
+          "text-content-muted max-[1440px]:px-2.5"
+        )}
+        disabled
+        title="Ask opens with the Live experience"
+      >
+        <SearchIcon aria-hidden="true" className="size-3.5" />
+        <span>Ask about this session</span>
+        <kbd className="rounded-[5px] border border-line-strong bg-surface px-[5px] py-0.5 font-mono text-[9px] text-content-quiet">
+          ⌘K
+        </kbd>
+      </button>
+    </>
+  )
+  // Outside Live the switcher carries every context action itself.
+  const actions = pathname === "/live" ? liveActions : null
 
   return (
     <div
       data-testid="application-shell"
-      className="min-h-svh bg-canvas text-content-primary"
+      className="relative min-h-svh bg-canvas text-content-primary"
     >
       <div className="flex min-h-svh w-full flex-col">
-        {isReviewRoute ? null : (
+        {isLauncherRoute ? (
+          <div className="absolute top-4 right-4 z-10">
+            <ThemeControl />
+          </div>
+        ) : null}
+        {isReviewRoute || isLauncherRoute ? null : (
           <ApplicationHeader
+            onLeaveLive={
+              pathname === "/live"
+                ? () => {
+                    void navigate({
+                      to: "/",
+                      search: { player: selected?.player_id },
+                    })
+                  }
+                : undefined
+            }
             actions={actions}
             brandContext={{
               player: selected?.player_id,
@@ -178,7 +206,7 @@ function AppShell({ navigation }: AppShellProps) {
           tabIndex={-1}
           data-testid="route-content"
           className={
-            isReviewRoute
+            isReviewRoute || isLauncherRoute
               ? "min-w-0 flex-1 outline-none"
               : "min-w-0 flex-1 p-5 outline-none sm:p-8"
           }

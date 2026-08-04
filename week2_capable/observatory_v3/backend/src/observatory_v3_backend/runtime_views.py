@@ -4,8 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .contracts import LiveJourneySnapshot, RuntimeSessionInvestigation
-from .projections.live import project_live
+from .contracts import (
+    LiveJourneySnapshot,
+    LivePlayerStatus,
+    RuntimeSessionInvestigation,
+)
+from .projections.live import derive_player_status, project_live
 from .projections.runtime_session import project_runtime_session
 from .sources.atlas import AtlasSource
 from .sources.runtime import RuntimeSession, RuntimeSource
@@ -40,6 +44,29 @@ class RuntimeReadService:
             atlas=self.atlas,
             operator_messages=self.runtime.operator_messages(session_id),
         )
+
+    def player_status(self, session_id: str) -> LivePlayerStatus:
+        """Derive the selected session's observed player state.
+
+        Reads one bounded tail of the session journal, so the roster can show
+        vitals without materialization and without loading the full session.
+        """
+        _, latest = self.runtime.journal_position(session_id)
+        events = self.runtime.events(
+            session_id,
+            after=max(0, latest - 400),
+            limit=400,
+        )
+        vitals_event = next(
+            (
+                event
+                for event in reversed(events)
+                if event.kind == "observation"
+                and event.payload.get("kind") == "vitals"
+            ),
+            None,
+        )
+        return derive_player_status(events, vitals_event)
 
     def investigation(
         self,

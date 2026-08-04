@@ -8,7 +8,7 @@ describe("production application boundary", () => {
     render(<App />)
 
     expect(
-      await screen.findByRole("heading", { name: "Live" })
+      await screen.findByRole("heading", { name: /Boukensha/ })
     ).toBeInTheDocument()
     expect(screen.queryByText("Foundation review")).not.toBeInTheDocument()
     expect(

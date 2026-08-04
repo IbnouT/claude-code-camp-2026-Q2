@@ -2511,6 +2511,82 @@
         "title": "LivePartitionResponse",
         "type": "object"
       },
+      "LiveVitalsResponse": {
+        "additionalProperties": false,
+        "description": "The selected session's observed player state for roster vitals.",
+        "properties": {
+          "capture_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Capture Gaps",
+            "type": "array"
+          },
+          "completeness": {
+            "enum": [
+              "complete",
+              "partial",
+              "degraded"
+            ],
+            "title": "Completeness",
+            "type": "string"
+          },
+          "fields": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ObservedPlayerValue"
+            },
+            "title": "Fields",
+            "type": "object"
+          },
+          "player_id": {
+            "maxLength": 512,
+            "title": "Player Id",
+            "type": "string"
+          },
+          "resource_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_version": {
+            "minimum": 1,
+            "title": "Resource Version",
+            "type": "integer"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "source_cursor": {
+            "minLength": 1,
+            "title": "Source Cursor",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "Source Refs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "resource_id",
+          "resource_version",
+          "source_cursor",
+          "completeness",
+          "capture_gaps",
+          "source_refs",
+          "session_id",
+          "player_id",
+          "fields"
+        ],
+        "title": "LiveVitalsResponse",
+        "type": "object"
+      },
       "LiveVoiceCapability": {
         "additionalProperties": false,
         "description": "Availability of cost-bearing speech for the selected Live thought.",
@@ -2861,6 +2937,54 @@
         "title": "ObservatoryCapabilities",
         "type": "object"
       },
+      "ObservedPlayerValue": {
+        "additionalProperties": false,
+        "description": "One observed player-state value and its supporting observation.",
+        "properties": {
+          "confidence": {
+            "maxLength": 64,
+            "title": "Confidence",
+            "type": "string"
+          },
+          "method": {
+            "maxLength": 64,
+            "title": "Method",
+            "type": "string"
+          },
+          "observed_at": {
+            "title": "Observed At",
+            "type": "number"
+          },
+          "sequence": {
+            "minimum": 0,
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "value",
+          "sequence",
+          "observed_at",
+          "confidence",
+          "method"
+        ],
+        "title": "ObservedPlayerValue",
+        "type": "object"
+      },
       "PlayerOption": {
         "additionalProperties": false,
         "description": "One player represented in the session catalog.",
@@ -2874,6 +2998,11 @@
             "maxLength": 512,
             "title": "Label",
             "type": "string"
+          },
+          "start_available": {
+            "default": false,
+            "title": "Start Available",
+            "type": "boolean"
           }
         },
         "required": [
@@ -3331,6 +3460,19 @@
             "title": "Id",
             "type": "string"
           },
+          "iteration_count": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Iteration Count"
+          },
           "latest_seq": {
             "anyOf": [
               {
@@ -3417,6 +3559,19 @@
             ],
             "default": null,
             "title": "Stop Mode"
+          },
+          "turn_count": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Turn Count"
           },
           "updated_at": {
             "maxLength": 128,
@@ -3551,10 +3706,18 @@
             "type": "string"
           },
           "expected_cursor": {
-            "maxLength": 2048,
-            "minLength": 1,
-            "title": "Expected Cursor",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 2048,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Expected Cursor"
           },
           "force": {
             "default": false,
@@ -3591,8 +3754,7 @@
           "idempotency_key",
           "actor",
           "player_id",
-          "action",
-          "expected_cursor"
+          "action"
         ],
         "title": "SessionCommandRequest",
         "type": "object"
@@ -3929,6 +4091,16 @@
             "maxLength": 120,
             "minLength": 1,
             "title": "Player Id",
+            "type": "string"
+          },
+          "reset": {
+            "default": "none",
+            "enum": [
+              "none",
+              "temple",
+              "baseline"
+            ],
+            "title": "Reset",
             "type": "string"
           }
         },
@@ -5429,6 +5601,68 @@
         ]
       }
     },
+    "/api/v1/live/{session_id}/vitals": {
+      "get": {
+        "operationId": "getLiveVitals",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveVitalsResponse"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "live"
+        ]
+      }
+    },
     "/api/v1/live/{session_id}/{partition}": {
       "get": {
         "operationId": "getLivePartition",
@@ -5516,10 +5750,21 @@
           {
             "in": "query",
             "name": "session_id",
-            "required": true,
+            "required": false,
             "schema": {
               "maxLength": 200,
               "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "enum": [
+                "catalog"
+              ],
               "type": "string"
             }
           },

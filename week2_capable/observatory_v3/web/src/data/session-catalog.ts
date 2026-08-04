@@ -1,9 +1,13 @@
 import {
   useInfiniteQuery,
   useQuery,
+  useQueryClient,
   type InfiniteData,
 } from "@tanstack/react-query"
 import { useEffect } from "react"
+
+import { ResourceNotificationCoordinator } from "@/data/notification-coordinator"
+import { connectResourceNotifications } from "@/data/notification-stream"
 
 import { createBoundedPageQueryOptions } from "@/data/bounded-queries"
 import {
@@ -49,6 +53,7 @@ type SessionCatalogState = {
 
 type SessionCatalog = SessionCatalogResponseOutput
 type SessionCatalogItem = SessionCatalogItemOutput
+type PlayerOption = SessionCatalog["players"][number]
 type SessionCatalogResult = ServerStateResult<SessionCatalog>
 
 function dataFromResult(
@@ -86,9 +91,11 @@ function mergePlayerPages(
 ): SessionCatalog {
   if (playerId === undefined) return rootCatalog
 
+  // Union, not replacement: the roster keeps every player's root sessions
+  // while the selected player's deep pages fill in beyond the first page.
   const sessions = new Map<string, SessionCatalogItem>()
   for (const session of rootCatalog.sessions) {
-    if (session.player_id === playerId) sessions.set(session.id, session)
+    sessions.set(session.id, session)
   }
   for (const page of pages) {
     for (const session of page.sessions) {
@@ -252,9 +259,42 @@ function useSessionCatalog(
   }
 }
 
+/**
+ * Follow roster-level transitions through the catalog notification scope.
+ * Any session appearing, going live, or ending invalidates every session
+ * catalog query, so live badges and Watch Live tiles update without a
+ * refresh and without polling.
+ */
+function useSessionCatalogLiveness(): void {
+  const queryClient = useQueryClient()
+  useEffect(() => {
+    const coordinator = new ResourceNotificationCoordinator(async () => {
+      await queryClient.invalidateQueries(
+        { queryKey: queryKeys.resourceKind(catalogIdentity.kind) },
+        { cancelRefetch: false }
+      )
+      // The selected session's observed vitals advance with the same roster
+      // transitions, so they refresh from the identical signal.
+      await queryClient.invalidateQueries(
+        { queryKey: queryKeys.resourceKind("live-vitals") },
+        { cancelRefetch: false }
+      )
+    })
+    const stream = connectResourceNotifications({
+      coordinator,
+      scope: "catalog",
+    })
+    return () => {
+      stream.close()
+    }
+  }, [queryClient])
+}
+
 export {
   sessionCatalogQueryOptions,
   useSessionCatalog,
+  useSessionCatalogLiveness,
+  type PlayerOption,
   type SessionCatalog,
   type SessionCatalogIdentity,
   type SessionCatalogItem,

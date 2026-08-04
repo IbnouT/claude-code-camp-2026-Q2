@@ -22,6 +22,8 @@ function item(
     created_at: "2026-08-03T10:00:00Z",
     ended_at: "2026-08-03T10:30:00Z",
     event_count: 20,
+    turn_count: null,
+    iteration_count: null,
     gateway_session_id: `gateway-${id}`,
     goal_count: 2,
     id,
@@ -48,6 +50,7 @@ function catalog(sessions: SessionCatalogItem[]): SessionCatalog {
     players: sessions.map((session) => ({
       id: session.player_id,
       label: session.character,
+      start_available: false,
     })),
     resource_id: "session-catalog",
     resource_version: 1,
@@ -85,6 +88,22 @@ describe("selected session context model", () => {
     expect(sessionLifecycle(item("checking", { state: "draining" }))).toBe(
       "checking"
     )
+    // The live flag stays true through transitions and must not win.
+    expect(
+      sessionLifecycle(item("draining", { live: true, state: "draining" }))
+    ).toBe("checking")
+    expect(
+      sessionLifecycle(item("starting", { live: true, state: "starting" }))
+    ).toBe("checking")
+    expect(
+      sessionLifecycle(item("live-failed", { live: true, state: "failed" }))
+    ).toBe("failed")
+    // Quarantine blocks agent commands, never a healthy running state.
+    expect(
+      sessionLifecycle(
+        item("quarantined", { live: true, state: "quarantined" })
+      )
+    ).toBe("failed")
     expect(sessionLifecycle(item("failed", { state: "failed" }))).toBe("failed")
     expect(sessionLifecycle(item("complete", { state: "complete" }))).toBe(
       "succeeded"

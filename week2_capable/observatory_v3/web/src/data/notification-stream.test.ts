@@ -14,6 +14,7 @@ class FakeEventSource implements EventSourceLike {
     Set<EventListenerOrEventListenerObject>
   >()
   closed = false
+  readyState = 1
 
   addEventListener(type: string, listener: EventListenerOrEventListenerObject) {
     const listeners = this.listeners.get(type) ?? new Set()
@@ -90,6 +91,43 @@ describe("resource notification stream", () => {
     stream.close()
     expect(source.closed).toBe(true)
     expect(states.at(-1)).toBe("closed")
+  })
+
+  it("replaces a permanently closed source with backoff", () => {
+    vi.useFakeTimers()
+    try {
+      const sources: FakeEventSource[] = []
+      const stream = connectResourceNotifications({
+        coordinator: new ResourceNotificationCoordinator(async () => {}),
+        eventSourceFactory: () => {
+          const source = new FakeEventSource()
+          sources.push(source)
+          return source
+        },
+      })
+      // The proxy answered with an HTTP failure: the source is terminal.
+      sources[0].readyState = 2
+      sources[0].emit("error", new Event("error"))
+      expect(sources[0].closed).toBe(true)
+      expect(sources).toHaveLength(1)
+      vi.advanceTimersByTime(1_000)
+      expect(sources).toHaveLength(2)
+      // The replacement dies too: the next retry waits twice as long.
+      sources[1].readyState = 2
+      sources[1].emit("error", new Event("error"))
+      vi.advanceTimersByTime(1_000)
+      expect(sources).toHaveLength(2)
+      vi.advanceTimersByTime(1_000)
+      expect(sources).toHaveLength(3)
+      // A recovered stream resets the backoff and keeps flowing.
+      sources[2].emit("open", new Event("open"))
+      stream.close()
+      vi.advanceTimersByTime(60_000)
+      expect(sources).toHaveLength(3)
+      expect(sources[2].closed).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it("reports invalid notification payloads without closing the stream", () => {

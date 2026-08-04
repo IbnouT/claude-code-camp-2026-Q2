@@ -54,8 +54,8 @@ class CommandStore:
                 """
                 INSERT INTO commands (
                     id, idempotency_key, action, actor, player_id, session_id,
-                    expected_cursor, instruction, force, state, submitted_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?)
+                    expected_cursor, instruction, reset, force, state, submitted_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?)
                 """,
                 (
                     command_id,
@@ -66,6 +66,7 @@ class CommandStore:
                     value.session_id,
                     value.expected_cursor,
                     value.instruction,
+                    value.reset,
                     int(value.force),
                     submitted_at,
                 ),
@@ -162,6 +163,7 @@ class CommandStore:
                     session_id TEXT,
                     expected_cursor TEXT,
                     instruction TEXT,
+                    reset TEXT NOT NULL DEFAULT 'none',
                     force INTEGER NOT NULL DEFAULT 0,
                     state TEXT NOT NULL,
                     submitted_at TEXT NOT NULL,
@@ -173,6 +175,14 @@ class CommandStore:
                 );
                 """
             )
+            columns = {
+                str(info[1])
+                for info in self._database.execute("PRAGMA table_info(commands)")
+            }
+            if "reset" not in columns:
+                self._database.execute(
+                    "ALTER TABLE commands ADD COLUMN reset TEXT NOT NULL DEFAULT 'none'"
+                )
             row = self._database.execute(
                 "SELECT version FROM command_schema"
             ).fetchone()
@@ -198,6 +208,7 @@ def _command(row: sqlite3.Row) -> Command:
             None if row["expected_cursor"] is None else str(row["expected_cursor"])
         ),
         instruction=None if row["instruction"] is None else str(row["instruction"]),
+        reset=str(row["reset"]),  # type: ignore[arg-type]
         force=bool(row["force"]),
         state=str(row["state"]),  # type: ignore[arg-type]
         submitted_at=str(row["submitted_at"]),
@@ -221,6 +232,7 @@ def _identity(command: Command) -> tuple[object, ...]:
         command.session_id,
         command.expected_cursor,
         command.instruction,
+        command.reset,
         command.force,
     )
 
@@ -233,6 +245,7 @@ def _submission_identity(value: CommandSubmission) -> tuple[object, ...]:
         value.session_id,
         value.expected_cursor,
         value.instruction,
+        value.reset,
         value.force,
     )
 

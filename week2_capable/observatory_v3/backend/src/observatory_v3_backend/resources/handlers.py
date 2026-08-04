@@ -28,6 +28,7 @@ from ..materialization.models import MaterializationResult
 from ..repositories import RegistryDatabase
 from ..repositories.session_catalog import SessionCatalogRepository
 from ..repositories.session_lookup import SessionLookupRepository
+from ..sources.gateway_identity import ConfiguredPlayer
 from ..storage_executor import StorageExecutor
 from .bounds import bounded_text, content_identity
 from .contracts import LivePartition, MaterializationPendingResponse
@@ -52,6 +53,9 @@ class ReadResourceHandlers:
         storage: StorageExecutor,
         knowledge: KnowledgeResourceRepository | None,
         experiment_store: ExperimentStore | None = None,
+        configured_players: (
+            Callable[[], tuple[ConfiguredPlayer, ...]] | None
+        ) = None,
     ) -> None:
         self.index = index
         self.registry = registry
@@ -59,6 +63,7 @@ class ReadResourceHandlers:
         self.storage = storage
         self.resources = ResourceRepository(index, registry, experiment_store)
         self.knowledge = knowledge
+        self._configured_players = configured_players
         self._pending_materializations: dict[
             str,
             asyncio.Task[MaterializationResult],
@@ -144,7 +149,16 @@ class ReadResourceHandlers:
                 record.character,
                 max_bytes=512,
             )
-            objective = None if checkpoint is None else checkpoint.latest_goal
+            (
+                objective,
+                goal_count,
+                nudge_count,
+            ) = await self.storage.run(
+                SessionCatalogRepository.objective_summary,
+                record,
+            )
+            if objective is None and checkpoint is not None:
+                objective = checkpoint.latest_goal
             objective_truncated = False
             if objective is not None:
                 objective, objective_truncated = bounded_text(
@@ -162,6 +176,10 @@ class ReadResourceHandlers:
                     "registry_latest_goal_truncated",
                 )
             catalog_gaps.extend(projection_gaps)
+            event_count, latest_seq = await self.storage.run(
+                SessionCatalogRepository.journal_summary,
+                record,
+            )
             sessions.append(
                 SessionCatalogItem(
                     id=record.session_id,
@@ -178,27 +196,51 @@ class ReadResourceHandlers:
                     stop_mode=record.stop_mode,
                     projection_status=projection_status,
                     projection_gaps=projection_gaps[:16],
-                    event_count=(
-                        None if checkpoint is None else checkpoint.record_count
+                    event_count=event_count,
+                    turn_count=(
+                        None if checkpoint is None else checkpoint.turn_count
                     ),
-                    latest_seq=(
-                        None
-                        if checkpoint is None
-                        else checkpoint.watermark.gateway_sequence
+                    iteration_count=(
+                        None if checkpoint is None else checkpoint.iteration_count
                     ),
+                    latest_seq=latest_seq,
                     legacy=record.legacy,
                     live=record.live,
                     objective=objective,
-                    goal_count=(None if checkpoint is None else checkpoint.goal_count),
-                    nudge_count=(
-                        None if checkpoint is None else checkpoint.nudge_count
-                    ),
+                    goal_count=goal_count,
+                    nudge_count=nudge_count,
                 )
             )
-        players = tuple(
-            PlayerOption(id=item.player_id, label=item.character)
-            for item in {item.player_id: item for item in sessions}.values()
+        live_players = await self.storage.run(
+            SessionCatalogRepository(self.registry).live_player_ids
         )
+        configured = (
+            await self.storage.run(self._configured_players)
+            if self._configured_players is not None
+            else ()
+        )
+        configured_ids = {player.id for player in configured}
+
+        def _startable(player_id: str) -> bool:
+            # Only a configured identity with no active session can be started.
+            return player_id in configured_ids and player_id not in live_players
+
+        options: dict[str, PlayerOption] = {}
+        for item in sessions:
+            options[item.player_id] = PlayerOption(
+                id=item.player_id,
+                label=item.character,
+                start_available=_startable(item.player_id),
+            )
+        for player in configured:
+            if player.id not in options:
+                options[player.id] = PlayerOption(
+                    id=player.id,
+                    label=player.character,
+                    start_available=_startable(player.id),
+                )
+        # Bounded to the SessionCatalogResponse.players contract limit.
+        players = tuple(options.values())[:50]
         continuation = (
             encode_cursor(
                 CursorCoordinates(
@@ -215,6 +257,7 @@ class ReadResourceHandlers:
             {
                 "player_id": player_id,
                 "sessions": [item.model_dump(mode="json") for item in sessions],
+                "players": [player.model_dump(mode="json") for player in players],
             },
         )
         response = SessionCatalogResponse(

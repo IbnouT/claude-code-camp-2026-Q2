@@ -59,8 +59,10 @@ class GatewaySettings:
     control_socket: Path | None = None
 
     @classmethod
-    def load(cls) -> "GatewaySettings":
-        config_dir = _config_dir()
+    def load(cls, config_dir: Path | None = None) -> "GatewaySettings":
+        config_dir = (
+            _config_dir() if config_dir is None else config_dir.expanduser().resolve()
+        )
         configured = _load(config_dir / "settings.yaml")
         connection = _mapping(configured, "connection")
         players = _players(configured.get("players"))

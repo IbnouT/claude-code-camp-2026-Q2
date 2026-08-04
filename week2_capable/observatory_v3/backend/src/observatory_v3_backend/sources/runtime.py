@@ -10,6 +10,7 @@ import tempfile
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -143,6 +144,25 @@ class RuntimeSource:
         except ObservatoryRepositoryError as error:
             raise RuntimeSourceError("runtime registry is unreadable") from error
         return tuple(self._session(record) for record in records)
+
+    def player_records(self, player_id: str) -> tuple[SessionRecord, ...]:
+        """Return lightweight registry rows for one player, newest first.
+
+        The launcher readiness loop needs only session identity, state, and
+        directory, so this avoids the per-session journal, control, and operator
+        reads that full ``sessions()`` discovery performs.
+        """
+        self._ensure_registry()
+        if self._catalog is None:
+            return ()
+        try:
+            return self._catalog.keyset_page(player_id=player_id, limit=50)
+        except PathIdentityError as error:
+            raise RuntimeSourceError(
+                "session path violates the runtime layout"
+            ) from error
+        except ObservatoryRepositoryError as error:
+            raise RuntimeSourceError("runtime registry is unreadable") from error
 
     def session(self, session_id: str) -> RuntimeSession | None:
         self._ensure_registry()
@@ -333,7 +353,10 @@ class RuntimeSource:
             raise RuntimeSourceError(f"unknown runtime session {session_id!r}")
         if not session.live:
             raise RuntimeSourceError("the selected session is not live")
-        if expected_sequence != session.latest_seq:
+        # A stop targets the session identity, so new events never make it
+        # stale. Guide and revise instruct against observed state and hold
+        # the exact-cursor guard.
+        if action != "stop" and expected_sequence != session.latest_seq:
             raise RuntimeSourceError(
                 "the selected session advanced, refresh before controlling it"
             )
@@ -394,6 +417,26 @@ class RuntimeSource:
                 str(value.get("error") or "the agent rejected control")
             )
         return value
+
+    def record_stop(self, session_id: str, mode: str) -> None:
+        """Record a verified stop outcome in the launcher registry."""
+        now = datetime.now(UTC).isoformat()
+        try:
+            with sqlite3.connect(self.registry) as database:
+                try:
+                    database.execute("ALTER TABLE sessions ADD COLUMN stop_mode TEXT")
+                except sqlite3.OperationalError:
+                    pass
+                database.execute(
+                    "UPDATE sessions SET state = 'stopped', updated_at = ?, "
+                    "ended_at = COALESCE(ended_at, ?), stop_mode = ? "
+                    "WHERE session_id = ?",
+                    (now, now, mode, session_id),
+                )
+        except sqlite3.Error as error:
+            raise RuntimeSourceError(
+                "the stop outcome could not be recorded"
+            ) from error
 
     def process_id(self, session_id: str, *, player_id: str) -> int:
         """Return one registry-owned PID after validating the selected player."""
@@ -535,6 +578,14 @@ class RuntimeSource:
                 if isinstance(instruction, str) and instruction.strip():
                     first_turn = instruction.strip()
         return first_turn
+
+    def player_of(self, session_id: str) -> str:
+        """Return the owning player id without full session hydration."""
+        return self._session_record(session_id).player_id
+
+    def journal_position(self, session_id: str) -> tuple[int, int]:
+        """Return one session's event count and latest sequence."""
+        return self._journal_summary(self._session_dir(session_id) / "gateway.db")
 
     def _session_dir(self, session_id: str) -> Path:
         return self._session_record(session_id).session_dir

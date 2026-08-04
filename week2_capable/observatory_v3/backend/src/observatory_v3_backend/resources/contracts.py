@@ -299,6 +299,24 @@ class LivePartitionResponse(ResourceMetadata):
     values: dict[str, JsonValue]
 
 
+class ObservedPlayerValue(ResourceContract):
+    """One observed player-state value and its supporting observation."""
+
+    value: bool | int | str
+    sequence: int = Field(ge=0)
+    observed_at: float
+    confidence: str = Field(max_length=64)
+    method: str = Field(max_length=64)
+
+
+class LiveVitalsResponse(ResourceMetadata):
+    """The selected session's observed player state for roster vitals."""
+
+    session_id: str
+    player_id: str = Field(max_length=512)
+    fields: dict[str, ObservedPlayerValue]
+
+
 class ExperimentSummary(ResourceContract):
     """One immutable experiment identity and its bounded sample totals."""
 

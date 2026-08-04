@@ -16,6 +16,7 @@ type ApplicationHeaderProps = {
     session?: string
   }
   navigation: ReactNode
+  onLeaveLive?: () => void
   onSelect: (session: SessionCatalogItem) => void
   onSelectPlayer: (playerId: string) => void
   selected: SessionCatalogItem | null
@@ -26,6 +27,7 @@ function ApplicationHeader({
   actions,
   brandContext,
   navigation,
+  onLeaveLive,
   onSelect,
   onSelectPlayer,
   selected,
@@ -34,16 +36,13 @@ function ApplicationHeader({
   return (
     <header
       data-testid="application-header"
-      className="relative z-30 flex min-h-(--header-height) items-center gap-4 border-b border-line bg-surface px-[22px] py-[13px] leading-[normal] max-[900px]:flex-wrap max-[700px]:items-stretch max-[700px]:px-3 max-[700px]:py-2.5"
+      className="relative z-30 flex min-h-(--header-height) items-center gap-4 border-b border-line bg-header-surface px-[22px] py-[13px] leading-[normal] max-[900px]:flex-wrap max-[700px]:items-stretch max-[700px]:px-3 max-[700px]:py-2.5"
     >
       <Link
-        to="/live"
-        search={{
-          ...brandContext,
-          view: "overview",
-        }}
-        aria-label="Boukensha Observatory"
-        className="inline-flex flex-none items-center gap-[11px] text-[15px] font-semibold text-content-primary no-underline outline-none focus-visible:[box-shadow:var(--focus-ring)]"
+        to="/"
+        search={{ player: brandContext.player }}
+        aria-label="Boukensha Observatory launcher"
+        className="inline-flex items-center gap-[11px] text-[15px] font-semibold text-content-primary no-underline outline-none focus-visible:[box-shadow:var(--focus-ring)]"
       >
         <span
           data-testid="brand-mark"
@@ -53,7 +52,7 @@ function ApplicationHeader({
         </span>
         <span className="grid gap-px max-[1040px]:hidden">
           <strong className="text-[15px] font-semibold">Boukensha</strong>
-          <small className="text-[8.5px] font-medium tracking-[0.16em] text-content-quiet uppercase in-data-[theme=light]:text-content-muted">
+          <small className="text-[8.5px] font-medium tracking-[0.16em] text-content-quiet uppercase">
             Observatory
           </small>
         </span>
@@ -68,6 +67,7 @@ function ApplicationHeader({
 
       <div className="ml-auto flex min-w-0 items-center justify-end gap-[7px] max-[700px]:ml-0 max-[700px]:w-full max-[700px]:flex-wrap max-[700px]:justify-start">
         <SessionSelector
+          onLeaveLive={onLeaveLive}
           catalogResult={sessionCatalog.result}
           isLoadingAllSessions={sessionCatalog.isLoadingAllSessions}
           loadAllSessions={sessionCatalog.loadAllSessions}

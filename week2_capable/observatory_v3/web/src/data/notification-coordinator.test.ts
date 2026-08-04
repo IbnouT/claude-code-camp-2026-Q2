@@ -124,3 +124,30 @@ describe("resource notification coordinator", () => {
     )
   })
 })
+
+describe("content-hash resource versions", () => {
+  it("refreshes when a newer notification carries a smaller hash", async () => {
+    const invalidated: ResourceChangeTargetOutput[] = []
+    const coordinator = new ResourceNotificationCoordinator(async (target) => {
+      invalidated.push(target)
+    })
+    const { changed } = loadFixture()
+    // A roster transition produces a new content hash that can be numerically
+    // smaller than the previous one; it must still refresh.
+    const transition = {
+      ...changed,
+      change_counter: changed.change_counter + 1,
+      resource_version: 1,
+      source_cursor: "obc1_transition",
+    }
+
+    await coordinator.accept(changed)
+    await coordinator.accept(transition)
+
+    expect(invalidated).toHaveLength(2)
+    expect(invalidated.at(-1)).toMatchObject({
+      resource_version: 1,
+      source_cursor: "obc1_transition",
+    })
+  })
+})

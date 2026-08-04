@@ -8,7 +8,45 @@
 @theme inline {
   --font-sans: var(--font-ui);
   --font-mono: var(--font-data);
+
+  /* Launcher type scale, rem at the 16px root. */
+  --text-launcher-title: 1.625rem;
+  --text-launcher-heading: 0.9375rem;
+  --text-launcher-name: 0.84375rem;
+  --text-launcher-base: 0.875rem;
+  --text-launcher-chip: 0.8125rem;
+  --text-launcher-note: 0.78125rem;
+  --text-launcher-detail: 0.75rem;
+  --text-launcher-caption: 0.6875rem;
+  --text-launcher-fine: 0.65625rem;
+  --text-launcher-sigil: 1.0625rem;
+  --text-launcher-sigil-lg: 1.3125rem;
+
+  /* Launcher radii. */
+  --radius-launcher-card: 0.875rem;
+  --radius-launcher-row: 0.8125rem;
+  --radius-launcher-sigil: 0.625rem;
+  --radius-launcher-action: 0.5625rem;
+  --radius-launcher-control: 0.5rem;
+  --radius-launcher-list: 0.4375rem;
+  --radius-launcher-retry: 0.375rem;
+
+  /* Vertical rhythm between a card heading and its supporting text. */
+  --spacing-launcher-text: 0.3125rem;
+
+  /* Soft pulse: opacity .95 at rest, .35 mid-cycle. */
+  --animate-pulse-glow: pulse-glow 2s infinite;
+  @keyframes pulse-glow {
+    0%,
+    100% {
+      opacity: 0.95;
+    }
+    50% {
+      opacity: 0.35;
+    }
+  }
   --color-canvas: var(--canvas);
+  --color-header-surface: var(--header-surface);
   --color-surface: var(--surface);
   --color-surface-raised: var(--surface-raised);
   --color-surface-soft: var(--surface-soft);
@@ -77,8 +115,11 @@
   body {
     @apply bg-canvas text-content-primary;
     font-family: var(--font-ui);
+    font-size: 14px;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
+    /* v2 tokens.css body antialiasing: thinner strokes on dark surfaces. */
+    -webkit-font-smoothing: antialiased;
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {

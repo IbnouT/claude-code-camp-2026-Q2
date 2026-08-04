@@ -9,7 +9,11 @@ from starlette.responses import StreamingResponse
 
 from ..api_v1.contracts import ResourceChangeTarget
 from .hub import ResourceNotificationHub, ResourceNotificationSubscription
-from .service import SessionNotificationLease, SessionNotificationService
+from .service import (
+    CatalogNotificationLease,
+    SessionNotificationLease,
+    SessionNotificationService,
+)
 
 SSE_RETRY_MS = 1_000
 GLOBAL_EXPERIMENT_KINDS = frozenset(
@@ -47,10 +51,48 @@ async def session_notification_response(
     )
 
 
+async def catalog_notification_response(
+    request: Request,
+    *,
+    hub: ResourceNotificationHub,
+    service: SessionNotificationService,
+) -> StreamingResponse:
+    """Open one session-catalog notification stream.
+
+    Announces roster-level transitions: a session appearing, going live, or
+    ending. Needs no session identity, so a browser can follow the catalog
+    before any session exists.
+    """
+    lease = await service.acquire_catalog()
+    try:
+        last_event_id = request.headers.get("last-event-id")
+        if last_event_id is not None:
+            await lease.wait_ready()
+        subscription = await hub.subscribe(
+            last_event_id,
+            target_filter=_catalog_filter,
+        )
+    except BaseException:
+        await lease.close()
+        raise
+    return StreamingResponse(
+        _event_body(request, subscription, lease),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+def _catalog_filter(target: ResourceChangeTarget) -> bool:
+    return target.resource_kind == "session_catalog"
+
+
 async def _event_body(
     request: Request,
     subscription: ResourceNotificationSubscription,
-    lease: SessionNotificationLease,
+    lease: SessionNotificationLease | CatalogNotificationLease,
 ) -> AsyncIterator[bytes]:
     try:
         async for envelope in subscription:

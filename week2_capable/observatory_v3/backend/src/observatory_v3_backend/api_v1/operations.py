@@ -25,6 +25,7 @@ from ..resources.contracts import (
     KnowledgeSummaryResponse,
     LifecyclePageResponse,
     LivePartitionResponse,
+    LiveVitalsResponse,
     MapPrefixResponse,
     MaterializationPendingResponse,
     SearchPageResponse,
@@ -197,7 +198,11 @@ API_V1_OPERATIONS: tuple[OperationSpec, ...] = (
                 "session_id",
                 "query",
                 {"type": "string", "minLength": 1, "maxLength": 200},
-                required=True,
+            ),
+            ParameterSpec(
+                "scope",
+                "query",
+                {"type": "string", "enum": ["catalog"]},
             ),
             ParameterSpec(
                 "Last-Event-ID",
@@ -490,6 +495,14 @@ API_V1_OPERATIONS: tuple[OperationSpec, ...] = (
             CURSOR,
             PAGE_LIMIT_50,
         ),
+    ),
+    _get(
+        "/live/{session_id:str}/vitals",
+        "getLiveVitals",
+        "live_vitals",
+        "live",
+        LiveVitalsResponse,
+        parameters=(SESSION_ID,),
     ),
     _get(
         "/live/{session_id:str}/{partition:str}",

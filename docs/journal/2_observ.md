@@ -228,3 +228,63 @@ Detail: [observatory README](../../week2_capable/observatory/README.md).
 ## Key Takeaway
 
 - Filled at week's end.
+
+## Observations, Launcher rebuild
+
+- Content-hash resource versions and ordering guards do not mix. The
+  notification coordinator compared hashes with greater-than and dropped half
+  of all genuine transitions at random. Ordering belongs to the change
+  counter, identity belongs to the hash, and conflating them produced the
+  most confusing symptom of the week: live status that sometimes updated
+  instantly and sometimes never.
+- A class-merge helper silently ate a color. Custom text-size tokens read as
+  colors to the merger, so the sigil lost its accent and nobody saw why until
+  the computed styles were measured on both builds side by side.
+- The lesson that cost the most: visual parity claimed from partial
+  inventories collapses one detail at a time. The launcher only converged
+  after writing the full behavior checklist from the reference source and
+  refusing to report done while any line stayed open.
+- The header conformance walk earned its keep twice in one pass. A
+  structural diff that looked like a v3 ordering bug turned out to be the
+  reference captured mid-poll with an empty panel, and the re-walk on
+  settled data exposed a real defect instead: the catalog merge replaced
+  all sessions with the selected player's, so the other players silently
+  vanished from the switcher. Measurement first, explanation second.
+- Reconciling the Live and Sessions switchers came down to one question:
+  what did each page know that the other did not? The answer was a single
+  field. Rows lead with the retained goal and fall back to the id, and one
+  panel now serves both pages where the reference kept two styled forks.
+- An empty socket read is connection state, not an empty game reply. Safe
+  recovery reconnects before the next command, while a command whose send
+  began is never replayed because its game effect may already have happened.
+- Wiring the stop control taught me where optimistic concurrency stops
+  being a virtue. The command cursor embeds the session's full event
+  watermark, and a busy agent advances it faster than any read-then-submit
+  round trip, so a cooperative stop could never win the race. The fix was
+  semantic, not mechanical: guide and revise instruct against observed
+  state and keep the exact cursor, a stop targets the session itself and
+  treats the cursor as advisory. Proven the only way that counts, a real
+  start from the launcher and a real stop from the switcher, with the
+  header flipping to stopped over the event stream.
+- The stop review taught the difference between a command that was accepted
+  and a fact that happened. The first version marked the durable command
+  successful after a five second wait it did not even check, which worked
+  only because the agent chose to comply. Success now means terminal:
+  bounded grace, then SIGTERM and SIGKILL against the verified process
+  group only, with the outcome mode recorded in the registry. The cursor
+  went the other way and disappeared entirely for stop, identity is the
+  only thing a stop needs, and the client shrank to a single request.
+- A stale header taught me two liveness lessons at once. The catalog event
+  stream was wired only into the launcher, so every other page's header
+  silently froze. And the browser's EventSource never retries after an
+  HTTP-level failure, which is exactly what a dev proxy returns while the
+  backend restarts, so even the launcher died permanently on a restart.
+  One subscription now lives in the shell, and a closed source is replaced
+  with backoff while the server epoch reconciles whatever was missed.
+- The goal labels looked like a frontend regression and were nothing of the
+  sort. The switcher rendered goals correctly against fixtures while the
+  catalog served none, because the objective never lived in the gateway
+  journal the index reads. It lives in the agent's own retained files, the
+  authored objective in agent.jsonl and applied revisions beside it. The
+  catalog now reads them the way the reference did, and the panel's one
+  recording action is View map recording, straight to the spatial replay.

@@ -10,6 +10,16 @@
 :root {
   color-scheme: dark;
 
+  /* v2 live-shell.css header surface */
+  --header-surface: #070b10;
+
+  /* v2 launcher.css scene values */
+  --scene-core: #10192a;
+  --scene-mid: #0a0f18;
+  --scene-link: #203550;
+  --scene-node: #294562;
+  --scene-node-strong: #3d6386;
+
   /* v1 :root --color-bg, --color-surface, --color-raised, --color-overlay */
   --canvas: #080b0f;
   --surface: #0d1218;
@@ -161,6 +171,15 @@
 }
 
 :root[data-theme="light"] {
+  --header-surface: var(--surface);
+
+  /* Launcher scene, v3 light values (no v2 light precedent) */
+  --scene-core: #d5e0ec;
+  --scene-mid: #e2eaf2;
+  --scene-link: #b9c8d8;
+  --scene-node: #9db2c6;
+  --scene-node-strong: #7897b2;
+
   color-scheme: light;
 
   /* v1 [data-theme="light"] surface, content, line, and status values */

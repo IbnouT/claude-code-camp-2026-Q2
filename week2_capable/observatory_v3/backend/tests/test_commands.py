@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import io
+import json
 import shutil
 import sqlite3
+import subprocess
 import threading
 from dataclasses import replace
 from pathlib import Path
@@ -22,6 +25,7 @@ from observatory_v3_backend.commands import (
     CommandSubmission,
     CommandUnavailableError,
 )
+from observatory_v3_backend.commands import effects as effects_module
 from observatory_v3_backend.commands.effects import RuntimeCommandEffects
 from observatory_v3_backend.settings import Settings
 from observatory_v3_backend.sources.runtime import RuntimeSourceError
@@ -152,11 +156,16 @@ async def test_restart_recovers_persisted_running_command(tmp_path: Path) -> Non
 class FakeSession:
     id = "session-a"
     player_id = "player-a"
+    latest_seq = 7
 
 
 class FakeRuntime:
     def __init__(self) -> None:
         self.controlled = False
+        self.stop_recorded: tuple[str, str] | None = None
+
+    def record_stop(self, session_id: str, mode: str) -> None:
+        self.stop_recorded = (session_id, mode)
 
     def session(self, _session_id: str) -> FakeSession:
         return FakeSession()
@@ -218,6 +227,80 @@ def test_stale_cursor_failure_stays_inside_authenticated_boundary(
         effects.apply(command())
 
     assert runtime.controlled is True
+
+
+class LiveFakeSession(FakeSession):
+    live = True
+    control_available = True
+    latest_seq = 99
+
+
+class SequenceRecordingRuntime(FakeRuntime):
+    def __init__(self) -> None:
+        super().__init__()
+        self.expected_sequence: int | None = None
+
+    def session(self, _session_id: str) -> FakeSession:
+        return LiveFakeSession()
+
+    def control(self, *_args: object, **kwargs: object) -> dict[str, object]:
+        self.controlled = True
+        self.expected_sequence = kwargs["expected_sequence"]  # type: ignore[assignment]
+        return {"ok": True}
+
+
+def test_stop_cursor_is_advisory_and_delivers_current_sequence(
+    tmp_path: Path,
+) -> None:
+    runtime = SequenceRecordingRuntime()
+    effects = RuntimeCommandEffects(tmp_path, runtime)  # type: ignore[arg-type]
+    process = _StartProcess()
+    effects._processes["session-a"] = process
+
+    effects.validate(
+        submission(action="stop", instruction=None, expected_cursor=None)
+    )
+    effects.apply(command(action="stop", instruction=None))
+
+    assert runtime.controlled is True
+    assert runtime.expected_sequence == 99
+    assert runtime.stop_recorded == ("session-a", "cooperative")
+
+
+def test_guide_cursor_still_guards_observed_state(tmp_path: Path) -> None:
+    runtime = SequenceRecordingRuntime()
+    effects = RuntimeCommandEffects(tmp_path, runtime)  # type: ignore[arg-type]
+
+    with pytest.raises(RuntimeSourceError, match="advanced"):
+        effects.validate(submission(expected_cursor="session-a:7"))
+    with pytest.raises(RuntimeSourceError, match="expected cursor"):
+        effects.validate(submission(expected_cursor=None))
+
+    assert runtime.controlled is False
+
+
+def test_stop_escalates_a_process_that_refuses_to_exit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(effects_module, "STOP_GRACE_SECONDS", 0.05)
+    monkeypatch.setattr(effects_module, "STOP_FORCE_SECONDS", 2.0)
+    runtime = SequenceRecordingRuntime()
+    process = subprocess.Popen(["sleep", "120"], start_new_session=True)
+    runtime.process_id = (  # type: ignore[method-assign]
+        lambda session_id, *, player_id: process.pid
+    )
+    effects = RuntimeCommandEffects(tmp_path, runtime)  # type: ignore[arg-type]
+    effects._processes["session-a"] = process  # type: ignore[assignment]
+
+    try:
+        effects.apply(command(action="stop", instruction=None))
+    finally:
+        if process.poll() is None:
+            process.kill()
+            process.wait(timeout=5)
+
+    assert process.poll() is not None
+    assert runtime.stop_recorded == ("session-a", "forced_after_grace")
 
 
 def test_restart_reuses_authenticated_operator_control(tmp_path: Path) -> None:
@@ -455,3 +538,266 @@ async def test_concurrent_first_starts_attach_read_services_once(
         assert effects.session_id is not None
         lease = await notifications.acquire(effects.session_id)
         await lease.close()
+
+
+def _write_gateway_receipt(
+    path: Path, kind: str, payload: dict[str, Any], *, seq: int = 1
+) -> None:
+    with sqlite3.connect(path) as database:
+        database.execute(
+            "CREATE TABLE IF NOT EXISTS events (seq INTEGER, kind TEXT, payload TEXT)"
+        )
+        database.execute(
+            "INSERT INTO events (seq, kind, payload) VALUES (?, ?, ?)",
+            (seq, kind, json.dumps(payload)),
+        )
+        database.commit()
+
+
+def _write_control_state(session_dir: Path, state: str = "running") -> None:
+    (session_dir / "control-state.json").write_text(
+        json.dumps({"state": state}), encoding="utf-8"
+    )
+
+
+class _Record:
+    """One lightweight registry row, as ``player_records`` returns."""
+
+    def __init__(self, session_dir: Path, state: str = "running") -> None:
+        self.session_id = "session-x"
+        self.player_id = "player-a"
+        self.state = state
+        self.session_dir = session_dir
+
+    @property
+    def live(self) -> bool:
+        return self.state in {"starting", "running", "draining", "quarantined"}
+
+
+class _StagedRuntime:
+    """No record before launch, then a running record whose control-state file
+    is written only at the ``control_delay`` poll, like real startup."""
+
+    def __init__(self, session_dir: Path, *, control_delay: int = 0) -> None:
+        self._dir = session_dir
+        self._control_delay = control_delay
+        self.polls = 0
+        self.launched = False
+
+    def player_records(self, _player_id: str) -> tuple[_Record, ...]:
+        if not self.launched:
+            return ()
+        if self.polls == self._control_delay:
+            _write_control_state(self._dir, "running")
+        self.polls += 1
+        return (_Record(self._dir),)
+
+
+class _StartProcess:
+    def __init__(self) -> None:
+        self.stdin = io.BytesIO()
+        self.terminated = False
+
+    def poll(self) -> int | None:
+        return 0 if self.stdin.closed else None
+
+    def terminate(self) -> None:
+        self.terminated = True
+
+    def wait(self, timeout: float | None = None) -> int:
+        return 0
+
+
+def test_control_state_running_reads_the_file(tmp_path: Path) -> None:
+    assert effects_module._control_state_running(tmp_path) is False
+    _write_control_state(tmp_path, "starting")
+    assert effects_module._control_state_running(tmp_path) is False
+    _write_control_state(tmp_path, "running")
+    assert effects_module._control_state_running(tmp_path) is True
+
+
+def test_reset_verified_requires_a_successful_receipt(tmp_path: Path) -> None:
+    assert effects_module._reset_verified(tmp_path, "none") is True
+    # No receipt yet: not ready, keep waiting.
+    assert effects_module._reset_verified(tmp_path, "baseline") is False
+    _write_gateway_receipt(tmp_path / "gateway.db", "reset_receipt", {"ok": True})
+    assert effects_module._reset_verified(tmp_path, "baseline") is True
+
+
+def test_reset_verified_rejects_a_failed_receipt(tmp_path: Path) -> None:
+    _write_gateway_receipt(
+        tmp_path / "gateway.db",
+        "reset_receipt",
+        {"ok": False, "error": "no baseline snapshot"},
+    )
+    with pytest.raises(RuntimeSourceError, match="no baseline snapshot"):
+        effects_module._reset_verified(tmp_path, "baseline")
+
+
+def test_start_builds_the_proven_agent_launch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    runtime = _StagedRuntime(tmp_path)
+    captured: dict[str, Any] = {}
+    process = _StartProcess()
+
+    def fake_popen(arguments: list[str], **kwargs: Any) -> _StartProcess:
+        captured["arguments"] = arguments
+        captured["kwargs"] = kwargs
+        runtime.launched = True
+        return process
+
+    monkeypatch.setattr(effects_module.subprocess, "Popen", fake_popen)
+    effects = RuntimeCommandEffects(tmp_path, runtime)  # type: ignore[arg-type]
+
+    session_id = effects.apply(
+        command(
+            action="start",
+            player_id="player-a",
+            session_id=None,
+            expected_cursor=None,
+            instruction="Explore the eastern gate.",
+            reset="none",
+        )
+    )
+
+    assert session_id == "session-x"
+    arguments = captured["arguments"]
+    # The agent runs through its own uv project, never the backend interpreter.
+    assert arguments[:3] == ["uv", "run", "--project"]
+    assert arguments[3].endswith("week2_capable/agent")
+    assert arguments[4] == "boukensha"
+    assert arguments[5:7] == ["--no-tui", "--player-profile"]
+    assert "--initial-task-stdin" in arguments
+    assert "--task-stdin" not in arguments
+    kwargs = captured["kwargs"]
+    # stdin is always a pipe, and stderr is captured for failure reporting.
+    assert kwargs["stdin"] == effects_module.subprocess.PIPE
+    assert hasattr(kwargs["stderr"], "read")
+    assert kwargs["cwd"] == str(Path(arguments[3]).parents[1])
+    # The agent REPL exits on stdin EOF: the pipe stays open and the process
+    # is retained for the session lifetime.
+    assert process.stdin.closed is False
+    assert process.stdin.getvalue() == b"Explore the eastern gate.\n"
+    assert effects._processes["session-x"] is process
+
+
+def test_start_baseline_reset_is_gated_on_its_receipt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write_gateway_receipt(tmp_path / "gateway.db", "reset_receipt", {"ok": True})
+    runtime = _StagedRuntime(tmp_path)
+    captured: dict[str, Any] = {}
+
+    def fake_popen(arguments: list[str], **kwargs: Any) -> _StartProcess:
+        captured["arguments"] = arguments
+        runtime.launched = True
+        return _StartProcess()
+
+    monkeypatch.setattr(effects_module.subprocess, "Popen", fake_popen)
+    effects = RuntimeCommandEffects(tmp_path, runtime)  # type: ignore[arg-type]
+
+    session_id = effects.apply(
+        command(
+            action="start",
+            player_id="player-a",
+            session_id=None,
+            expected_cursor=None,
+            instruction=None,
+            reset="baseline",
+        )
+    )
+
+    assert session_id == "session-x"
+    arguments = captured["arguments"]
+    assert arguments[arguments.index("--reset-baseline") + 1] == "level1-temple@1"
+
+
+def test_start_waits_for_control_state_running(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    runtime = _StagedRuntime(tmp_path, control_delay=2)
+
+    def fake_popen(arguments: list[str], **kwargs: Any) -> _StartProcess:
+        runtime.launched = True
+        return _StartProcess()
+
+    monkeypatch.setattr(effects_module.subprocess, "Popen", fake_popen)
+    effects = RuntimeCommandEffects(tmp_path, runtime)  # type: ignore[arg-type]
+
+    session_id = effects.apply(
+        command(
+            action="start",
+            player_id="player-a",
+            session_id=None,
+            expected_cursor=None,
+            instruction=None,
+            reset="none",
+        )
+    )
+
+    assert session_id == "session-x"
+    # It did not accept the first live appearance; it waited for control running.
+    assert runtime.polls >= 3
+
+
+def test_start_aborts_when_reset_receipt_reports_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write_gateway_receipt(
+        tmp_path / "gateway.db",
+        "reset_receipt",
+        {"ok": False, "error": "baseline unavailable"},
+    )
+    runtime = _StagedRuntime(tmp_path)
+    process = _StartProcess()
+
+    def fake_popen(arguments: list[str], **kwargs: Any) -> _StartProcess:
+        runtime.launched = True
+        return process
+
+    monkeypatch.setattr(effects_module.subprocess, "Popen", fake_popen)
+    effects = RuntimeCommandEffects(tmp_path, runtime)  # type: ignore[arg-type]
+
+    with pytest.raises(RuntimeSourceError, match="baseline unavailable"):
+        effects.apply(
+            command(
+                action="start",
+                player_id="player-a",
+                session_id=None,
+                expected_cursor=None,
+                instruction=None,
+                reset="baseline",
+            )
+        )
+
+    # A failed start is cleaned up and never retained.
+    assert process.terminated is True
+    assert "session-x" not in effects._processes
+
+
+def test_stop_releases_the_retained_process(tmp_path: Path) -> None:
+    runtime = RecoveredRuntime()
+    effects = RuntimeCommandEffects(tmp_path, runtime)  # type: ignore[arg-type]
+    process = _StartProcess()
+    effects._processes["session-a"] = process
+
+    effects.apply(command(action="stop"))
+
+    # Stop closes the retained stdin, reaps the process, and drops the handle.
+    assert "session-a" not in effects._processes
+    assert process.stdin.closed is True
+    assert runtime.stop_recorded == ("session-a", "cooperative")
+
+
+def test_guide_wakes_the_retained_idle_repl(tmp_path: Path) -> None:
+    runtime = RecoveredRuntime()
+    effects = RuntimeCommandEffects(tmp_path, runtime)  # type: ignore[arg-type]
+    process = _StartProcess()
+    effects._processes["session-a"] = process
+
+    effects.apply(command(action="guide", instruction="Head north."))
+
+    # An operator-message envelope nudges the idle REPL; the process is retained.
+    assert b'"operator_message"' in process.stdin.getvalue()
+    assert "session-a" in effects._processes

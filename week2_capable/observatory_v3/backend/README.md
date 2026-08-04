@@ -104,8 +104,14 @@ flowchart LR
 ```
 
 - `/api/v1/sessions` returns at most 50 catalog entries from registry keysets.
+- `/api/v1/live/{session_id}/vitals` derives the observed player state from a
+  bounded journal tail, without materialization, for roster stat bars.
 - Catalog entries mark projection state as available, pending, or fault.
-  Projection-owned counts remain null until materialization makes them known.
+- Catalog event counts and latest sequences read the session journal directly.
+  Turn and iteration counts come from the committed projection and stay null
+  until materialization makes them known.
+- Catalog players merge registry history with the configured gateway
+  identities. `start_available` is authoritative: configured and not live.
 - First selected-session summary, Goal, or evidence demand may return a typed
   `202 materialization_pending` resource while the canonical B4 single flight
   advances. Later reads converge to indexed content or a typed capture fault.
@@ -141,7 +147,7 @@ sequenceDiagram
     participant Materializer
     participant API as Bounded read API
 
-    Browser->>SSE: GET /api/v1/notifications?session_id=...
+    Browser->>SSE: GET /api/v1/notifications?session_id=... or ?scope=catalog
     SSE->>Materializer: share selected-session demand
     Materializer->>Materializer: commit projection and composite cursor
     Materializer->>API: read exact changed resource metadata
@@ -175,6 +181,15 @@ The transport has fixed in-memory bounds.
 | Committed root targets per session pass | 14 |
 | SSE retry hint | 1,000 ms |
 
+### Catalog scope
+
+- `GET /api/v1/notifications?scope=catalog` needs no session identity. One
+  shared watcher publishes the catalog change target, the hub suppresses
+  unchanged versions, and subscribers hear only real roster transitions:
+  a session appearing, going live, or ending.
+- A transient catalog read failure does not end the stream. The next tick
+  retries against the source.
+
 ## Durable lifecycle commands
 
 ```mermaid
@@ -198,6 +213,14 @@ sequenceDiagram
 - Command database reads and writes run off the event loop with a bounded busy
   timeout and typed unavailable responses.
 - Start, stop, Goal, Nudge, pause, and resume persist before their effects.
+- Start runs the agent through its own uv project with a persistent stdin
+  objective and typed reset modes: none, temple, baseline.
+- Start succeeds only when the new session is running, its control state is
+  running, and any requested reset produced a successful receipt. The launcher
+  stderr tail becomes the failure detail.
+- The launched process and its stdin pipe are retained for the session
+  lifetime. Stop closes and reaps them. Goal and Nudge wake an idle agent
+  through the retained stdin envelope.
 - Repeated idempotency keys return the original command without applying twice.
 - Session commands validate the selected player and expected cursor.
 - Command status remains readable at `/api/v1/commands/{command_id}` from the

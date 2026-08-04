@@ -8,6 +8,7 @@ import base64
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from functools import partial
 from pathlib import Path
 
 import httpx
@@ -84,7 +85,10 @@ from .notifications.service import (
     NotificationSessionNotFoundError,
     SessionNotificationService,
 )
-from .notifications.transport import session_notification_response
+from .notifications.transport import (
+    catalog_notification_response,
+    session_notification_response,
+)
 from .projections.history import diagnostic_history
 from .projections.knowledge import project_knowledge
 from .projections.session import (
@@ -95,6 +99,7 @@ from .queries import answer
 from .queries.model import ModelTranslator
 from .repositories import RegistryDatabase
 from .resources.bounds import content_identity
+from .resources.contracts import LiveVitalsResponse, ObservedPlayerValue
 from .resources.cursor import (
     CursorCoordinates,
     InvalidCursorError,
@@ -110,6 +115,7 @@ from .sources.atlas import AtlasSource
 from .sources.benchmark import BenchmarkSource
 from .sources.comparison import rendering_comparison
 from .sources.gateway import GatewaySource
+from .sources.gateway_identity import configured_players as configured_players_source
 from .sources.knowledge import KnowledgeSource, KnowledgeSourceError
 from .sources.recorded_session import RecordedSessionSource
 from .sources.runtime import RuntimeSource, RuntimeSourceError
@@ -243,6 +249,9 @@ def create_app(
                         None
                         if experiment_executor is None
                         else experiment_executor.store
+                    ),
+                    configured_players=partial(
+                        configured_players_source, active.runtime_root
                     ),
                 )
                 candidate_notifications = SessionNotificationService(
@@ -485,6 +494,7 @@ def create_app(
                     session_id=None,
                     expected_cursor=None,
                     instruction=body.instruction,
+                    reset=body.reset,
                 )
             )
         except ValidationError as error:
@@ -676,6 +686,55 @@ def create_app(
         except (RuntimeSourceError, ValueError) as error:
             return _runtime_error(error)
         return JSONResponse(result.model_dump(mode="json"))
+
+    async def live_vitals(request: Request) -> JSONResponse:
+        if runtime is None or not runtime.available:
+            return JSONResponse(
+                {
+                    "error": "runtime_unavailable",
+                    "detail": "No launcher runtime registry is available",
+                },
+                status_code=503,
+            )
+        session_id = request.path_params["session_id"]
+        try:
+            assert runtime_reads is not None
+            player_id = await storage.run(runtime.player_of, session_id)
+            status = await storage.run(runtime_reads.player_status, session_id)
+        except RuntimeSourceError as error:
+            return _runtime_error(error)
+        version, source_cursor = content_identity(
+            "obv1",
+            {
+                "session_id": session_id,
+                "fields": {
+                    name: value.model_dump(mode="json")
+                    for name, value in status.fields.items()
+                },
+                "capture_gaps": status.capture_gaps,
+            },
+        )
+        response = LiveVitalsResponse(
+            resource_id=f"session:{session_id}:live:vitals",
+            resource_version=version,
+            source_cursor=source_cursor,
+            completeness="partial" if status.capture_gaps else "complete",
+            capture_gaps=tuple(status.capture_gaps)[:32],
+            source_refs=("gateway.db observations",),
+            session_id=session_id,
+            player_id=player_id,
+            fields={
+                name: ObservedPlayerValue(
+                    value=value.value,
+                    sequence=value.sequence,
+                    observed_at=value.observed_at,
+                    confidence=value.confidence,
+                    method=value.method,
+                )
+                for name, value in status.fields.items()
+            },
+        )
+        return JSONResponse(response.model_dump(mode="json"))
 
     async def session_investigation(request: Request) -> JSONResponse:
         if runtime is None or not runtime.available:
@@ -1634,8 +1693,19 @@ def create_app(
         return JSONResponse(error.model_dump(mode="json"), status_code=404)
 
     async def resource_notifications(request: Request) -> Response:
+        scope = request.query_params.get("scope")
         session_id = request.query_params.get("session_id")
-        if session_id is None or not 1 <= len(session_id) <= 200:
+        if scope not in (None, "catalog"):
+            return JSONResponse(
+                {
+                    "error": "invalid_request",
+                    "detail": "scope must be omitted or 'catalog'",
+                },
+                status_code=422,
+            )
+        if scope is None and (
+            session_id is None or not 1 <= len(session_id) <= 200
+        ):
             return JSONResponse(
                 {
                     "error": "invalid_request",
@@ -1659,6 +1729,12 @@ def create_app(
                 status_code=503,
             )
         try:
+            if scope == "catalog":
+                return await catalog_notification_response(
+                    request,
+                    hub=hub,
+                    service=service,
+                )
             return await session_notification_response(
                 request,
                 hub=hub,
@@ -1795,6 +1871,7 @@ def create_app(
         "start_command": start_command,
         "session_command": session_command,
         "command_status": command_status,
+        "live_vitals": live_vitals,
         "run_experiment": run_experiment,
         "experiment_jobs": experiment_jobs,
         "experiment_job": experiment_job,

@@ -609,7 +609,7 @@ async def test_unsupported_cold_source_surfaces_sticky_capture_fault(
     )
     assert selected["projection_status"] == "fault"
     assert selected["projection_gaps"] == ["capture_fault"]
-    assert selected["event_count"] is None
+    assert selected["event_count"] is not None
     restarted_selected = next(
         item
         for item in restarted_catalog.json()["sessions"]
@@ -951,7 +951,7 @@ async def test_representative_resource_performance_and_payload_budgets(
         if item["id"] == session_id
     )
     assert selected["projection_status"] == "pending"
-    assert selected["event_count"] is None
+    assert selected["event_count"] is not None
     for name in ("summary", "hierarchy", "evidence"):
         assert cold_responses[name].status_code == 202
         assert cold_responses[name].json()["state"] == "materialization_pending"
@@ -1300,3 +1300,20 @@ async def _await_terminal_response(
         await asyncio.sleep(0.005)
         response = await client.get(path)
     raise AssertionError("materialization did not reach a terminal response")
+
+
+async def test_catalog_merges_configured_players_with_start_available(
+    tmp_path: Path,
+) -> None:
+    fixture = build_retained_fixture(tmp_path, session_count=2)
+    async with _client(fixture, tmp_path) as client:
+        response = await client.get("/api/v1/sessions")
+    assert response.status_code == 200
+    players = {item["id"]: item for item in response.json()["players"]}
+    # A gateway-configured identity with no live session is offered for Start,
+    # carrying only public fields, never a secret.
+    assert "default" in players
+    assert players["default"]["start_available"] is True
+    assert set(players["default"]) == {"id", "label", "start_available"}
+    # The session-derived player is still present.
+    assert "alpha" in players

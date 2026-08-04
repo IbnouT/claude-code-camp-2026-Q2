@@ -44,6 +44,35 @@ async function fetchValidated<Output>(
   return parseContractResponse(response, new Map([[200, schema]]))
 }
 
+async function postValidated<Output>(
+  path: string,
+  body: unknown,
+  successStatus: number,
+  schema: ContractSchema<Output>,
+  { fetcher = globalThis.fetch, signal }: RequestOptions = {}
+): Promise<Output> {
+  let response: Response
+  try {
+    response = await fetcher(path, {
+      body: JSON.stringify(body),
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json",
+      },
+      method: "POST",
+      signal,
+    })
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw error
+    }
+    throw new TransportError(`POST ${path} failed before a response arrived`, {
+      cause: error,
+    })
+  }
+  return parseContractResponse(response, new Map([[successStatus, schema]]))
+}
+
 function withQuery(
   path: string,
   parameters: Readonly<Record<string, number | string | undefined>>
@@ -62,6 +91,7 @@ export {
   fetchResponse,
   fetchValidated,
   isAbortError,
+  postValidated,
   withQuery,
   type FetchImplementation,
   type RequestOptions,

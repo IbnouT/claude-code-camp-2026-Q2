@@ -7,6 +7,7 @@ from typing import Literal
 
 CommandAction = Literal["start", "guide", "revise", "pause", "resume", "stop"]
 CommandState = Literal["queued", "running", "succeeded", "failed"]
+ResetMode = Literal["none", "temple", "baseline"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,6 +22,7 @@ class CommandSubmission:
     expected_cursor: str | None
     instruction: str | None
     force: bool = False
+    reset: ResetMode = "none"
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,6 +45,7 @@ class Command:
     result_code: str | None
     result_detail: str | None
     result_session_id: str | None
+    reset: ResetMode = "none"
 
     @property
     def terminal(self) -> bool:

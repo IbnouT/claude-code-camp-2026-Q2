@@ -31,7 +31,8 @@
     "storybook": "storybook dev -p 6006",
     "storybook:build": "storybook build",
     "storybook:test": "node .storybook/test-a11y.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:parity": "playwright test --config playwright.parity.config.ts"
   },
   "dependencies": {
     "@base-ui/react": "1.6.0",

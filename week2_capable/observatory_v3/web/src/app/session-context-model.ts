@@ -10,16 +10,27 @@ type Lifecycle =
   "checking" | "failed" | "idle" | "running" | "stopped" | "succeeded"
 
 function sessionLifecycle(session: SessionCatalogItem): Lifecycle {
-  if (session.live) return "running"
-
+  // The state classifies before the live flag: live stays true through
+  // transitions like draining, and those must not read as running.
   const state = session.state.toLowerCase()
-  if (state.includes("fail") || session.projection_status === "fault") {
+  if (
+    state.includes("fail") ||
+    state.includes("quarantine") ||
+    session.projection_status === "fault"
+  ) {
     return "failed"
   }
-  if (state.includes("check") || state.includes("drain")) return "checking"
+  if (
+    state.includes("check") ||
+    state.includes("drain") ||
+    state.includes("start")
+  ) {
+    return "checking"
+  }
   if (state.includes("success") || state.includes("complete")) {
     return "succeeded"
   }
+  if (session.live) return "running"
   if (state.includes("stop") || session.ended_at !== null) return "stopped"
   return "idle"
 }

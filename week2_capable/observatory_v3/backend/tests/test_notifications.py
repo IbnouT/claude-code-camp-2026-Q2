@@ -822,3 +822,44 @@ def _stop_retained_session(fixture: Any) -> None:
             """,
             (fixture.selected_session_id,),
         )
+
+
+async def test_catalog_scope_streams_roster_transitions() -> None:
+    hub = ResourceNotificationHub(epoch=EPOCH, replay_capacity=8)
+    versions = iter((1, 2))
+
+    async def catalog_target() -> ResourceChangeTarget:
+        version = next(versions, 2)
+        return _target(
+            resource_kind="session_catalog",
+            resource_id="session-catalog:all",
+            resource_version=version,
+            source_cursor=f"obc1_{version}",
+        )
+
+    service = SessionNotificationService(
+        registry=None,  # type: ignore[arg-type]
+        index=None,  # type: ignore[arg-type]
+        resources=None,  # type: ignore[arg-type]
+        catalog_target=catalog_target,
+        materializer=None,  # type: ignore[arg-type]
+        storage=None,  # type: ignore[arg-type]
+        hub=hub,
+        poll_interval=0.01,
+    )
+    lease = await service.acquire_catalog()
+    try:
+        await lease.wait_ready()
+        subscription = await hub.subscribe(
+            None,
+            target_filter=lambda target: target.resource_kind == "session_catalog",
+        )
+        # The version-2 publish arrives as the roster transition event.
+        envelope = await asyncio.wait_for(subscription.next(), timeout=2)
+        assert envelope.payload.resource_kind == "session_catalog"
+        assert envelope.payload.resource_version == 2
+        await subscription.close()
+    finally:
+        await lease.close()
+        await service.close()
+        await hub.close()

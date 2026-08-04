@@ -11,17 +11,71 @@ import type { LiveRouteIdentity } from "../routes";
 
 type Action = "guide" | "revise";
 
-type Receipt = {
-  request_id: string;
-  action: Action;
-  state: string;
-  insertion: string;
-};
-
 type OptimisticMessage = LiveOperatorMessage & {
   status: "sending" | "waiting";
   baselineCount: number;
 };
+
+async function failureDetail(response: Response): Promise<string> {
+  const detail = await response.text();
+  return detail || `Message rejected (${response.status})`;
+}
+
+async function deliverMessage(
+  identity: LiveRouteIdentity,
+  requestId: string,
+  action: Action,
+  instruction: string,
+): Promise<void> {
+  const legacyResponse = await fetch(lifecycleApiUrl(
+    `/api/sessions/${encodeURIComponent(identity.sessionId)}/message`,
+  ), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      request_id: requestId,
+      action,
+      instruction,
+    }),
+  });
+  if (legacyResponse.ok) return;
+
+  const legacyDetail = await failureDetail(legacyResponse);
+  if (
+    legacyResponse.status !== 409
+    || !legacyDetail.includes("supervisor_mismatch")
+  ) {
+    throw new Error(legacyDetail);
+  }
+
+  const sessionPath = `/api/v1/sessions/${
+    encodeURIComponent(identity.sessionId)
+  }`;
+  const sessionResponse = await fetch(sessionPath, { cache: "no-store" });
+  if (!sessionResponse.ok) {
+    throw new Error(await failureDetail(sessionResponse));
+  }
+  const session = await sessionResponse.json() as { source_cursor?: unknown };
+  if (typeof session.source_cursor !== "string" || !session.source_cursor) {
+    throw new Error("The session owner did not provide a control cursor.");
+  }
+
+  const commandResponse = await fetch(`${sessionPath}/commands`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      idempotency_key: requestId,
+      actor: "frozen-observatory",
+      player_id: identity.playerId,
+      action,
+      instruction,
+      expected_cursor: session.source_cursor,
+    }),
+  });
+  if (!commandResponse.ok) {
+    throw new Error(await failureDetail(commandResponse));
+  }
+}
 
 function sentTime(value: string): string {
   const date = new Date(value);
@@ -128,25 +182,12 @@ export function MessageAgentDialog({
     };
     setOptimistic(nextOptimistic);
     setError(null);
-    const target = lifecycleApiUrl(
-      `/api/sessions/${encodeURIComponent(identity.sessionId)}/message`,
-    );
-    fetch(target, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        request_id: crypto.randomUUID(),
-        action,
-        instruction: message,
-      }),
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          const detail = await response.text();
-          throw new Error(detail || `Message rejected (${response.status})`);
-        }
-        return response.json() as Promise<Receipt>;
-      })
+    deliverMessage(
+      identity,
+      crypto.randomUUID(),
+      action,
+      message,
+    )
       .then(() => {
         setInstruction("");
         setOptimistic((current) => (

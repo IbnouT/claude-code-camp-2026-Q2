@@ -20,6 +20,7 @@ type DetailDimensions = {
 const queryKeys = {
   all: ["observatory"] as const,
   capabilities: () => ["observatory", "capabilities"] as const,
+  resourceKind: (kind: string) => ["observatory", "resource", kind] as const,
   resource: ({
     kind,
     id,

@@ -66,6 +66,7 @@ class PlayerOption(PublicContract):
 
     id: str = Field(max_length=512)
     label: str = Field(max_length=512)
+    start_available: bool = False
 
 
 class SessionCatalogItem(PublicContract):
@@ -86,6 +87,8 @@ class SessionCatalogItem(PublicContract):
     projection_status: Literal["available", "pending", "fault"]
     projection_gaps: tuple[str, ...] = Field(max_length=16)
     event_count: int | None = Field(default=None, ge=0)
+    turn_count: int | None = Field(default=None, ge=0)
+    iteration_count: int | None = Field(default=None, ge=0)
     latest_seq: int | None = Field(default=None, ge=0)
     legacy: bool
     live: bool
@@ -306,7 +309,9 @@ class SessionCommandRequest(PublicContract):
     player_id: str = Field(min_length=1, max_length=120)
     action: Literal["guide", "revise", "pause", "resume", "stop"]
     instruction: str | None = Field(default=None, max_length=4_000)
-    expected_cursor: str = Field(min_length=1, max_length=2_048)
+    expected_cursor: str | None = Field(
+        default=None, min_length=1, max_length=2_048
+    )
     force: bool = False
 
 
@@ -317,6 +322,7 @@ class StartCommandRequest(PublicContract):
     actor: str = Field(min_length=1, max_length=120)
     player_id: str = Field(min_length=1, max_length=120)
     instruction: str | None = Field(default=None, max_length=4_000)
+    reset: Literal["none", "temple", "baseline"] = "none"
 
 
 class CommandResponse(PublicContract):
