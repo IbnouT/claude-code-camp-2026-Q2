@@ -81,19 +81,30 @@ class SessionCatalogRepository:
     def objective_summary(
         record: SessionRecord,
     ) -> tuple[str | None, int | None, int | None]:
-        """Return one session's applied objective and operator-message counts.
+        """Return one session's current objective and its version count.
 
         The objective lives in the agent's own retained files, not in the
-        gateway journal: the authored initial objective in ``agent.jsonl``
-        and applied operator revisions in ``operator-messages.json``. The
-        latest revision wins over the initial objective.
+        gateway journal. Versions replay chronologically: the authored
+        initial in ``agent.jsonl``, each applied operator revision, and
+        every turn instruction that introduced a goal no earlier version
+        stated. The newest turn instruction is the current objective.
         """
-        initial = _initial_objective(record.session_dir / "agent.jsonl")
+        initial, turns = _goal_statements(record.session_dir / "agent.jsonl")
         revisions, nudges = _operator_messages(
             record.session_dir / "operator-messages.json"
         )
-        objective = revisions[-1] if revisions else initial
-        goal_count = (1 if initial is not None else 0) + len(revisions)
+        known: list[str] = []
+        if initial is not None:
+            known.append(initial)
+        known.extend(revisions)
+        goal_count = len(known)
+        for instruction in turns:
+            if instruction not in known:
+                known.append(instruction)
+                goal_count += 1
+        objective = (
+            turns[-1] if turns else revisions[-1] if revisions else initial
+        )
         return objective, goal_count, nudges
 
     def live_player_ids(self) -> frozenset[str]:
@@ -159,15 +170,16 @@ class SessionCatalogRepository:
         return tuple(self.registry.session_record(row) for row in rows)
 
 
-def _initial_objective(source: Path) -> str | None:
-    """Recover an authored initial objective without treating nudges as goals."""
+def _goal_statements(source: Path) -> tuple[str | None, list[str]]:
+    """Read the authored objective and every turn instruction, in order."""
     if not source.is_file():
-        return None
+        return None, []
     try:
         lines = source.read_text(encoding="utf-8").splitlines()
     except OSError:
-        return None
-    first_turn: str | None = None
+        return None, []
+    initial: str | None = None
+    turns: list[str] = []
     for line in lines:
         try:
             event = json.loads(line)
@@ -175,16 +187,16 @@ def _initial_objective(source: Path) -> str | None:
             continue
         if not isinstance(event, dict):
             continue
-        if event.get("phase") == "session_start":
+        if event.get("phase") == "session_start" and initial is None:
             value = event.get("objective")
             title = value.get("title") if isinstance(value, dict) else None
             if isinstance(title, str) and title.strip():
-                return title.strip()
-        if event.get("phase") == "turn" and first_turn is None:
+                initial = title.strip()
+        if event.get("phase") == "turn":
             instruction = event.get("instruction")
             if isinstance(instruction, str) and instruction.strip():
-                first_turn = instruction.strip()
-    return first_turn
+                turns.append(instruction.strip())
+    return initial, turns
 
 
 def _operator_messages(source: Path) -> tuple[list[str], int]:
