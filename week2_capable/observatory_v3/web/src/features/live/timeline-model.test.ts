@@ -35,9 +35,20 @@ function item(
   sequence: number,
   kind: string,
   label: string,
-  source = "gateway"
+  source: "agent" | "gateway" = "gateway"
 ) {
-  return { id: `${sequence}`, sequence, kind, label, source }
+  return {
+    id: `${sequence}`,
+    sequence,
+    kind,
+    label,
+    source,
+    at: 0,
+    cost_usd: 0,
+    tokens: 0,
+    quiet_cohort: null,
+    trace_id: null,
+  }
 }
 
 describe("timeline model", () => {

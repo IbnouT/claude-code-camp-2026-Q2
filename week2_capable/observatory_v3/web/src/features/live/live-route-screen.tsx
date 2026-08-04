@@ -71,6 +71,7 @@ function LiveRouteScreen({
         catalogObjective={selected?.objective ?? null}
         sessionRunning={running}
         lifecycle={selected === null ? "idle" : sessionLifecycle(selected)}
+        captureStatus={selected?.capture_status ?? null}
         through={through}
         onSelectThrough={onSelectThrough}
       />

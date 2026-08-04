@@ -7,7 +7,9 @@ import { cn } from "@/lib/utils"
 import { useLiveView } from "@/data/live-view"
 
 import { CausalTimeline } from "./causal-timeline"
+import { CombatPanel } from "./combat-panel"
 import { EvidenceRail } from "./evidence-rail"
+import { ThoughtDock } from "./thought-dock"
 import { ObjectiveStrip } from "./objective-strip"
 import { projectObjective } from "./objective-model"
 
@@ -16,6 +18,7 @@ type LiveShellProps = {
   catalogObjective: string | null
   sessionRunning: boolean
   lifecycle: string
+  captureStatus: string | null
   through: number | null
   onSelectThrough: (sequence: number | null) => void
 }
@@ -30,6 +33,7 @@ function LiveShell({
   catalogObjective,
   sessionRunning,
   lifecycle,
+  captureStatus,
   through,
   onSelectThrough,
 }: LiveShellProps) {
@@ -43,6 +47,11 @@ function LiveShell({
   const [railOpen, setRailOpen] = useState(
     () => typeof window === "undefined" || window.innerWidth > 700
   )
+  const [thoughtExpanded, setThoughtExpanded] = useState(
+    () => typeof window === "undefined" || window.innerWidth > 700
+  )
+  const pinned = through === null ? null : (pinnedView.data?.view ?? null)
+  const activeView = pinned ?? latestView.data?.view ?? null
   const items = goals.data?.items ?? []
   const objective = projectObjective(items, catalogObjective, sessionRunning)
   const evidence = items.at(-1)?.goal.source_ref ?? undefined
@@ -64,6 +73,12 @@ function LiveShell({
           >
             The learned world arrives with the map section.
           </p>
+          <CombatPanel episode={activeView?.combat_episode ?? null} />
+          <ThoughtDock
+            expanded={thoughtExpanded}
+            thought={activeView?.agent_thought ?? null}
+            onToggle={() => setThoughtExpanded((current) => !current)}
+          />
         </div>
         <aside
           aria-label="Live evidence rail"
@@ -88,6 +103,9 @@ function LiveShell({
             sessionId={sessionId}
             lifecycle={lifecycle}
             sessionRunning={sessionRunning}
+            view={activeView}
+            captureStatus={captureStatus}
+            reconnecting={latestView.isError}
           />
         </aside>
         <section

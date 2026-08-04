@@ -31,6 +31,17 @@ function money(value: number): string {
   return `$${value < 0.01 ? value.toFixed(4) : value.toFixed(3)}`
 }
 
+/** The most recent gateway command label, prefix stripped. */
+function latestCommand(
+  timeline: readonly { source: string; kind: string; label: string }[]
+): string | null {
+  const item = [...timeline]
+    .reverse()
+    .find((entry) => entry.source === "gateway" && entry.kind === "command")
+  if (item === undefined) return null
+  return item.label.replace(/^Command:\s*/i, "")
+}
+
 /** Fractional change of the last response cost versus the one before. */
 function responseTrend(costs: readonly number[]): number | null {
   if (costs.length < 2) return null
@@ -42,6 +53,7 @@ function responseTrend(costs: readonly number[]): number | null {
 export {
   evidenceTitle,
   formatAge,
+  latestCommand,
   money,
   observedNumber,
   responseTrend,

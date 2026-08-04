@@ -1,13 +1,16 @@
 import { useMemo, type ReactNode } from "react"
 
+import type { LiveJourney } from "@/data/live-view"
 import { useLivePartition } from "@/data/live-partitions"
 import { useSessionCost } from "@/data/session-cost"
 import { useSessionVitals, type VitalsFields } from "@/data/session-vitals"
 import { cn } from "@/lib/utils"
 
+import { FrictionBlock } from "./friction-block"
 import {
   evidenceTitle,
   formatAge,
+  latestCommand,
   money,
   observedNumber,
   responseTrend,
@@ -17,6 +20,9 @@ type EvidenceRailProps = {
   sessionId: string | undefined
   lifecycle: string
   sessionRunning: boolean
+  view: LiveJourney | null
+  captureStatus: string | null
+  reconnecting: boolean
 }
 
 const conditionPresentations: Record<
@@ -183,6 +189,9 @@ function EvidenceRail({
   sessionId,
   lifecycle,
   sessionRunning,
+  view,
+  captureStatus,
+  reconnecting,
 }: EvidenceRailProps) {
   const vitals = useSessionVitals(sessionId)
   const cost = useSessionCost(sessionId)
@@ -241,12 +250,18 @@ function EvidenceRail({
       <RailBlock
         title="Now"
         status={
-          sessionRunning
-            ? { label: "Live", tone: "live" }
-            : { label: lifecycleLabel(lifecycle), tone: "history" }
+          view !== null && !view.following_live
+            ? { label: "Historical prefix", tone: "history" }
+            : sessionRunning
+              ? { label: "Live", tone: "live" }
+              : { label: lifecycleLabel(lifecycle), tone: "history" }
         }
       >
-        {posture === undefined ? null : (
+        {view?.combat ? (
+          <span className="w-fit rounded-[7px] border border-line bg-(--fighting-bg) px-[9px] py-[3px] text-[11px] text-danger capitalize">
+            fighting
+          </span>
+        ) : posture === undefined ? null : (
           <span
             className="w-fit rounded-[7px] border border-line bg-surface-soft px-[9px] py-[3px] text-[11px] text-success capitalize"
             title={evidenceTitle(posture)}
@@ -258,6 +273,13 @@ function EvidenceRail({
           label="Latest tool action"
           meta={latestTool === null ? undefined : formatAge(latestTool.at)}
           value={latestTool?.text || "No tool action retained"}
+        />
+        <EvidenceText
+          label="Last command"
+          value={
+            (view === null ? null : latestCommand(view.timeline)) ??
+            "No command retained"
+          }
         />
       </RailBlock>
       <RailBlock title="Character">
@@ -366,24 +388,13 @@ function EvidenceRail({
           )}
         </figure>
       </RailBlock>
-      <RailBlock title="Progress">
-        <div className="grid min-h-[126px] content-start gap-1.5">
-          {sessionRunning ? (
-            <p className="m-0 text-[11px] leading-[1.45] text-content-muted">
-              Spatial progress arrives with the journey resource.
-            </p>
-          ) : (
-            <>
-              <strong className="text-[12.5px] text-content-muted">
-                Session stopped
-              </strong>
-              <p className="m-0 text-[11px] leading-[1.45] text-content-muted">
-                No further activity is expected.
-              </p>
-            </>
-          )}
-        </div>
-      </RailBlock>
+      {view === null ? null : (
+        <FrictionBlock
+          view={view}
+          captureStatus={captureStatus}
+          reconnecting={reconnecting}
+        />
+      )}
     </div>
   )
 }

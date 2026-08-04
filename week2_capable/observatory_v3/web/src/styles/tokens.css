@@ -25,6 +25,10 @@
   --vital-move-to: #8bdfa9;
   --sparkline-stroke: #4fd6c9;
   --violet: #b7a7ff;
+  --fighting-bg: #3a1620;
+  --combat-panel-bg: linear-gradient(180deg, #1a0f14, #140b10);
+  --combat-header-bg: #20111a;
+  --combat-icon-bg: #3a1620;
   --scene-core: #10192a;
   --scene-mid: #0a0f18;
   --scene-link: #203550;
@@ -189,6 +193,10 @@
   --live-track: var(--surface-soft);
   --live-cell: var(--surface-raised);
   --violet: #6f58b8;
+  --fighting-bg: #f7dcdd;
+  --combat-panel-bg: linear-gradient(180deg, #fff3f3, #fff8f8);
+  --combat-header-bg: #f7dcdd;
+  --combat-icon-bg: #f7dcdd;
   --scene-core: #d5e0ec;
   --scene-mid: #e2eaf2;
   --scene-link: #b9c8d8;
