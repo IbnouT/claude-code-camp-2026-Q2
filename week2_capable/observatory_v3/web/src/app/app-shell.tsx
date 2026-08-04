@@ -4,6 +4,7 @@ import { useEffect, useRef, type ReactNode } from "react"
 import { MessageSquareTextIcon, SearchIcon } from "lucide-react"
 
 import { ApplicationHeader } from "@/app/application-header"
+import { useLiveActions } from "@/app/live-actions-context"
 import { cn } from "@/lib/utils"
 import { ThemeControl } from "@/app/theme-control"
 import { selectedSession } from "@/app/session-context-model"
@@ -18,6 +19,7 @@ type AppShellProps = {
 
 function AppShell({ navigation }: AppShellProps) {
   useSessionCatalogLiveness()
+  const liveDialogs = useLiveActions()
   const contentRef = useRef<HTMLElement>(null)
   const location = useRouterState({
     select: (state) => state.location,
@@ -121,12 +123,13 @@ function AppShell({ navigation }: AppShellProps) {
           headerActionClassName,
           "border-[color-mix(in_srgb,var(--warning)_34%,var(--line))] text-warning"
         )}
-        disabled
+        disabled={selected?.control_available !== true}
         title={
           selected?.control_available
-            ? "Messaging lands with the Live controls"
+            ? "Guide the running agent"
             : "Messaging requires a running, controllable session"
         }
+        onClick={liveDialogs.openMessage}
       >
         <MessageSquareTextIcon aria-hidden="true" className="size-3.5" />
         <span>Message agent</span>
@@ -139,8 +142,9 @@ function AppShell({ navigation }: AppShellProps) {
           headerActionClassName,
           "text-content-muted max-[1440px]:px-2.5"
         )}
-        disabled
-        title="Ask opens with the Live experience"
+        disabled={selected === null}
+        title="Ask about this session"
+        onClick={liveDialogs.openAsk}
       >
         <SearchIcon aria-hidden="true" className="size-3.5" />
         <span>Ask about this session</span>

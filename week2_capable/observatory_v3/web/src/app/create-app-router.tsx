@@ -16,6 +16,7 @@ import {
 } from "lucide-react"
 
 import { AppShell } from "@/app/app-shell"
+import { LiveActionsProvider } from "@/app/live-actions-context"
 import { LiveRouteScreen } from "@/features/live/live-route-screen"
 import {
   RouteErrorBoundary,
@@ -101,7 +102,11 @@ function contextFromSearch(previous: Record<string, unknown>) {
 function createAppRouter(options: CreateAppRouterOptions = {}) {
   let navigation: ReactNode = null
   const rootRoute = createRootRoute({
-    component: () => <AppShell navigation={navigation} />,
+    component: () => (
+      <LiveActionsProvider>
+        <AppShell navigation={navigation} />
+      </LiveActionsProvider>
+    ),
     notFoundComponent: RouteNotFoundBoundary,
   })
 

@@ -1,7 +1,12 @@
+import { useEffect } from "react"
+
+import { useLiveActions } from "@/app/live-actions-context"
 import { selectedSession, sessionLifecycle } from "@/app/session-context-model"
 import { useSessionCatalog } from "@/data/session-catalog"
 
+import { AskDialog } from "./ask-dialog"
 import { LiveShell } from "./live-shell"
+import { MessageAgentDialog } from "./message-agent-dialog"
 
 type LiveRouteScreenProps = {
   playerId: string | undefined
@@ -14,21 +19,61 @@ type LiveRouteScreenProps = {
  */
 function LiveRouteScreen({ playerId, sessionId }: LiveRouteScreenProps) {
   const catalog = useSessionCatalog({ playerId, sessionId })
+  const dialogs = useLiveActions()
   const data =
     catalog.result.status === "loading" || catalog.result.status === "error"
       ? undefined
       : catalog.result.data
   const selected =
     data === undefined ? null : selectedSession(data, { playerId, sessionId })
+  const running = selected !== null && sessionLifecycle(selected) === "running"
+
+  const { openAsk, closeAsk } = dialogs
+  useEffect(() => {
+    if (selected === null) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault()
+        openAsk()
+      }
+      if (event.key === "Escape") {
+        closeAsk()
+      }
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [selected, openAsk, closeAsk])
 
   return (
-    <LiveShell
-      sessionId={selected?.id}
-      catalogObjective={selected?.objective ?? null}
-      sessionRunning={
-        selected !== null && sessionLifecycle(selected) === "running"
-      }
-    />
+    <>
+      <LiveShell
+        sessionId={selected?.id}
+        catalogObjective={selected?.objective ?? null}
+        sessionRunning={running}
+      />
+      {selected === null ? null : (
+        <>
+          <AskDialog
+            open={dialogs.askOpen}
+            onClose={dialogs.closeAsk}
+            playerId={selected.player_id}
+            sessionId={selected.id}
+          />
+          <MessageAgentDialog
+            open={dialogs.messageOpen}
+            onClose={dialogs.closeMessage}
+            playerId={selected.player_id}
+            sessionId={selected.id}
+            sessionRunning={running}
+            controlAvailable={selected.control_available === true}
+            objectiveAvailable={
+              (selected.objective ?? "") !== "" ||
+              (selected.goal_count ?? 0) > 0
+            }
+          />
+        </>
+      )}
+    </>
   )
 }
 
