@@ -13,11 +13,7 @@ function sessionLifecycle(session: SessionCatalogItem): Lifecycle {
   // The state classifies before the live flag: live stays true through
   // transitions like draining, and those must not read as running.
   const state = session.state.toLowerCase()
-  if (
-    state.includes("fail") ||
-    state.includes("quarantine") ||
-    session.projection_status === "fault"
-  ) {
+  if (state.includes("fail") || state.includes("quarantine")) {
     return "failed"
   }
   if (
@@ -31,6 +27,9 @@ function sessionLifecycle(session: SessionCatalogItem): Lifecycle {
     return "succeeded"
   }
   if (session.live) return "running"
+  // A capture fault marks an ended session's evidence, never a running
+  // session's lifecycle.
+  if (session.projection_status === "fault") return "failed"
   if (state.includes("stop") || session.ended_at !== null) return "stopped"
   return "idle"
 }

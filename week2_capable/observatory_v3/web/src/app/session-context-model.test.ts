@@ -98,6 +98,19 @@ describe("selected session context model", () => {
     expect(
       sessionLifecycle(item("live-failed", { live: true, state: "failed" }))
     ).toBe("failed")
+    // A retained capture fault never overrides a live session.
+    expect(
+      sessionLifecycle(
+        item("fault-live", {
+          live: true,
+          state: "running",
+          projection_status: "fault",
+        })
+      )
+    ).toBe("running")
+    expect(
+      sessionLifecycle(item("fault-ended", { projection_status: "fault" }))
+    ).toBe("failed")
     // Quarantine blocks agent commands, never a healthy running state.
     expect(
       sessionLifecycle(
