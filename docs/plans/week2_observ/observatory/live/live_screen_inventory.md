@@ -125,6 +125,24 @@ Build order:
 - Small tint and radius adjustments follow the built header and launcher
   token scale where the reference used one off values.
 
+### Map deviations, accepted after review
+
+- The follow camera keeps the reference's damped glide, snap entry, and
+  jump cuts. The anchor chain simplifies to the live center, without the
+  reference's velocity reversal zeroing, settle snap, per axis freeze,
+  and projected viewport centers for zoom. Motion stays within a frame
+  of the reference's.
+- The focus pan clamp uses the default extent padding, the reference
+  passed zero.
+- The `data-focus-*` debug attributes and the stage state classes exist
+  only in the reference, nothing consumed them outside its tests.
+- The session recording map variant (scale 0.8, session toolbar) belongs
+  to the Sessions screen work.
+- The continuations container renders only when markers exist, the
+  reference kept an empty container.
+- The thought dock always shows its live age, the historical variant
+  lands with the Sessions screen.
+
 ## Decisions needed
 
 - The backend batch (item 4) is required for full parity of the map,

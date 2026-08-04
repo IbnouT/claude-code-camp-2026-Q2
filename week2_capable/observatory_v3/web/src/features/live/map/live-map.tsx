@@ -151,7 +151,12 @@ function LiveMap({
   const [panHintVisible, setPanHintVisible] = useState(true)
   const [dragging, setDragging] = useState(false)
   const [safeInsets, setSafeInsets] = useState<MapSafeInsets>(defaultSafeInsets)
-  const [overlayRects, setOverlayRects] = useState<MapOverlayRect[]>([])
+  const [focusOverlayRects, setFocusOverlayRects] = useState<MapOverlayRect[]>(
+    []
+  )
+  const [markerOverlayRects, setMarkerOverlayRects] = useState<
+    MapOverlayRect[]
+  >([])
   const [reflowRevision, setReflowRevision] = useState(0)
 
   const dragRef = useRef<{
@@ -202,13 +207,21 @@ function LiveMap({
         )
       : baseViewport
 
-  const presentation = useMemo(
-    () =>
-      graph === null
-        ? null
-        : projectMapPresentation(graph, mode, selectedRoomId),
-    [graph, mode, selectedRoomId]
-  )
+  const presentation = useMemo(() => {
+    if (graph === null) return null
+    const currentCenter = roomCenter(graph, graph.currentRoomId ?? "") ?? {
+      x: graph.x + graph.width / 2,
+      y: graph.y + graph.height / 2,
+    }
+    return projectMapPresentation(graph, mode, selectedRoomId, {
+      frame,
+      overlayRects: focusOverlayRects,
+      viewport: mapCameraViewport(
+        { center: currentCenter, scale: cameraView.scale },
+        frame
+      ),
+    })
+  }, [graph, mode, selectedRoomId, frame, focusOverlayRects, cameraView.scale])
   const lanternOpacities = useMemo(
     () => (graph === null ? new Map() : projectLanternOpacities(graph)),
     [graph]
@@ -229,7 +242,7 @@ function LiveMap({
     const ids = new Set<string>()
     for (const beacon of world?.objective_beacons ?? []) {
       const node = world?.nodes.find((entry) => entry.id === beacon.node_id)
-      ids.add(node === undefined ? beacon.node_id : canonicalNodeId(node))
+      if (node !== undefined) ids.add(canonicalNodeId(node))
     }
     return ids
   }, [world])
@@ -267,7 +280,7 @@ function LiveMap({
   }, [graph, visibleRoomIds, selectedRoomId, beaconRoomIds, evidence, view])
 
   const overlayBand = mapOverlaySafeBand({
-    thoughtVisible: true,
+    thoughtVisible: view?.agent_thought != null,
     thoughtExpanded,
     legendExpanded,
     legendEntries: legendEntries.length,
@@ -293,9 +306,16 @@ function LiveMap({
 
   const fitCamera = useCallback(() => {
     if (graph === null) return
-    const extent = mapContentExtent(graph, new Set(points.keys()), [])
+    const markerPoints = (evidence?.frontiers ?? []).map((marker) => ({
+      point: marker.end,
+      source: marker.source,
+    }))
+    const pathIds = presentation?.selectionPathRoomIds ?? []
+    const ids =
+      pathIds.length > 1 ? new Set(pathIds) : (visibleRoomIds as Set<string>)
+    const extent = mapContentExtent(graph, ids, markerPoints)
     setCameraView(fitMapCameraToSafeFrame(extent, frame, safeInsets))
-  }, [graph, points, frame, safeInsets])
+  }, [graph, evidence, presentation, visibleRoomIds, frame, safeInsets])
 
   // Camera follow: snap on entry, damped glide between connected rooms.
   useEffect(() => {
@@ -358,23 +378,21 @@ function LiveMap({
     return () => cancelAnimationFrame(raf)
   }, [graph, cameraMode, frame])
 
-  // Frame measurement and overlay occluders.
-  useLayoutEffect(() => {
+  // Frame measurement and overlay occluders, split per family.
+  const measureStage = useCallback(() => {
     const stage = stageRef.current
     if (stage === null) return
-    const measure = () => {
-      const bounds = stage.getBoundingClientRect()
-      setFrame((current) =>
-        Math.abs(current.width - bounds.width) < 1 &&
-        Math.abs(current.height - bounds.height) < 1
-          ? current
-          : { width: bounds.width, height: bounds.height }
-      )
-      const insets = { ...defaultSafeInsets }
+    const bounds = stage.getBoundingClientRect()
+    setFrame((current) =>
+      Math.abs(current.width - bounds.width) < 1 &&
+      Math.abs(current.height - bounds.height) < 1
+        ? current
+        : { width: bounds.width, height: bounds.height }
+    )
+    const insets = { ...defaultSafeInsets }
+    const collect = (selector: string): MapOverlayRect[] => {
       const rects: MapOverlayRect[] = []
-      for (const occluder of stage.querySelectorAll<HTMLElement>(
-        "[data-map-focus-occluder]"
-      )) {
+      for (const occluder of stage.querySelectorAll<HTMLElement>(selector)) {
         const rect = occluder.getBoundingClientRect()
         rects.push({
           x: Math.max(rect.left - bounds.left - 8, 0),
@@ -396,36 +414,56 @@ function LiveMap({
           insets.left = Math.max(insets.left, rect.right - bounds.left + 8)
         }
       }
-      setSafeInsets((current) =>
-        current.top === insets.top &&
-        current.right === insets.right &&
-        current.bottom === insets.bottom &&
-        current.left === insets.left
-          ? current
-          : insets
-      )
-      setOverlayRects((current) =>
-        current.length === rects.length &&
-        current.every(
-          (rect, index) =>
-            Math.abs(rect.x - rects[index].x) < 1 &&
-            Math.abs(rect.y - rects[index].y) < 1
-        )
-          ? current
-          : rects
-      )
+      return rects
     }
-    measure()
-    const observer = new ResizeObserver(measure)
+    const sameRects = (
+      current: MapOverlayRect[],
+      next: MapOverlayRect[]
+    ): boolean =>
+      current.length === next.length &&
+      current.every(
+        (rect, index) =>
+          Math.abs(rect.x - next[index].x) < 1 &&
+          Math.abs(rect.y - next[index].y) < 1 &&
+          Math.abs(rect.width - next[index].width) < 1 &&
+          Math.abs(rect.height - next[index].height) < 1
+      )
+    const focusRects = collect("[data-map-focus-occluder]")
+    const markerRects = collect("[data-map-marker-occluder]")
+    setSafeInsets((current) =>
+      current.top === insets.top &&
+      current.right === insets.right &&
+      current.bottom === insets.bottom &&
+      current.left === insets.left
+        ? current
+        : insets
+    )
+    setFocusOverlayRects((current) =>
+      sameRects(current, focusRects) ? current : focusRects
+    )
+    setMarkerOverlayRects((current) =>
+      sameRects(current, markerRects) ? current : markerRects
+    )
+  }, [])
+  useLayoutEffect(() => {
+    const stage = stageRef.current
+    if (stage === null) return
+    measureStage()
+    const observer = new ResizeObserver(measureStage)
     observer.observe(stage)
     return () => observer.disconnect()
-  }, [])
+  }, [measureStage])
+  useLayoutEffect(() => {
+    measureStage()
+  }, [measureStage, inspectorOpen, legendExpanded, thoughtExpanded, mode])
 
   // Escape closes the selection first, then collapses the legend.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return
       if (selectedRoomId !== null) {
+        event.preventDefault()
+        event.stopImmediatePropagation()
         onSelectRoom(null)
         return
       }
@@ -433,17 +471,51 @@ function LiveMap({
         legendExpanded &&
         document.querySelector('[role="dialog"]') === null
       ) {
+        event.preventDefault()
+        event.stopImmediatePropagation()
         setLegendExpanded(false)
       }
     }
+    const onPointerDown = (event: PointerEvent) => {
+      if (selectedRoomId === null) return
+      const target = event.target as Element | null
+      if (
+        target?.closest(
+          '[aria-label^="Room inspector"], [data-room-id], [data-map-focus-occluder], [data-map-marker-occluder]'
+        )
+      ) {
+        return
+      }
+      onSelectRoom(null)
+    }
     window.addEventListener("keydown", onKeyDown, true)
-    return () => window.removeEventListener("keydown", onKeyDown, true)
+    window.addEventListener("pointerdown", onPointerDown, true)
+    return () => {
+      window.removeEventListener("keydown", onKeyDown, true)
+      window.removeEventListener("pointerdown", onPointerDown, true)
+    }
   }, [selectedRoomId, legendExpanded, onSelectRoom])
+
+  // Focus keeps the agent framed: a manual camera re-follows when the
+  // current room changes.
+  const manualRoomRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (graph === null) return
+    const currentId = graph.currentRoomId
+    if (cameraMode !== "manual" || mode !== "focus") {
+      manualRoomRef.current = currentId
+      return
+    }
+    if (manualRoomRef.current !== null && manualRoomRef.current !== currentId) {
+      setCameraMode("follow")
+    }
+    manualRoomRef.current = currentId
+  }, [graph, cameraMode, mode])
 
   const panning = mode !== "lantern"
 
   const onPointerDown = (event: React.PointerEvent) => {
-    if (!panning) return
+    suppressClickRef.current = false
     dragRef.current = {
       pointerId: event.pointerId,
       clientX: event.clientX,
@@ -460,11 +532,15 @@ function LiveMap({
     if (!drag.moved && Math.hypot(dx, dy) < 4) return
     if (!drag.moved) {
       drag.moved = true
-      ;(event.target as Element).setPointerCapture?.(event.pointerId)
+      drag.clientX = event.clientX
+      drag.clientY = event.clientY
+      drag.center = cameraViewRef.current.center
+      ;(event.currentTarget as Element).setPointerCapture?.(event.pointerId)
       setDragging(true)
       setPanHintVisible(false)
       setCameraMode("manual")
       if (mode === "lantern") setChosenMode("grow")
+      return
     }
     const bounds = stageRef.current?.getBoundingClientRect()
     if (bounds === undefined || bounds.width === 0) return
@@ -529,7 +605,6 @@ function LiveMap({
   return (
     <div
       ref={stageRef}
-      aria-label="Learned world map"
       className="relative grid min-h-0 min-w-0 overflow-hidden"
       style={{ ["--live-map-overlay-safe-band" as string]: `${overlayBand}px` }}
     >
@@ -541,12 +616,15 @@ function LiveMap({
         minimumZoom={minimumMapZoom}
         maximumZoom={maximumMapZoom}
         onCameraChange={(camera) => {
+          if (mode === "lantern" && camera !== "follow") {
+            setChosenMode("grow")
+          }
+          followVelocityRef.current = { x: 0, y: 0 }
           if (camera === "fit") {
             fitCamera()
             setCameraMode("fit")
             return
           }
-          if (camera === "follow" && mode === "lantern") setChosenMode("grow")
           setCameraMode(camera)
         }}
         onModeChange={(nextMode) => {
@@ -563,10 +641,14 @@ function LiveMap({
           }
         }}
         onReflow={() => {
-          setReflowRevision((revision) => revision + 1)
-          setPanHintVisible(false)
+          if (world === null) return
+          const next = reflowMapGraph(world.nodes, world.edges)
+          const ids = new Set(next.rooms.map((room) => room.node.id))
+          const extent = mapContentExtent(next, ids, [])
+          setCameraView(fitMapCameraToSafeFrame(extent, frame, safeInsets))
           setCameraMode("fit")
-          fitCamera()
+          setPanHintVisible(false)
+          setReflowRevision((revision) => revision + 1)
         }}
         onZoom={(direction) =>
           setCameraView((current) => zoomMapCamera(current, direction))
@@ -621,7 +703,7 @@ function LiveMap({
             </radialGradient>
           ) : null}
         </defs>
-        {mode === "lantern" ? (
+        {mode === "lantern" && graph.currentRoomId !== null ? (
           <rect
             x={viewport.x}
             y={viewport.y}
@@ -639,7 +721,7 @@ function LiveMap({
                 key={connection.id}
                 connection={connection}
                 points={points}
-                opacity={Math.min(
+                opacity={Math.max(
                   roomOpacity(connection.source),
                   roomOpacity(connection.target)
                 )}
@@ -690,7 +772,7 @@ function LiveMap({
               key={`${marker.edge}:${marker.hiddenRoomId}`}
               frame={frame}
               marker={marker}
-              overlayRects={overlayRects}
+              overlayRects={markerOverlayRects}
               safeInsets={defaultSafeInsets}
               viewport={viewport}
               visibleRoomFootprints={visibleFootprints}
@@ -713,7 +795,7 @@ function LiveMap({
         inspectorOpen={inspector !== null}
         onToggle={() => setLegendExpanded((current) => !current)}
       />
-      {panHintVisible && !dragging ? (
+      {panning && panHintVisible && !dragging ? (
         <p className="pointer-events-none absolute bottom-[68px] left-1/2 -translate-x-1/2 rounded-[9px] border border-line bg-surface px-2.5 py-[7px] text-[10px] text-content-muted">
           Drag to explore the learned world.
         </p>

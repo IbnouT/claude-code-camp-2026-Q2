@@ -68,6 +68,7 @@ function LiveShell({
           className="absolute top-0 right-(--live-rail-width) bottom-(--live-timeline-height) left-0 grid min-h-0 min-w-0 overflow-hidden max-[700px]:right-0"
         >
           <LiveMap
+            key={sessionId ?? "none"}
             view={activeView}
             reconnecting={latestView.isError}
             selectedRoomId={selectedRoomId}
