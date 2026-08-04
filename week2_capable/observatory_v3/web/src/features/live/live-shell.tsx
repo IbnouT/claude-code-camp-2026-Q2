@@ -15,6 +15,7 @@ import { projectObjective } from "./objective-model"
 type LiveShellProps = {
   sessionId: string | undefined
   catalogObjective: string | null
+  catalogGoalCount: number | null
   sessionRunning: boolean
   captureStatus: string | null
   through: number | null
@@ -31,6 +32,7 @@ type LiveShellProps = {
 function LiveShell({
   sessionId,
   catalogObjective,
+  catalogGoalCount,
   sessionRunning,
   captureStatus,
   through,
@@ -51,7 +53,12 @@ function LiveShell({
   const pinned = through === null ? null : (pinnedView.data?.view ?? null)
   const activeView = pinned ?? latestView.data?.view ?? null
   const items = goals.data?.items ?? []
-  const objective = projectObjective(items, catalogObjective, sessionRunning)
+  const objective = projectObjective(
+    items,
+    catalogObjective,
+    sessionRunning,
+    catalogGoalCount
+  )
   const evidence = items.at(-1)?.goal.source_ref ?? undefined
 
   return (

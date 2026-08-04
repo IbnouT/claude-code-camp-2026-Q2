@@ -14,7 +14,8 @@ type ObjectivePresentation = {
 function projectObjective(
   goals: readonly SessionGoalItem[],
   catalogObjective: string | null,
-  canSetGoal: boolean
+  canSetGoal: boolean,
+  catalogGoalCount: number | null = null
 ): ObjectivePresentation {
   const ordered = [...goals].sort(
     (left, right) => (left.goal.ordinal ?? 0) - (right.goal.ordinal ?? 0)
@@ -28,7 +29,8 @@ function projectObjective(
         ? "First message starts the agent"
         : null
       : null
-  const revisionLabel = ordered.length > 1 ? `Revision ${ordered.length}` : null
+  const revisions = Math.max(ordered.length, catalogGoalCount ?? 0)
+  const revisionLabel = revisions > 1 ? `Revision ${revisions}` : null
   return { title, clue, revisionLabel }
 }
 
