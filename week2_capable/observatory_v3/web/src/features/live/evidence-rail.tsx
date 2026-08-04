@@ -232,7 +232,7 @@ function LiveEconomics({ view }: { view: LiveJourney }) {
           <small className="text-[10px] font-semibold tracking-[0.1em] text-content-quiet uppercase">
             {spend.scope === "turn" ? "Turn spend" : "Session spend"}
           </small>
-          <strong className="text-[15px] font-semibold text-content-primary">
+          <strong className="font-mono text-[15px] font-semibold text-content-primary">
             {money(spend.amount)}
             {spend.cap === null ? "" : ` / ${money(spend.cap)}`}
           </strong>

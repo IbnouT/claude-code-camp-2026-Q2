@@ -65,7 +65,7 @@ const PROPERTIES: Record<string, string[]> = {
   railBlock: ["paddingTop", "paddingLeft", "borderBottomWidth", "rowGap", "lineHeight"],
   econCell: ["paddingTop", "paddingLeft", "borderRadius", "borderTopWidth", "lineHeight", "HEIGHT"],
   vitalRow: ["gridTemplateColumns", "columnGap", "fontSize"],
-  spendValue: ["fontSize", "fontWeight"],
+  spendValue: ["fontSize", "fontWeight", "fontFamily"],
   roomRect: ["WIDTH"],
 }
 
