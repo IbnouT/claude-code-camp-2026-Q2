@@ -28,22 +28,16 @@ function LiveShell({
   const [railOpen, setRailOpen] = useState(
     () => typeof window === "undefined" || window.innerWidth > 700
   )
-  const objective = projectObjective(
-    goals.data?.items ?? [],
-    catalogObjective,
-    sessionRunning
-  )
+  const items = goals.data?.items ?? []
+  const objective = projectObjective(items, catalogObjective, sessionRunning)
+  const evidence = items.at(-1)?.goal.source_ref ?? undefined
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <ObjectiveStrip objective={objective} />
+      <ObjectiveStrip objective={objective} evidence={evidence} />
       <main
         aria-label="Live workspace"
-        className="relative min-h-0 flex-1 overflow-hidden [--live-rail-width:320px] [--live-timeline-height:110px] max-[1040px]:[--live-rail-width:260px] max-[700px]:[--live-rail-width:0px] max-[700px]:[--live-timeline-height:64px]"
-        style={{
-          background:
-            "radial-gradient(1200px 600px at 60% 30%, var(--live-workspace-glow), transparent), var(--canvas)",
-        }}
+        className="relative min-h-0 flex-1 overflow-hidden bg-[image:radial-gradient(1200px_600px_at_60%_30%,var(--live-workspace-glow),transparent)] bg-canvas [--live-rail-width:320px] [--live-timeline-height:110px] max-[1040px]:[--live-rail-width:260px] max-[700px]:[--live-rail-width:0px] max-[700px]:[--live-timeline-height:64px]"
       >
         <div
           aria-label="Learned world map"
@@ -60,7 +54,7 @@ function LiveShell({
           aria-label="Live evidence rail"
           className={cn(
             "absolute top-0 right-0 bottom-(--live-timeline-height) z-[8] w-(--live-rail-width) overflow-y-auto border-l border-line bg-surface",
-            "max-[700px]:block max-[700px]:w-[min(86vw,320px)] max-[700px]:shadow-[-18px_0_36px_rgb(0_0_0/30%)] max-[700px]:transition-transform max-[700px]:duration-180",
+            "max-[700px]:block max-[700px]:w-[min(86vw,320px)] max-[700px]:shadow-[-18px_0_36px_rgb(0_0_0/30%)] max-[700px]:transition-transform max-[700px]:duration-180 max-[700px]:ease-[ease]",
             railOpen
               ? "max-[700px]:translate-x-0"
               : "max-[700px]:translate-x-full"
@@ -81,7 +75,7 @@ function LiveShell({
         </aside>
         <section
           aria-label="Causal timeline"
-          className="absolute right-0 bottom-0 left-0 h-(--live-timeline-height) border-t border-line bg-surface px-[18px] py-3 max-[700px]:px-3"
+          className="absolute right-0 bottom-0 left-0 z-[8] h-(--live-timeline-height) border-t border-line bg-surface px-[18px] py-3 max-[700px]:px-3"
         >
           <div className="grid h-full place-items-center text-[10px] text-content-quiet">
             The causal timeline arrives with its section.

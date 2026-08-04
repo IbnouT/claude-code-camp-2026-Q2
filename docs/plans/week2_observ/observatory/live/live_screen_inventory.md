@@ -90,6 +90,18 @@ Build order:
 ## Deviations
 
 - Polling is replaced by bounded queries with SSE invalidation.
+- The objective strip derives from the goals resource. The reference
+  benchmark clue and the Goal replaced label have no retained v3 source,
+  the revision count carries the replacement signal instead.
+- Message history shows sent time and effect per retained control
+  record. The applied-at-iteration line returns with the journey
+  resource in the backend batch.
+- The message send gate omits the reference followingLive condition
+  until the timeline's pinned prefix lands.
+- The objective hint condition reads the catalog running state, the
+  reference additionally required a controllable followed session.
+- The revision label counts retained goal items, bounded at the goals
+  page size of twenty. The reference read a server revision number.
 - The context switcher, stop dialog, and header actions are the already
   built v3 components, not the reference markup.
 - Small tint and radius adjustments follow the built header and launcher
