@@ -6,13 +6,13 @@ import ast
 import pathlib
 
 import pytest
-
 from mud_gateway.commands import AVAILABLE, BY_NAME, IMMORTAL, build
 from mud_gateway.journal import Journal
 from mud_gateway.mcp_server import execute, failure, seed_login_observations
 from mud_gateway.profiles import PermissionDenied, Surface, load_profile
 from mud_gateway.results import CommandFailure, CommandObservation
-from mud_gateway.session import Reply
+from mud_gateway.session import ReconnectFailed, Reply
+from mud_gateway.wire import ConnectionLost
 
 PACKAGE = pathlib.Path(__file__).resolve().parents[1] / "mud_gateway"
 
@@ -219,3 +219,18 @@ class TestTypedExecution:
         assert isinstance(result, CommandFailure)
         assert result.code == "permission_denied"
         assert result.capability == "cast_spell"
+
+    @pytest.mark.parametrize(
+        ("error", "code"),
+        [
+            (ConnectionLost("game connection closed"), "connection_lost"),
+            (ReconnectFailed("game reconnection failed"), "reconnect_failed"),
+        ],
+    )
+    def test_connection_failures_have_specific_error_codes(self, error, code):
+        surface = Surface(load_profile("direct-core"))
+
+        result = failure("look", error, surface)
+
+        assert result.code == code
+        assert result.message == str(error)

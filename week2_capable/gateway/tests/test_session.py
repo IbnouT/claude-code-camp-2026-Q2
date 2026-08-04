@@ -15,10 +15,15 @@ import asyncio
 import re
 
 import pytest
-
 from mud_gateway.journal import Journal
-from mud_gateway.session import (ENTER_GAME, LoginFailed, Reply, Session)
-from mud_gateway.wire import Direction, WireEvent
+from mud_gateway.session import (
+    ENTER_GAME,
+    LoginFailed,
+    ReconnectFailed,
+    Reply,
+    Session,
+)
+from mud_gateway.wire import ConnectionLost, Direction, WireEvent
 
 GREETING = b"\r\nBy what name do you wish to be known? "
 PASSWORD = b"\r\nPassword: "
@@ -42,6 +47,7 @@ class ScriptedTransport:
 
     async def connect(self) -> None:
         self.connected = True
+        self.closed = False
 
     async def close(self) -> None:
         self.closed = True
@@ -58,6 +64,46 @@ class ScriptedTransport:
 
     async def drain_pending(self, window: float = 0.15) -> bytes:
         return self.pending.pop(0) if self.pending else b""
+
+
+class EofBeforeCommandTransport(ScriptedTransport):
+    """Reports queued output and EOF before the requested command is sent."""
+
+    def __init__(self, script: list[bytes], pending: bytes) -> None:
+        super().__init__(script)
+        self._pending_before_eof = pending
+        self.connect_count = 0
+
+    async def connect(self) -> None:
+        await super().connect()
+        self.connect_count += 1
+
+    async def drain_pending(self, window: float = 0.15) -> bytes:
+        pending = self._pending_before_eof
+        self._pending_before_eof = b""
+        self.closed = True
+        return pending
+
+
+class EofAfterSendTransport(ScriptedTransport):
+    """Drops the connection while waiting for a command reply."""
+
+    async def read_until(self, pattern: re.Pattern[bytes], *, quiet, deadline=None) -> bytes:
+        self.closed = True
+        raise ConnectionLost("connection closed before the reply completed")
+
+
+class FailedReconnectTransport(ScriptedTransport):
+    """Keeps no usable connection when a pre-command reconnect is attempted."""
+
+    def __init__(self) -> None:
+        super().__init__([])
+        self.closed = True
+        self.connect_count = 0
+
+    async def connect(self) -> None:
+        self.connect_count += 1
+        raise ConnectionRefusedError("game is unavailable")
 
 
 @pytest.fixture()
@@ -306,6 +352,63 @@ class TestCommands:
         assert [event.payload["line"] for event in commands] == ["look", "score"]
         assert first.seq < second.seq
         assert session.transport.max_in_flight == 1
+
+    async def test_eof_before_send_reconnects_then_runs_the_command_once(self, journal):
+        session = Session(journal, name="poucet", password="secret")
+        transport = EofBeforeCommandTransport(
+            [GREETING, PASSWORD, PROMPT_BYTES, b"The Bakery\r\n" + PROMPT_BYTES],
+            b"Three hours of queued output.\r\n",
+        )
+        session.transport = transport
+        session._logged_in = True
+        transport.closed = True
+
+        reply = await session.command("look")
+
+        assert "The Bakery" in reply.text
+        assert reply.unsolicited == b"Three hours of queued output.\r\n"
+        assert [line for line, _ in transport.sent].count("look") == 1
+        assert transport.connect_count == 1
+        reconnect = journal.since(session.id, kind="session_reconnect")
+        assert reconnect[-1].payload["reason"] == "connection_lost_before_command"
+
+    async def test_failed_reconnect_reports_error_without_sending_command(self, journal):
+        session = Session(journal, name="poucet", password="secret")
+        transport = FailedReconnectTransport()
+        session.transport = transport
+        session._logged_in = True
+
+        with pytest.raises(ReconnectFailed, match="could not reconnect"):
+            await session.command("north")
+
+        assert transport.sent == []
+        assert transport.connect_count == 1
+        assert not session.logged_in
+        failed = journal.since(session.id, kind="session_reconnect_failed")
+        assert failed[-1].payload == {
+            "character": "poucet",
+            "reason": "connection_lost_before_command",
+            "error": "ConnectionRefusedError",
+        }
+
+    async def test_eof_after_send_does_not_replay_the_command(self, journal):
+        session = Session(journal, name="poucet", password="secret")
+        transport = EofAfterSendTransport([])
+        session.transport = transport
+        session._logged_in = True
+
+        with pytest.raises(ConnectionLost):
+            await session.command("north")
+
+        assert [line for line, _ in transport.sent].count("north") == 1
+        assert not session.logged_in
+        assert not journal.since(session.id, kind="session_reconnect")
+
+    def test_eof_makes_logged_in_false(self, journal):
+        session = make(journal, [])
+        session._logged_in = True
+        session.transport.closed = True
+        assert not session.logged_in
 
 
 class TestClosing:

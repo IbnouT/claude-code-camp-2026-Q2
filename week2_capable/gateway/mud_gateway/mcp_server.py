@@ -25,10 +25,11 @@ from .profiles import (
     load_profile,
 )
 from .raw import Role, send_raw
-from .results import CommandFailure, CommandObservation
 from .reset_control import ResetControlServer, ResetCoordinator
-from .session import Session
+from .results import CommandFailure, CommandObservation
+from .session import ReconnectFailed, Session
 from .settings import GatewaySettings
+from .wire import NotConnected
 
 
 async def seed_login_observations(session: Session, journal: Journal) -> None:
@@ -151,6 +152,10 @@ def failure(
         code = "capability_unavailable"
     elif isinstance(error, ValueError):
         code = "invalid_arguments"
+    elif isinstance(error, ReconnectFailed):
+        code = "reconnect_failed"
+    elif isinstance(error, NotConnected):
+        code = "connection_lost"
     else:
         code = "command_failed"
     result = CommandFailure(
