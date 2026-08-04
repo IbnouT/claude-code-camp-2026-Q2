@@ -90,6 +90,17 @@ Build order:
 6. Map cluster with ported layout, camera, presentation modules.
 7. Thought dock, combat panel, friction block completion.
 
+## Corrections landed after visual review
+
+- The Live screen inherits `line-height: normal` at its root. The
+  reference had no preflight, so every unset line height computed
+  normal, the rebuild inherited 1.5 and every box grew. The parity spec
+  now pins line heights and box heights.
+- The carried projection bounded agent events by the last gateway
+  timestamp even when following live, dropping the agent's final
+  response. The reference bounds only a pinned prefix. The derived
+  values now match the reference exactly, point for point.
+
 ## Deviations
 
 - Polling is replaced by bounded queries with SSE invalidation.

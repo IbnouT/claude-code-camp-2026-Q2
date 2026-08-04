@@ -59,11 +59,11 @@ const PROPERTIES: Record<string, string[]> = {
   railHeading: ["fontSize", "fontWeight", "letterSpacing", "textTransform"],
   timeline: ["height", "borderTopWidth", "paddingLeft", "paddingTop"],
   timelineHeading: ["fontSize", "fontWeight", "letterSpacing"],
-  transport: ["minHeight", "borderRadius", "fontSize", "fontWeight"],
+  transport: ["minHeight", "borderRadius", "fontSize", "fontWeight", "lineHeight", "HEIGHT"],
   jump: ["fontSize", "whiteSpace"],
   scrubTrack: ["height", "marginTop", "cursor"],
-  railBlock: ["paddingTop", "paddingLeft", "borderBottomWidth", "rowGap"],
-  econCell: ["paddingTop", "paddingLeft", "borderRadius", "borderTopWidth"],
+  railBlock: ["paddingTop", "paddingLeft", "borderBottomWidth", "rowGap", "lineHeight"],
+  econCell: ["paddingTop", "paddingLeft", "borderRadius", "borderTopWidth", "lineHeight", "HEIGHT"],
   vitalRow: ["gridTemplateColumns", "columnGap", "fontSize"],
   spendValue: ["fontSize", "fontWeight"],
   roomRect: ["WIDTH"],
@@ -97,7 +97,9 @@ async function measure(
           .map((name) =>
             name === "WIDTH"
               ? `w:${Math.round(el.getBoundingClientRect().width)}`
-              : `${name}:${cs[name as keyof CSSStyleDeclaration]}`
+              : name === "HEIGHT"
+                ? `h:${Math.round(el.getBoundingClientRect().height)}`
+                : `${name}:${cs[name as keyof CSSStyleDeclaration]}`
           )
           .join(" ")
       }

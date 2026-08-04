@@ -62,7 +62,7 @@ function LiveShell({
   const evidence = items.at(-1)?.goal.source_ref ?? undefined
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col leading-[normal]">
       <ObjectiveStrip objective={objective} evidence={evidence} />
       <main
         aria-label="Live workspace"
