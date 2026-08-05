@@ -103,11 +103,14 @@ class SessionNotificationService:
         storage: StorageExecutor,
         hub: ResourceNotificationHub,
         poll_interval: float = 0.1,
+        catalog_poll_interval: float = 1.0,
         seed_timeout: float = 5.0,
         session_capacity: int = 16,
     ) -> None:
         if poll_interval <= 0:
             raise ValueError("notification poll interval must be positive")
+        if catalog_poll_interval <= 0:
+            raise ValueError("catalog poll interval must be positive")
         if session_capacity < 1:
             raise ValueError("notification session capacity must be positive")
         if seed_timeout <= 0:
@@ -121,6 +124,9 @@ class SessionNotificationService:
         self._targets = CommittedResourceTargets(resources)
         self._catalog_target = catalog_target
         self.poll_interval = poll_interval
+        # The roster changes on the human scale, session evidence on the
+        # agent scale. The catalog watcher runs on its own slower cadence.
+        self.catalog_poll_interval = catalog_poll_interval
         self.seed_timeout = seed_timeout
         self.session_capacity = session_capacity
         self._lock = asyncio.Lock()
@@ -223,7 +229,7 @@ class SessionNotificationService:
                 try:
                     await asyncio.wait_for(
                         changed.wait(),
-                        timeout=self.poll_interval,
+                        timeout=self.catalog_poll_interval,
                     )
                 except TimeoutError:
                     pass

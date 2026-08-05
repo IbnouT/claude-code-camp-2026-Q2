@@ -609,7 +609,7 @@ async def test_unsupported_cold_source_surfaces_sticky_capture_fault(
     )
     assert selected["projection_status"] == "fault"
     assert selected["projection_gaps"] == ["capture_fault"]
-    assert selected["event_count"] is not None
+    assert selected["event_count"] is None
     restarted_selected = next(
         item
         for item in restarted_catalog.json()["sessions"]
@@ -951,7 +951,9 @@ async def test_representative_resource_performance_and_payload_budgets(
         if item["id"] == session_id
     )
     assert selected["projection_status"] == "pending"
-    assert selected["event_count"] is not None
+    # Before materialization the catalog reads no retained journal, so
+    # the event figure is honestly absent.
+    assert selected["event_count"] is None
     for name in ("summary", "hierarchy", "evidence"):
         assert cold_responses[name].status_code == 202
         assert cold_responses[name].json()["state"] == "materialization_pending"
@@ -1317,3 +1319,35 @@ async def test_catalog_merges_configured_players_with_start_available(
     assert set(players["default"]) == {"id", "label", "start_available"}
     # The session-derived player is still present.
     assert "alpha" in players
+
+
+async def test_catalog_reads_only_registry_and_index(tmp_path: Path) -> None:
+    """The catalog never opens retained session files.
+
+    A materialized session keeps its indexed objective and counts after
+    every retained file disappears, and a never-materialized session
+    lists as pending with a null objective instead of a journal replay.
+    """
+    fixture = build_retained_fixture(tmp_path, session_count=2)
+    session_id = fixture.selected_session_id
+    async with _client(fixture, tmp_path) as client:
+        await _await_ready(client, f"/api/v1/sessions/{session_id}")
+        for name in ("agent.jsonl", "gateway.db", "operator-messages.json"):
+            retained = fixture.selected_session_dir / name
+            if retained.exists():
+                retained.unlink()
+        response = await client.get("/api/v1/sessions")
+
+    assert response.status_code == 200
+    by_id = {item["id"]: item for item in response.json()["sessions"]}
+    materialized = by_id[session_id]
+    assert materialized["projection_status"] == "available"
+    assert materialized["objective"] is not None
+    assert materialized["turn_count"] is not None
+    assert materialized["event_count"] == materialized["latest_seq"]
+    assert materialized["goal_count"] is None
+    assert materialized["nudge_count"] is None
+    pending = next(item for item in by_id.values() if item["id"] != session_id)
+    assert pending["projection_status"] == "pending"
+    assert pending["objective"] is None
+    assert pending["event_count"] is None

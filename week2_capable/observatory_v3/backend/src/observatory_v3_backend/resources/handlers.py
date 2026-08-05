@@ -151,16 +151,10 @@ class ReadResourceHandlers:
                 record.character,
                 max_bytes=512,
             )
-            (
-                objective,
-                goal_count,
-                nudge_count,
-            ) = await self.storage.run(
-                SessionCatalogRepository.objective_summary,
-                record,
-            )
-            if objective is None and checkpoint is not None:
-                objective = checkpoint.latest_goal
+            # The catalog reads only the registry and the index. Retained
+            # journals are never opened here: a session without a
+            # checkpoint lists as pending until its first materialization.
+            objective = None if checkpoint is None else checkpoint.latest_goal
             objective_truncated = False
             if objective is not None:
                 objective, objective_truncated = bounded_text(
@@ -178,9 +172,12 @@ class ReadResourceHandlers:
                     "registry_latest_goal_truncated",
                 )
             catalog_gaps.extend(projection_gaps)
-            event_count, latest_seq = await self.storage.run(
-                SessionCatalogRepository.journal_summary,
-                record,
+            # The journal is append-only from sequence one, so the indexed
+            # head sequence is the retained event count.
+            head_sequence = (
+                None
+                if checkpoint is None
+                else checkpoint.watermark.gateway_sequence
             )
             sessions.append(
                 SessionCatalogItem(
@@ -198,19 +195,19 @@ class ReadResourceHandlers:
                     stop_mode=record.stop_mode,
                     projection_status=projection_status,
                     projection_gaps=projection_gaps[:16],
-                    event_count=event_count,
+                    event_count=head_sequence,
                     turn_count=(
                         None if checkpoint is None else checkpoint.turn_count
                     ),
                     iteration_count=(
                         None if checkpoint is None else checkpoint.iteration_count
                     ),
-                    latest_seq=latest_seq,
+                    latest_seq=head_sequence,
                     legacy=record.legacy,
                     live=record.live,
                     objective=objective,
-                    goal_count=goal_count,
-                    nudge_count=nudge_count,
+                    goal_count=None,
+                    nudge_count=None,
                 )
             )
         live_players = await self.storage.run(

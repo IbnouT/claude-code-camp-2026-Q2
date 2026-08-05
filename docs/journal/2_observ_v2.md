@@ -407,6 +407,18 @@ the reference's own attribution quirk, faithfully reproduced, which is
 the strongest evidence yet that porting the algorithm rather than
 rewriting it is the right instinct.
 
+Measuring before optimizing paid off twice in one evening. The latency
+we actually felt was the investigation projection, 3.4 seconds and 3.8
+megabytes in the reference, not the catalog scan I had been treating as
+the headline. And when the catalog did get its fix, the whole change
+was deleting work: the index checkpoint already held the latest goal
+and the head sequence, so the catalog stopped opening journals
+entirely and dropped to 23 milliseconds. The only real design question
+was honesty, a never-materialized session now says null instead of
+pretending, and the one trap was a shared poll interval that would
+have slowed live updates tenfold had the catalog cadence not become
+its own setting.
+
 ## Technical Conclusions
 
 - The gateway hypothesis held. Owning the wire made raw evidence, typed

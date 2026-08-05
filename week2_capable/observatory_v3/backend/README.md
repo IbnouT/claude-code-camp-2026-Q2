@@ -104,6 +104,9 @@ flowchart LR
 ```
 
 - `/api/v1/sessions` returns at most 50 catalog entries from registry keysets.
+  Rows read only the registry and the index: objective and counts come from
+  the session checkpoint, never from retained journals. A session lists as
+  pending with null figures until its first materialization.
 - `/api/v1/live/{session_id}/vitals` derives the observed player state from a
   bounded journal tail, without materialization, for roster stat bars.
 - Catalog entries mark projection state as available, pending, or fault.
