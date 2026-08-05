@@ -78,6 +78,9 @@ flowchart LR
   button state) was invalid and is dropped, labels and pressed state
   stay.
 - URL write back goes through the router, not `replaceState`.
+- The view bar scrolls with the page. The reference pinned it under its
+  fixed header, but the v3 header scrolls away, and a lone floating bar
+  mid page reads as detached.
 
 ## Quality bar
 

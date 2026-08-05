@@ -216,7 +216,7 @@ function SessionWorkspace({
         </div>
       </section>
 
-      <div className="sticky top-(--header-height) z-[18] flex min-h-[58px] items-center gap-3.5 border-b border-line bg-canvas px-[max(24px,calc((100%-1180px)/2))] max-[900px]:flex-wrap max-[900px]:px-3.5 max-[900px]:py-2">
+      <div className="flex min-h-[58px] items-center gap-3.5 border-b border-line bg-canvas px-[max(24px,calc((100%-1180px)/2))] max-[900px]:flex-wrap max-[900px]:px-3.5 max-[900px]:py-2">
         <nav
           aria-label="Session views"
           className="flex rounded-[11px] border border-line bg-surface p-1"
