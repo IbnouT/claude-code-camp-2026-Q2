@@ -2,33 +2,44 @@ import { SearchIcon, XIcon } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import {
+  askQuestion,
+  type AskResponseOutput,
+  type QueryScope,
+} from "@/data/ask"
 
 type AskDialogProps = {
   open: boolean
   onClose: () => void
   playerId: string
   sessionId: string
+  space?: "live" | "sessions"
+  runId?: string
+  selectedRecordId?: string | null
 }
 
-type AskResponse = {
-  answer: string
-  citations: {
-    id?: string | null
-    label?: string | null
-    excerpt?: string | null
-  }[]
-  missing: string[]
-  tier: string
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === "AbortError"
 }
 
 /**
  * Evidence questions over the retained session. Answers cite retained
  * records only, model use stays off.
  */
-function AskDialog({ open, onClose, playerId, sessionId }: AskDialogProps) {
+function AskDialog({
+  open,
+  onClose,
+  playerId,
+  sessionId,
+  space = "live",
+  runId,
+  selectedRecordId = null,
+}: AskDialogProps) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const abortRef = useRef<AbortController | null>(null)
   const [question, setQuestion] = useState("")
-  const [answer, setAnswer] = useState<AskResponse | null>(null)
+  const [limitToSelection, setLimitToSelection] = useState(false)
+  const [answer, setAnswer] = useState<AskResponseOutput | null>(null)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
@@ -37,43 +48,44 @@ function AskDialog({ open, onClose, playerId, sessionId }: AskDialogProps) {
       setQuestion("")
       setAnswer(null)
       setError("")
+      setLimitToSelection(false)
       inputRef.current?.focus()
+      return
     }
+    abortRef.current?.abort()
   }, [open])
+  useEffect(() => {
+    abortRef.current?.abort()
+  }, [sessionId])
+  useEffect(() => () => abortRef.current?.abort(), [])
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
     const trimmed = question.trim()
     if (trimmed === "" || loading) return
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
     setLoading(true)
     setAnswer(null)
     setError("")
+    const scope: QueryScope = {
+      space,
+      player_id: playerId,
+      ...(space === "sessions"
+        ? { run_id: runId ?? sessionId }
+        : { live_session_id: sessionId }),
+      ...(limitToSelection && selectedRecordId !== null
+        ? { selected_record_id: selectedRecordId }
+        : {}),
+    }
     try {
-      const response = await fetch("/api/v1/ask", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          question: trimmed,
-          scope: {
-            space: "live",
-            player_id: playerId,
-            live_session_id: sessionId,
-          },
-          allow_model: false,
-          allow_summary: false,
-        }),
-      })
-      const payload = (await response.json()) as AskResponse & {
-        detail?: string
-      }
-      if (!response.ok) {
-        throw new Error(payload.detail ?? `Ask returned ${response.status}`)
-      }
-      setAnswer(payload)
+      setAnswer(await askQuestion(trimmed, scope, controller.signal))
     } catch (reason) {
+      if (isAbortError(reason)) return
       setError(reason instanceof Error ? reason.message : "Ask failed")
     } finally {
-      setLoading(false)
+      if (abortRef.current === controller) setLoading(false)
     }
   }
 
@@ -81,7 +93,9 @@ function AskDialog({ open, onClose, playerId, sessionId }: AskDialogProps) {
     <Dialog open={open} onOpenChange={(next) => (next ? undefined : onClose())}>
       <DialogContent
         showCloseButton={false}
-        className="top-[min(12vh,110px)] block w-[min(760px,calc(100%-32px))] max-w-none translate-y-0 gap-0 overflow-hidden rounded-2xl border-line-strong bg-surface p-0 leading-[normal]"
+        retained
+        overlayClassName="supports-backdrop-filter:backdrop-blur-[8px]"
+        className="top-[min(12vh,110px)] block max-h-[calc(100vh-min(12vh,110px)-16px)] w-[min(760px,calc(100%-32px))] translate-y-0 gap-0 overflow-y-auto p-0 leading-[normal] text-content-primary"
       >
         <DialogTitle className="sr-only">Ask about this session</DialogTitle>
         <form
@@ -107,7 +121,7 @@ function AskDialog({ open, onClose, playerId, sessionId }: AskDialogProps) {
           <button
             type="button"
             aria-label="Close Ask"
-            className="grid size-[34px] flex-none place-items-center rounded-[11px] border border-line bg-surface-raised text-content-muted outline-none hover:bg-surface-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="grid size-[34px] flex-none place-items-center rounded-[11px] border border-line bg-surface-raised text-content-muted outline-none hover:border-line-strong hover:bg-surface-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             onClick={onClose}
           >
             <XIcon aria-hidden="true" className="size-4" />
@@ -121,16 +135,32 @@ function AskDialog({ open, onClose, playerId, sessionId }: AskDialogProps) {
             {playerId} · {sessionId}
           </strong>
           <small className="text-[10px] text-content-quiet">
-            Whole session evidence. Answers cite retained records. Model use is
-            off.
+            {limitToSelection && selectedRecordId !== null
+              ? `Evidence through ${selectedRecordId}.`
+              : "Whole session evidence."}{" "}
+            Answers cite retained records. Model use is off.
           </small>
           <small className="text-[10px] text-content-quiet">
             Try: “Why did it stop?”, “Find the north gate”, or “Which positions
             were ambiguous?”
           </small>
+          {selectedRecordId === null ? null : (
+            <label className="mt-1.5 flex w-fit cursor-pointer items-center gap-2 text-[11px] text-content-muted">
+              <input
+                type="checkbox"
+                checked={limitToSelection}
+                className="accent-(--accent)"
+                onChange={(event) => setLimitToSelection(event.target.checked)}
+              />
+              Limit the answer to evidence through {selectedRecordId}
+            </label>
+          )}
         </div>
         {error === "" ? null : (
-          <p role="alert" className="border-t border-line p-4 text-danger">
+          <p
+            role="alert"
+            className="m-0 border-t border-line p-4 leading-[1.55] text-danger"
+          >
             {error}
           </p>
         )}
@@ -152,7 +182,7 @@ function AskDialog({ open, onClose, playerId, sessionId }: AskDialogProps) {
               <ul className="mt-[5px] grid list-none gap-[7px] p-0">
                 {answer.citations.map((citation, index) => (
                   <li
-                    key={citation.id ?? index}
+                    key={citation.id ?? `${citation.label ?? "evidence"}-${index}`}
                     className="grid gap-0.5 rounded-[8px] border border-line bg-surface px-2.5 py-2"
                   >
                     <strong className="text-[11px] text-content-primary">

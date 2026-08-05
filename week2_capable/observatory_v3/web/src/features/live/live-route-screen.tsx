@@ -3,6 +3,7 @@ import { useCallback, useEffect } from "react"
 
 import { useLiveActions } from "@/app/live-actions-context"
 import { selectedSession, sessionLifecycle } from "@/app/session-context-model"
+import { useLiveView } from "@/data/live-view"
 import { useSessionCatalog } from "@/data/session-catalog"
 
 import { AskDialog } from "./ask-dialog"
@@ -62,6 +63,9 @@ function LiveRouteScreen({
   const selected =
     data === undefined ? null : selectedSession(data, { playerId, sessionId })
   const running = selected !== null && sessionLifecycle(selected) === "running"
+  // The same query the shell renders from, so the drawer adds no fetch.
+  const liveView = useLiveView(selected?.id, through)
+  const view = liveView.data?.view ?? null
 
   const { openAsk, closeAsk } = dialogs
   useEffect(() => {
@@ -99,18 +103,22 @@ function LiveRouteScreen({
             playerId={selected.player_id}
             sessionId={selected.id}
           />
-          <MessageAgentDialog
-            open={dialogs.messageOpen}
-            onClose={dialogs.closeMessage}
-            playerId={selected.player_id}
-            sessionId={selected.id}
-            sessionRunning={running}
-            controlAvailable={selected.control_available === true}
-            objectiveAvailable={
-              (selected.objective ?? "") !== "" ||
-              (selected.goal_count ?? 0) > 0
-            }
-          />
+          {view === null ? null : (
+            <MessageAgentDialog
+              open={dialogs.messageOpen}
+              onClose={dialogs.closeMessage}
+              playerId={selected.player_id}
+              sessionId={selected.id}
+              sessionRunning={running}
+              controlAvailable={selected.control_available === true}
+              objectiveAvailable={
+                view.objective_context !== null || view.objective !== null
+              }
+              followingLive={view.following_live}
+              selectedSequence={view.through_sequence}
+              messages={view.operator_messages}
+            />
+          )}
         </>
       )}
     </>

@@ -1,10 +1,12 @@
 import { SendIcon, XIcon } from "lucide-react"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { useLivePartition } from "@/data/live-partitions"
+import type { LiveJourney } from "@/data/live-view"
 import { useOperatorMessage } from "@/data/message-command"
 import { cn } from "@/lib/utils"
+
+type OperatorMessage = LiveJourney["operator_messages"][number]
 
 type MessageAgentDialogProps = {
   open: boolean
@@ -14,41 +16,35 @@ type MessageAgentDialogProps = {
   sessionRunning: boolean
   controlAvailable: boolean
   objectiveAvailable: boolean
+  followingLive: boolean
+  selectedSequence: number | null
+  messages: readonly OperatorMessage[]
 }
 
-type HistoryEntry = {
-  id: string
-  action: "guide" | "revise"
-  instruction: string
-  sentAt: string
-}
-
-function historyEntries(records: unknown): HistoryEntry[] {
-  if (typeof records !== "object" || records === null) return []
-  const list = (records as { records?: unknown }).records
-  if (!Array.isArray(list)) return []
-  const entries: HistoryEntry[] = []
-  for (const record of list) {
-    if (typeof record !== "object" || record === null) continue
-    const { id, kind, occurred_at, title } = record as Record<string, unknown>
-    if (kind !== "operator:guide" && kind !== "operator:revise") continue
-    entries.push({
-      id: String(id),
-      action: kind === "operator:revise" ? "revise" : "guide",
-      instruction: String(title ?? ""),
-      sentAt: String(occurred_at ?? ""),
-    })
-  }
-  return entries
-}
-
+/** Local send time, or the raw value when the date cannot be read. */
 function sentTime(value: string): string {
   const parsed = Date.parse(value)
-  if (!Number.isFinite(parsed)) return "time unknown"
-  return new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
+  if (!Number.isFinite(parsed)) return value
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "2-digit",
     minute: "2-digit",
   }).format(parsed)
+}
+
+function appliedLine(message: OperatorMessage): string {
+  if (message.applied_iteration === null) {
+    return "waiting for the next iteration"
+  }
+  if (message.action === "revise") {
+    return `replaced the goal at iteration ${message.applied_iteration}`
+  }
+  return `applied at iteration ${message.applied_iteration}`
+}
+
+type OptimisticEntry = {
+  instruction: string
+  sentAt: string
+  baselineCount: number
 }
 
 /**
@@ -63,48 +59,51 @@ function MessageAgentDialog({
   sessionRunning,
   controlAvailable,
   objectiveAvailable,
+  followingLive,
+  selectedSequence,
+  messages,
 }: MessageAgentDialogProps) {
-  const controls = useLivePartition(open ? sessionId : undefined, "controls")
   const message = useOperatorMessage()
   const [action, setAction] = useState<"guide" | "revise">(
     objectiveAvailable ? "guide" : "revise"
   )
   const [instruction, setInstruction] = useState("")
-  const [pendingText, setPendingText] = useState<string | null>(null)
+  const [optimistic, setOptimistic] = useState<OptimisticEntry | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const entries = useMemo(
-    () => historyEntries(controls.data?.values),
-    [controls.data?.values]
-  )
-  const baseline = useRef(entries.length)
   useEffect(() => {
-    if (pendingText !== null && entries.length > baseline.current) {
-      setPendingText(null)
+    if (optimistic !== null && messages.length > optimistic.baselineCount) {
+      setOptimistic(null)
     }
-  }, [entries.length, pendingText])
+  }, [messages.length, optimistic])
   const resetMessage = message.reset
   useEffect(() => {
     if (open) {
       setAction(objectiveAvailable ? "guide" : "revise")
       setInstruction("")
-      setPendingText(null)
+      setOptimistic(null)
       resetMessage()
       textareaRef.current?.focus()
     }
   }, [open, objectiveAvailable, resetMessage])
 
   const sending = message.isPending
-  const canSend = sessionRunning && controlAvailable && !sending
-  const disabledPlaceholder = sessionRunning
-    ? "Steer the agent"
-    : "The agent is not running"
+  const canSend =
+    followingLive && sessionRunning && controlAvailable && !sending
+  const placeholder = !followingLive
+    ? "Return to live to message the agent"
+    : sessionRunning
+      ? "Steer the agent"
+      : "The agent is not running"
 
   const send = () => {
     const text = instruction.trim()
     if (text === "" || !canSend) return
-    baseline.current = entries.length
-    setPendingText(text)
+    setOptimistic({
+      instruction: text,
+      sentAt: new Date().toISOString(),
+      baselineCount: messages.length,
+    })
     message.mutate(
       { session_id: sessionId, player_id: playerId, action, instruction: text },
       {
@@ -112,7 +111,7 @@ function MessageAgentDialog({
           setInstruction("")
         },
         onError: () => {
-          setPendingText(null)
+          setOptimistic(null)
         },
       }
     )
@@ -122,21 +121,23 @@ function MessageAgentDialog({
     <Dialog open={open} onOpenChange={(next) => (next ? undefined : onClose())}>
       <DialogContent
         showCloseButton={false}
-        className="fixed inset-y-0 right-0 left-auto block h-full w-[min(430px,100%)] max-w-none translate-x-0 translate-y-0 gap-0 overflow-y-auto rounded-none border-y-0 border-r-0 border-l border-line-strong bg-[color-mix(in_srgb,var(--surface)_97%,transparent)] p-0 leading-[normal] shadow-[-18px_0_54px_rgb(0_0_0/28%)] duration-[360ms] data-open:slide-in-from-right data-closed:slide-out-to-right"
+        aria-label="Your messages"
+        overlayClassName="bg-[rgb(4_8_12/10%)] supports-backdrop-filter:backdrop-blur-none data-open:animate-[message-shade-in_360ms_ease-out_both] data-closed:animate-[message-shade-out_360ms_ease-in_both]"
+        className="fixed inset-y-0 right-0 left-auto block h-full w-[min(430px,100%)] max-w-none translate-x-0 translate-y-0 gap-0 overflow-y-auto rounded-none border-y-0 border-r-0 border-l border-line-strong ring-0 sm:max-w-none bg-[color-mix(in_srgb,var(--surface)_97%,transparent)] p-0 leading-[normal] shadow-[-18px_0_54px_rgb(0_0_0/28%)] data-open:animate-[message-drawer-in_360ms_cubic-bezier(0.22,1,0.36,1)_both] data-closed:animate-[message-drawer-out_360ms_cubic-bezier(0.64,0,0.78,0)_both]"
       >
         <header className="flex items-start justify-between gap-4 border-b border-line px-6 py-[22px]">
           <div>
             <p className="mb-1.5 text-[10.5px] font-semibold tracking-[0.14em] text-content-quiet uppercase">
               Running agent · {playerId}
             </p>
-            <DialogTitle className="text-[20px] font-medium">
+            <DialogTitle className="text-[20px] font-bold">
               Your messages
             </DialogTitle>
           </div>
           <button
             type="button"
             aria-label="Close messages"
-            className="grid size-[38px] place-items-center rounded-[11px] border border-line bg-surface-raised text-content-muted outline-none hover:bg-surface-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="grid size-[38px] place-items-center rounded-[11px] border border-line bg-surface-raised text-content-muted outline-none hover:border-line-strong hover:bg-surface-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             onClick={onClose}
           >
             <XIcon aria-hidden="true" className="size-[17px]" />
@@ -147,35 +148,35 @@ function MessageAgentDialog({
             aria-label="Sent message history"
             className="grid max-h-[min(44vh,420px)] gap-2.5 overflow-y-auto"
           >
-            {entries.length === 0 && pendingText === null ? (
-              <p className="rounded-[8px] border border-dashed border-line p-3.5 text-[11px] text-content-quiet">
+            {messages.length === 0 && optimistic === null ? (
+              <p className="rounded-[8px] border border-dashed border-line p-3.5 text-[11px] leading-normal text-content-quiet">
                 You have not messaged this agent.
               </p>
             ) : (
               <>
-                {entries.map((entry) => (
+                {messages.map((entry, index) => (
                   <article
-                    key={entry.id}
+                    key={`${entry.sent_at}-${index}`}
                     className="grid gap-1.5 rounded-[8px] border border-l-2 border-line border-l-warning bg-surface-raised px-[13px] py-3"
                   >
                     <p className="text-[12px] text-content-primary">
                       {entry.instruction}
                     </p>
                     <small className="text-[10px] text-content-quiet">
-                      {sentTime(entry.sentAt)} ·{" "}
-                      {entry.action === "revise"
-                        ? "replaced the goal"
-                        : "nudged the agent"}
+                      {sentTime(entry.sent_at)} · {appliedLine(entry)}
                     </small>
                   </article>
                 ))}
-                {pendingText === null ? null : (
+                {optimistic === null ? null : (
                   <article className="grid gap-1.5 rounded-[8px] border border-l-2 border-line border-l-accent bg-surface-raised px-[13px] py-3">
                     <p className="text-[12px] text-content-primary">
-                      {pendingText}
+                      {optimistic.instruction}
                     </p>
                     <small className="text-[10px] text-content-quiet">
-                      {sending ? "sending…" : "waiting for the next iteration"}
+                      {sentTime(optimistic.sentAt)} ·{" "}
+                      {sending
+                        ? "sending…"
+                        : "waiting for the next iteration"}
                     </small>
                   </article>
                 )}
@@ -191,14 +192,20 @@ function MessageAgentDialog({
           <textarea
             id="live-agent-message"
             ref={textareaRef}
-            disabled={!sessionRunning}
+            disabled={!followingLive || !sessionRunning}
             maxLength={4000}
             rows={5}
-            placeholder={disabledPlaceholder}
+            placeholder={placeholder}
             value={instruction}
             className="min-h-[150px] resize-none rounded-[10px] border border-line bg-surface-raised p-3 text-content-primary outline-none focus:border-accent"
             onChange={(event) => setInstruction(event.target.value)}
           />
+          {followingLive ? null : (
+            <p className="text-[11px] leading-normal text-content-quiet">
+              A message would arrive at the live boundary, not at the moment
+              being inspected.
+            </p>
+          )}
           {sessionRunning ? null : (
             <p className="text-[11px] leading-normal text-content-quiet">
               The agent is not running.
@@ -212,7 +219,7 @@ function MessageAgentDialog({
             </p>
           ) : null}
           <div className="flex items-center justify-between gap-3.5">
-            {sessionRunning ? (
+            {followingLive && sessionRunning ? (
               <div
                 role="group"
                 aria-label="Message effect"
@@ -245,7 +252,9 @@ function MessageAgentDialog({
               </div>
             ) : (
               <span className="font-mono text-[9px] text-content-quiet">
-                session stopped
+                {followingLive
+                  ? "session stopped"
+                  : `inspecting sequence ${selectedSequence ?? "unknown"}`}
               </span>
             )}
             <button

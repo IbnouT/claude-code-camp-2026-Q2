@@ -291,6 +291,51 @@
   --focus-ring: 0 0 0 3px rgb(12 143 136 / 20%);
 }
 
+/* Message drawer motion, the reference slide and shade curves. */
+@keyframes message-drawer-in {
+  from {
+    opacity: 0.35;
+    transform: translate3d(100%, 0, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes message-drawer-out {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    opacity: 0.25;
+    transform: translate3d(100%, 0, 0);
+  }
+}
+
+@keyframes message-shade-in {
+  from {
+    background: transparent;
+  }
+
+  to {
+    background: rgb(4 8 12 / 10%);
+  }
+}
+
+@keyframes message-shade-out {
+  from {
+    background: rgb(4 8 12 / 10%);
+  }
+
+  to {
+    background: transparent;
+  }
+}
+
 :root[data-density="dense"] {
   --header-height: 58px;
   --content-gap: 10px;
