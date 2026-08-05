@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { HttpResponseError } from "@/data/contracts/response-contract"
 import {
   CommandResponse,
-  GetLiveVitals200Response,
+  GetSessionSummary200Response,
   SessionCommandRequest,
   type CommandResponseOutput,
 } from "@/data/generated/validators"
@@ -36,9 +36,11 @@ async function sendOperatorMessage(
   input: OperatorMessageInput
 ): Promise<CommandResponseOutput> {
   for (let attempt = 1; attempt <= MESSAGE_CURSOR_ATTEMPTS; attempt += 1) {
-    const vitals = await fetchValidated(
-      `/api/v1/live/${encodeURIComponent(input.session_id)}/vitals`,
-      GetLiveVitals200Response
+    // The command guard compares the composite index cursor, which only
+    // index backed resources carry. The session summary is the cheapest.
+    const summary = await fetchValidated(
+      `/api/v1/sessions/${encodeURIComponent(input.session_id)}`,
+      GetSessionSummary200Response
     )
     const body = SessionCommandRequest.parse({
       idempotency_key: crypto.randomUUID(),
@@ -46,7 +48,7 @@ async function sendOperatorMessage(
       player_id: input.player_id,
       action: input.action,
       instruction: input.instruction,
-      expected_cursor: vitals.source_cursor,
+      expected_cursor: summary.source_cursor,
     })
     try {
       return await postValidated(
