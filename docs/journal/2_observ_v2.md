@@ -394,6 +394,19 @@ try again. Recovery needed two ideas, rebuild when the watermark is
 stale rather than fault, and let a fault stay terminal only while the
 source it blames is provably unchanged.
 
+The Sessions screen went up in one evening because the expensive part
+already existed twice. The story projection, the cost ledger, and the
+replay's prefix rule were all in the backend as the ported
+investigation, and the map replay is the Live map handed a pinned
+prefix instead of the live head. What surprised me is how little the
+replay needed: the reference computed a synthetic snapshot client side
+from the full record set, while a bounded `through` query gets the
+same world from the server for one iteration at a time. And the
+duplicate goal titles in the rail that looked like my porting bug were
+the reference's own attribution quirk, faithfully reproduced, which is
+the strongest evidence yet that porting the algorithm rather than
+rewriting it is the right instinct.
+
 ## Technical Conclusions
 
 - The gateway hypothesis held. Owning the wire made raw evidence, typed
