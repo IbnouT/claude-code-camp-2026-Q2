@@ -507,12 +507,22 @@ Rules:
 
 ### Discovery and freshness
 
-The header session picker shows the five most recently updated sessions for the
-selected player.
+The header context chip is the shared Observatory switcher, showing player,
+lifecycle, and short session id for the current view.
 
-- Every option shows lifecycle, short id, latest applied goal, and update time.
-- Show all opens a searchable dialog over the complete player history.
-- Search matches goal, lifecycle, date, and session id.
+- The chip popover lists the current session with its actions and the five most
+  recently updated other sessions for the player.
+- Every row shows lifecycle, short id, latest applied goal when retained, and
+  update time.
+- A recorded current session offers View map recording. Live-only lifecycle
+  actions never appear in Sessions.
+- View all opens the session finder, a searchable dialog over the complete
+  player history, shared with Live.
+- Finder search matches goal, lifecycle as displayed, date in both displayed
+  and ISO form, and short or full session id.
+- Choosing a recorded session switches the view in place. A live session opens
+  Live.
+- An experiment sample renders through the same chip with its run identity.
 - Opening Sessions fetches the catalog and investigation with no browser cache.
 - Focus, page restoration, and visible-tab return refresh the selected session.
 - A selected live session refreshes every two seconds without replacing the
@@ -521,9 +531,12 @@ selected player.
 ## Component boundaries
 
 ```text
+shell/
+  AppHeader.tsx
+  ContextSwitcher.tsx
+  SessionFinderDialog.tsx
 sessions/
   SessionRoute.tsx
-  SessionHeader.tsx
   SessionStory.tsx
   StoryTurn.tsx
   StoryIteration.tsx

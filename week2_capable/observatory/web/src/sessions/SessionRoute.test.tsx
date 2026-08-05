@@ -148,9 +148,10 @@ describe("SessionRoute", () => {
       name: "Inspect a completed run",
     })).toBeInTheDocument();
     expect(document.body).toHaveClass("sessions-document");
-    expect(screen.getByText("stopped")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Live/ }))
-      .toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("button", {
+      name: "View context, poucet, stopped, stopped-1",
+    })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Live/ })).toBeDisabled();
 
     await waitFor(() => {
       expect(fetch).toHaveBeenCalledWith(
@@ -265,9 +266,10 @@ describe("SessionRoute", () => {
       level: 1,
       name: "Inspect a completed run",
     })).toBeInTheDocument();
-    expect(screen.getByText("experiment · run-42")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Experiments/ }))
-      .toHaveAttribute("aria-disabled", "false");
+    expect(screen.getByRole("button", {
+      name: "View context, poucet, ended, run-42",
+    })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Experiments/ })).toBeEnabled();
   });
 
   it("shows five recent goals and searches the complete session history", async () => {
@@ -310,14 +312,17 @@ describe("SessionRoute", () => {
     render(<SessionRoute theme="dark" onThemeChange={vi.fn()} />);
 
     await screen.findByRole("heading", { level: 1, name: "Goal 7" });
-    await user.click(screen.getByRole("button", { name: "Session" }));
-    const recent = screen.getByRole("menu");
-    expect(within(recent).getAllByRole("menuitem")).toHaveLength(6);
-    expect(within(recent).getByText("Goal 7")).toBeInTheDocument();
-    expect(within(recent).queryByText("Goal 1")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /View context/ }));
+    const panel = screen.getByRole("dialog", { name: "View context" });
+    expect(within(panel).getByText("Recent poucet sessions"))
+      .toBeInTheDocument();
+    expect(within(panel).getAllByRole("button", { name: /stopped, Goal/ }))
+      .toHaveLength(5);
+    expect(within(panel).getByText("Goal 6")).toBeInTheDocument();
+    expect(within(panel).queryByText("Goal 1")).not.toBeInTheDocument();
 
-    await user.click(within(recent).getByRole("menuitem", {
-      name: /Show all sessions/,
+    await user.click(within(panel).getByRole("button", {
+      name: /View all poucet sessions \(7\)/,
     }));
     const finder = screen.getByRole("dialog", { name: "Find a session" });
     await user.type(

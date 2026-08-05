@@ -3,12 +3,17 @@ import {
   useState,
 } from "react";
 import type { Catalog } from "../contracts";
-import type { LiveRouteIdentity } from "../routes";
+import {
+  sessionDestination,
+  sessionsHref,
+  type LiveRouteIdentity,
+} from "../routes";
+import { AppHeader } from "../shell/AppHeader";
+import type { ContextState } from "../shell/ContextSwitcher";
+import { SessionFinderDialog } from "../shell/SessionFinderDialog";
 import type { Theme } from "../theme";
 import { LiveAskDialog } from "./LiveAskDialog";
 import { LiveCausalTimeline } from "./LiveCausalTimeline";
-import type { ContextState } from "./LiveContextSwitcher";
-import { LiveHeader } from "./LiveHeader";
 import { LiveMap } from "./LiveMap";
 import { LiveEvidenceRail } from "./LiveEvidenceRail";
 import { LiveObjectiveStrip } from "./LiveObjectiveStrip";
@@ -33,6 +38,7 @@ export function LiveShell({
   onThemeChange = defaultThemeChange,
 }: Props) {
   const [askOpen, setAskOpen] = useState(false);
+  const [finderOpen, setFinderOpen] = useState(false);
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [catalogRevision, setCatalogRevision] = useState(0);
   const [stopOpen, setStopOpen] = useState(false);
@@ -52,6 +58,11 @@ export function LiveShell({
     (session) => session.id === identity.sessionId
       && session.player_id === identity.playerId,
   );
+  const playerSessions = identity === null ? [] : (catalog?.sessions ?? [])
+    .filter((session) => session.player_id === identity.playerId)
+    .sort((left, right) => (
+      Date.parse(right.updated_at) - Date.parse(left.updated_at)
+    ));
   useEffect(() => {
     const url = new URL(window.location.href);
     if (throughSequence === null) {
@@ -151,9 +162,16 @@ export function LiveShell({
 
   return (
     <div className="live-shell">
-      <LiveHeader
+      <AppHeader
+        activeSpace="live"
+        askDisabled={identity === null}
         catalog={catalog}
         contextState={contextState}
+        destinations={{
+          sessions: { href: sessionsHref(identity?.playerId) },
+          experiments: { title: "Experiments will be rebuilt after Live" },
+          knowledge: { title: "Knowledge will be rebuilt after Live" },
+        }}
         identity={identity}
         theme={theme}
         onAsk={() => setAskOpen(true)}
@@ -165,6 +183,7 @@ export function LiveShell({
         onNavigate={navigate}
         onRequestStop={() => setStopOpen(true)}
         onThemeChange={onThemeChange}
+        onViewAll={() => setFinderOpen(true)}
       />
       <LiveObjectiveStrip
         canSetGoal={
@@ -237,6 +256,18 @@ export function LiveShell({
           sessionRunning={contextState === "running"}
           controlAvailable={selectedSession?.control_available === true}
           onClose={() => setMessageOpen(false)}
+        />
+      ) : null}
+      {identity !== null ? (
+        <SessionFinderDialog
+          open={finderOpen}
+          selectedId={identity.sessionId}
+          sessions={playerSessions}
+          onClose={() => setFinderOpen(false)}
+          onSelect={(session) => {
+            setFinderOpen(false);
+            navigate(sessionDestination(session));
+          }}
         />
       ) : null}
       {stopOpen && identity !== null ? (

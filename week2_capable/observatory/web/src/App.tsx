@@ -33,5 +33,5 @@ export function App() {
       />
     );
   }
-  return <Launcher />;
+  return <Launcher theme={theme} onThemeChange={setTheme} />;
 }

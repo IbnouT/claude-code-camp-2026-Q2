@@ -15,11 +15,7 @@ import type {
   Catalog,
   Session,
 } from "../contracts";
-import {
-  liveHref,
-  recordedSessionHref,
-  sessionsHref,
-} from "../routes";
+import { sessionDestination } from "../routes";
 import type { LiveRouteIdentity } from "../routes";
 
 export type ContextState =
@@ -34,16 +30,18 @@ type Props = {
   catalog: Catalog | null;
   identity: LiveRouteIdentity;
   state: ContextState;
-  onLeave: () => void;
+  onLeave?: () => void;
   onNavigate: (href: string) => void;
-  onRequestStop: () => void;
+  onOpenSession?: (session: Session) => void;
+  onRequestStop?: () => void;
+  onViewAll: () => void;
 };
 
 function shortSession(sessionId: string): string {
   return sessionId.length > 12 ? sessionId.slice(0, 8) : sessionId;
 }
 
-function sessionState(session: Session): ContextState {
+export function sessionContextState(session: Session): ContextState {
   if (session.state === "draining") return "draining";
   if (session.state === "stopped") return "stopped";
   if (session.live) return "running";
@@ -66,28 +64,24 @@ function ordered(sessions: Session[]): Session[] {
   });
 }
 
-function destination(session: Session): string {
-  return session.live
-    ? liveHref({
-      playerId: session.player_id,
-      sessionId: session.id,
-    })
-    : recordedSessionHref(session);
+function rowGoal(session: Session): string | null {
+  const goal = session.objective?.trim() ?? "";
+  return goal === "" ? null : goal;
 }
 
 function SessionRow({
   session,
-  onNavigate,
+  onOpen,
 }: {
   session: Session;
-  onNavigate: (href: string) => void;
+  onOpen: (session: Session) => void;
 }) {
-  const state = sessionState(session);
+  const state = sessionContextState(session);
   return (
     <button
       aria-label={[
         state,
-        shortSession(session.id),
+        rowGoal(session) ?? shortSession(session.id),
         when(session.updated_at),
         `${session.event_count.toLocaleString()} events`,
       ].join(", ")}
@@ -95,15 +89,30 @@ function SessionRow({
       data-context-item
       role="button"
       type="button"
-      onClick={() => onNavigate(destination(session))}
+      onClick={() => onOpen(session)}
     >
       <span className={`live-context-row-state is-${state}`}>
         {session.live ? <Radio size={12} aria-hidden="true" /> : null}
         {state}
       </span>
       <span className="live-context-row-main">
-        <strong>{shortSession(session.id)}</strong>
-        <small>{when(session.updated_at)}</small>
+        {rowGoal(session) === null ? (
+          <>
+            <strong className="is-id">{shortSession(session.id)}</strong>
+            <small>{when(session.updated_at)}</small>
+          </>
+        ) : (
+          <>
+            <strong>{rowGoal(session)}</strong>
+            <small>
+              <span className="live-context-row-id">
+                {shortSession(session.id)}
+              </span>
+              {" · "}
+              {when(session.updated_at)}
+            </small>
+          </>
+        )}
       </span>
       <span className="live-context-row-meta">
         {session.event_count.toLocaleString()} events
@@ -112,13 +121,15 @@ function SessionRow({
   );
 }
 
-export function LiveContextSwitcher({
+export function ContextSwitcher({
   catalog,
   identity,
   state,
   onLeave,
   onNavigate,
+  onOpenSession,
   onRequestStop,
+  onViewAll,
 }: Props) {
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -141,25 +152,6 @@ export function LiveContextSwitcher({
   const recent = currentPlayerSessions
     .filter((session) => session.id !== identity.sessionId)
     .slice(0, 5);
-  const otherPlayers = useMemo(() => {
-    const rows = (catalog?.players ?? [])
-      .filter((player) => player.id !== identity.playerId)
-      .map((player) => ({
-        player,
-        session: ordered(
-          (catalog?.sessions ?? []).filter(
-            (session) => session.player_id === player.id,
-          ),
-        )[0] ?? null,
-      }))
-      .filter(
-        (row): row is {
-          player: { id: string; label: string };
-          session: Session;
-        } => row.session !== null,
-      );
-    return rows;
-  }, [catalog, identity.playerId]);
 
   const close = (returnFocus: boolean) => {
     setOpen(false);
@@ -239,8 +231,18 @@ export function LiveContextSwitcher({
     }
   };
 
+  const openSession = (session: Session): void => {
+    close(false);
+    if (onOpenSession === undefined) {
+      onNavigate(sessionDestination(session));
+      return;
+    }
+    onOpenSession(session);
+  };
+
   const contextPlayer = current?.character || identity.playerId;
-  const canStop = state === "running";
+  const contextGoal = current?.objective?.trim() ? current.objective.trim() : null;
+  const canStop = state === "running" && onRequestStop !== undefined;
 
   return (
     <div className="live-context-switcher" ref={root}>
@@ -282,21 +284,28 @@ export function LiveContextSwitcher({
               <span>
                 <strong>{contextPlayer}</strong>
                 <small>{identity.sessionId}</small>
+                {contextGoal === null ? null : (
+                  <small className="live-context-current-goal">
+                    {contextGoal}
+                  </small>
+                )}
               </span>
               <span className={`live-context-state is-${state}`}>{state}</span>
             </div>
             <div className="live-context-current-actions">
-              <button
-                data-context-item
-                type="button"
-                onClick={() => {
-                  close(false);
-                  onLeave();
-                }}
-              >
-                <DoorOpen size={14} aria-hidden="true" />
-                Leave Live view
-              </button>
+              {onLeave === undefined ? null : (
+                <button
+                  data-context-item
+                  type="button"
+                  onClick={() => {
+                    close(false);
+                    onLeave();
+                  }}
+                >
+                  <DoorOpen size={14} aria-hidden="true" />
+                  Leave Live view
+                </button>
+              )}
               {canStop ? (
                 <button
                   className="live-stop-action"
@@ -304,7 +313,7 @@ export function LiveContextSwitcher({
                   type="button"
                   onClick={() => {
                     close(false);
-                    onRequestStop();
+                    onRequestStop?.();
                   }}
                 >
                   <CircleStop size={14} aria-hidden="true" />
@@ -315,10 +324,10 @@ export function LiveContextSwitcher({
                 <button
                   data-context-item
                   type="button"
-                  onClick={() => onNavigate(recordedSessionHref(current))}
+                  onClick={() => openSession(current)}
                 >
                   <ExternalLink size={14} aria-hidden="true" />
-                  View recording
+                  View map recording
                 </button>
               ) : null}
             </div>
@@ -333,7 +342,7 @@ export function LiveContextSwitcher({
                 <SessionRow
                   key={session.id}
                   session={session}
-                  onNavigate={onNavigate}
+                  onOpen={openSession}
                 />
               ))}
             </section>
@@ -344,50 +353,16 @@ export function LiveContextSwitcher({
               className="live-context-wide-link"
               data-context-item
               type="button"
-              onClick={() => onNavigate(sessionsHref(identity.playerId))}
+              onClick={() => {
+                close(false);
+                onViewAll();
+              }}
             >
               View all {contextPlayer} sessions ({currentPlayerSessions.length})
               <ExternalLink size={13} aria-hidden="true" />
             </button>
           ) : null}
 
-          {otherPlayers.length > 0 ? (
-            <section className="live-context-group">
-              <p className="live-context-heading">Other players</p>
-              {otherPlayers.map(({ player, session }) => (
-                <button
-                  aria-label={[
-                    player.label,
-                    session.live ? sessionState(session) : when(session.updated_at),
-                    `${session.event_count.toLocaleString()} events`,
-                  ].join(", ")}
-                  className="live-context-player-row"
-                  data-context-item
-                  key={player.id}
-                  type="button"
-                  onClick={() => onNavigate(destination(session))}
-                >
-                  <span>
-                    <strong>{player.label}</strong>
-                    <small>
-                      {session.live ? sessionState(session) : when(session.updated_at)}
-                    </small>
-                  </span>
-                  <span>{session.event_count.toLocaleString()} events</span>
-                </button>
-              ))}
-            </section>
-          ) : null}
-
-          <button
-            className="live-context-footer"
-            data-context-item
-            type="button"
-            onClick={() => onNavigate(sessionsHref())}
-          >
-            All sessions &amp; players
-            <ExternalLink size={13} aria-hidden="true" />
-          </button>
         </div>
       ) : null}
     </div>

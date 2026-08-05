@@ -34,7 +34,7 @@ it("owns the screen while a new session is connecting", async () => {
     return new Promise<Response>(() => undefined);
   });
 
-  render(<Launcher />);
+  render(<Launcher theme="dark" onThemeChange={() => undefined} />);
   await user.click(
     await screen.findByRole("button", {
       name: /Start session as poucet/,

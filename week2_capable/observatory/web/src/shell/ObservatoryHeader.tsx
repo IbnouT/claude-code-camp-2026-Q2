@@ -67,8 +67,8 @@ export function ObservatoryHeader({
           const available = active || destination?.href !== undefined;
           return (
             <button
-              aria-disabled={!available}
               aria-current={active ? "page" : undefined}
+              disabled={!available}
               className="live-nav-link"
               key={id}
               title={destination?.title}

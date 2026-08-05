@@ -1,18 +1,12 @@
-import {
-  Activity,
-  BookOpen,
-  FlaskConical,
-  MessageSquareText,
-  Moon,
-  Sun,
-  Telescope,
-} from "lucide-react";
+import { FlaskConical, MessageSquareText, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import type {
   ExperimentCatalog,
   ExperimentComparison,
   ExperimentJob,
 } from "../contracts";
+import { sessionsHref } from "../routes";
+import { ObservatoryHeader } from "../shell/ObservatoryHeader";
 import type { Theme } from "../theme";
 import { ExperimentBuilder } from "./ExperimentBuilder";
 import { ExperimentWorkspace } from "./ExperimentWorkspace";
@@ -116,62 +110,52 @@ export function ExperimentRoute({ theme, onThemeChange }: Props) {
 
   return (
     <div className="experiments-shell">
-      <header className="live-header">
-        <a className="live-brand" href="/" aria-label="Boukensha Observatory launcher">
-          <span className="live-brand-mark"><Telescope size={19} /></span>
-          <span className="live-brand-name">
-            <strong>Boukensha</strong><small>Observatory</small>
-          </span>
-        </a>
-        <nav className="live-nav" aria-label="Observatory spaces">
-          <a className="live-nav-link" href="/"><Activity size={15} /><span>Live</span></a>
-          <a className="live-nav-link" href="/sessions"><Telescope size={15} /><span>Sessions</span></a>
-          <button aria-current="page" className="live-nav-link" type="button">
-            <FlaskConical size={15} /><span>Experiments</span>
-          </button>
-          <button aria-disabled="true" className="live-nav-link" type="button">
-            <BookOpen size={15} /><span>Knowledge</span>
-          </button>
-        </nav>
-        <div className="experiment-header-context">
-          <label>
-            <span>Comparison</span>
-            <select
-              aria-label="Comparison"
-              value={comparisonId}
-              onChange={(event) => setComparisonId(event.target.value)}
-            >
-              {catalog.comparisons.map((item) => (
-                <option key={item.id} value={item.id}>{item.title}</option>
-              ))}
-            </select>
-          </label>
-          <button
-            className="experiment-new"
-            type="button"
-            onClick={() => {
-              setAuthoring(true);
-              const url = new URL(window.location.href);
-              url.searchParams.set("mode", "new");
-              window.history.replaceState(null, "", url);
-            }}
+      <ObservatoryHeader
+        activeSpace="experiments"
+        destinations={{
+          live: { title: "Live opens from a running session" },
+          sessions: { href: sessionsHref() },
+          knowledge: { title: "Knowledge is not available yet" },
+        }}
+        theme={theme}
+        onNavigate={(href) => window.location.assign(href)}
+        onThemeChange={onThemeChange}
+      >
+        <label className="live-context experiment-header-context">
+          <small>Comparison</small>
+          <select
+            aria-label="Comparison"
+            value={comparisonId}
+            onChange={(event) => setComparisonId(event.target.value)}
           >
-            <FlaskConical size={14} />
-            New experiment
-          </button>
-          <button className="live-header-action live-ask-action" type="button" onClick={() => setAskOpen(true)}>
-            <MessageSquareText size={14} /><span>Ask this experiment</span><kbd>⌘K</kbd>
-          </button>
-          <button
-            aria-label={`Use ${theme === "dark" ? "light" : "dark"} theme`}
-            className="live-icon-button"
-            type="button"
-            onClick={() => onThemeChange(theme === "dark" ? "light" : "dark")}
-          >
-            {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
-        </div>
-      </header>
+            {catalog.comparisons.map((item) => (
+              <option key={item.id} value={item.id}>{item.title}</option>
+            ))}
+          </select>
+        </label>
+        <button
+          className="live-header-action experiment-new"
+          type="button"
+          onClick={() => {
+            setAuthoring(true);
+            const url = new URL(window.location.href);
+            url.searchParams.set("mode", "new");
+            window.history.replaceState(null, "", url);
+          }}
+        >
+          <FlaskConical size={14} aria-hidden="true" />
+          <span>New experiment</span>
+        </button>
+        <button
+          className="live-header-action live-ask-action"
+          type="button"
+          onClick={() => setAskOpen(true)}
+        >
+          <Search size={14} aria-hidden="true" />
+          <span>Ask this experiment</span>
+          <kbd>&#8984;K</kbd>
+        </button>
+      </ObservatoryHeader>
       {authoring && experimentCatalog !== null ? (
         <ExperimentBuilder
           catalog={experimentCatalog}

@@ -25,6 +25,14 @@ export function recordedSessionHref(session: RecordedSession): string {
   return `/sessions?${query.toString()}`;
 }
 
+type SessionDestination = Pick<Session, "id" | "player_id" | "live">;
+
+export function sessionDestination(session: SessionDestination): string {
+  return session.live
+    ? liveHref({ playerId: session.player_id, sessionId: session.id })
+    : recordedSessionHref(session);
+}
+
 export function sessionsHref(playerId?: string): string {
   const query = new URLSearchParams();
   if (playerId) query.set("player", playerId);

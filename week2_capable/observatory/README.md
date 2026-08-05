@@ -36,6 +36,9 @@ observatory/
 ├── web/
 │   ├── src/
 │   │   ├── live/
+│   │   ├── sessions/
+│   │   ├── experiments/
+│   │   ├── shell/
 │   │   ├── App.tsx
 │   │   ├── Launcher.tsx
 │   │   └── contracts.ts
@@ -52,7 +55,8 @@ observatory/
 - `backend/launcher/` owns the loopback-only session supervisor used by
   launcher and lifecycle controls.
 - `web/` owns the React application, strict TypeScript contracts, theme,
-  launcher, Live shell, map, room inspector, and component tests.
+  launcher, the shared header in `shell/`, Live shell, map, room inspector,
+  Sessions, Experiments, and component tests.
 
 ## Install
 
@@ -191,8 +195,10 @@ ordinary non-experiment runs. Story, Map, Cost, and Ask share one selection.
   evidence. A selected-record boundary is explicit and optional.
 - Story filtering reports matching iterations from readable evidence text. It
   does not search accumulated raw request bodies or appear in other views.
-- The header shows the five latest sessions with their goals. Show all opens a
-  searchable complete history.
+- The header is the shared Observatory header with the context chip, Ask, and
+  theme. The chip lists the five latest sessions with their goals, and View all
+  opens the session finder over the complete player history. Finder search
+  matches goal, displayed lifecycle, displayed or ISO date, and session id.
 - The route bypasses browser caching, refreshes on return, and polls a selected
   live session without resetting the reader's view.
 - Launcher load links route terminal sessions here. Running sessions retain the

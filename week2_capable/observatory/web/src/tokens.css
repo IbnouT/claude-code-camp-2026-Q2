@@ -131,3 +131,9 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 button, input { font: inherit; }
+
+/* Pointer on anything genuinely clickable; disabled controls opt out. */
+button:not(:disabled),
+[role="button"]:not(:disabled) {
+  cursor: pointer;
+}

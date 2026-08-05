@@ -1,4 +1,3 @@
-import { Search } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -12,11 +11,15 @@ import type {
   SessionInvestigation,
 } from "../contracts";
 import { liveHref } from "../routes";
-import { ObservatoryHeader } from "../shell/ObservatoryHeader";
+import { AppHeader } from "../shell/AppHeader";
+import {
+  sessionContextState,
+  type ContextState,
+} from "../shell/ContextSwitcher";
+import { SessionFinderDialog } from "../shell/SessionFinderDialog";
 import type { Theme } from "../theme";
 import { LiveAskDialog } from "../live/LiveAskDialog";
 import { SessionsWorkspace } from "./SessionWorkspace";
-import { SessionPicker } from "./SessionPicker";
 import styles from "./SessionShell.module.css";
 
 type Props = {
@@ -36,6 +39,7 @@ export function SessionRoute({ theme, onThemeChange }: Props) {
   const [investigationError, setInvestigationError] = useState("");
   const [loading, setLoading] = useState(true);
   const [askOpen, setAskOpen] = useState(false);
+  const [finderOpen, setFinderOpen] = useState(false);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const [refreshRevision, setRefreshRevision] = useState(0);
   const loadedInvestigation = useRef("");
@@ -170,146 +174,94 @@ export function SessionRoute({ theme, onThemeChange }: Props) {
     return () => window.clearInterval(timer);
   }, [refresh, runId, selected?.live]);
 
-  const changePlayer = (nextPlayer: string): void => {
-    setPlayerId(nextPlayer);
-    const next = catalog?.sessions
-      .filter((session) => session.player_id === nextPlayer)
-      .sort((left, right) => (
-        Date.parse(right.updated_at) - Date.parse(left.updated_at)
-      ))[0];
-    setSessionId(next?.id ?? "");
+  const identity = runId
+    ? (investigation === null
+      ? null
+      : { playerId: investigation.player_id, sessionId: runId })
+    : (sessionId === "" ? null : { playerId, sessionId });
+  const contextState: ContextState = runId
+    ? "ended"
+    : (selected === null ? "checking" : sessionContextState(selected));
+  const openSession = (session: Session): void => {
+    setFinderOpen(false);
+    if (session.live) {
+      window.location.assign(liveHref({
+        playerId: session.player_id,
+        sessionId: session.id,
+      }));
+      return;
+    }
+    setRunId("");
+    setPlayerId(session.player_id);
+    setSessionId(session.id);
   };
 
   return (
-    <div className={styles.shell}>
-      <SessionHeader
+    <>
+      <AppHeader
+        activeSpace="sessions"
         catalog={catalog}
-        playerId={playerId}
-        sessionId={sessionId}
-        sessions={playerSessions}
-        recording={runId ? investigation : null}
+        contextState={contextState}
+        destinations={{
+          live: selected?.live
+            ? {
+              href: liveHref({
+                playerId: selected.player_id,
+                sessionId: selected.id,
+              }),
+            }
+            : { title: "Live is available for the running session" },
+          experiments: { href: "/experiments" },
+          knowledge: { title: "Knowledge is not available yet" },
+        }}
+        identity={identity}
         theme={theme}
         onAsk={() => setAskOpen(true)}
-        onPlayerChange={changePlayer}
-        onSessionChange={(next) => {
-          setRunId("");
-          setSessionId(next);
-        }}
+        onNavigate={(href) => window.location.assign(href)}
+        onOpenSession={openSession}
         onThemeChange={onThemeChange}
+        onViewAll={() => setFinderOpen(true)}
       />
-      <SessionsWorkspace
-        error={catalogError || investigationError || null}
-        incident={{
-          annotations: [],
-          sourceVersions: {},
-          redactionPolicy: null,
-          history: null,
-        }}
-        investigation={investigation}
-        loading={loading}
-        sourceState="recorded"
-        onOpenRun={(next) => {
-          setRunId("");
-          setSessionId(next);
-        }}
-        onOpenSearch={() => setAskOpen(true)}
-        onSelectionChange={setSelectedRecordId}
+      <SessionFinderDialog
+        open={finderOpen}
+        selectedId={sessionId}
+        sessions={playerSessions}
+        onClose={() => setFinderOpen(false)}
+        onSelect={openSession}
       />
-      {selected !== null || (runId && investigation !== null) ? (
-        <LiveAskDialog
-          identity={{
-            playerId: selected?.player_id ?? investigation?.player_id ?? "recorded",
-            sessionId: runId || selected?.id || investigation?.agent_session_id || "",
+      <div className={styles.shell}>
+        <SessionsWorkspace
+          error={catalogError || investigationError || null}
+          incident={{
+            annotations: [],
+            sourceVersions: {},
+            redactionPolicy: null,
+            history: null,
           }}
-          open={askOpen}
-          selectedRecordId={selectedRecordId}
-          space="sessions"
-          onClose={() => setAskOpen(false)}
+          investigation={investigation}
+          loading={loading}
+          sourceState="recorded"
+          onOpenRun={(next) => {
+            setRunId("");
+            setSessionId(next);
+          }}
+          onOpenSearch={() => setAskOpen(true)}
+          onSelectionChange={setSelectedRecordId}
         />
-      ) : null}
-    </div>
-  );
-}
-
-function SessionHeader({
-  catalog,
-  playerId,
-  sessionId,
-  sessions,
-  recording,
-  theme,
-  onAsk,
-  onPlayerChange,
-  onSessionChange,
-  onThemeChange,
-}: {
-  catalog: Catalog | null;
-  playerId: string;
-  sessionId: string;
-  sessions: Session[];
-  recording: SessionInvestigation | null;
-  theme: Theme;
-  onAsk: () => void;
-  onPlayerChange: (player: string) => void;
-  onSessionChange: (session: string) => void;
-  onThemeChange: (theme: Theme) => void;
-}) {
-  const selected = sessions.find((session) => session.id === sessionId) ?? null;
-  return (
-    <ObservatoryHeader
-      activeSpace="sessions"
-      destinations={{
-        live: selected?.live
-          ? {
-            href: liveHref({
-              playerId: selected.player_id,
-              sessionId: selected.id,
-            }),
-          }
-          : { title: "Live is available for the running session" },
-        experiments: { href: "/experiments" },
-        knowledge: { title: "Knowledge is not available yet" },
-      }}
-      theme={theme}
-      onNavigate={(href) => window.location.assign(href)}
-      onThemeChange={onThemeChange}
-    >
-      <div className="live-context session-header-context">
-        <label className={styles.contextField}>
-          <span className={styles.srOnly}>Player</span>
-          <select
-            aria-label="Player"
-            value={playerId}
-            onChange={(event) => onPlayerChange(event.target.value)}
-          >
-            {(catalog?.players ?? []).map((player) => (
-              <option key={player.id} value={player.id}>{player.label}</option>
-            ))}
-          </select>
-        </label>
-        {recording !== null ? (
-          <span className={styles.recordedContext}>
-            <span className={styles.sessionStateDot} aria-hidden="true" />
-            experiment · {shortId(recording.run.id)}
-          </span>
-        ) : (
-          <SessionPicker
-            selectedId={sessionId}
-            sessions={sessions}
-            onSelect={onSessionChange}
+        {selected !== null || (runId && investigation !== null) ? (
+          <LiveAskDialog
+            identity={{
+              playerId: selected?.player_id ?? investigation?.player_id ?? "recorded",
+              sessionId: runId || selected?.id || investigation?.agent_session_id || "",
+            }}
+            open={askOpen}
+            selectedRecordId={selectedRecordId}
+            space="sessions"
+            onClose={() => setAskOpen(false)}
           />
-        )}
+        ) : null}
       </div>
-      <button
-        className="live-header-action live-ask-action"
-        type="button"
-        onClick={onAsk}
-      >
-        <Search size={14} aria-hidden="true" />
-        <span>Ask about this session</span>
-        <kbd>⌘K</kbd>
-      </button>
-    </ObservatoryHeader>
+    </>
   );
 }
 
@@ -328,6 +280,3 @@ function chooseSession(
   return candidates[0] ?? null;
 }
 
-function shortId(value: string): string {
-  return value.length <= 8 ? value : value.slice(0, 8);
-}

@@ -1,3 +1,5 @@
+import { ThemeControl } from "./shell/ThemeControl";
+import type { Theme } from "./theme";
 import { useEffect, useMemo, useState } from "react";
 import {
   decodeSnapshot,
@@ -176,7 +178,10 @@ function Bar({ name, current, max, tone }: { name: string; current: number; max:
   );
 }
 
-export function Launcher() {
+export function Launcher({ theme, onThemeChange }: {
+  theme: Theme;
+  onThemeChange: (theme: Theme) => void;
+}) {
   const launcherQuery = new URLSearchParams(window.location.search);
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [selected, setSelected] = useState(
@@ -314,6 +319,9 @@ export function Launcher() {
           </div>
         </div>
       ) : null}
+      <div className="launcher-theme">
+        <ThemeControl theme={theme} onThemeChange={onThemeChange} />
+      </div>
       <div className="wrap">
         <section className="left">
           <header className="brand">

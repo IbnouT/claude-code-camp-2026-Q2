@@ -1,0 +1,148 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background: var(--color-overlay);
+  backdrop-filter: blur(7px);
+}
+
+.dialog {
+  width: min(680px, 100%);
+  max-height: min(760px, calc(100vh - 56px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 16px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-popover);
+  font: inherit;
+  line-height: 1.5;
+}
+
+.dialog button,
+.dialog input {
+  font: inherit;
+}
+
+.dialog > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 17px 19px;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.dialog > header strong,
+.dialog > header small {
+  display: block;
+}
+
+.dialog > header strong {
+  font-size: 18px;
+}
+
+.dialog > header small {
+  color: var(--color-muted);
+}
+
+.dialog > header button {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--color-line);
+  border-radius: 9px;
+  background: var(--color-raised);
+  color: var(--color-muted);
+  cursor: pointer;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 16px 18px 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 10px;
+  background: var(--color-bg);
+  color: var(--color-quiet);
+}
+
+.search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--color-text);
+}
+
+.results {
+  min-height: 180px;
+  overflow: auto;
+  padding: 5px 10px 14px;
+}
+
+.results > p {
+  padding: 36px;
+  color: var(--color-muted);
+  text-align: center;
+}
+
+.option {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 9px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.option:hover,
+.option[aria-current="true"] {
+  border-color: var(--color-line);
+  background: var(--color-soft);
+}
+
+.option strong,
+.option small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.option small {
+  margin-top: 2px;
+  color: var(--color-muted);
+  font-size: 11px;
+}
+
+.option > svg {
+  color: var(--color-quiet);
+}
+
+.stateDot {
+  width: 8px;
+  height: 8px;
+  display: inline-block;
+  border-radius: 50%;
+  background: var(--color-quiet);
+}
+
+.stateDot.isLive {
+  background: var(--color-cyan);
+  box-shadow: 0 0 10px rgb(104 225 220 / 55%);
+}

@@ -5,6 +5,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
@@ -1363,7 +1364,7 @@ describe("Live shell", () => {
     }, { timeout: 4_000 });
   }, 5_000);
 
-  it("offers recent sessions and one destination for each other player", async () => {
+  it("offers the player's recent sessions and the full history finder", async () => {
     const recorded = runtimeSession({
       id: "poucet-recording",
       state: "stopped",
@@ -1395,17 +1396,24 @@ describe("Live shell", () => {
       name: /View context/,
     }));
     expect(screen.getByText("Recent poucet sessions")).toBeInTheDocument();
-    expect(screen.getByRole("button", {
-      name: /stopped, poucet-r.*12 events/,
-    })).toBeInTheDocument();
-    expect(screen.getByText("Other players")).toBeInTheDocument();
+    expect(screen.queryByText("Other players")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", {
-      name: /lancelot, running, 8 events/,
+      name: /stopped, poucet-r.*12 events/,
     }));
     expect(navigate).toHaveBeenCalledWith(
-      "/live?player=lancelot&session=lancelot-live",
+      "/sessions?player=poucet&session=poucet-recording",
     );
+
+    await user.click(screen.getByRole("button", { name: /View context/ }));
+    await user.click(screen.getByRole("button", {
+      name: /View all poucet sessions \(2\)/,
+    }));
+    const finder = screen.getByRole("dialog", { name: "Find a session" });
+    expect(within(finder).getByText("2 sessions for this player"))
+      .toBeInTheDocument();
+    expect(within(finder).getByRole("searchbox", { name: "Search sessions" }))
+      .toBeInTheDocument();
   });
 
   it("opens the v2 Sessions archive from the binding header", async () => {
@@ -1482,7 +1490,7 @@ describe("Live shell", () => {
       name: "Stop session…",
     })).not.toBeInTheDocument();
     expect(screen.getByRole("button", {
-      name: "View recording",
+      name: "View map recording",
     })).toBeInTheDocument();
   });
 
