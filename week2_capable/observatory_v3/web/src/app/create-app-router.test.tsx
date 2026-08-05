@@ -42,11 +42,12 @@ describe("typed application router", () => {
     const router = renderRoute("/sessions?state=running&page=3")
 
     expect(
-      await screen.findByRole("heading", { name: "Sessions" })
+      await screen.findByRole("heading", { name: "Find a session" })
     ).toBeInTheDocument()
-    expect(screen.getByTestId("validated-route-state")).toHaveTextContent(
-      "state=running;page=3"
-    )
+    expect(router.state.location.search).toMatchObject({
+      page: 3,
+      state: "running",
+    })
 
     const shell = screen.getByTestId("application-shell")
     await user.click(screen.getByRole("link", { name: "Knowledge" }))
@@ -64,7 +65,7 @@ describe("typed application router", () => {
     router.history.back()
     await waitFor(() => {
       expect(
-        screen.getByRole("heading", { name: "Sessions" })
+        screen.getByRole("heading", { name: "Find a session" })
       ).toBeInTheDocument()
     })
     expect(screen.getByTestId("application-shell")).toBe(shell)
@@ -74,23 +75,27 @@ describe("typed application router", () => {
     const router = renderRoute("/sessions?state=unknown&page=-2")
 
     expect(
-      await screen.findByTestId("validated-route-state")
-    ).toHaveTextContent("state=all;page=1")
+      await screen.findByRole("heading", { name: "Find a session" })
+    ).toBeInTheDocument()
+    expect(router.state.location.search).toMatchObject({
+      page: 1,
+      state: "all",
+    })
 
     await router.navigate({
       to: "/sessions/$sessionId",
       params: { sessionId: "session-42" },
     })
-    expect(
-      await screen.findByRole("heading", { name: "Session" })
-    ).toBeInTheDocument()
-    expect(screen.getByTestId("validated-route-state")).toHaveTextContent(
-      "sessionId=session-42"
-    )
-    expect(screen.getByRole("link", { name: "Sessions" })).toHaveAttribute(
-      "aria-current",
-      "page"
-    )
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/sessions/session-42")
+    })
+    expect(router.state.location.search).toMatchObject({ view: "story" })
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: "Sessions" })).toHaveAttribute(
+        "aria-current",
+        "page"
+      )
+    })
     expect(screen.getByRole("link", { name: "Live" })).not.toHaveAttribute(
       "aria-current"
     )
@@ -102,9 +107,7 @@ describe("typed application router", () => {
       "/live?view=activity&player=player-7&session=session-42"
     )
 
-    expect(
-      await screen.findByLabelText("Live workspace")
-    ).toBeInTheDocument()
+    expect(await screen.findByLabelText("Live workspace")).toBeInTheDocument()
     await user.click(screen.getByRole("link", { name: "Experiments" }))
 
     expect(router.state.location.pathname).toBe("/experiments")
@@ -126,9 +129,7 @@ describe("typed application router", () => {
     let routePreparation: Promise<void> | undefined
     const router = renderRoute("/live", () => routePreparation)
 
-    expect(
-      await screen.findByLabelText("Live workspace")
-    ).toBeInTheDocument()
+    expect(await screen.findByLabelText("Live workspace")).toBeInTheDocument()
     const shell = screen.getByTestId("application-shell")
     const routeContent = screen.getByTestId("route-content")
     const pending = createDeferred()
@@ -145,7 +146,7 @@ describe("typed application router", () => {
 
     pending.resolve()
     expect(
-      await screen.findByRole("heading", { name: "Sessions" })
+      await screen.findByRole("heading", { name: "Find a session" })
     ).toBeInTheDocument()
     routePreparation = undefined
 
@@ -165,15 +166,17 @@ describe("typed application router", () => {
       to: "/sessions/$sessionId",
       params: { sessionId: "session-42" },
     })
-    expect(
-      await screen.findByRole("heading", { name: "Session" })
-    ).toBeInTheDocument()
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/sessions/session-42")
+    })
     expect(screen.getByTestId("application-shell")).toBe(shell)
     expect(screen.getByTestId("route-content")).toBe(routeContent)
-    expect(screen.getByRole("link", { name: "Sessions" })).toHaveAttribute(
-      "aria-current",
-      "page"
-    )
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: "Sessions" })).toHaveAttribute(
+        "aria-current",
+        "page"
+      )
+    })
   })
 
   it("keeps unmatched paths on the not-found boundary", async () => {

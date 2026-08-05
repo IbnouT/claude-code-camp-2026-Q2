@@ -25,6 +25,8 @@ import {
 } from "@/app/route-boundaries"
 import { RoutePlaceholder } from "@/app/route-placeholder"
 import { Launcher } from "@/features/launcher/launcher"
+import { SessionRouteScreen } from "@/features/sessions/session-route-screen"
+import { SessionsListScreen } from "@/features/sessions/sessions-list-screen"
 
 type DevelopmentRouteExtension = {
   label: string
@@ -65,6 +67,11 @@ const sessionsSearchSchema = z.object({
   ...contextSearchShape,
   page: z.coerce.number().int().positive().catch(1).default(1),
   state: z.enum(["all", "running", "complete"]).catch("all").default("all"),
+  view: z.enum(["story", "map", "cost"]).catch("story").default("story"),
+  turn: z.number().int().optional().catch(undefined),
+  iteration: z.number().int().optional().catch(undefined),
+  event: z.string().max(200).optional().catch(undefined),
+  goal: z.number().int().optional().catch(undefined),
 })
 
 const experimentsSearchSchema = z.object({
@@ -80,6 +87,10 @@ const knowledgeSearchSchema = z.object({
 const sessionSearchSchema = z.object({
   ...contextSearchShape,
   view: z.enum(["story", "map", "cost"]).catch("story").default("story"),
+  turn: z.number().int().optional().catch(undefined),
+  iteration: z.number().int().optional().catch(undefined),
+  event: z.string().max(200).optional().catch(undefined),
+  goal: z.number().int().optional().catch(undefined),
 })
 
 const sessionParamsSchema = z.object({
@@ -150,13 +161,25 @@ function createAppRouter(options: CreateAppRouterOptions = {}) {
     errorComponent: RouteErrorBoundary,
     pendingComponent: RoutePendingBoundary,
     component: function SessionsRoute() {
-      const { page, state } = sessionsRoute.useSearch()
-      return (
-        <RoutePlaceholder
-          title="Sessions"
-          routeState={`state=${state};page=${page}`}
-        />
-      )
+      const { player, session, view, turn, iteration, event, goal } =
+        sessionsRoute.useSearch()
+      // With a session in context the route reads it directly, like the
+      // reference. The finder renders only without a selected session.
+      if (session !== undefined) {
+        return (
+          <SessionRouteScreen
+            sessionId={session}
+            initialParams={{
+              view,
+              turn: turn ?? null,
+              iteration: iteration ?? null,
+              event: event ?? null,
+              goal: goal ?? null,
+            }}
+          />
+        )
+      }
+      return <SessionsListScreen playerId={player} />
     },
   })
 
@@ -173,11 +196,17 @@ function createAppRouter(options: CreateAppRouterOptions = {}) {
     },
     component: function SessionRoute() {
       const { sessionId } = sessionRoute.useParams()
-      const { view } = sessionRoute.useSearch()
+      const { view, turn, iteration, event, goal } = sessionRoute.useSearch()
       return (
-        <RoutePlaceholder
-          title="Session"
-          routeState={`sessionId=${sessionId};view=${view}`}
+        <SessionRouteScreen
+          sessionId={sessionId}
+          initialParams={{
+            view,
+            turn: turn ?? null,
+            iteration: iteration ?? null,
+            event: event ?? null,
+            goal: goal ?? null,
+          }}
         />
       )
     },
