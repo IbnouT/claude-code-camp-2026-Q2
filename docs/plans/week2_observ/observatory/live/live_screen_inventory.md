@@ -138,6 +138,23 @@ Build order:
   against the light canvas: room fills gain saturation, sector lines and
   links gain depth, the workspace glow firms, bar tracks darken a step,
   and the sparkline uses the accent teal. Dark values are untouched.
+- The message drawer renders the view's operator messages with applied
+  iterations, the live boundary gate, the inspecting sequence label, and
+  the reference slide and shade motion. Delivery is the guarded v1
+  command against the session summary's composite cursor. The legacy
+  lifecycle delivery path is not carried.
+- The Ask dialog uses the retained popover container, the 8px shade,
+  the evidence boundary checkbox, and typed transport with request
+  cancellation. The backend live query space is restored, its earlier
+  retirement contradicted the reference product behavior.
+- Materialization recovers from a stale watermark by a full rebuild, and
+  a retained fault clears when a later pass succeeds. A fault stays
+  terminal only while the session's registry row and journals are
+  unchanged.
+- Live notifications invalidate their exact target: the summary target
+  refreshes the latest view and vitals, goals and partitions refresh
+  themselves, pinned views never refetch. Previous session data never
+  stands in across a player or session switch.
 
 ### Map deviations, accepted after review
 

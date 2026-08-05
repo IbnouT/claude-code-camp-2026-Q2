@@ -376,6 +376,24 @@ only the identity and cursor needed to reread committed state.
 The notification and reconciliation bounds are specified in
 [the backend architecture plan](../plans/week2_observ/observatory/backend_architecture.md).
 
+Messaging taught me the cheapest lesson the hard way. My delivery test
+mocked a cursor conflict resolving on the third try, so it passed while
+the real guard compared a content hash against a composite watermark
+that could never match. A unit test that encodes my assumption instead
+of the contract is worse than no test, it manufactures confidence. The
+fix was one line of resource choice, the session summary already carried
+the exact cursor the guard wanted.
+
+Two earlier decisions collided with product behavior tonight. Retiring
+the live query space made the Ask dialog structurally perfect and
+functionally dead, the deterministic answers were the product. And a
+terminal materialization fault turned one crash into a permanent lie:
+the session resumed, the projection rebuilt cleanly from scratch, yet
+every read kept serving the old fault because nothing was allowed to
+try again. Recovery needed two ideas, rebuild when the watermark is
+stale rather than fault, and let a fault stay terminal only while the
+source it blames is provably unchanged.
+
 ## Technical Conclusions
 
 - The gateway hypothesis held. Owning the wire made raw evidence, typed
