@@ -1,10 +1,11 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 
 import {
   GetLiveView200Response,
   type LiveViewResponseOutput,
 } from "@/data/generated/validators"
 import { queryKeys } from "@/data/query-keys"
+import { sameSessionPlaceholder } from "@/data/session-placeholder"
 import { fetchValidated, withQuery } from "@/data/transport"
 
 type LiveView = LiveViewResponseOutput
@@ -21,7 +22,7 @@ function useLiveView(
 ) {
   return useQuery({
     enabled: sessionId !== undefined,
-    placeholderData: keepPreviousData,
+    placeholderData: sameSessionPlaceholder(sessionId),
     queryFn: ({ signal }) =>
       fetchValidated(
         withQuery(`/api/v1/live/${sessionId}/view`, {

@@ -1,10 +1,11 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 
 import {
   GetSessionGoals200Response,
   type GoalPageResponseOutput,
 } from "@/data/generated/validators"
 import { queryKeys } from "@/data/query-keys"
+import { sameSessionPlaceholder } from "@/data/session-placeholder"
 import { fetchValidated } from "@/data/transport"
 
 type SessionGoals = GoalPageResponseOutput
@@ -17,7 +18,7 @@ type SessionGoalItem = SessionGoals["items"][number]
 function useSessionGoals(sessionId: string | undefined) {
   return useQuery({
     enabled: sessionId !== undefined,
-    placeholderData: keepPreviousData,
+    placeholderData: sameSessionPlaceholder(sessionId),
     queryFn: ({ signal }) =>
       fetchValidated(
         `/api/v1/sessions/${sessionId}/goals`,

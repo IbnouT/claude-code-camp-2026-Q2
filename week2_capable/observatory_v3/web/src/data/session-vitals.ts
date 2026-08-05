@@ -1,10 +1,11 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 
 import {
   GetLiveVitals200Response,
   type LiveVitalsResponseOutput,
 } from "@/data/generated/validators"
 import { queryKeys } from "@/data/query-keys"
+import { sameSessionPlaceholder } from "@/data/session-placeholder"
 import { fetchValidated } from "@/data/transport"
 
 type SessionVitals = LiveVitalsResponseOutput
@@ -17,7 +18,7 @@ type VitalsFields = SessionVitals["fields"]
 function useSessionVitals(sessionId: string | undefined) {
   return useQuery({
     enabled: sessionId !== undefined,
-    placeholderData: keepPreviousData,
+    placeholderData: sameSessionPlaceholder(sessionId),
     queryFn: ({ signal }) =>
       fetchValidated(
         `/api/v1/live/${sessionId}/vitals`,
