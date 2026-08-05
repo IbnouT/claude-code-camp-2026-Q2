@@ -845,6 +845,73 @@
         "title": "EvidenceCitation",
         "type": "object"
       },
+      "EvidenceForm": {
+        "additionalProperties": false,
+        "description": "One layer in the wire-to-truth evidence lens.",
+        "properties": {
+          "citations": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "state": {
+            "enum": [
+              "available",
+              "missing"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "title",
+          "text"
+        ],
+        "title": "EvidenceForm",
+        "type": "object"
+      },
+      "EvidenceLens": {
+        "additionalProperties": false,
+        "description": "Five non-interchangeable forms of one selected run outcome.",
+        "properties": {
+          "believed": {
+            "$ref": "#/components/schemas/EvidenceForm"
+          },
+          "parsed": {
+            "$ref": "#/components/schemas/EvidenceForm"
+          },
+          "rendered": {
+            "$ref": "#/components/schemas/EvidenceForm"
+          },
+          "truth": {
+            "$ref": "#/components/schemas/EvidenceForm"
+          },
+          "wire": {
+            "$ref": "#/components/schemas/EvidenceForm"
+          }
+        },
+        "required": [
+          "wire",
+          "parsed",
+          "rendered",
+          "believed",
+          "truth"
+        ],
+        "title": "EvidenceLens",
+        "type": "object"
+      },
       "EvidenceRecordResponse": {
         "additionalProperties": false,
         "description": "One retained record with ancestry, provenance, and sanitized fields.",
@@ -5121,6 +5188,240 @@
         "title": "ResourceReconciliationNotification",
         "type": "object"
       },
+      "RuntimeSessionInvestigation": {
+        "additionalProperties": false,
+        "description": "One universal launcher session projected into navigable evidence.",
+        "properties": {
+          "agent_session_id": {
+            "title": "Agent Session Id",
+            "type": "string"
+          },
+          "capture_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Capture Gaps",
+            "type": "array"
+          },
+          "correlation": {
+            "title": "Correlation",
+            "type": "string"
+          },
+          "cost": {
+            "$ref": "#/components/schemas/SessionCostLedger"
+          },
+          "diagnostic_coverage": {
+            "items": {
+              "enum": [
+                "false_completion",
+                "belief_divergence",
+                "position_ambiguity",
+                "confusion_loop",
+                "progress_stall",
+                "parse_degradation",
+                "corrective_call_cluster",
+                "stale_action",
+                "context_churn",
+                "instrumentation_gap"
+              ],
+              "type": "string"
+            },
+            "title": "Diagnostic Coverage",
+            "type": "array"
+          },
+          "diagnostics": {
+            "items": {
+              "$ref": "#/components/schemas/SessionDiagnostic"
+            },
+            "title": "Diagnostics",
+            "type": "array"
+          },
+          "gateway_session_id": {
+            "title": "Gateway Session Id",
+            "type": "string"
+          },
+          "lens": {
+            "$ref": "#/components/schemas/EvidenceLens"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "objective": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objective"
+          },
+          "player_id": {
+            "title": "Player Id",
+            "type": "string"
+          },
+          "records": {
+            "items": {
+              "$ref": "#/components/schemas/SessionEvidenceRecord"
+            },
+            "title": "Records",
+            "type": "array"
+          },
+          "run": {
+            "$ref": "#/components/schemas/RuntimeSessionSummary"
+          },
+          "source_kind": {
+            "const": "runtime_session",
+            "default": "runtime_session",
+            "title": "Source Kind",
+            "type": "string"
+          },
+          "version": {
+            "default": 2,
+            "title": "Version",
+            "type": "integer"
+          },
+          "world": {
+            "$ref": "#/components/schemas/WorldProjection"
+          }
+        },
+        "required": [
+          "correlation",
+          "run",
+          "player_id",
+          "agent_session_id",
+          "gateway_session_id",
+          "objective",
+          "model",
+          "records",
+          "diagnostics",
+          "diagnostic_coverage",
+          "lens",
+          "world",
+          "cost",
+          "capture_gaps"
+        ],
+        "title": "RuntimeSessionInvestigation",
+        "type": "object"
+      },
+      "RuntimeSessionSummary": {
+        "additionalProperties": false,
+        "description": "One launcher run summarized without experiment semantics.",
+        "properties": {
+          "attempt": {
+            "title": "Attempt",
+            "type": "string"
+          },
+          "capture_status": {
+            "title": "Capture Status",
+            "type": "string"
+          },
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "goal_epochs": {
+            "title": "Goal Epochs",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "iterations": {
+            "title": "Iterations",
+            "type": "integer"
+          },
+          "journey": {
+            "default": "Session",
+            "title": "Journey",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "lifecycle": {
+            "title": "Lifecycle",
+            "type": "string"
+          },
+          "responses": {
+            "title": "Responses",
+            "type": "integer"
+          },
+          "result_mode": {
+            "default": "runtime",
+            "title": "Result Mode",
+            "type": "string"
+          },
+          "stop_reason": {
+            "title": "Stop Reason",
+            "type": "string"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          },
+          "turns": {
+            "title": "Turns",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "attempt",
+          "success",
+          "stop_reason",
+          "iterations",
+          "cost_usd",
+          "lifecycle",
+          "capture_status",
+          "created_at",
+          "ended_at",
+          "duration_ms",
+          "turns",
+          "responses",
+          "goal_epochs"
+        ],
+        "title": "RuntimeSessionSummary",
+        "type": "object"
+      },
       "SearchMatch": {
         "additionalProperties": false,
         "description": "One stable search result and navigation target.",
@@ -5629,6 +5930,506 @@
           "action"
         ],
         "title": "SessionCommandRequest",
+        "type": "object"
+      },
+      "SessionCostLedger": {
+        "additionalProperties": false,
+        "description": "Reconciled run economics with explicit completeness.",
+        "properties": {
+          "cache_read_tokens": {
+            "title": "Cache Read Tokens",
+            "type": "integer"
+          },
+          "cache_write_tokens": {
+            "title": "Cache Write Tokens",
+            "type": "integer"
+          },
+          "complete": {
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "completeness_detail": {
+            "title": "Completeness Detail",
+            "type": "string"
+          },
+          "fresh_input_tokens": {
+            "title": "Fresh Input Tokens",
+            "type": "integer"
+          },
+          "output_tokens": {
+            "title": "Output Tokens",
+            "type": "integer"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/SessionCostPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "raw_response_total_usd": {
+            "title": "Raw Response Total Usd",
+            "type": "number"
+          },
+          "reconciliation_delta_usd": {
+            "title": "Reconciliation Delta Usd",
+            "type": "number"
+          },
+          "response_total_usd": {
+            "title": "Response Total Usd",
+            "type": "number"
+          },
+          "total_usd": {
+            "title": "Total Usd",
+            "type": "number"
+          }
+        },
+        "required": [
+          "total_usd",
+          "response_total_usd",
+          "raw_response_total_usd",
+          "reconciliation_delta_usd",
+          "complete",
+          "completeness_detail",
+          "fresh_input_tokens",
+          "cache_read_tokens",
+          "cache_write_tokens",
+          "output_tokens",
+          "points"
+        ],
+        "title": "SessionCostLedger",
+        "type": "object"
+      },
+      "SessionCostPoint": {
+        "additionalProperties": false,
+        "description": "One billed response linked to its exact session record.",
+        "properties": {
+          "cache_read_tokens": {
+            "title": "Cache Read Tokens",
+            "type": "integer"
+          },
+          "cache_write_tokens": {
+            "title": "Cache Write Tokens",
+            "type": "integer"
+          },
+          "context_tokens": {
+            "title": "Context Tokens",
+            "type": "integer"
+          },
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "fresh_input_tokens": {
+            "title": "Fresh Input Tokens",
+            "type": "integer"
+          },
+          "iteration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Iteration"
+          },
+          "output_tokens": {
+            "title": "Output Tokens",
+            "type": "integer"
+          },
+          "pricing_source": {
+            "enum": [
+              "attempt_cost_curve",
+              "agent_response"
+            ],
+            "title": "Pricing Source",
+            "type": "string"
+          },
+          "progress": {
+            "title": "Progress",
+            "type": "string"
+          },
+          "raw_response_cost_usd": {
+            "title": "Raw Response Cost Usd",
+            "type": "number"
+          },
+          "record_id": {
+            "title": "Record Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "cost_usd",
+          "raw_response_cost_usd",
+          "pricing_source",
+          "fresh_input_tokens",
+          "cache_read_tokens",
+          "cache_write_tokens",
+          "output_tokens",
+          "context_tokens",
+          "progress"
+        ],
+        "title": "SessionCostPoint",
+        "type": "object"
+      },
+      "SessionDiagnostic": {
+        "additionalProperties": false,
+        "description": "One versioned diagnostic that explains its own evidence boundary.",
+        "properties": {
+          "affected_conclusions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Affected Conclusions",
+            "type": "array"
+          },
+          "alternatives": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Alternatives",
+            "type": "array"
+          },
+          "at_record": {
+            "title": "At Record",
+            "type": "string"
+          },
+          "consequence": {
+            "title": "Consequence",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "false_completion",
+              "belief_divergence",
+              "position_ambiguity",
+              "confusion_loop",
+              "progress_stall",
+              "parse_degradation",
+              "corrective_call_cluster",
+              "stale_action",
+              "context_churn",
+              "instrumentation_gap"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "related_occurrences": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Related Occurrences",
+            "type": "array"
+          },
+          "resolution": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Resolution"
+          },
+          "rule_version": {
+            "title": "Rule Version",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "critical",
+              "warning",
+              "notice"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "open",
+              "acknowledged",
+              "resolved"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "threshold": {
+            "title": "Threshold",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "severity",
+          "state",
+          "title",
+          "consequence",
+          "rule_version",
+          "threshold",
+          "at_record",
+          "evidence",
+          "alternatives",
+          "affected_conclusions"
+        ],
+        "title": "SessionDiagnostic",
+        "type": "object"
+      },
+      "SessionEvidenceRecord": {
+        "additionalProperties": false,
+        "description": "One sanitized record in a navigable session evidence hierarchy.",
+        "properties": {
+          "at": {
+            "title": "At",
+            "type": "string"
+          },
+          "capture_gaps": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Capture Gaps",
+            "type": "array"
+          },
+          "cost_usd": {
+            "default": 0,
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "duration_ms": {
+            "default": 0,
+            "title": "Duration Ms",
+            "type": "number"
+          },
+          "fields": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Fields",
+            "type": "object"
+          },
+          "form": {
+            "enum": [
+              "wire",
+              "parsed",
+              "rendered",
+              "believed",
+              "truth"
+            ],
+            "title": "Form",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "iteration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Iteration"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Parent Id"
+          },
+          "preview": {
+            "title": "Preview",
+            "type": "string"
+          },
+          "room_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Room Id"
+          },
+          "sequence": {
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "source": {
+            "enum": [
+              "agent",
+              "gateway",
+              "benchmark"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "source_ref": {
+            "title": "Source Ref",
+            "type": "string"
+          },
+          "status": {
+            "default": "unknown",
+            "enum": [
+              "complete",
+              "partial",
+              "failed",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tokens": {
+            "default": 0,
+            "title": "Tokens",
+            "type": "integer"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Trace Id"
+          },
+          "turn": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Turn"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "form",
+          "kind",
+          "label",
+          "sequence",
+          "at",
+          "preview",
+          "source_ref"
+        ],
+        "title": "SessionEvidenceRecord",
+        "type": "object"
+      },
+      "SessionInvestigationResponse": {
+        "additionalProperties": false,
+        "description": "The complete recorded story of one retained session.",
+        "properties": {
+          "capture_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Capture Gaps",
+            "type": "array"
+          },
+          "completeness": {
+            "enum": [
+              "complete",
+              "partial",
+              "degraded"
+            ],
+            "title": "Completeness",
+            "type": "string"
+          },
+          "investigation": {
+            "$ref": "#/components/schemas/RuntimeSessionInvestigation"
+          },
+          "resource_id": {
+            "maxLength": 512,
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_version": {
+            "minimum": 1,
+            "title": "Resource Version",
+            "type": "integer"
+          },
+          "session_id": {
+            "maxLength": 512,
+            "title": "Session Id",
+            "type": "string"
+          },
+          "source_cursor": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Source Cursor",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "Source Refs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "resource_id",
+          "resource_version",
+          "source_cursor",
+          "completeness",
+          "capture_gaps",
+          "source_refs",
+          "session_id",
+          "investigation"
+        ],
+        "title": "SessionInvestigationResponse",
         "type": "object"
       },
       "SessionSummaryResponse": {
@@ -9104,6 +9905,68 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TurnPageResponse"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Required source unavailable"
+          }
+        },
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/investigation": {
+      "get": {
+        "operationId": "getSessionInvestigation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionInvestigationResponse"
                 }
               }
             },

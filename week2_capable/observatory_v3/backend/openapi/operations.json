@@ -41,6 +41,11 @@
   ],
   [
     "GET",
+    "/api/v1/sessions/{session_id}/investigation",
+    "getSessionInvestigation"
+  ],
+  [
+    "GET",
     "/api/v1/sessions/{session_id}",
     "getSessionSummary"
   ],

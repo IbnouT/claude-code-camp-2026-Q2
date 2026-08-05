@@ -14,6 +14,7 @@ from ..contracts import (
     LiveJourneySnapshot,
     RecordedSessionCatalogItem,
     RunSummary,
+    RuntimeSessionInvestigation,
 )
 from ..experiment_jobs.models import (
     ExperimentJobState,
@@ -258,6 +259,19 @@ class LiveViewResponse(PublicContract):
     source_refs: tuple[str, ...] = Field(max_length=16)
     session_id: str = Field(max_length=512)
     view: LiveJourneySnapshot
+
+
+class SessionInvestigationResponse(PublicContract):
+    """The complete recorded story of one retained session."""
+
+    resource_id: str = Field(max_length=512)
+    resource_version: int = Field(ge=1)
+    source_cursor: str = Field(min_length=1, max_length=256)
+    completeness: Literal["complete", "partial", "degraded"]
+    capture_gaps: tuple[str, ...] = Field(max_length=32)
+    source_refs: tuple[str, ...] = Field(max_length=16)
+    session_id: str = Field(max_length=512)
+    investigation: RuntimeSessionInvestigation
 
 
 class ResourceChangeTarget(PublicContract):

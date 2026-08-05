@@ -51,6 +51,7 @@ from .contracts import (
     ResourceNotification,
     SessionCatalogResponse,
     SessionCommandRequest,
+    SessionInvestigationResponse,
     StartCommandRequest,
 )
 
@@ -290,6 +291,14 @@ API_V1_OPERATIONS: tuple[OperationSpec, ...] = (
             ResponseSpec(422, "Request validation failed", ApiError),
             ResponseSpec(503, "Command service unavailable", ApiError),
         ),
+        parameters=(SESSION_ID,),
+    ),
+    _get(
+        "/sessions/{session_id:str}/investigation",
+        "getSessionInvestigation",
+        "session_investigation_view",
+        "sessions",
+        SessionInvestigationResponse,
         parameters=(SESSION_ID,),
     ),
     _get(

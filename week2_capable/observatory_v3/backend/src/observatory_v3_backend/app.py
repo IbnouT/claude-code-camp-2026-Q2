@@ -33,6 +33,7 @@ from .api_v1.contracts import (
     LiveViewResponse,
     ResourceChangeTarget,
     SessionCommandRequest,
+    SessionInvestigationResponse,
     StartCommandRequest,
 )
 from .api_v1.operations import Handler
@@ -791,6 +792,43 @@ def create_app(
             source_refs=("gateway.db events", "agent.jsonl"),
             session_id=session_id,
             view=result,
+        )
+        return JSONResponse(response.model_dump(mode="json"))
+
+    async def session_investigation_view(request: Request) -> JSONResponse:
+        if runtime is None or not runtime.available:
+            return JSONResponse(
+                {
+                    "error": "runtime_unavailable",
+                    "detail": "No launcher runtime registry is available",
+                },
+                status_code=503,
+            )
+        session_id = request.path_params["session_id"]
+        try:
+            assert runtime_reads is not None
+            result = await storage.run(
+                runtime_reads.investigation,
+                session_id,
+            )
+            if result is None:
+                return JSONResponse({"error": "not_found"}, status_code=404)
+        except RuntimeSourceError as error:
+            return _runtime_error(error)
+        payload = result.model_dump(mode="json")
+        version, source_cursor = content_identity(
+            "obi1",
+            {"session_id": session_id, "investigation": payload},
+        )
+        response = SessionInvestigationResponse(
+            resource_id=f"session:{session_id}:investigation",
+            resource_version=version,
+            source_cursor=source_cursor,
+            completeness="partial" if result.capture_gaps else "complete",
+            capture_gaps=tuple(result.capture_gaps)[:32],
+            source_refs=("gateway.db events", "agent.jsonl", "registry.db"),
+            session_id=session_id,
+            investigation=result,
         )
         return JSONResponse(response.model_dump(mode="json"))
 
@@ -1929,6 +1967,7 @@ def create_app(
         "command_status": command_status,
         "live_vitals": live_vitals,
         "live_view": live_view,
+        "session_investigation_view": session_investigation_view,
         "ask": ask,
         "run_experiment": run_experiment,
         "experiment_jobs": experiment_jobs,

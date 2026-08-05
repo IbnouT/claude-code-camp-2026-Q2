@@ -312,6 +312,29 @@ export const EntityPageResponse = /*#__PURE__*/ zod.strictObject({
 export type EntityPageResponse = zod.input<typeof EntityPageResponse>;
 export type EntityPageResponseOutput = zod.output<typeof EntityPageResponse>;
 
+export const evidenceFormCitationsDefault = [];
+
+export const EvidenceForm = /*#__PURE__*/ zod.strictObject({
+  "citations": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()), evidenceFormCitationsDefault),
+  "state": /*#__PURE__*/ zod.enum(['available', 'missing']),
+  "text": /*#__PURE__*/ zod.string(),
+  "title": /*#__PURE__*/ zod.string()
+}).check(/*#__PURE__*/ zod.describe('One layer in the wire-to-truth evidence lens.'));
+
+export type EvidenceForm = zod.input<typeof EvidenceForm>;
+export type EvidenceFormOutput = zod.output<typeof EvidenceForm>;
+
+export const EvidenceLens = /*#__PURE__*/ zod.strictObject({
+  "believed": EvidenceForm,
+  "parsed": EvidenceForm,
+  "rendered": EvidenceForm,
+  "truth": EvidenceForm,
+  "wire": EvidenceForm
+}).check(/*#__PURE__*/ zod.describe('Five non-interchangeable forms of one selected run outcome.'));
+
+export type EvidenceLens = zod.input<typeof EvidenceLens>;
+export type EvidenceLensOutput = zod.output<typeof EvidenceLens>;
+
 export const JsonScalar = /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.boolean(),/*#__PURE__*/ zod.int(),/*#__PURE__*/ zod.number(),/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]);
 
 export type JsonScalar = zod.input<typeof JsonScalar>;
@@ -1675,6 +1698,153 @@ export const ResourceNotification = /*#__PURE__*/ zod.union([ResourceChangedNoti
 export type ResourceNotification = zod.input<typeof ResourceNotification>;
 export type ResourceNotificationOutput = zod.output<typeof ResourceNotification>;
 
+export const sessionCostPointIterationDefault = null;
+
+export const SessionCostPoint = /*#__PURE__*/ zod.strictObject({
+  "cache_read_tokens": /*#__PURE__*/ zod.int(),
+  "cache_write_tokens": /*#__PURE__*/ zod.int(),
+  "context_tokens": /*#__PURE__*/ zod.int(),
+  "cost_usd": /*#__PURE__*/ zod.number(),
+  "fresh_input_tokens": /*#__PURE__*/ zod.int(),
+  "iteration": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.int(),/*#__PURE__*/ zod.null()]), sessionCostPointIterationDefault),
+  "output_tokens": /*#__PURE__*/ zod.int(),
+  "pricing_source": /*#__PURE__*/ zod.enum(['attempt_cost_curve', 'agent_response']),
+  "progress": /*#__PURE__*/ zod.string(),
+  "raw_response_cost_usd": /*#__PURE__*/ zod.number(),
+  "record_id": /*#__PURE__*/ zod.string()
+}).check(/*#__PURE__*/ zod.describe('One billed response linked to its exact session record.'));
+
+export type SessionCostPoint = zod.input<typeof SessionCostPoint>;
+export type SessionCostPointOutput = zod.output<typeof SessionCostPoint>;
+
+export const SessionCostLedger = /*#__PURE__*/ zod.strictObject({
+  "cache_read_tokens": /*#__PURE__*/ zod.int(),
+  "cache_write_tokens": /*#__PURE__*/ zod.int(),
+  "complete": /*#__PURE__*/ zod.boolean(),
+  "completeness_detail": /*#__PURE__*/ zod.string(),
+  "fresh_input_tokens": /*#__PURE__*/ zod.int(),
+  "output_tokens": /*#__PURE__*/ zod.int(),
+  "points": /*#__PURE__*/ zod.array(SessionCostPoint),
+  "raw_response_total_usd": /*#__PURE__*/ zod.number(),
+  "reconciliation_delta_usd": /*#__PURE__*/ zod.number(),
+  "response_total_usd": /*#__PURE__*/ zod.number(),
+  "total_usd": /*#__PURE__*/ zod.number()
+}).check(/*#__PURE__*/ zod.describe('Reconciled run economics with explicit completeness.'));
+
+export type SessionCostLedger = zod.input<typeof SessionCostLedger>;
+export type SessionCostLedgerOutput = zod.output<typeof SessionCostLedger>;
+
+export const sessionDiagnosticRelatedOccurrencesDefault = [];
+export const sessionDiagnosticResolutionDefault = null;
+
+export const SessionDiagnostic = /*#__PURE__*/ zod.strictObject({
+  "affected_conclusions": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()),
+  "alternatives": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()),
+  "at_record": /*#__PURE__*/ zod.string(),
+  "consequence": /*#__PURE__*/ zod.string(),
+  "evidence": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()),
+  "id": /*#__PURE__*/ zod.string(),
+  "kind": /*#__PURE__*/ zod.enum(['false_completion', 'belief_divergence', 'position_ambiguity', 'confusion_loop', 'progress_stall', 'parse_degradation', 'corrective_call_cluster', 'stale_action', 'context_churn', 'instrumentation_gap']),
+  "related_occurrences": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()), sessionDiagnosticRelatedOccurrencesDefault),
+  "resolution": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]), sessionDiagnosticResolutionDefault),
+  "rule_version": /*#__PURE__*/ zod.string(),
+  "severity": /*#__PURE__*/ zod.enum(['critical', 'warning', 'notice']),
+  "state": /*#__PURE__*/ zod.enum(['open', 'acknowledged', 'resolved']),
+  "threshold": /*#__PURE__*/ zod.string(),
+  "title": /*#__PURE__*/ zod.string()
+}).check(/*#__PURE__*/ zod.describe('One versioned diagnostic that explains its own evidence boundary.'));
+
+export type SessionDiagnostic = zod.input<typeof SessionDiagnostic>;
+export type SessionDiagnosticOutput = zod.output<typeof SessionDiagnostic>;
+
+export const sessionEvidenceRecordCaptureGapsDefault = [];
+export const sessionEvidenceRecordCostUsdDefault = 0;
+export const sessionEvidenceRecordDurationMsDefault = 0;
+export const sessionEvidenceRecordIterationDefault = null;
+export const sessionEvidenceRecordParentIdDefault = null;
+export const sessionEvidenceRecordRoomIdDefault = null;
+export const sessionEvidenceRecordStatusDefault = `unknown`;
+export const sessionEvidenceRecordTokensDefault = 0;
+export const sessionEvidenceRecordTraceIdDefault = null;
+export const sessionEvidenceRecordTurnDefault = null;
+
+export const SessionEvidenceRecord = /*#__PURE__*/ zod.strictObject({
+  "at": /*#__PURE__*/ zod.string(),
+  "capture_gaps": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()), sessionEvidenceRecordCaptureGapsDefault),
+  "cost_usd": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.number(), sessionEvidenceRecordCostUsdDefault),
+  "duration_ms": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.number(), sessionEvidenceRecordDurationMsDefault),
+  "fields": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.record(/*#__PURE__*/ zod.string(), JsonValue)),
+  "form": /*#__PURE__*/ zod.enum(['wire', 'parsed', 'rendered', 'believed', 'truth']),
+  "id": /*#__PURE__*/ zod.string(),
+  "iteration": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.int(),/*#__PURE__*/ zod.null()]), sessionEvidenceRecordIterationDefault),
+  "kind": /*#__PURE__*/ zod.string(),
+  "label": /*#__PURE__*/ zod.string(),
+  "parent_id": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]), sessionEvidenceRecordParentIdDefault),
+  "preview": /*#__PURE__*/ zod.string(),
+  "room_id": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]), sessionEvidenceRecordRoomIdDefault),
+  "sequence": /*#__PURE__*/ zod.int(),
+  "source": /*#__PURE__*/ zod.enum(['agent', 'gateway', 'benchmark']),
+  "source_ref": /*#__PURE__*/ zod.string(),
+  "status": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.enum(['complete', 'partial', 'failed', 'unknown']), sessionEvidenceRecordStatusDefault),
+  "tokens": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int(), sessionEvidenceRecordTokensDefault),
+  "trace_id": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]), sessionEvidenceRecordTraceIdDefault),
+  "turn": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.int(),/*#__PURE__*/ zod.null()]), sessionEvidenceRecordTurnDefault)
+}).check(/*#__PURE__*/ zod.describe('One sanitized record in a navigable session evidence hierarchy.'));
+
+export type SessionEvidenceRecord = zod.input<typeof SessionEvidenceRecord>;
+export type SessionEvidenceRecordOutput = zod.output<typeof SessionEvidenceRecord>;
+
+export const runtimeSessionSummaryJourneyDefault = `Session`;
+export const runtimeSessionSummaryResultModeDefault = `runtime`;
+
+export const RuntimeSessionSummary = /*#__PURE__*/ zod.strictObject({
+  "attempt": /*#__PURE__*/ zod.string(),
+  "capture_status": /*#__PURE__*/ zod.string(),
+  "cost_usd": /*#__PURE__*/ zod.number(),
+  "created_at": /*#__PURE__*/ zod.string(),
+  "duration_ms": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.number(),/*#__PURE__*/ zod.null()]),
+  "ended_at": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "goal_epochs": /*#__PURE__*/ zod.int(),
+  "id": /*#__PURE__*/ zod.string(),
+  "iterations": /*#__PURE__*/ zod.int(),
+  "journey": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.string(), runtimeSessionSummaryJourneyDefault),
+  "label": /*#__PURE__*/ zod.string(),
+  "lifecycle": /*#__PURE__*/ zod.string(),
+  "responses": /*#__PURE__*/ zod.int(),
+  "result_mode": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.string(), runtimeSessionSummaryResultModeDefault),
+  "stop_reason": /*#__PURE__*/ zod.string(),
+  "success": /*#__PURE__*/ zod.boolean(),
+  "turns": /*#__PURE__*/ zod.int()
+}).check(/*#__PURE__*/ zod.describe('One launcher run summarized without experiment semantics.'));
+
+export type RuntimeSessionSummary = zod.input<typeof RuntimeSessionSummary>;
+export type RuntimeSessionSummaryOutput = zod.output<typeof RuntimeSessionSummary>;
+
+export const runtimeSessionInvestigationSourceKindDefault = `runtime_session`;
+export const runtimeSessionInvestigationVersionDefault = 2;
+
+export const RuntimeSessionInvestigation = /*#__PURE__*/ zod.strictObject({
+  "agent_session_id": /*#__PURE__*/ zod.string(),
+  "capture_gaps": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()),
+  "correlation": /*#__PURE__*/ zod.string(),
+  "cost": SessionCostLedger,
+  "diagnostic_coverage": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.enum(['false_completion', 'belief_divergence', 'position_ambiguity', 'confusion_loop', 'progress_stall', 'parse_degradation', 'corrective_call_cluster', 'stale_action', 'context_churn', 'instrumentation_gap'])),
+  "diagnostics": /*#__PURE__*/ zod.array(SessionDiagnostic),
+  "gateway_session_id": /*#__PURE__*/ zod.string(),
+  "lens": EvidenceLens,
+  "model": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "objective": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()]),
+  "player_id": /*#__PURE__*/ zod.string(),
+  "records": /*#__PURE__*/ zod.array(SessionEvidenceRecord),
+  "run": RuntimeSessionSummary,
+  "source_kind": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.literal("runtime_session"), runtimeSessionInvestigationSourceKindDefault),
+  "version": /*#__PURE__*/ zod._default(/*#__PURE__*/ zod.int(), runtimeSessionInvestigationVersionDefault),
+  "world": WorldProjection
+}).check(/*#__PURE__*/ zod.describe('One universal launcher session projected into navigable evidence.'));
+
+export type RuntimeSessionInvestigation = zod.input<typeof RuntimeSessionInvestigation>;
+export type RuntimeSessionInvestigationOutput = zod.output<typeof RuntimeSessionInvestigation>;
+
 export const SearchMatch = /*#__PURE__*/ zod.strictObject({
   "excerpt": /*#__PURE__*/ zod.string(),
   "kind": /*#__PURE__*/ zod.enum(['session', 'goal', 'nudge', 'turn', 'iteration', 'record', 'trace', 'experiment_sample']),
@@ -1844,6 +2014,33 @@ export const SessionCommandRequest = /*#__PURE__*/ zod.strictObject({
 
 export type SessionCommandRequest = zod.input<typeof SessionCommandRequest>;
 export type SessionCommandRequestOutput = zod.output<typeof SessionCommandRequest>;
+
+export const sessionInvestigationResponseCaptureGapsMax = 32;
+
+export const sessionInvestigationResponseResourceIdMax = 512;
+
+
+export const sessionInvestigationResponseSessionIdMax = 512;
+
+export const sessionInvestigationResponseSourceCursorMax = 256;
+
+export const sessionInvestigationResponseSourceRefsMax = 16;
+
+
+
+export const SessionInvestigationResponse = /*#__PURE__*/ zod.strictObject({
+  "capture_gaps": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(sessionInvestigationResponseCaptureGapsMax)),
+  "completeness": /*#__PURE__*/ zod.enum(['complete', 'partial', 'degraded']),
+  "investigation": RuntimeSessionInvestigation,
+  "resource_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionInvestigationResponseResourceIdMax)),
+  "resource_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "session_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(sessionInvestigationResponseSessionIdMax)),
+  "source_cursor": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(sessionInvestigationResponseSourceCursorMax)),
+  "source_refs": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(sessionInvestigationResponseSourceRefsMax))
+}).check(/*#__PURE__*/ zod.describe('The complete recorded story of one retained session.'));
+
+export type SessionInvestigationResponse = zod.input<typeof SessionInvestigationResponse>;
+export type SessionInvestigationResponseOutput = zod.output<typeof SessionInvestigationResponse>;
 
 export const sessionTotalsCostUsdMin = 0;
 
@@ -2740,6 +2937,23 @@ export const GetGoalTurns404Response = ApiError
 export const GetGoalTurns422Response = ApiError
 
 export const GetGoalTurns503Response = ApiError
+
+
+export const getSessionInvestigationPathSessionIdMax = 200;
+
+
+
+export const GetSessionInvestigationParams = /*#__PURE__*/ zod.strictObject({
+  "session_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(getSessionInvestigationPathSessionIdMax))
+})
+
+export const GetSessionInvestigation200Response = SessionInvestigationResponse
+
+export const GetSessionInvestigation404Response = ApiError
+
+export const GetSessionInvestigation422Response = ApiError
+
+export const GetSessionInvestigation503Response = ApiError
 
 
 export const getSessionLifecyclePathSessionIdMax = 200;

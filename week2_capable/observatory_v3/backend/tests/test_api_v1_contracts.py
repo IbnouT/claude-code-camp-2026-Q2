@@ -108,10 +108,12 @@ def test_public_schema_excludes_legacy_complete_investigations() -> None:
         "SessionCatalogResponse",
         "StartCommandRequest",
     } <= set(schemas)
+    # The runtime investigation serves the Sessions screen as a bounded
+    # v1 resource, like the live view. The legacy variants stay excluded.
+    assert "RuntimeSessionInvestigation" in schemas
     assert {
         "Investigation",
         "RecordedSessionInvestigation",
-        "RuntimeSessionInvestigation",
     }.isdisjoint(schemas)
 
 
