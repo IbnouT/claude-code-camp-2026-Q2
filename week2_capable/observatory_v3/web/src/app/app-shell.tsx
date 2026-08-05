@@ -113,6 +113,26 @@ function AppShell({ navigation }: AppShellProps) {
 
   const headerActionClassName =
     "inline-flex h-[34px] items-center justify-center gap-[7px] rounded-[11px] border border-line bg-surface-raised px-[13px] py-2 text-[12.5px] whitespace-nowrap outline-none hover:border-line-strong hover:bg-surface-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-[0.56] max-[1440px]:[&>span]:hidden"
+  const askAction = (
+    <button
+      type="button"
+      data-header-action="ask"
+      aria-label="Ask about this session"
+      className={cn(
+        headerActionClassName,
+        "text-content-muted max-[1440px]:px-2.5"
+      )}
+      disabled={selected === null}
+      title="Ask about this session"
+      onClick={liveDialogs.openAsk}
+    >
+      <SearchIcon aria-hidden="true" className="size-3.5" />
+      <span>Ask about this session</span>
+      <kbd className="rounded-[5px] border border-line-strong bg-surface px-[5px] py-0.5 font-mono text-[9px] text-content-quiet">
+        ⌘K
+      </kbd>
+    </button>
+  )
   const liveActions = (
     <>
       <button
@@ -134,28 +154,13 @@ function AppShell({ navigation }: AppShellProps) {
         <MessageSquareTextIcon aria-hidden="true" className="size-3.5" />
         <span>Message agent</span>
       </button>
-      <button
-        type="button"
-        data-header-action="ask"
-        aria-label="Ask about this session"
-        className={cn(
-          headerActionClassName,
-          "text-content-muted max-[1440px]:px-2.5"
-        )}
-        disabled={selected === null}
-        title="Ask about this session"
-        onClick={liveDialogs.openAsk}
-      >
-        <SearchIcon aria-hidden="true" className="size-3.5" />
-        <span>Ask about this session</span>
-        <kbd className="rounded-[5px] border border-line-strong bg-surface px-[5px] py-0.5 font-mono text-[9px] text-content-quiet">
-          ⌘K
-        </kbd>
-      </button>
+      {askAction}
     </>
   )
-  // Outside Live the switcher carries every context action itself.
-  const actions = pathname === "/live" ? liveActions : null
+  const isSessionsRoute =
+    pathname === "/sessions" || pathname.startsWith("/sessions/")
+  const actions =
+    pathname === "/live" ? liveActions : isSessionsRoute ? askAction : null
 
   return (
     <div
