@@ -1627,14 +1627,21 @@ def _agent_thought(
 ) -> LiveAgentExcerpt | None:
     for event in reversed(events):
         phase = _text(event.get("phase"))
-        if phase not in {"reasoning", "plan"}:
+        if phase not in {"reasoning", "plan", "response"}:
             continue
         if phase == "reasoning" and event.get("redacted") is True:
+            continue
+        # A response is a thought only when it concluded the turn: the
+        # closing summary. Mid-turn responses stay behind the planning.
+        if phase == "response" and event.get("stop_reason") != "end_turn":
             continue
         text = _text(event.get("text"))
         if text is None or not text.strip():
             continue
-        phase_kind = cast(Literal["reasoning", "plan"], phase)
+        phase_kind = cast(
+            Literal["reasoning", "plan", "response"],
+            phase,
+        )
         return _agent_excerpt(event, phase_kind, text.strip())
     return None
 
@@ -1668,7 +1675,7 @@ def _agent_belief(
 
 def _agent_excerpt(
     event: dict[str, Any],
-    phase: Literal["reasoning", "plan", "tool_call"],
+    phase: Literal["reasoning", "plan", "tool_call", "response"],
     text: str,
 ) -> LiveAgentExcerpt:
     line = _integer(event.get("line"))

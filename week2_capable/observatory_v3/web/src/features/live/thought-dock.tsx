@@ -13,6 +13,7 @@ type ThoughtDockProps = {
 
 function phaseLabel(phase: string | undefined): string {
   if (phase === "reasoning") return "Thinking"
+  if (phase === "response") return "Response"
   if (phase === "plan" || phase === undefined) return "Planning"
   return "Acting"
 }

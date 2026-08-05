@@ -954,7 +954,7 @@ export const LiveAgentExcerpt = /*#__PURE__*/ zod.strictObject({
   "evidence": /*#__PURE__*/ zod.string(),
   "line": /*#__PURE__*/ zod.int(),
   "observed_at": /*#__PURE__*/ zod.string(),
-  "phase": /*#__PURE__*/ zod.enum(['reasoning', 'plan', 'tool_call']),
+  "phase": /*#__PURE__*/ zod.enum(['reasoning', 'plan', 'tool_call', 'response']),
   "text": /*#__PURE__*/ zod.string()
 }).check(/*#__PURE__*/ zod.describe('One retained agent statement with its exact log provenance.'));
 

@@ -155,6 +155,11 @@ Build order:
   refreshes the latest view and vitals, goals and partitions refresh
   themselves, pinned views never refetch. Previous session data never
   stands in across a player or session switch.
+- The thought dock surfaces a turn's closing model response as the
+  latest thought, labeled Response. The reference only ever showed
+  planning and reasoning, so a finished goal's final summary never
+  reached the Live screen. Mid turn responses that pause for tools
+  stay behind the planning.
 
 ### Map deviations, accepted after review
 

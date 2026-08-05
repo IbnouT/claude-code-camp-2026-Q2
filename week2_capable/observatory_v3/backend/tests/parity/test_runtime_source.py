@@ -2331,3 +2331,61 @@ async def test_destination_action_requires_beacon_and_learned_route(
             written[7].seq,
         ],
     }
+
+
+async def test_closing_response_becomes_the_latest_agent_thought(
+    tmp_path: Path,
+):
+    """An end-turn response outranks earlier planning in the thought dock.
+
+    A mid-turn response that pauses for tools never does.
+    """
+    root = runtime_root(tmp_path)
+    agent_log = (
+        root / "profiles" / "alpha" / "sessions" / "session-alpha" / "agent.jsonl"
+    )
+    identity = {
+        "player_id": "alpha",
+        "agent_id": "agent-alpha",
+        "session_id": "session-alpha",
+        "gateway_session_id": "gateway-alpha",
+    }
+    with agent_log.open("a", encoding="utf-8") as handle:
+        for event in (
+            {
+                "phase": "plan",
+                "text": "This is a losing battle. I need to flee immediately.",
+                "at": "1970-01-01T00:00:01.600+00:00",
+                **identity,
+            },
+            {
+                "phase": "response",
+                "stop_reason": "tool_use",
+                "text": "Let me check the exits first.",
+                "at": "1970-01-01T00:00:01.700+00:00",
+                **identity,
+            },
+        ):
+            handle.write(json.dumps(event) + "\n")
+
+    paused = runtime_snapshot(root, "session-alpha")
+    assert paused["agent_thought"]["phase"] == "plan"
+    assert paused["agent_thought"]["text"].startswith("This is a losing")
+
+    with agent_log.open("a", encoding="utf-8") as handle:
+        handle.write(
+            json.dumps(
+                {
+                    "phase": "response",
+                    "stop_reason": "end_turn",
+                    "text": "I've fled the blob! I escaped, wounded but safe.",
+                    "at": "1970-01-01T00:00:01.900+00:00",
+                    **identity,
+                }
+            )
+            + "\n"
+        )
+
+    closed = runtime_snapshot(root, "session-alpha")
+    assert closed["agent_thought"]["phase"] == "response"
+    assert closed["agent_thought"]["text"].startswith("I've fled the blob!")

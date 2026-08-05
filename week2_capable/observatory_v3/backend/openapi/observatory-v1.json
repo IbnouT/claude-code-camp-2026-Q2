@@ -2771,7 +2771,8 @@
             "enum": [
               "reasoning",
               "plan",
-              "tool_call"
+              "tool_call",
+              "response"
             ],
             "title": "Phase",
             "type": "string"

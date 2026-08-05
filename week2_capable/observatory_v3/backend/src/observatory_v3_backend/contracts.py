@@ -207,7 +207,7 @@ class LiveAgentExcerpt(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     text: str
-    phase: Literal["reasoning", "plan", "tool_call"]
+    phase: Literal["reasoning", "plan", "tool_call", "response"]
     observed_at: str
     line: int
     evidence: str
