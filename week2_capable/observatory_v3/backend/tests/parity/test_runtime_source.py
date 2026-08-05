@@ -1158,7 +1158,9 @@ async def test_live_snapshot_exposes_observed_status_economics_and_frontier(
     }
 
 
-async def test_live_ask_directs_callers_to_bounded_resources(tmp_path: Path):
+async def test_live_ask_answers_lifecycle_from_the_selected_session(
+    tmp_path: Path,
+):
     root = runtime_root(tmp_path)
     benchmark = tmp_path / "unrelated-benchmark"
     benchmark.mkdir()
@@ -1189,10 +1191,13 @@ async def test_live_ask_directs_callers_to_bounded_resources(tmp_path: Path):
 
     assert response.status_code == 200
     result = response.json()
-    assert result["tier"] == "unsupported"
+    assert result["tier"] == "deterministic"
     assert result["query"]["scope"]["space"] == "live"
-    assert result["citations"] == []
-    assert result["missing"] == ["bounded Live resource"]
+    assert "has not stopped" in result["answer"]
+    assert [item["id"] for item in result["citations"]] == [
+        "runtime:session:session-alpha"
+    ]
+    assert result["missing"] == []
 
 
 async def test_sessions_ask_directs_runtime_callers_to_bounded_resources(
@@ -1277,7 +1282,7 @@ async def test_live_ask_rejects_player_and_session_mismatch(tmp_path: Path):
     assert response.status_code == 200
     result = response.json()
     assert result["citations"] == []
-    assert result["missing"] == ["bounded Live resource"]
+    assert result["missing"] == ["runtime session matching the selected player"]
 
 
 async def test_exact_query_cannot_replace_active_scope(tmp_path: Path):
@@ -1495,7 +1500,7 @@ async def test_supported_local_query_never_calls_the_optional_model(
         )
 
     assert response.status_code == 200
-    assert response.json()["tier"] == "unsupported"
+    assert response.json()["tier"] == "deterministic"
     assert calls == 0
 
 

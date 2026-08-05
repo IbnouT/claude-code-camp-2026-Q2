@@ -21,6 +21,7 @@ from ..sources.recorded_session import RecordedSessionSource
 from ..sources.runtime import RuntimeSource, RuntimeSourceError
 from . import experiments as experiment_queries
 from . import knowledge as knowledge_queries
+from . import live as live_queries
 from . import recorded as recorded_queries
 from .common import missing
 
@@ -165,15 +166,14 @@ def answer_operation(
             "permitted operation for selected space",
         )
     if request.scope.space == "live":
-        result = _rejected(
-            request,
-            selected,
-            (
-                "Live compatibility queries were retired. "
-                "Use the bounded /api/v1/live resources."
-            ),
-            "bounded Live resource",
-        )
+        if operation == "summarize_live":
+            result = live_queries.summarize(request, runtime)
+        elif operation == "diagnose_stop":
+            result = live_queries.diagnose_stop(request, runtime)
+        elif operation == "list_position_candidates":
+            result = live_queries.position_candidates(request, runtime)
+        else:
+            result = live_queries.search(request, runtime, selected)
     elif request.scope.space == "sessions":
         runtime_session = None
         if (
