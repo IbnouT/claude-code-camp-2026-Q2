@@ -182,7 +182,9 @@ function AskDialog({
               <ul className="mt-[5px] grid list-none gap-[7px] p-0">
                 {answer.citations.map((citation, index) => (
                   <li
-                    key={citation.id ?? `${citation.label ?? "evidence"}-${index}`}
+                    key={
+                      citation.id ?? `${citation.label ?? "evidence"}-${index}`
+                    }
                     className="grid gap-0.5 rounded-[8px] border border-line bg-surface px-2.5 py-2"
                   >
                     <strong className="text-[11px] text-content-primary">

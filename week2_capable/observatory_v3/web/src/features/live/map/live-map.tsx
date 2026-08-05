@@ -69,6 +69,7 @@ type LiveMapProps = {
 }
 
 const defaultFrame: MapFrame = { width: 1600, height: 900 }
+const emptyIds = new Set<string>()
 const defaultSafeInsets: MapSafeInsets = {
   top: 8,
   right: 8,
@@ -169,6 +170,8 @@ function LiveMap({
   const suppressClickRef = useRef(false)
   const cameraViewRef = useRef(cameraView)
   cameraViewRef.current = cameraView
+  const selectedRoomIdRef = useRef(selectedRoomId)
+  selectedRoomIdRef.current = selectedRoomId
   const followVelocityRef = useRef<MapPoint>({ x: 0, y: 0 })
   const previousRoomRef = useRef<string | null>(null)
   const followInitializedRef = useRef(false)
@@ -247,9 +250,8 @@ function LiveMap({
     return ids
   }, [world])
 
-  const visibleRoomIds = presentation?.visibleRoomIds ?? new Set<string>()
-  const visibleConnectionIds =
-    presentation?.visibleConnectionIds ?? new Set<string>()
+  const visibleRoomIds = presentation?.visibleRoomIds ?? emptyIds
+  const visibleConnectionIds = presentation?.visibleConnectionIds ?? emptyIds
 
   const inspector = useMemo(() => {
     if (world === null || selectedRoomId === null) return null
@@ -303,6 +305,15 @@ function LiveMap({
     if (graph === null || mode !== "focus") return []
     return projectFocusContinuations(graph, visibleRoomIds, viewport)
   }, [graph, mode, visibleRoomIds, viewport])
+
+  // Stable identity keeps every memoized room from re-rendering when the
+  // selection toggles; the ref carries the current selection for the toggle.
+  const selectRoom = useCallback(
+    (roomId: string) => {
+      onSelectRoom(roomId === selectedRoomIdRef.current ? null : roomId)
+    },
+    [onSelectRoom]
+  )
 
   const fitCamera = useCallback(() => {
     if (graph === null) return
@@ -581,24 +592,18 @@ function LiveMap({
 
   if (view === null || graph === null) {
     return (
-      <p
-        role="status"
-        className="place-self-center text-[13px] text-content-muted"
-      >
+      <output className="place-self-center text-[13px] text-content-muted">
         {reconnecting
           ? "World evidence is reconnecting."
           : "Loading learned world…"}
-      </p>
+      </output>
     )
   }
   if (graph.rooms.length === 0) {
     return (
-      <p
-        role="status"
-        className="place-self-center text-[13px] text-content-muted"
-      >
+      <output className="place-self-center text-[13px] text-content-muted">
         Waiting for the first observed room.
-      </p>
+      </output>
     )
   }
 
@@ -654,8 +659,9 @@ function LiveMap({
           setCameraView((current) => zoomMapCamera(current, direction))
         }
       />
+      {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the svg is the pan surface, native drag starts must be suppressed on it */}
       <svg
-        role="img"
+        role="application"
         aria-label={`Learned world, ${graph.rooms.length} rooms`}
         preserveAspectRatio="xMidYMid meet"
         viewBox={`${viewport.x} ${viewport.y} ${viewport.width} ${viewport.height}`}
@@ -754,9 +760,7 @@ function LiveMap({
                   verticalMarkers={
                     evidence?.verticalByRoom.get(room.node.id) ?? []
                   }
-                  onSelect={(roomId) =>
-                    onSelectRoom(roomId === selectedRoomId ? null : roomId)
-                  }
+                  onSelect={selectRoom}
                 />
               </g>
             ))}
@@ -801,12 +805,9 @@ function LiveMap({
         </p>
       ) : null}
       {reconnecting ? (
-        <p
-          role="status"
-          className="absolute right-[18px] bottom-[calc(var(--live-map-overlay-safe-band,0px)+10px)] rounded-[9px] border border-line bg-surface px-2.5 py-[7px] text-[10px] text-warning"
-        >
+        <output className="absolute right-[18px] bottom-[calc(var(--live-map-overlay-safe-band,0px)+10px)] rounded-[9px] border border-line bg-surface px-2.5 py-[7px] text-[10px] text-warning">
           Showing the latest world while evidence reconnects.
-        </p>
+        </output>
       ) : null}
     </div>
   )

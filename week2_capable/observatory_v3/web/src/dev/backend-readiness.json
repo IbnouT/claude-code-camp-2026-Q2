@@ -72,9 +72,7 @@
     "cold_summary_ack": {
       "p50_ms": 48.2435,
       "request_count": 16,
-      "status_codes": [
-        202
-      ],
+      "status_codes": [202],
       "wall_ms": 62.4592
     },
     "cold_useful_content_ms": 2405.3495,

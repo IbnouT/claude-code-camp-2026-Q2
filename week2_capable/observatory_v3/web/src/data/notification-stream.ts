@@ -11,10 +11,7 @@ import { ResponseValidationError } from "@/data/contracts/response-contract"
 import { withQuery } from "@/data/transport"
 
 type NotificationConnectionState =
-  | "closed"
-  | "connecting"
-  | "open"
-  | "reconnecting"
+  "closed" | "connecting" | "open" | "reconnecting"
 
 type EventSourceLike = {
   addEventListener: (

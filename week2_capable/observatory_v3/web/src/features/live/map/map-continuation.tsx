@@ -68,6 +68,7 @@ const MapContinuation = memo(function MapContinuation({
   )
   if (box === null) return null
   return (
+    // oxlint-disable jsx-a11y/prefer-tag-over-role -- the marker is a labeled inline graphic, there is no image file for an img tag
     <div
       aria-label={`Learned map continues ${edgeLabels[marker.edge]}`}
       className="pointer-events-none absolute text-[#b99cff] drop-shadow-[0_0_5px_rgb(185_156_255/28%)]"
@@ -88,6 +89,7 @@ const MapContinuation = memo(function MapContinuation({
         className={cn("size-[18px]", chevronClass[marker.edge])}
       />
     </div>
+    // oxlint-enable jsx-a11y/prefer-tag-over-role
   )
 })
 

@@ -4,7 +4,7 @@
  * state, never another session's retained data.
  */
 function sameSessionPlaceholder(sessionId: string | undefined) {
-  return <TData,>(
+  return <TData>(
     previousData: TData | undefined,
     previousQuery: { queryKey: readonly unknown[] } | undefined
   ): TData | undefined => {

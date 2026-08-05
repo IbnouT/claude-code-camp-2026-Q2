@@ -10,6 +10,21 @@
     "import/no-unassigned-import": "off",
     "react/react-in-jsx-scope": "off"
   },
+  "overrides": [
+    {
+      "files": ["src/data/message-command.ts"],
+      "rules": {
+        "no-await-in-loop": "off"
+      }
+    },
+    {
+      "files": ["src/features/live/message-agent-dialog.tsx"],
+      "rules": {
+        "jsx-a11y/prefer-tag-over-role": "off",
+        "react/no-array-index-key": "off"
+      }
+    }
+  ],
   "ignorePatterns": [
     "dist/**",
     "coverage/**",

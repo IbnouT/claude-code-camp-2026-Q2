@@ -281,6 +281,7 @@ function LiveEconomics({ view }: { view: LiveJourney }) {
             No response costs retained
           </span>
         ) : (
+          // oxlint-disable jsx-a11y/prefer-tag-over-role -- an inline SVG chart carries role img, there is no image file for an img tag
           <svg
             role="img"
             aria-label="Cost per response sparkline"
@@ -293,6 +294,7 @@ function LiveEconomics({ view }: { view: LiveJourney }) {
             />
           </svg>
         )}
+        {/* oxlint-enable jsx-a11y/prefer-tag-over-role */}
       </figure>
       {contextFill === null ? null : (
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2.5">

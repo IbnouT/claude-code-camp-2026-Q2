@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import {
   RouterProvider,
   createMemoryHistory,
@@ -8,6 +7,10 @@ import {
 } from "@tanstack/react-router"
 
 import { SessionSelector } from "./session-selector"
+import {
+  ServerStateProvider,
+  createServerStateClient,
+} from "@/data/server-state-provider"
 import type { SessionCatalogItem } from "@/data/session-catalog"
 
 function seedSession(
@@ -97,7 +100,7 @@ const catalog = {
 }
 
 function storyRouter(selected: SessionCatalogItem, onLive: boolean) {
-  const client = new QueryClient()
+  const client = createServerStateClient()
   const StorySelector = () => (
     <div className="flex justify-end bg-header-surface p-4">
       <SessionSelector
@@ -114,9 +117,9 @@ function storyRouter(selected: SessionCatalogItem, onLive: boolean) {
     </div>
   )
   const Wrapped = () => (
-    <QueryClientProvider client={client}>
+    <ServerStateProvider client={client}>
       <StorySelector />
-    </QueryClientProvider>
+    </ServerStateProvider>
   )
   return createRouter({
     routeTree: createRootRoute({ component: Wrapped }),

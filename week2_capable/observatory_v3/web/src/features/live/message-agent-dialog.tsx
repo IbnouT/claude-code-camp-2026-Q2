@@ -123,7 +123,7 @@ function MessageAgentDialog({
         showCloseButton={false}
         aria-label="Your messages"
         overlayClassName="bg-[rgb(4_8_12/10%)] supports-backdrop-filter:backdrop-blur-none data-open:animate-[message-shade-in_360ms_ease-out_both] data-closed:animate-[message-shade-out_360ms_ease-in_both]"
-        className="fixed inset-y-0 right-0 left-auto block h-full w-[min(430px,100%)] max-w-none translate-x-0 translate-y-0 gap-0 overflow-y-auto rounded-none border-y-0 border-r-0 border-l border-line-strong ring-0 sm:max-w-none bg-[color-mix(in_srgb,var(--surface)_97%,transparent)] p-0 leading-[normal] shadow-[-18px_0_54px_rgb(0_0_0/28%)] data-open:animate-[message-drawer-in_360ms_cubic-bezier(0.22,1,0.36,1)_both] data-closed:animate-[message-drawer-out_360ms_cubic-bezier(0.64,0,0.78,0)_both]"
+        className="fixed inset-y-0 right-0 left-auto block h-full w-[min(430px,100%)] max-w-none translate-x-0 translate-y-0 gap-0 overflow-y-auto rounded-none border-y-0 border-r-0 border-l border-line-strong bg-[color-mix(in_srgb,var(--surface)_97%,transparent)] p-0 leading-[normal] shadow-[-18px_0_54px_rgb(0_0_0/28%)] ring-0 sm:max-w-none data-open:animate-[message-drawer-in_360ms_cubic-bezier(0.22,1,0.36,1)_both] data-closed:animate-[message-drawer-out_360ms_cubic-bezier(0.64,0,0.78,0)_both]"
       >
         <header className="flex items-start justify-between gap-4 border-b border-line px-6 py-[22px]">
           <div>
@@ -174,9 +174,7 @@ function MessageAgentDialog({
                     </p>
                     <small className="text-[10px] text-content-quiet">
                       {sentTime(optimistic.sentAt)} ·{" "}
-                      {sending
-                        ? "sending…"
-                        : "waiting for the next iteration"}
+                      {sending ? "sending…" : "waiting for the next iteration"}
                     </small>
                   </article>
                 )}

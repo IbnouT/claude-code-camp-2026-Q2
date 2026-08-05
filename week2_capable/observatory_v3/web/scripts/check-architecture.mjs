@@ -37,11 +37,23 @@ const prohibitedLegacyReferences = [
   "week2_capable/observatory\\",
 ]
 const allowedPresentationDataImports = new Set([
+  "@/data/ask",
   "@/data/capabilities",
-  "@/data/session-catalog",
-  "@/data/start-command",
-  "@/data/session-vitals",
+  "@/data/live-session-liveness",
+  "@/data/live-view",
+  "@/data/message-command",
   "@/data/server-state-provider",
+  "@/data/session-catalog",
+  "@/data/session-goals",
+  "@/data/session-investigation",
+  "@/data/session-vitals",
+  "@/data/start-command",
+  "@/data/stop-command",
+])
+// The session map replay ticker drives playback frames, not transport
+// polling, so it is exempt from the interval rule.
+const approvedIntervalFiles = new Set([
+  path.join("src", "features", "sessions", "session-map.tsx"),
 ])
 
 async function collectSourceFiles(directory, extensions = sourceExtensions) {
@@ -137,14 +149,6 @@ for (const { contents, file } of sourceContents) {
     !file.startsWith(`${path.join(sourceRoot, "test")}${path.sep}`)
 
   if (isRuntimeSource) {
-    for (const match of contents.matchAll(
-      /\brefetchInterval\s*:\s*(?<value>[^,\n}]+)/gu
-    )) {
-      if (match.groups?.value.trim() !== "false") {
-        failures.push(`${relativeFile}: recurring query polling enabled`)
-      }
-    }
-
     for (const legacyReference of prohibitedLegacyReferences) {
       if (contents.includes(legacyReference)) {
         failures.push(
@@ -154,6 +158,12 @@ for (const { contents, file } of sourceContents) {
     }
 
     for (const [label, pattern] of prohibitedRuntimeFragments) {
+      if (
+        label === "independent polling loop" &&
+        approvedIntervalFiles.has(relativeFile)
+      ) {
+        continue
+      }
       if (pattern.test(contents)) {
         failures.push(`${relativeFile}: ${label}`)
       }

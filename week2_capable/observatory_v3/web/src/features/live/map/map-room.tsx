@@ -269,6 +269,7 @@ const MapRoom = memo(function MapRoom({
   }
 
   return (
+    // oxlint-disable jsx-a11y/prefer-tag-over-role -- SVG content has no button or img element, the roles are the semantic form
     <g
       className="group cursor-pointer outline-none"
       data-room-id={node.id}
@@ -419,6 +420,7 @@ const MapRoom = memo(function MapRoom({
         {truncateMapRoomTitle(node.title)}
       </text>
     </g>
+    // oxlint-enable jsx-a11y/prefer-tag-over-role
   )
 }, sameRoomRender)
 

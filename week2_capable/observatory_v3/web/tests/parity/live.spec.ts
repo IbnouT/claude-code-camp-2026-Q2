@@ -41,12 +41,15 @@ const V3_PAIRS: [string, string][] = [
   ["jump", '[aria-label="Jump to live"]'],
   ["scrubTrack", '[aria-label="Causal timeline"] .group'],
   ["railBlock", '[aria-label="Live evidence rail"] section'],
+  ["econCell", '[aria-label="Live evidence rail"] .grid-cols-2 > div'],
   [
-    "econCell",
-    '[aria-label="Live evidence rail"] .grid-cols-2 > div',
+    "vitalRow",
+    '[aria-label="Live evidence rail"] .grid-cols-\\[44px_minmax\\(0\\,1fr\\)_72px\\]',
   ],
-  ["vitalRow", '[aria-label="Live evidence rail"] .grid-cols-\\[44px_minmax\\(0\\,1fr\\)_72px\\]'],
-  ["spendValue", '[aria-label="Live evidence rail"] section:nth-of-type(3) strong'],
+  [
+    "spendValue",
+    '[aria-label="Live evidence rail"] section:nth-of-type(3) strong',
+  ],
   ["roomRect", "[data-room-id] rect"],
 ]
 
@@ -59,11 +62,31 @@ const PROPERTIES: Record<string, string[]> = {
   railHeading: ["fontSize", "fontWeight", "letterSpacing", "textTransform"],
   timeline: ["height", "borderTopWidth", "paddingLeft", "paddingTop"],
   timelineHeading: ["fontSize", "fontWeight", "letterSpacing"],
-  transport: ["minHeight", "borderRadius", "fontSize", "fontWeight", "lineHeight", "HEIGHT"],
+  transport: [
+    "minHeight",
+    "borderRadius",
+    "fontSize",
+    "fontWeight",
+    "lineHeight",
+    "HEIGHT",
+  ],
   jump: ["fontSize", "whiteSpace"],
   scrubTrack: ["height", "marginTop", "cursor"],
-  railBlock: ["paddingTop", "paddingLeft", "borderBottomWidth", "rowGap", "lineHeight"],
-  econCell: ["paddingTop", "paddingLeft", "borderRadius", "borderTopWidth", "lineHeight", "HEIGHT"],
+  railBlock: [
+    "paddingTop",
+    "paddingLeft",
+    "borderBottomWidth",
+    "rowGap",
+    "lineHeight",
+  ],
+  econCell: [
+    "paddingTop",
+    "paddingLeft",
+    "borderRadius",
+    "borderTopWidth",
+    "lineHeight",
+    "HEIGHT",
+  ],
   vitalRow: ["gridTemplateColumns", "columnGap", "fontSize"],
   spendValue: ["fontSize", "fontWeight", "fontFamily"],
   roomRect: ["WIDTH"],
@@ -118,7 +141,8 @@ test("live screen structure matches the reference measurements", async ({
     const data = (await response.json()) as {
       sessions: { id: string; player_id: string; live: boolean }[]
     }
-    const session = data.sessions.find((entry) => entry.live) ?? data.sessions[0]
+    const session =
+      data.sessions.find((entry) => entry.live) ?? data.sessions[0]
     return session ? { player: session.player_id, session: session.id } : null
   })
   test.skip(identity === null, "reference has no sessions")

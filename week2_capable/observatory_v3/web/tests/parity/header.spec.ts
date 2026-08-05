@@ -49,7 +49,10 @@ const V3_PAIRS: [string, string][] = [
   ["msgBtn", '[data-header-action="message"]'],
   ["askBtn", '[data-header-action="ask"]'],
   ["askKbd", '[data-header-action="ask"] kbd'],
-  ["themeBtn", '[data-testid="application-header"] button[aria-label*="theme"]'],
+  [
+    "themeBtn",
+    '[data-testid="application-header"] button[aria-label*="theme"]',
+  ],
 ]
 
 /**
@@ -80,9 +83,9 @@ async function extract(
   await page.waitForSelector(rootSelector, { timeout: 10_000 })
   await page.waitForTimeout(1200)
   return page.evaluate(
-    ({ pairs, props }) => {
+    ({ selectorPairs, props }) => {
       const out: Record<string, Record<string, string> | "MISSING"> = {}
-      for (const [key, selector] of pairs) {
+      for (const [key, selector] of selectorPairs) {
         const el = document.querySelector(selector)
         if (el === null) {
           out[key] = "MISSING"
@@ -97,7 +100,7 @@ async function extract(
       }
       return out
     },
-    { pairs, props: [...PROPS] }
+    { selectorPairs: pairs, props: [...PROPS] }
   )
 }
 
@@ -109,9 +112,8 @@ test("application header matches the reference, every element and property", asy
     const response = await fetch("/api/sessions")
     const catalog = await response.json()
     const session =
-      catalog.sessions.find(
-        (item: { live: boolean }) => item.live
-      ) ?? catalog.sessions[0]
+      catalog.sessions.find((item: { live: boolean }) => item.live) ??
+      catalog.sessions[0]
     return session === undefined
       ? null
       : { player: session.player_id, session: session.id }
@@ -137,7 +139,9 @@ test("application header matches the reference, every element and property", asy
     const f = frozen[key]
     const v = v3[key]
     if (f === "MISSING" || v === "MISSING") {
-      diffs.push(`${key}: frozen=${f === "MISSING" ? "MISSING" : "ok"} v3=${v === "MISSING" ? "MISSING" : "ok"}`)
+      diffs.push(
+        `${key}: frozen=${f === "MISSING" ? "MISSING" : "ok"} v3=${v === "MISSING" ? "MISSING" : "ok"}`
+      )
       continue
     }
     for (const prop of PROPS) {

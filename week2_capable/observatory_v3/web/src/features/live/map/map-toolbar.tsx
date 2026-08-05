@@ -55,7 +55,7 @@ function MapToolbar({
       data-map-overlay-edge="top"
       data-map-focus-occluder="true"
     >
-      <div aria-label="Map camera" className={groupClass} role="group">
+      <fieldset aria-label="Map camera" className={cn(groupClass, "min-w-0")}>
         <small className="mr-1 ml-1.5 text-[9px] tracking-[.1em] text-content-quiet uppercase">
           Camera
         </small>
@@ -90,8 +90,11 @@ function MapToolbar({
         >
           {fitLabel}
         </button>
-      </div>
-      <div aria-label="Map presentation" className={groupClass} role="group">
+      </fieldset>
+      <fieldset
+        aria-label="Map presentation"
+        className={cn(groupClass, "min-w-0")}
+      >
         <small className="mr-1 ml-1.5 text-[9px] tracking-[.1em] text-content-quiet uppercase">
           Map
         </small>
@@ -106,7 +109,7 @@ function MapToolbar({
             {item.label}
           </button>
         ))}
-      </div>
+      </fieldset>
       {variant === "full" ? (
         <button
           aria-label="Reflow map"

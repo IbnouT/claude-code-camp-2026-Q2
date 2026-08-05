@@ -40,9 +40,7 @@ async function measure(
   // measuring so a slow first paint cannot fail the comparison.
   const sigil = pairs.find(([key]) => key === "sigil")?.[1]
   if (sigil !== undefined && !sigil.startsWith("@")) {
-    await page
-      .waitForSelector(sigil, { timeout: 20000 })
-      .catch(() => undefined)
+    await page.waitForSelector(sigil, { timeout: 20000 }).catch(() => undefined)
   }
   await page.waitForTimeout(800)
   return page.evaluate((spec) => {

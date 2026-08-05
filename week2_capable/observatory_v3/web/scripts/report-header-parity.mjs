@@ -73,7 +73,7 @@ async function capture(page, url, rootSelector, openTrigger) {
   await page.goto(url)
   await page.waitForSelector(rootSelector, { timeout: 15000 })
   await page.waitForTimeout(1200)
-  const closed = await page.$eval(rootSelector, eval(WALK))
+  const closed = await page.$eval(rootSelector, WALK)
   let panel = []
   let switcher = []
   if (openTrigger) {
@@ -84,12 +84,12 @@ async function capture(page, url, rootSelector, openTrigger) {
     if (trigger) {
       // The reference wraps its switcher in a positioning div that v3 does
       // not need; an aligned walk from each trigger root pairs the subtree.
-      switcher = await page.$eval(openTrigger.trigger, eval(WALK))
+      switcher = await page.$eval(openTrigger.trigger, WALK)
       await trigger.click()
       await page.waitForTimeout(1200)
       const panelHandle = await page.$(openTrigger.panel)
       if (panelHandle) {
-        panel = await page.$eval(openTrigger.panel, eval(WALK))
+        panel = await page.$eval(openTrigger.panel, WALK)
       }
     }
   }
@@ -104,7 +104,7 @@ function table(rows) {
       `#### \`${row.path}\`${row.text ? ` "${row.text}"` : ""}${row.aria ? ` (aria: ${row.aria})` : ""}`
     )
     lines.push("")
-    lines.push(`box ${row.box}` )
+    lines.push(`box ${row.box}`)
     lines.push("")
     lines.push("| property | value |")
     lines.push("|---|---|")
@@ -144,7 +144,10 @@ const v3 = await capture(
   page,
   `${V3}/live`,
   '[data-testid="application-header"]',
-  { trigger: '[data-testid="application-header"] [aria-haspopup]', panel: '[role="dialog"], [data-testid="application-header"] ~ * [role]' }
+  {
+    trigger: '[data-testid="application-header"] [aria-haspopup]',
+    panel: '[role="dialog"], [data-testid="application-header"] ~ * [role]',
+  }
 )
 const frozenSessions = await capture(
   page,
@@ -193,10 +196,14 @@ function conformance(label, a, b) {
     lines.push("")
   }
   for (let i = size; i < a.length; i += 1) {
-    lines.push(`- reference only: \`${a[i].path}\`${a[i].text ? ` "${a[i].text}"` : ""}`)
+    lines.push(
+      `- reference only: \`${a[i].path}\`${a[i].text ? ` "${a[i].text}"` : ""}`
+    )
   }
   for (let i = size; i < b.length; i += 1) {
-    lines.push(`- v3 only: \`${b[i].path}\`${b[i].text ? ` "${b[i].text}"` : ""}`)
+    lines.push(
+      `- v3 only: \`${b[i].path}\`${b[i].text ? ` "${b[i].text}"` : ""}`
+    )
   }
   lines.splice(1, 0, `Properties same: ${same}. Different: ${diff}.`, "")
   lines.push("")
@@ -206,13 +213,17 @@ function conformance(label, a, b) {
 function diffSection(label, a, b) {
   const lines = [`## Diff, ${label}`, ""]
   if (a.length !== b.length) {
-    lines.push(`Structural mismatch: reference ${a.length} elements, v3 ${b.length}.`)
+    lines.push(
+      `Structural mismatch: reference ${a.length} elements, v3 ${b.length}.`
+    )
     lines.push("")
     lines.push("Reference paths:")
-    for (const row of a) lines.push(`- ${row.path}${row.text ? ` "${row.text}"` : ""}`)
+    for (const row of a)
+      lines.push(`- ${row.path}${row.text ? ` "${row.text}"` : ""}`)
     lines.push("")
     lines.push("v3 paths:")
-    for (const row of b) lines.push(`- ${row.path}${row.text ? ` "${row.text}"` : ""}`)
+    for (const row of b)
+      lines.push(`- ${row.path}${row.text ? ` "${row.text}"` : ""}`)
     lines.push("")
     return lines.join("\n")
   }
@@ -224,7 +235,8 @@ function diffSection(label, a, b) {
     for (const key of Object.keys(f.props)) {
       if (key === "borderTopColor" && f.props.borderTopWidth === "0px") continue
       if (["width", "minWidth", "maxWidth"].includes(key)) continue
-      if (f.props[key] !== v.props[key]) diffs.push(`${key}: ref[${f.props[key]}] v3[${v.props[key]}]`)
+      if (f.props[key] !== v.props[key])
+        diffs.push(`${key}: ref[${f.props[key]}] v3[${v.props[key]}]`)
     }
     if (diffs.length > 0) {
       count += diffs.length
@@ -250,10 +262,18 @@ const doc = [
   "",
   diffSection("header closed", frozen.closed, v3.closed),
   diffSection("context panel open", frozen.panel, v3.panel),
-  conformance("Conformance, switcher trigger aligned", frozen.switcher, v3.switcher),
+  conformance(
+    "Conformance, switcher trigger aligned",
+    frozen.switcher,
+    v3.switcher
+  ),
   conformance("Conformance, header on Live", frozen.closed, v3.closed),
   conformance("Conformance, context panel open", frozen.panel, v3.panel),
-  conformance("Conformance, header on Sessions", frozenSessions.closed, v3Sessions.closed),
+  conformance(
+    "Conformance, header on Sessions",
+    frozenSessions.closed,
+    v3Sessions.closed
+  ),
   "## Reference header, closed",
   "",
   table(frozen.closed),
@@ -269,4 +289,6 @@ const doc = [
 ].join("\n")
 
 await writeFile(OUT, doc)
-console.log(`written: ${frozen.closed.length}+${frozen.panel.length} reference, ${v3.closed.length}+${v3.panel.length} v3 elements`)
+console.log(
+  `written: ${frozen.closed.length}+${frozen.panel.length} reference, ${v3.closed.length}+${v3.panel.length} v3 elements`
+)

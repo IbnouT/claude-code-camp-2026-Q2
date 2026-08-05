@@ -36,14 +36,11 @@ function CausalTimeline({
   const view = pinned ?? latest
   if (view === null || latest === null) {
     return (
-      <div
-        role="status"
-        className="grid h-full place-items-center text-[10px] text-content-quiet"
-      >
+      <output className="grid h-full place-items-center text-[10px] text-content-quiet">
         {reconnecting
           ? "Timeline evidence is reconnecting."
           : "Waiting for retained timeline evidence."}
-      </div>
+      </output>
     )
   }
 
@@ -152,6 +149,7 @@ function CausalTimeline({
       <div className="group relative mt-2.5 h-[52px] cursor-pointer has-[input:focus-visible]:outline has-[input:focus-visible]:outline-offset-[3px] has-[input:focus-visible]:outline-accent">
         <div className="absolute top-[30px] right-0 left-0 h-px bg-line-strong transition-colors duration-120 group-hover:bg-[color-mix(in_srgb,var(--accent)_34%,var(--line-strong))]" />
         {curve === "" ? null : (
+          // oxlint-disable jsx-a11y/prefer-tag-over-role -- an inline SVG chart carries role img, there is no image file for an img tag
           <svg
             role="img"
             aria-label="Cumulative session cost"
@@ -165,6 +163,7 @@ function CausalTimeline({
             />
           </svg>
         )}
+        {/* oxlint-enable jsx-a11y/prefer-tag-over-role */}
         {landmarks.map((landmark) => {
           const kindLabel =
             landmark.kind === "level_up"

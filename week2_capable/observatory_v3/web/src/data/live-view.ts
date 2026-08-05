@@ -43,3 +43,11 @@ function useLiveView(
 }
 
 export { useLiveView, type LiveJourney, type LiveView }
+export type {
+  LiveRoomEconomicsOutput,
+  WorldEdgeOutput,
+  WorldFrontierOutput,
+  WorldNodeOutput,
+  WorldRoomDescriptionOutput,
+  WorldSightingOutput,
+} from "@/data/generated/validators"

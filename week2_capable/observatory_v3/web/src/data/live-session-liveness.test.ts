@@ -5,10 +5,7 @@ import type { ResourceChangeTargetOutput } from "@/data/generated/validators"
 import { invalidateLiveTarget } from "@/data/live-session-liveness"
 import { queryKeys } from "@/data/query-keys"
 
-function target(
-  kind: string,
-  resourceId: string
-): ResourceChangeTargetOutput {
+function target(kind: string, resourceId: string): ResourceChangeTargetOutput {
   return {
     resource_kind: kind,
     resource_id: resourceId,

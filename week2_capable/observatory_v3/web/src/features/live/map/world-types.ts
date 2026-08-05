@@ -5,7 +5,7 @@ import type {
   WorldNodeOutput,
   WorldRoomDescriptionOutput,
   WorldSightingOutput,
-} from "@/data/generated/validators"
+} from "@/data/live-view"
 
 export type WorldRoomDescription = WorldRoomDescriptionOutput
 export type WorldSighting = WorldSightingOutput

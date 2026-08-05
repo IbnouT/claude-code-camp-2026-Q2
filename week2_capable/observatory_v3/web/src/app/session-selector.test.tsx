@@ -1,30 +1,31 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { cleanup, render as renderBare, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { ReactElement } from "react"
 
 vi.mock("@tanstack/react-router", () => ({
-  useNavigate: () => vi.fn(),
+  useNavigate: () => vi.fn<() => Promise<void>>(),
 }))
 
 import { SessionSelector } from "@/app/session-selector"
+import {
+  ServerStateProvider,
+  createServerStateClient,
+} from "@/data/server-state-provider"
 import type { SessionCatalog, SessionCatalogItem } from "@/data/session-catalog"
 
 afterEach(cleanup)
 
 function render(ui: ReactElement) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  })
+  const client = createServerStateClient()
   const view = renderBare(
-    <QueryClientProvider client={client}>{ui}</QueryClientProvider>
+    <ServerStateProvider client={client}>{ui}</ServerStateProvider>
   )
   return {
     ...view,
     rerender: (next: ReactElement) =>
       view.rerender(
-        <QueryClientProvider client={client}>{next}</QueryClientProvider>
+        <ServerStateProvider client={client}>{next}</ServerStateProvider>
       ),
   }
 }

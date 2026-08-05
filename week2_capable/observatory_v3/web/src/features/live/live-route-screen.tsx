@@ -63,7 +63,7 @@ function LiveRouteScreen({
   const selected =
     data === undefined ? null : selectedSession(data, { playerId, sessionId })
   const running = selected !== null && sessionLifecycle(selected) === "running"
-  // The same query the shell renders from, so the drawer adds no fetch.
+  // The same query the shell renders from, so the drawer adds no request.
   const liveView = useLiveView(selected?.id, through)
   const view = liveView.data?.view ?? null
 
