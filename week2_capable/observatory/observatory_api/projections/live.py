@@ -89,7 +89,11 @@ def project_live(
     latest = gateway_events[-1].seq if gateway_events else 0
     selected = latest if through is None else max(0, min(through, latest))
     gateway_prefix = [event for event in gateway_events if event.seq <= selected]
-    selected_at = gateway_prefix[-1].at if gateway_prefix else None
+    selected_at = (
+        gateway_prefix[-1].at
+        if through is not None and gateway_prefix
+        else None
+    )
     agent_prefix = [
         event
         for event in agent_events
