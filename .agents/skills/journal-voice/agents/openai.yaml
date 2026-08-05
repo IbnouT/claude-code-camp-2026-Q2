@@ -1,4 +1,0 @@
-interface:
-  display_name: "Journal Voice"
-  short_description: "Write evidence-backed technical journals"
-  default_prompt: "Use $journal-voice to write or revise the current weekly technical journal."

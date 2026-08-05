@@ -83,6 +83,9 @@ gateway:
     poucet:
       character: poucet
       password_env: MUD_PASSWORD
+    elenor:
+      character: Elenor
+      password_env: MUD_PASSWORD_ELENOR
     # tester:
     #   character: tester
     #   password_env: MUD_PASSWORD_TESTER
