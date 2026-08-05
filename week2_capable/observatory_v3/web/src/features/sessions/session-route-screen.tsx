@@ -43,6 +43,8 @@ function SessionRouteScreen({
       void navigate({
         to: ".",
         replace: true,
+        // The reading position writes back silently, never as a jump.
+        resetScroll: false,
         search: (previous: Record<string, unknown>) => ({
           ...previous,
           view: params.view,
