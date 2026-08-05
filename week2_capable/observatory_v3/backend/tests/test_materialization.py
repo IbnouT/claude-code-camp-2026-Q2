@@ -1433,3 +1433,37 @@ class _PhasedAdvancer:
         if not self.release[index].wait(timeout=2):
             raise TimeoutError("test advancement was not released")
         return _result(session_id)
+
+
+def test_failed_increment_recovers_by_full_rebuild(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A stale watermark must not fault a session whose source projects whole."""
+    fixture = build_retained_fixture(tmp_path)
+    with IndexStore(tmp_path / "index.sqlite3") as index:
+        advancer = IncrementalSessionAdvancer(
+            RegistryDatabase(fixture.config_dir),
+            index,
+        )
+        first = advancer.advance(fixture.selected_session_id)
+        assert first.kind == "bootstrap"
+
+        _append_agent(
+            fixture,
+            phase="reasoning",
+            text="Look behind the fountain",
+            at="2026-08-01T00:00:03+00:00",
+        )
+        _append_gateway(fixture)
+
+        def broken_increment(checkpoint: SessionCheckpoint) -> None:
+            raise MalformedSourceError(tmp_path, "stale watermark tail")
+
+        monkeypatch.setattr(advancer, "_increment", broken_increment)
+        recovered = advancer.advance(fixture.selected_session_id)
+
+        assert recovered.kind == "recovered"
+        assert recovered.fault is None
+        committed = _checkpoint(index, fixture)
+        assert committed.capture_status != "fault"

@@ -294,16 +294,26 @@ class IndexStore:
 
     def materialization_fault(self, session_id: str) -> str | None:
         """Read one durable bootstrap fault without retaining handler state."""
+        record = self.materialization_fault_record(session_id)
+        return None if record is None else record[0]
+
+    def materialization_fault_record(
+        self,
+        session_id: str,
+    ) -> tuple[str, str] | None:
+        """Read one durable bootstrap fault with the moment it was recorded."""
         with closing(self._read_connection()) as database:
             row = database.execute(
                 """
-                SELECT detail
+                SELECT detail, updated_at
                 FROM materialization_faults
                 WHERE session_id = ?
                 """,
                 (session_id,),
             ).fetchone()
-        return None if row is None else str(row["detail"])
+        return (
+            None if row is None else (str(row["detail"]), str(row["updated_at"]))
+        )
 
     def record_materialization_fault(self, session_id: str, detail: str) -> None:
         """Persist one bounded public fault for catalog and resource reads."""

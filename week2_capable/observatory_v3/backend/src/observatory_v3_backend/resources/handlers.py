@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
+from datetime import UTC, datetime
 from functools import partial
+from pathlib import Path
 from typing import Literal, cast
 
 from pydantic import BaseModel
@@ -694,19 +696,48 @@ class ReadResourceHandlers:
                 f"Selected-session materialization failed: {result.fault}.",
                 status=503,
             )
+        # A successful pass resolves any fault an earlier attempt retained.
+        retained = await self.storage.run(
+            self.index.materialization_fault,
+            session_id,
+        )
+        if retained is not None:
+            await self.storage.run(
+                self.index.clear_materialization_fault,
+                session_id,
+            )
         return None
 
     async def _ensure_materialized(self, session_id: str) -> JSONResponse | None:
         retained_fault = await self.storage.run(
-            self.index.materialization_fault,
+            self.index.materialization_fault_record,
             session_id,
         )
         if retained_fault is not None:
-            return _error(
-                "capture_fault",
-                retained_fault,
-                status=503,
+            # A fault stays terminal only while the source is unchanged.
+            # A session whose registry row or retained journals moved
+            # after the fault earns a fresh attempt, which clears the
+            # record when it succeeds.
+            record = await self.storage.run(
+                SessionLookupRepository(self.registry).get,
+                session_id,
             )
+            healed = await self.storage.run(self.index.checkpoint, session_id)
+            retry = record is not None and (
+                (healed is not None and healed.capture_status != "fault")
+                or _advanced_since(record.updated_at, retained_fault[1])
+                or await self.storage.run(
+                    _journals_moved_since,
+                    record.session_dir,
+                    retained_fault[1],
+                )
+            )
+            if not retry:
+                return _error(
+                    "capture_fault",
+                    retained_fault[0],
+                    status=503,
+                )
         task = self._pending_materializations.get(session_id)
         if task is not None:
             if not task.done():
@@ -786,8 +817,51 @@ class ReadResourceHandlers:
         return _json(value)
 
 
+_RETAINED_JOURNAL_NAMES = (
+    "gateway.db",
+    "gateway.db-wal",
+    "agent.jsonl",
+    "operator-messages.json",
+)
+
+
+def _journals_moved_since(session_dir: Path, fault_recorded_at: str) -> bool:
+    """Whether any retained journal was written after the fault landed."""
+    try:
+        threshold = datetime.fromisoformat(
+            fault_recorded_at.replace("Z", "+00:00")
+        ).timestamp()
+    except ValueError:
+        return True
+    for name in _RETAINED_JOURNAL_NAMES:
+        try:
+            if (session_dir / name).stat().st_mtime > threshold:
+                return True
+        except OSError:
+            continue
+    return False
+
+
 def _session_id(request: Request) -> str:
     return str(request.path_params["session_id"])
+
+
+def _advanced_since(session_updated_at: str, fault_recorded_at: str) -> bool:
+    """Whether the registry saw the session move after the fault landed."""
+    try:
+        session_stamp = datetime.fromisoformat(
+            session_updated_at.replace("Z", "+00:00")
+        )
+        fault_stamp = datetime.fromisoformat(
+            fault_recorded_at.replace("Z", "+00:00")
+        )
+    except ValueError:
+        return True
+    if session_stamp.tzinfo is None:
+        session_stamp = session_stamp.replace(tzinfo=UTC)
+    if fault_stamp.tzinfo is None:
+        fault_stamp = fault_stamp.replace(tzinfo=UTC)
+    return session_stamp > fault_stamp
 
 
 def _limit(request: Request, *, maximum: int, default: int) -> int:

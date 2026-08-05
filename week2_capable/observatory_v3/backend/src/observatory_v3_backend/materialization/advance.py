@@ -112,7 +112,21 @@ class IncrementalSessionAdvancer:
         except SourceIdentityFault as error:
             return self._fault(checkpoint, error.code)
         except (MalformedSourceError, IndexBuildError):
-            return self._fault(checkpoint, "malformed_source")
+            # A resumed session can rewrite the tail the retained watermark
+            # points into. The source may still project whole, so a full
+            # rebuild recovers before a fault is recorded.
+            session = self.lookup.get(session_id)
+            if session is None:
+                return self._fault(checkpoint, "session_source_missing")
+            try:
+                projection = self.bootstrap.project(session)
+            except (MalformedSourceError, IndexBuildError):
+                return self._fault(checkpoint, "malformed_source")
+            return self._replace_projected_session(
+                session,
+                projection,
+                kind="recovered",
+            )
 
     def _replace_projected_session(
         self,
