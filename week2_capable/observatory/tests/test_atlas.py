@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from observatory_api.sources.atlas import AtlasSource
+from backend.sources.atlas import AtlasSource
 
 
 def test_repository_atlas_meets_actual_scale_budget():

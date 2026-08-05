@@ -6,9 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "test": "vitest run",
-    "test:e2e": "playwright test",
-    "test:budget": "npm run build && node scripts/check-budgets.mjs"
+    "test": "vitest run"
   },
   "dependencies": {
     "lucide-react": "0.575.0",
@@ -16,8 +14,6 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
-    "@axe-core/playwright": "4.12.1",
-    "@playwright/test": "1.62.0",
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "16.3.2",
     "@testing-library/user-event": "14.6.1",

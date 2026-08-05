@@ -12,11 +12,11 @@ from pathlib import Path
 import httpx
 from mud_gateway.journal import Journal
 
-from observatory_api.app import create_app
-from observatory_api.contracts import LiveMilestone, LiveTimelineItem
-from observatory_api.projections.live import _objective, _quiet_cohorts
-from observatory_api.settings import Settings
-from observatory_api.sources.runtime import RuntimeSource, RuntimeSourceError
+from backend.app import create_app
+from backend.contracts import LiveMilestone, LiveTimelineItem
+from backend.projections.live import _objective, _quiet_cohorts
+from backend.settings import Settings
+from backend.sources.runtime import RuntimeSource, RuntimeSourceError
 
 
 REGISTRY_SCHEMA = """

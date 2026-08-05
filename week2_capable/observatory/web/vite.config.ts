@@ -1,17 +1,28 @@
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vitest/config";
+import { defineConfig } from "vite";
+
+const proxy = {
+  "/api/sessions/start": "http://127.0.0.1:8792",
+  "^/api/sessions/[^/]+/stop$": "http://127.0.0.1:8792",
+  "/api": "http://127.0.0.1:8787",
+};
 
 export default defineConfig({
   plugins: [react()],
-  server: {
-    port: 5174,
-    proxy: {
-      "/api": "http://127.0.0.1:8787",
-    },
-  },
   test: {
     environment: "jsdom",
     setupFiles: "./src/test/setup.ts",
-    exclude: ["e2e/**", "node_modules/**"],
+  },
+  server: {
+    host: "127.0.0.1",
+    port: 8791,
+    strictPort: true,
+    proxy,
+  },
+  preview: {
+    host: "127.0.0.1",
+    port: 8791,
+    strictPort: true,
+    proxy,
   },
 });

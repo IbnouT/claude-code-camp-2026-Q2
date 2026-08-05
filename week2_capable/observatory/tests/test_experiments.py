@@ -5,21 +5,21 @@ from pathlib import Path
 
 import pytest
 
-from observatory_api.execution import (
+from backend.execution import (
     ExperimentExecutor,
     ExperimentRequestConflict,
 )
-from observatory_api.experiments import (
+from backend.experiments import (
     fork_one_variable,
     remaining_queue,
     sample_queue,
     validate_definition,
 )
-from observatory_api.sources.comparison import (
+from backend.sources.comparison import (
     experiment_registry,
     rendering_definition,
 )
-from observatory_api.sources.benchmark import stable_run_id
+from backend.sources.benchmark import stable_run_id
 
 
 def test_typed_registry_rejects_unknown_fields_and_spend_mismatch():
@@ -284,7 +284,7 @@ async def test_executor_retains_success_as_a_standard_sessions_run(
         return Process()
 
     monkeypatch.setattr(
-        "observatory_api.execution.asyncio.create_subprocess_exec",
+        "backend.execution.asyncio.create_subprocess_exec",
         create_process,
     )
     await executor._run_sample(job, sample)

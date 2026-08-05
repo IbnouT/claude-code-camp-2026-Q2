@@ -36,7 +36,6 @@ settings.local.json
 
 # Generated Observatory showcase media and narration
 .boukensha/showcase/
-week2_capable/observatory/web/captures/
 
 # Internal working instructions, not repo content
 CLAUDE.md
@@ -58,3 +57,12 @@ week1_baseline/log_viewer/docs/demo.mp4
 
 # Agent skill definitions live outside the graded tree
 .agents/
+
+# Observatory build and test output
+week2_capable/observatory/web/dist/
+week2_capable/observatory/web/coverage/
+week2_capable/observatory/web/playwright-report/
+week2_capable/observatory/web/test-results/
+
+# CircleMUD runtime state written by the container
+week0_explore/infrastructure/lib/

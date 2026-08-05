@@ -17,7 +17,8 @@ dependencies = [
 boukensha-gateway = { path = "../gateway" }
 
 [project.scripts]
-boukensha-observatory = "observatory_api.app:main"
+observatory = "backend.app:main"
+observatory-launcher = "backend.launcher.server:main"
 
 [project.optional-dependencies]
 dev = [
@@ -30,7 +31,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["observatory_api"]
+packages = ["backend"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

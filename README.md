@@ -59,7 +59,7 @@ before the agent faces a private game world.
 - [`week1_baseline/`](week1_baseline/README.md): the baseline agent
   (**boukensha**), built step by step
 - `week2_capable/`: the Week 2 agent, gateway, viewer, and observability work,
-  including the current [`observatory_v2/`](week2_capable/observatory_v2/)
+  including the current [`observatory/`](week2_capable/observatory/)
 - [`docs/`](docs/): plans, technical documentation, and the weekly journal
 
 ## Documentation

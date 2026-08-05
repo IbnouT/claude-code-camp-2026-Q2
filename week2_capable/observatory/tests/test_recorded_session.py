@@ -7,14 +7,14 @@ import sqlite3
 
 import httpx
 
-from observatory_api.app import create_app
-from observatory_api.projections.session import (
+from backend.app import create_app
+from backend.projections.session import (
     _objective,
     project_recorded_session,
     project_recorded_session_prefix,
 )
-from observatory_api.settings import Settings
-from observatory_api.sources.recorded_session import RecordedSessionSource
+from backend.settings import Settings
+from backend.sources.recorded_session import RecordedSessionSource
 
 
 def _fixture(tmp_path):

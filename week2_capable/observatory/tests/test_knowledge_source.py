@@ -6,13 +6,13 @@ import httpx
 import pytest
 from mud_gateway.knowledge import EvidenceRef, KnowledgeStore
 
-from observatory_api.app import create_app
-from observatory_api.settings import Settings
-from observatory_api.sources.knowledge import (
+from backend.app import create_app
+from backend.settings import Settings
+from backend.sources.knowledge import (
     KnowledgeSource,
     KnowledgeSourceError,
 )
-from observatory_api.sources.runtime import RuntimeSource
+from backend.sources.runtime import RuntimeSource
 
 
 def evidence(session: str, seq: int) -> EvidenceRef:

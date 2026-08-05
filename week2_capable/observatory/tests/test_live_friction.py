@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 from mud_gateway.journal import Event
 
-from observatory_api.projections.live import _friction
+from backend.projections.live import _friction
 
 
 def event(sequence: int, kind: str, payload: dict[str, object]) -> Event:

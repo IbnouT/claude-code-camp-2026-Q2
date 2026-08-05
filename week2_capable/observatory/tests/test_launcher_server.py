@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from observatory_v2_api.server import (
+from backend.launcher.server import (
     MessageRequest,
     MessageRequestError,
     StartRequest,

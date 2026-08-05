@@ -3,22 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="A causal flight recorder and experiment studio for Boukensha."
-    />
-    <meta name="theme-color" content="#090d12" />
     <title>Boukensha Observatory</title>
-    <script>
-      (() => {
-        const stored = localStorage.getItem("boukensha-observatory-theme");
-        const theme = stored === "light" ? "light" : "dark";
-        const density = localStorage.getItem("boukensha-observatory-density");
-        document.documentElement.dataset.theme = theme;
-        document.documentElement.dataset.density =
-          density === "dense" ? "dense" : "comfortable";
-      })();
-    </script>
   </head>
   <body>
     <div id="root"></div>

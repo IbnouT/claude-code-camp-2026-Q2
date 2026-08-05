@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from observatory_api.sources.sector_overrides import (
+from backend.sources.sector_overrides import (
     SectorOverride,
     default_sector_category,
     load_sector_overrides,

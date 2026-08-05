@@ -9,18 +9,18 @@ import httpx
 from mud_gateway.journal import Event
 from mud_gateway.knowledge import EvidenceRef, KnowledgeStore
 
-from observatory_api.app import create_app
-from observatory_api.incidents import canonical_payload
-from observatory_api.contracts import IncidentCapsule
-from observatory_api.projections.parser_replay import replay_parser
-from observatory_api.projections.world import project_world, project_world_events
-from observatory_api.contracts import QueryScope
-from observatory_api.queries import plan_query
-from observatory_api.queries.model import ModelTranslator
-from observatory_api.redaction import redact_question
-from observatory_api.settings import Settings
-from observatory_api.execution import ExperimentExecutor
-from observatory_api.sources.comparison import (
+from backend.app import create_app
+from backend.incidents import canonical_payload
+from backend.contracts import IncidentCapsule
+from backend.projections.parser_replay import replay_parser
+from backend.projections.world import project_world, project_world_events
+from backend.contracts import QueryScope
+from backend.queries import plan_query
+from backend.queries.model import ModelTranslator
+from backend.redaction import redact_question
+from backend.settings import Settings
+from backend.execution import ExperimentExecutor
+from backend.sources.comparison import (
     rendering_comparison,
     rendering_definition,
 )
