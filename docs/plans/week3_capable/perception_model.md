@@ -1,0 +1,142 @@
+# Week 3 · Perception model
+
+A trained classifier that reads one game reply block and predicts typed
+boolean flags, replacing prose pattern-matching with a learned,
+versioned, measured component. It trains in a lab isolated from the
+product code and ships as one pinned artifact the gateway can load.
+This plan is the training experiment's authority.
+
+## Task
+
+Multi-label binary classification.
+
+- Input: one command's complete cleaned output text (ANSI stripped,
+  prompt line included), truncated at 512 tokens.
+- Output: one probability per label, thresholded per label.
+
+Labels, version 1:
+
+| Group | Labels |
+| --- | --- |
+| perception | dark_or_blind, menu_or_pager, movement_refused, door_blocked |
+| combat | combat_active, being_attacked, something_died, near_death |
+| opportunity | corpse_or_loot, item_on_floor, gold_mentioned, shopkeeper_present, sign_readable |
+| status | leveled_up, died_respawned, dangerous_zone_warning, hungry, thirsty |
+
+The model predicts what the text states, never what to do about it.
+Policy stays in rules and gates that read the flags.
+
+## Corpora
+
+Two training corpora, one shared evaluation set.
+
+- Corpus A: real reply blocks extracted from every retained journal,
+  plus synthetic blocks generated from the game engine's message
+  templates with slot fills varied (names, items, rooms).
+- Corpus B: the same real blocks, plus synthetic blocks generated only
+  from patterns observed in our logs, slot fills varied the same way.
+- Adoption rule: corpus B is adopted if its per-label metrics match
+  corpus A within one point of F1 on every label; otherwise A is used
+  and the gap is reported per label.
+
+Training labels come from weak supervision: the existing detectors and
+parser where they exist, plus a one-time model-assisted labeling pass
+over a stratified sample. Synthetic blocks carry perfect labels by
+construction.
+
+## Gold evaluation set
+
+- 400 real reply blocks sampled from the journals, stratified so every
+  label has meaningful support, including hard negatives (combat spam
+  that is not a death, shop text without a shopkeeper line).
+- Labeled once by a strong model, then human-verified, then frozen.
+- Never used for training or threshold tuning. A separate validation
+  split from training data serves tuning.
+- Circularity guard: gold labels are produced independently of the
+  detectors used for weak supervision.
+
+## The experiment grid
+
+Three architectures by two corpora, six runs, one gold set:
+
+| Rung | Architecture | Checkpoint |
+| --- | --- | --- |
+| 3 | TF-IDF word 1-2 grams and char 3-5 grams, one-vs-rest logistic regression | scikit-learn |
+| 2 | Frozen sentence embeddings, trained logistic head | sentence-transformers/all-MiniLM-L6-v2 (fallback BAAI/bge-small-en-v1.5) |
+| 4 | Fine-tuned encoder, multi-label head | microsoft/deberta-v3-small (fallback distilbert-base-uncased) |
+
+The lab verifies checkpoint availability and licenses at setup and
+records exact revisions in the artifact manifest.
+
+Adoption rule across rungs: the simplest architecture that clears the
+floors wins. A heavier rung must beat the lighter one on the gold set
+to justify itself.
+
+## Metric floors
+
+| Labels | Precision | Recall |
+| --- | --- | --- |
+| dark_or_blind, near_death, combat_active | at least 0.98 | at least 0.90 |
+| all others | at least 0.95 | at least 0.85 |
+
+Per-label support is reported beside every metric. Class imbalance is
+handled with per-label class weights and stratified sampling. Thresholds
+are tuned per label on the validation split for the precision floors and
+pinned in the artifact manifest.
+
+## Lab structure
+
+Isolated from the product: nothing under the lab imports product code,
+and no product package imports the lab.
+
+```text
+lab/perception/
+├── pyproject.toml        pinned: torch, transformers,
+│                         sentence-transformers, scikit-learn,
+│                         onnxruntime, tensorboard
+├── extract.py            journals -> reply blocks JSONL
+├── generate.py           template expansion for both corpora
+├── label.py              weak supervision + assisted labeling
+├── goldset.py            sampling, freeze, verification workflow
+├── train.py              the six-run grid, TensorBoard events
+├── evaluate.py           per-label tables, A/B and rung comparisons
+├── export.py             ONNX int8 + manifest (metrics, thresholds,
+│                         corpus hashes, checkpoint revisions)
+└── runs/                 events and artifacts, never committed
+```
+
+## Live monitoring
+
+TensorBoard over `lab/perception/runs`, one run per grid cell, named
+`rung{n}-corpus{A|B}`. Watched live: training loss, validation
+per-label precision, recall, and F1 per epoch, and the six runs side by
+side. The final gold-set tables land in a report under `docs/reports/`
+when the experiment concludes.
+
+## Execution
+
+Run by a spawned agent in the lab, in this order, reporting after each
+numbered step:
+
+1. Extract and deduplicate reply blocks from all retained journals;
+   report corpus size and label-frequency estimates.
+2. Build both synthetic corpora; report generated counts per label.
+3. Build, verify, and freeze the gold set.
+4. Run rung 3 on both corpora; report gold tables.
+5. Run rung 2 on both corpora; report gold tables.
+6. Run rung 4 on both corpora only if a floor remains unmet or a
+   lighter rung is beaten on validation; report gold tables.
+7. Export the winning artifact with its manifest and write the
+   experiment report.
+
+The runtime integration (gateway loads the artifact, flags become typed
+observations with classifier provenance and probability-mapped
+confidence) is specified in the [knowledge rework](knowledge_rework.md)
+contract and lands only after the artifact exists and its report is
+approved.
+
+## Spend
+
+Model-assisted labeling only: one pass over the stratified sample and
+the gold set, estimated under three dollars at current prices. Training
+runs locally and costs nothing.
