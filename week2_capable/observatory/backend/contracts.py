@@ -1115,7 +1115,10 @@ class ExperimentFeature(BaseModel):
 
     id: str
     label: str
-    group: Literal["model", "tools", "rendering", "memory", "context", "policy"]
+    group: Literal[
+        "model", "tools", "rendering", "memory", "context", "policy",
+        "capability",
+    ]
     kind: Literal["boolean", "enum", "integer", "number", "text"]
     description: str
     default: bool | int | float | str

@@ -172,7 +172,14 @@ export type SessionsLens =
 export type ExperimentFeature = {
   id: string;
   label: string;
-  group: "model" | "tools" | "rendering" | "memory" | "context" | "policy";
+  group:
+    | "model"
+    | "tools"
+    | "rendering"
+    | "memory"
+    | "context"
+    | "policy"
+    | "capability";
   kind: "boolean" | "enum" | "integer" | "number" | "text";
   description: string;
   default: boolean | number | string;

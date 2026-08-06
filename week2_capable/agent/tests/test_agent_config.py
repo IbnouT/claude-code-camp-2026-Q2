@@ -10,7 +10,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from boukensha.config import Config
+from boukensha.config import CAPABILITIES, Config
+from boukensha.errors import ConfigError
 from boukensha.tasks import Player
 
 
@@ -129,3 +130,44 @@ class TestEveryCeilingCanBeSetAgentWide(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestCapabilities(unittest.TestCase):
+    def _config(self, text: str) -> Config:
+        self._tmp = tempfile.TemporaryDirectory()
+        cfg_dir = Path(self._tmp.name) / ".boukensha"
+        cfg_dir.mkdir()
+        (cfg_dir / "settings.yaml").write_text(text)
+        self._old = os.environ.get("BOUKENSHA_DIR")
+        os.environ["BOUKENSHA_DIR"] = str(cfg_dir)
+        self.addCleanup(self._restore)
+        return Config()
+
+    def _restore(self) -> None:
+        if self._old is None:
+            os.environ.pop("BOUKENSHA_DIR", None)
+        else:
+            os.environ["BOUKENSHA_DIR"] = self._old
+        self._tmp.cleanup()
+
+    def test_capabilities_default_off(self):
+        cfg = self._config("tasks:\n  player:\n    provider: anthropic\n")
+        for name in CAPABILITIES:
+            self.assertFalse(cfg.capability(name))
+            self.assertEqual({}, cfg.capability_settings(name))
+
+    def test_capability_reads_enabled_and_settings(self):
+        cfg = self._config(
+            "capabilities:\n"
+            "  survival:\n"
+            "    enabled: true\n"
+            "    rest_threshold: 0.2\n")
+        self.assertTrue(cfg.capability("survival"))
+        self.assertFalse(cfg.capability("navigation"))
+        self.assertEqual(
+            0.2, cfg.capability_settings("survival")["rest_threshold"])
+
+    def test_unknown_capability_raises(self):
+        cfg = self._config("tasks: {}\n")
+        with self.assertRaises(ConfigError):
+            cfg.capability("telepathy")

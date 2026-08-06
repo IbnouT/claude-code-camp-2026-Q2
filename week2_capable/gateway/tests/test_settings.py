@@ -180,3 +180,50 @@ def test_reset_timeouts_must_be_positive(
 
     with pytest.raises(GatewaySettingsError, match="must be positive"):
         GatewaySettings.load()
+
+
+def test_capabilities_default_off_and_load_from_their_block(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    directory = _configure(tmp_path, monkeypatch, "gateway:\n  connection: {}\n")
+    absent = GatewaySettings.load()
+    assert absent.capabilities == {
+        "knowledge": False,
+        "navigation": False,
+        "survival": False,
+        "economy": False,
+        "campaign": False,
+    }
+
+    (directory / "settings.yaml").write_text(
+        """
+gateway:
+  connection: {}
+capabilities:
+  navigation:
+    enabled: true
+    sweep_max_rooms: 40
+  survival:
+    enabled: false
+""",
+        encoding="utf-8",
+    )
+    loaded = GatewaySettings.load()
+    assert loaded.capabilities["navigation"] is True
+    assert loaded.capabilities["survival"] is False
+    assert loaded.capabilities["campaign"] is False
+    assert loaded.capability_settings["navigation"]["sweep_max_rooms"] == 40
+
+
+def test_unknown_capability_is_rejected(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _configure(
+        tmp_path,
+        monkeypatch,
+        "gateway:\n  connection: {}\ncapabilities:\n  telepathy:\n    enabled: true\n",
+    )
+    with pytest.raises(GatewaySettingsError):
+        GatewaySettings.load()

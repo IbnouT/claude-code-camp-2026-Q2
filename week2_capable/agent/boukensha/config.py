@@ -18,6 +18,16 @@ from dotenv import dotenv_values, load_dotenv
 
 from .errors import ConfigError
 from .mcp.transport import DEFAULT_TIMEOUT
+
+# The five week 3 capabilities. Each has exactly one master flag; every
+# number a capability needs is a setting under its block, never a flag.
+CAPABILITIES = (
+    "knowledge",
+    "navigation",
+    "survival",
+    "economy",
+    "campaign",
+)
 from .tool_result import RESULT_MODES, result_mode
 
 #: Default config directory for a real install.
@@ -82,6 +92,34 @@ class Config:
         agent default, then the code default.
         """
         return self.dig("agent", key)
+
+    def capability(self, name: str) -> bool:
+        """Whether one week 3 capability is enabled. Off by default.
+
+        The five capabilities (``CAPABILITIES``) each carry one master flag
+        under the top-level ``capabilities:`` block:
+
+        .. code-block:: yaml
+
+            capabilities:
+              navigation:
+                enabled: true
+
+        Any threshold or bound a capability needs lives as a sibling of
+        ``enabled`` under the same block. An unknown name raises
+        :class:`ConfigError` so a misspelt flag cannot silently measure
+        nothing.
+        """
+        if name not in CAPABILITIES:
+            raise ConfigError(f"unknown capability {name!r}")
+        return bool(self.dig("capabilities", name, "enabled"))
+
+    def capability_settings(self, name: str) -> dict[str, Any]:
+        """One capability's settings block, ``{}`` when absent."""
+        if name not in CAPABILITIES:
+            raise ConfigError(f"unknown capability {name!r}")
+        block = self.dig("capabilities", name)
+        return dict(block) if isinstance(block, dict) else {}
 
     def mcp_servers(self) -> dict[str, dict[str, Any]]:
         """The ``mcp_servers:`` block, keyed by name, with defaults applied.

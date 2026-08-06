@@ -295,3 +295,20 @@ async def test_executor_retains_success_as_a_standard_sessions_run(
     assert sample["turns"] == 11
     assert sample["calls"] == 17
     assert sample["run_id"] == stable_run_id(ledger_name, "20260730-001")
+
+
+def test_registry_exposes_capabilities_off_by_default():
+    from backend.experiment_catalog import (
+        experiment_registry,
+        experiment_scenarios,
+    )
+
+    features = {feature.id: feature for feature in experiment_registry()}
+    for name in ("knowledge", "navigation", "survival", "economy", "campaign"):
+        feature = features[f"capability.{name}"]
+        assert feature.kind == "boolean"
+        assert feature.default is False
+        assert feature.group == "capability"
+        assert feature.execution_supported is False
+    scenarios = {scenario.id for scenario in experiment_scenarios()}
+    assert "J3" in scenarios

@@ -18,6 +18,18 @@ class GatewaySettingsError(ValueError):
     """The gateway section in ``settings.yaml`` is malformed."""
 
 
+# The five week 3 capabilities, mirrored from the agent package. Each has
+# exactly one master flag under the top-level ``capabilities:`` block, and
+# every number a capability needs is a setting under its block.
+CAPABILITIES = (
+    "knowledge",
+    "navigation",
+    "survival",
+    "economy",
+    "campaign",
+)
+
+
 @dataclass(frozen=True)
 class PlayerProfile:
     """One public player identity and the name of its secret."""
@@ -50,6 +62,12 @@ class GatewaySettings:
     reset_pause_timeout: float = 15.0
     reset_child_timeout: float = 30.0
     reset_client_timeout: float = 45.0
+    capabilities: Mapping[str, bool] = field(default_factory=lambda: {
+        name: False for name in CAPABILITIES
+    })
+    capability_settings: Mapping[str, Mapping[str, Any]] = field(
+        default_factory=dict
+    )
     agent_id: str | None = None
     session_id: str | None = None
     gateway_session_id: str | None = None
@@ -62,6 +80,7 @@ class GatewaySettings:
     def load(cls) -> "GatewaySettings":
         config_dir = _config_dir()
         configured = _load(config_dir / "settings.yaml")
+        flags, capability_blocks = _capabilities(config_dir / "settings.yaml")
         connection = _mapping(configured, "connection")
         players = _players(configured.get("players"))
         surface = _mapping(configured, "surface")
@@ -124,6 +143,8 @@ class GatewaySettings:
                 45.0,
                 "gateway.reset.client_timeout_seconds",
             ),
+            capabilities=flags,
+            capability_settings=capability_blocks,
             agent_id=os.environ.get("BOUKENSHA_AGENT_ID"),
             session_id=os.environ.get("BOUKENSHA_SESSION_ID"),
             gateway_session_id=os.environ.get("BOUKENSHA_GATEWAY_SESSION_ID"),
@@ -229,6 +250,38 @@ def _load(path: Path) -> dict[str, Any]:
     for name, keys in sections.items():
         _known(_mapping(configured, name), keys, f"gateway.{name}")
     return configured
+
+
+def _capabilities(
+    path: Path,
+) -> tuple[dict[str, bool], dict[str, dict[str, Any]]]:
+    """Top-level ``capabilities:`` flags and blocks, all off when absent."""
+    flags = {name: False for name in CAPABILITIES}
+    blocks: dict[str, dict[str, Any]] = {}
+    if not path.is_file():
+        return flags, blocks
+    loaded = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(loaded, dict):
+        return flags, blocks
+    section = loaded.get("capabilities") or {}
+    if not isinstance(section, dict):
+        raise GatewaySettingsError(
+            "settings.yaml: 'capabilities' must be a mapping"
+        )
+    _known(section, set(CAPABILITIES), "capabilities")
+    for name, block in section.items():
+        if block is None:
+            continue
+        if not isinstance(block, dict):
+            raise GatewaySettingsError(
+                f"settings.yaml: 'capabilities.{name}' must be a mapping"
+            )
+        flags[name] = _boolean(
+            block.get("enabled", False),
+            f"capabilities.{name}.enabled",
+        )
+        blocks[name] = dict(block)
+    return flags, blocks
 
 
 def _players(value: Any) -> dict[str, PlayerProfile]:

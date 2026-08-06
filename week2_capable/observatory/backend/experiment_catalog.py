@@ -6,6 +6,30 @@ from .contracts import ExperimentFeature, ExperimentScenario
 
 RENDER_MODES = ("raw", "minimal", "full")
 
+_CAPABILITIES = (
+    ("knowledge", "State fields, state block, and fact layers."),
+    ("navigation", "Weighted routing, sweep, and the search ledger."),
+    ("survival", "Rest, sustenance, darkness back-out, wimpy, re-orientation."),
+    ("economy", "Loot, gold custody, and need-driven purchasing."),
+    ("campaign", "Mission phases, readiness gate, preparation planner."),
+)
+
+
+def _capability_features() -> tuple[ExperimentFeature, ...]:
+    return tuple(
+        ExperimentFeature(
+            id=f"capability.{name}",
+            label=f"Capability: {name}",
+            group="capability",
+            kind="boolean",
+            description=description,
+            default=False,
+            source="capabilities settings block",
+            execution_supported=False,
+        )
+        for name, description in _CAPABILITIES
+    )
+
 
 def experiment_registry() -> tuple[ExperimentFeature, ...]:
     """Return every configuration dimension the workbench can explain."""
@@ -84,6 +108,7 @@ def experiment_registry() -> tuple[ExperimentFeature, ...]:
             source="agent task limits",
             execution_supported=True,
         ),
+        *_capability_features(),
     )
 
 
@@ -116,6 +141,15 @@ def experiment_scenarios() -> tuple[ExperimentScenario, ...]:
             ),
             success_predicate=(
                 "A gateway observation contains the Massive Minotaur."
+            ),
+            **shared,
+        ),
+        ExperimentScenario(
+            id="J3",
+            label="Kill the Massive Minotaur",
+            objective="Find the minotaur and kill it.",
+            success_predicate=(
+                "A gateway observation retains the Massive Minotaur's death."
             ),
             **shared,
         ),
