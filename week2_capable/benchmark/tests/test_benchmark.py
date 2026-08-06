@@ -108,12 +108,22 @@ def test_attempt_uses_supervised_selected_session_reset(
     attempt = create_attempt(repository, tmp_path, player_profile="poucet")
     captured: dict[str, object] = {}
 
-    def run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
-        captured["command"] = command
-        captured.update(kwargs)
-        return subprocess.CompletedProcess(command, 0, "", "")
+    class Process:
+        def __init__(self, command: list[str], **kwargs: object) -> None:
+            captured["command"] = command
+            captured.update(kwargs)
+            self.returncode = 0
+            self.pid = 4242
 
-    monkeypatch.setattr("benchmark.runner.subprocess.run", run)
+        def communicate(
+            self,
+            input: str | None = None,
+            timeout: float | None = None,
+        ) -> tuple[str, str]:
+            captured["input"] = input
+            return "", ""
+
+    monkeypatch.setattr("benchmark.runner.subprocess.Popen", Process)
     _launch_agent(
         repository=repository,
         journey=J1,

@@ -41,11 +41,20 @@ J2 = Journey(
     title="Find the Massive Minotaur",
     clue="north of the Temple · newbie area",
 )
-JOURNEYS = {journey.id: journey for journey in (J1, J2)}
+J3 = Journey(
+    "J3",
+    "Find the minotaur and kill it.",
+    title="Kill the Massive Minotaur",
+)
+JOURNEYS = {journey.id: journey for journey in (J1, J2, J3)}
 
 _MENU_ROW = re.compile(r"^\s*\d+\)\s+.*(?:bread|danish|cake|pastry)", re.IGNORECASE)
 _BAKERY_GOOD = re.compile(r"\b(?:bread|danish|cake|pastry)\b", re.IGNORECASE)
 _MINOTAUR = re.compile(r"\bmassive minotaur\b", re.IGNORECASE)
+_MINOTAUR_DEAD = re.compile(
+    r"massive minotaur is dead|massive minotaur'?s death cry",
+    re.IGNORECASE,
+)
 
 
 def judge(journey: Journey, events: Iterable[Mapping[str, object]]) -> Verdict:
@@ -57,7 +66,7 @@ def judge(journey: Journey, events: Iterable[Mapping[str, object]]) -> Verdict:
             if event.get("kind") != "observation":
                 continue
             payload = event.get("payload")
-            text = _flatten(payload if isinstance(payload, dict) else {})
+            text = flatten_payload(payload if isinstance(payload, dict) else {})
             evidence.extend(
                 line.strip()
                 for line in text.splitlines()
@@ -65,6 +74,21 @@ def judge(journey: Journey, events: Iterable[Mapping[str, object]]) -> Verdict:
             )
         unique = tuple(dict.fromkeys(evidence))
         return Verdict(bool(unique), unique[:8])
+    if journey.id == "J3":
+        kills: list[str] = []
+        sightings: list[str] = []
+        for event in material:
+            if event.get("kind") != "observation":
+                continue
+            payload = event.get("payload")
+            text = flatten_payload(payload if isinstance(payload, dict) else {})
+            for line in text.splitlines():
+                if _MINOTAUR_DEAD.search(line):
+                    kills.append(line.strip())
+                elif _MINOTAUR.search(line):
+                    sightings.append(line.strip())
+        evidence = tuple(dict.fromkeys([*kills, *sightings]))
+        return Verdict(bool(kills), evidence[:8])
     if journey.id != "J1":
         raise ValueError(f"unknown journey {journey.id!r}")
     rows: list[str] = []
@@ -72,7 +96,7 @@ def judge(journey: Journey, events: Iterable[Mapping[str, object]]) -> Verdict:
     bakery_seen = False
     for event in material:
         payload = event.get("payload")
-        text = _flatten(payload if isinstance(payload, dict) else event)
+        text = flatten_payload(payload if isinstance(payload, dict) else event)
         if "the bakery" in text.lower():
             bakery_seen = True
         for line in text.splitlines():
@@ -84,11 +108,11 @@ def judge(journey: Journey, events: Iterable[Mapping[str, object]]) -> Verdict:
     return Verdict(bool(bakery_seen and rows and goods), evidence[:8])
 
 
-def _flatten(value: object) -> str:
+def flatten_payload(value: object) -> str:
     if isinstance(value, str):
         return value
     if isinstance(value, dict):
-        return "\n".join(_flatten(item) for item in value.values())
+        return "\n".join(flatten_payload(item) for item in value.values())
     if isinstance(value, (list, tuple)):
-        return "\n".join(_flatten(item) for item in value)
+        return "\n".join(flatten_payload(item) for item in value)
     return ""

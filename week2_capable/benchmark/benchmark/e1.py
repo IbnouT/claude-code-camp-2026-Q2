@@ -77,6 +77,16 @@ def main(argv: list[str] | None = None) -> int:
         help="per-sample agent spend ceiling",
     )
     parser.add_argument(
+        "--attempt-timeout",
+        type=float,
+        help="per-sample wall-clock ceiling in seconds",
+    )
+    parser.add_argument(
+        "--count-attempts",
+        action="store_true",
+        help="count every launched attempt toward --runs, timeouts included",
+    )
+    parser.add_argument(
         "--player",
         help="one-off player character, requires --password-stdin",
     )
@@ -148,7 +158,12 @@ def main(argv: list[str] | None = None) -> int:
         supplied_password = sys.stdin.readline().rstrip("\r\n")
         if not supplied_password:
             parser.error("--password-stdin received an empty password")
-    while sum(row.aggregate_eligible for row in rows) < arguments.runs:
+    def counted(material: list) -> int:
+        if arguments.count_attempts:
+            return len(material)
+        return sum(row.aggregate_eligible for row in material)
+
+    while counted(rows) < arguments.runs:
         run_number = len(rows) + 1
         attempt_id = _attempt_id(run_number, multiple=arguments.runs > 1)
         attempt_dir = output / "attempts" / attempt_id
@@ -192,6 +207,7 @@ def main(argv: list[str] | None = None) -> int:
             attempt_id=attempt_id,
             proof=proof,
             environment=runtime_environment,
+            timeout_seconds=arguments.attempt_timeout,
         )
         append_jsonl(ledger, row)
         rows.append(row)

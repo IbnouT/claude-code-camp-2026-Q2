@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import signal
 import sqlite3
 import subprocess
 import time
@@ -97,12 +98,19 @@ def run_attempt(
     proof: SurfaceProof,
     environment: Mapping[str, str] | None = None,
     launcher: Callable[..., subprocess.CompletedProcess[str]] | None = None,
+    timeout_seconds: float | None = None,
 ) -> AttemptMetrics:
     """Launch one isolated runtime that resets before its first model call."""
     combined = {**os.environ, **(environment or {}), **config.environment()}
     launch = launcher or _launch_agent
     started = time.monotonic()
-    completed = launch(repository=repository, journey=journey, config=config, environment=combined)
+    completed = launch(
+        repository=repository,
+        journey=journey,
+        config=config,
+        environment=combined,
+        timeout_seconds=timeout_seconds,
+    )
     wall_ms = round((time.monotonic() - started) * 1000)
     agent_log, gateway_journal = _runtime_evidence(config)
     error = (
@@ -131,39 +139,60 @@ def _launch_agent(
     journey: Journey,
     config: AttemptConfig,
     environment: Mapping[str, str],
+    timeout_seconds: float | None = None,
 ) -> subprocess.CompletedProcess[str]:
     env = dict(environment)
-    return subprocess.run(
-        [
-            "uv",
-            "run",
-            "--project",
-            str(repository.agent),
-            "boukensha",
-            "--task-stdin",
-            "--reset-baseline",
-            "level1-temple@1",
-            "--objective-title",
-            journey.objective_title,
-            "--objective-source-kind",
-            "benchmark",
-            "--objective-revision",
-            "1",
-            *(
-                ["--objective-clue", journey.clue]
-                if journey.clue is not None
-                else []
-            ),
-            "--player-profile",
-            config.player_profile,
-        ],
+    command = [
+        "uv",
+        "run",
+        "--project",
+        str(repository.agent),
+        "boukensha",
+        "--task-stdin",
+        "--reset-baseline",
+        "level1-temple@1",
+        "--objective-title",
+        journey.objective_title,
+        "--objective-source-kind",
+        "benchmark",
+        "--objective-revision",
+        "1",
+        *(
+            ["--objective-clue", journey.clue]
+            if journey.clue is not None
+            else []
+        ),
+        "--player-profile",
+        config.player_profile,
+    ]
+    process = subprocess.Popen(
+        command,
         cwd=repository.agent,
         env=env,
-        input=journey.order + "\n",
-        capture_output=True,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         text=True,
-        check=False,
+        start_new_session=True,
     )
+    try:
+        stdout, stderr = process.communicate(
+            journey.order + "\n", timeout=timeout_seconds
+        )
+        return subprocess.CompletedProcess(
+            command, process.returncode, stdout, stderr
+        )
+    except subprocess.TimeoutExpired:
+        os.killpg(process.pid, signal.SIGTERM)
+        try:
+            stdout, stderr = process.communicate(timeout=15)
+        except subprocess.TimeoutExpired:
+            os.killpg(process.pid, signal.SIGKILL)
+            stdout, stderr = process.communicate()
+        note = f"attempt timeout after {timeout_seconds:.0f}s"
+        return subprocess.CompletedProcess(
+            command, 124, stdout, f"{stderr or ''}\n{note}".strip()
+        )
 
 
 def _runtime_evidence(config: AttemptConfig) -> tuple[Path, Path]:
