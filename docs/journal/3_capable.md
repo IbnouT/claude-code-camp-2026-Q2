@@ -87,6 +87,41 @@ handling second, then the rest and flee reflexes. Combat interrupts
 matter, but nothing else matters while every dollar goes to blind
 wandering.
 
+### 2. The capabilities landed as five flags, and the first live sweep paid off
+
+The build followed the autopsy's ranking as five independently switchable
+capabilities: navigation (routing and systematic exploration over the
+agent's own map), knowledge (a re-rendered state summary each model call,
+required per-response state fields, and the agent's assertions stored as
+distinct beliefs), survival (numeric reflexes: the game's own auto-flee
+threshold kept set, rest before movement runs out), economy (banking gold
+above a ceiling at a place the agent recorded as a bank), and campaign
+(a deterministic mission phase chosen from typed readiness). With every
+flag off, the advertised tool surface and its digest are unchanged from
+the measured baseline, so any subset can run as an experiment arm.
+
+The one live verification that fit before the account's API credits ran
+out was worth the night on its own: a single exploration call walked 47
+steps and discovered 30 rooms with typed stop reasons and vitals
+tracking, where the baseline had spent roughly 90 model calls per attempt
+discovering less. The same short verification loop caught two defects no
+unit test had found, because both lived in real data:
+
+- Stored exit lists use the game's abbreviations ("n") while learned
+  exit links use full words ("north"), so the set arithmetic that finds
+  unexplored exits never matched on real stores. The synthetic test
+  fixtures had used full words on both sides and hidden it.
+- Right after a baseline reset, the store is wiped but the in-process
+  position state is not, so the two disagree about the current room at
+  exactly the moment a cold mission starts. The exploration routine now
+  falls back to the live room observation; whether a reset should also
+  reset in-process state is an open question.
+
+Credits ran out mid-verification, so the comparison batch, the
+per-capability measurements, and the learning curve remain queued rather
+than claimed. Nothing in this observation asserts mission improvement:
+that number does not exist until the batch runs.
+
 ## Technical Conclusions
 
 Open. The week is in flight, and the conclusions must answer the
