@@ -334,3 +334,30 @@ Gate: every aggregate, divergence, and replay value opens its retained source.
 | Observatory tests | Vitest and React Testing Library for lenses and execution states |
 | No paid test calls | execution behavior uses constructed commands and hermetic jobs |
 | No committed runtime output | jobs, attempts, bundles, and caches remain ignored |
+
+## Workbench rework (on hold)
+
+The built workspace is archive-first: it opens on one retained comparison and
+keeps authoring and execution behind secondary controls. `experiments_mock.html`
+described that archive-first state and is superseded as visual authority for
+this rework. The workbench direction in `../mockups/experiments.html` is the
+visual reference: an experiment rail, arms as editable configuration cards,
+and run controls in front. The rework is designed and approved, and it waits
+until the week 3 capability work lands.
+
+- The section opens on an experiment rail: every retained comparison and
+  draft with status, sample count, and cost. New experiment is the primary
+  action at the top of the rail.
+- With nothing selected, the main area states the section's purpose and
+  offers the create action.
+- The selected experiment leads with its question, then arms as side-by-side
+  configuration cards: every registered feature per arm, differing values
+  highlighted, observe-only options marked, and a marker on registry entries
+  added after the definition was retained.
+- The headline result strip and observed findings stay as built.
+- Attention economics, counterfactual, and parser replay move to secondary
+  depth with one-line explanations.
+- The rail's job area becomes the run flow: enable policy, preflight,
+  confirm ceiling, run, progress with stop and resume.
+- No new metrics, no verdict generation, no templates. Backend unchanged
+  except a possible registry newness marker.
