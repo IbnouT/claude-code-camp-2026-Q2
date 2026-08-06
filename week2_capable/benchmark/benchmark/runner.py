@@ -99,6 +99,7 @@ def run_attempt(
     environment: Mapping[str, str] | None = None,
     launcher: Callable[..., subprocess.CompletedProcess[str]] | None = None,
     timeout_seconds: float | None = None,
+    warm: bool = False,
 ) -> AttemptMetrics:
     """Launch one isolated runtime that resets before its first model call."""
     combined = {**os.environ, **(environment or {}), **config.environment()}
@@ -110,6 +111,7 @@ def run_attempt(
         config=config,
         environment=combined,
         timeout_seconds=timeout_seconds,
+        warm=warm,
     )
     wall_ms = round((time.monotonic() - started) * 1000)
     agent_log, gateway_journal = _runtime_evidence(config)
@@ -140,6 +142,7 @@ def _launch_agent(
     config: AttemptConfig,
     environment: Mapping[str, str],
     timeout_seconds: float | None = None,
+    warm: bool = False,
 ) -> subprocess.CompletedProcess[str]:
     env = dict(environment)
     command = [
@@ -149,8 +152,10 @@ def _launch_agent(
         str(repository.agent),
         "boukensha",
         "--task-stdin",
-        "--reset-baseline",
-        "level1-temple@1",
+        *(
+            ["--relocate-temple"] if warm
+            else ["--reset-baseline", "level1-temple@1"]
+        ),
         "--objective-title",
         journey.objective_title,
         "--objective-source-kind",

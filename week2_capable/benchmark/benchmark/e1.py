@@ -87,6 +87,12 @@ def main(argv: list[str] | None = None) -> int:
         help="count every launched attempt toward --runs, timeouts included",
     )
     parser.add_argument(
+        "--warm",
+        action="store_true",
+        help="keep the player's knowledge and progress between attempts, "
+             "relocating to the temple instead of resetting the baseline",
+    )
+    parser.add_argument(
         "--capability",
         action="append",
         default=[],
@@ -169,11 +175,18 @@ def main(argv: list[str] | None = None) -> int:
             return len(material)
         return sum(row.aggregate_eligible for row in material)
 
+    shared_config = None
     while counted(rows) < arguments.runs:
         run_number = len(rows) + 1
         attempt_id = _attempt_id(run_number, multiple=arguments.runs > 1)
-        attempt_dir = output / "attempts" / attempt_id
-        config = create_attempt(
+        attempt_dir = (
+            output / "attempts" / "warm" if arguments.warm
+            else output / "attempts" / attempt_id
+        )
+        if arguments.warm and shared_config is not None:
+            config = shared_config
+        else:
+            config = create_attempt(
             repository,
             attempt_dir,
             result_mode=arguments.result_mode,
@@ -185,7 +198,9 @@ def main(argv: list[str] | None = None) -> int:
             max_iterations=arguments.max_iterations,
             max_turn_cost=arguments.max_sample_cost,
             capabilities=tuple(arguments.capability),
-        )
+            )
+        if arguments.warm:
+            shared_config = config
         runtime_environment = dict(os.environ)
         password = (
             supplied_password
@@ -215,6 +230,7 @@ def main(argv: list[str] | None = None) -> int:
             proof=proof,
             environment=runtime_environment,
             timeout_seconds=arguments.attempt_timeout,
+            warm=arguments.warm,
         )
         append_jsonl(ledger, row)
         rows.append(row)
