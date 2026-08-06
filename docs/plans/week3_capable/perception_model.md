@@ -19,12 +19,19 @@ Labels, version 1:
 | Group | Labels |
 | --- | --- |
 | perception | dark_or_blind, menu_or_pager, movement_refused, door_blocked |
-| combat | combat_active, being_attacked, something_died, near_death |
+| combat | combat_active, being_attacked, something_died |
 | opportunity | corpse_or_loot, item_on_floor, gold_mentioned, shopkeeper_present, sign_readable |
-| status | leveled_up, died_respawned, dangerous_zone_warning, hungry, thirsty |
+| status | died_respawned, dangerous_zone_warning, hungry, thirsty |
 
 The model predicts what the text states, never what to do about it.
 Policy stays in rules and gates that read the flags.
+
+A label earns its place only if the agent acts on the flag and no
+protocol-shaped source carries the same information. That test removed
+near_death and leveled_up from an earlier draft: exact hp and level are
+parsed from the prompt line and the score output, so a prose classifier
+for them is redundant. Values wanted only for observability are computed
+from stored facts, never predicted by the classifier.
 
 ## Corpora
 
@@ -78,7 +85,7 @@ to justify itself.
 
 | Labels | Precision | Recall |
 | --- | --- | --- |
-| dark_or_blind, near_death, combat_active | at least 0.98 | at least 0.90 |
+| dark_or_blind, combat_active | at least 0.98 | at least 0.90 |
 | all others | at least 0.95 | at least 0.85 |
 
 Per-label support is reported beside every metric. Class imbalance is
