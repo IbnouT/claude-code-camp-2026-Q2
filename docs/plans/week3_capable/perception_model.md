@@ -49,13 +49,14 @@ Two training corpora, one shared evaluation set.
   bound.
 - Corpus B: the same real blocks, plus synthetic blocks generated only
   from patterns observed in our logs, slot fills varied the same way.
-- Corpus D (the deployment corpus): observation-only with hygiene.
-  Real training-split blocks, plus synthetics seeded exclusively from
-  training-split blocks, plus definition-generated text for rare
-  labels using observed vocabulary. No gold block or derivative of one
-  ever enters the generator, by construction. A rare-label floor
-  unreachable from observation alone is reported per label as an
-  honest finding, never patched with template text.
+- Corpus D (the deployment corpus): authored text only. Every
+  training block is generated from the label definitions and the
+  interest vocabulary learned by playing, with freely written sentence
+  contexts, realistic block structure, and hard negatives from the
+  pinned contract decisions. No journal text and no engine source
+  appear anywhere in training or threshold tuning: real game text
+  exists only in the frozen gold set, as the exam. A floor unreachable
+  from authored text is reported per label as an honest finding.
 - Corpus C: text generated from the label definitions alone, in
   genuinely varied wording, with no engine templates, no journal text,
   and nothing derived from the gold set. Training on A measures string
