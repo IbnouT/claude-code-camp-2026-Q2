@@ -1,0 +1,1866 @@
+{
+ "nodes": [
+  {
+   "id": "place:1",
+   "place": 1,
+   "title": "The Temple Square",
+   "description": {
+    "text": "You are standing on the temple square.  Huge marble steps lead up to the\ntemple gate.  The entrance to the Clerics' Guild is to the west, and the old\nGrunting Boar Inn, is to the east.  Just south of here you see the market\nsquare, the center of Midgaard.",
+    "evidence": [
+     61
+    ]
+   },
+   "atlas": {
+    "vnum": 3005,
+    "zone_id": 30,
+    "zone_label": "Northern Midgaard Main City",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "high",
+    "evidence": [
+     "atlas-unique title and exit anchor"
+    ]
+   },
+   "exits": [
+    "n",
+    "e",
+    "s",
+    "w"
+   ],
+   "mobs": [
+    "An odif yltsaeb is here, walking backwards.",
+    "A janitor is walking around, cleaning up.",
+    "A Peacekeeper is standing here, ready to jump in at the first sign of trouble."
+   ],
+   "objects": [
+    "A large fountain carved from blue-streaked marble is here, bubbling merrily."
+   ],
+   "mob_sightings": [
+    {
+     "name": "A janitor is walking around, cleaning up.",
+     "count": 1,
+     "first_seq": 61,
+     "last_seq": 61,
+     "evidence": [
+      61
+     ]
+    },
+    {
+     "name": "A Peacekeeper is standing here, ready to jump in at the first sign of trouble.",
+     "count": 1,
+     "first_seq": 61,
+     "last_seq": 61,
+     "evidence": [
+      61
+     ]
+    },
+    {
+     "name": "An odif yltsaeb is here, walking backwards.",
+     "count": 1,
+     "first_seq": 61,
+     "last_seq": 61,
+     "evidence": [
+      61
+     ]
+    }
+   ],
+   "object_sightings": [
+    {
+     "name": "A large fountain carved from blue-streaked marble is here, bubbling merrily.",
+     "count": 1,
+     "first_seq": 61,
+     "last_seq": 61,
+     "evidence": [
+      61
+     ]
+    }
+   ],
+   "visits": 1,
+   "evidence": [
+    61
+   ],
+   "first_seq": 61,
+   "last_seq": 61,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "new-title"
+  },
+  {
+   "id": "place:2",
+   "place": 2,
+   "title": "The Temple Of Midgaard",
+   "description": {
+    "text": "You are in the southern end of the temple hall in the Temple of Midgaard.\nThe temple has been constructed from giant marble blocks, eternal in\nappearance, and most of the walls are covered by ancient wall paintings\npicturing Gods, giants and peasants.\nLarge steps lead down through the grand temple gate, descending the huge\nmound upon which the temple is built and ends on the temple square below.\nTo the west, you see the Reading Room.  The donation room is in a small\nalcove to your east.",
+    "evidence": [
+     161
+    ]
+   },
+   "atlas": {
+    "vnum": 3001,
+    "zone_id": 30,
+    "zone_label": "Northern Midgaard Main City",
+    "sector": "inside",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "high",
+    "evidence": [
+     "atlas-unique title and exit anchor"
+    ]
+   },
+   "exits": [
+    "n",
+    "e",
+    "s",
+    "w",
+    "d"
+   ],
+   "mobs": [],
+   "objects": [
+    "An automatic teller machine has been installed in the wall here."
+   ],
+   "mob_sightings": [],
+   "object_sightings": [
+    {
+     "name": "An automatic teller machine has been installed in the wall here.",
+     "count": 1,
+     "first_seq": 161,
+     "last_seq": 161,
+     "evidence": [
+      161
+     ]
+    }
+   ],
+   "visits": 1,
+   "evidence": [
+    161
+   ],
+   "first_seq": 161,
+   "last_seq": 161,
+   "state": "observed",
+   "confidence": "confirmed",
+   "method": "unique-title+exits"
+  },
+  {
+   "id": "place:3",
+   "place": 3,
+   "title": "By The Temple Altar",
+   "description": {
+    "text": "You are by the temple altar in the northern end of the Temple of Midgaard.\nA huge altar made from white polished marble dominates this part of the temple.\nTowering behind the altar is a ten foot tall sitting statue of Odin, the King of\nthe Gods. To the north, steps lead out the back of the temple towards the\ncountryside.",
+    "evidence": [
+     225
+    ]
+   },
+   "atlas": {
+    "vnum": 3054,
+    "zone_id": 30,
+    "zone_label": "Northern Midgaard Main City",
+    "sector": "inside",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3001 north to 3054, gateway edge 2:3:north"
+    ]
+   },
+   "exits": [
+    "n",
+    "s"
+   ],
+   "mobs": [],
+   "objects": [],
+   "mob_sightings": [],
+   "object_sightings": [],
+   "visits": 1,
+   "evidence": [
+    225
+   ],
+   "first_seq": 225,
+   "last_seq": 225,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "new-arrival-path"
+  },
+  {
+   "id": "place:4",
+   "place": 4,
+   "title": "Behind The Temple Altar",
+   "description": {
+    "text": "You are on a dirt path leading away from the Temple Altar which is south\nof here.  To the north, the path continues through the lush contryside of\nMidgaard towards the Dragonhelm Mountains far off to the north.",
+    "evidence": [
+     239
+    ]
+   },
+   "atlas": {
+    "vnum": 3059,
+    "zone_id": 30,
+    "zone_label": "Northern Midgaard Main City",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3054 north to 3059, gateway edge 3:4:north"
+    ]
+   },
+   "exits": [
+    "n",
+    "s"
+   ],
+   "mobs": [],
+   "objects": [],
+   "mob_sightings": [],
+   "object_sightings": [],
+   "visits": 1,
+   "evidence": [
+    239
+   ],
+   "first_seq": 239,
+   "last_seq": 239,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "new-arrival-path"
+  },
+  {
+   "id": "place:5",
+   "place": 5,
+   "title": "The Great Field Of Midgaard",
+   "description": {
+    "text": "You are walking on a wide dirt path through the lush, green, fresh\nMidgaard countryside.  You can see to the horizon to the north, east,\nand west; the busy city of Midgaard lies to the south.  All around you\nis healthy green grass and an occasional large oak tree.  The sun feels\nwonderful on your face and a pleasant wind blows through your hair.  Birds\nchirp quietly to themselves and you can smell the faint scent of flowers\nand freshly cut grass.  You feel like you could lie down in the grass and\nstay here forever, surrounded by powerful beauty in all directions.\nThe path you are on continues north through the field and south back\nto Midgaard.",
+    "evidence": [
+     253
+    ]
+   },
+   "atlas": {
+    "vnum": 3060,
+    "zone_id": 30,
+    "zone_label": "Northern Midgaard Main City",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3059 north to 3060, gateway edge 4:5:north"
+    ]
+   },
+   "exits": [
+    "n",
+    "s"
+   ],
+   "mobs": [],
+   "objects": [],
+   "mob_sightings": [],
+   "object_sightings": [],
+   "visits": 1,
+   "evidence": [
+    253
+   ],
+   "first_seq": 253,
+   "last_seq": 253,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "new-arrival-path"
+  },
+  {
+   "id": "place:6",
+   "place": 6,
+   "title": "The Great Field Of Midgaard",
+   "description": {
+    "text": "You are walking on a wide dirt path through the lush, green, fresh\nMidgaard countryside.  You can see to the horizon to the north, east,\nand west; the busy city of Midgaard lies to the south.  All around you\nis healthy green grass and an occasional large oak tree.  The sun feels\nwonderful on your face and a pleasant wind blows through your hair.  Birds\nchirp quietly to themselves and you can smell the faint scent of flowers\nand freshly cut grass.  You feel like you could lie down in the grass and\nstay here forever, surrounded by powerful beauty in all directions.\nThere is a strange structure on the eastern side of the path.  A small\ndirt path splits off of the main path and leads off to the west.",
+    "evidence": [
+     323
+    ]
+   },
+   "atlas": {
+    "vnum": 3061,
+    "zone_id": 30,
+    "zone_label": "Northern Midgaard Main City",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3060 north to 3061, gateway edge 5:6:north"
+    ]
+   },
+   "exits": [
+    "n",
+    "e",
+    "s",
+    "w"
+   ],
+   "mobs": [],
+   "objects": [],
+   "mob_sightings": [],
+   "object_sightings": [],
+   "visits": 2,
+   "evidence": [
+    267,
+    323
+   ],
+   "first_seq": 267,
+   "last_seq": 323,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "known-neighbour+matching-signature"
+  },
+  {
+   "id": "place:7",
+   "place": 7,
+   "title": "The Entrance To The Newbie Zone",
+   "description": {
+    "text": "Ahhh... the entrance to the newbie zone!  Just the place you have\nbeen looking for.  Well, when you've readied yourself you can enter\nto the north.",
+    "evidence": [
+     309
+    ]
+   },
+   "atlas": {
+    "vnum": 18600,
+    "zone_id": 186,
+    "zone_label": "Newbie Zone",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3061 east to 18600, gateway edge 6:7:east"
+    ]
+   },
+   "exits": [
+    "n",
+    "w"
+   ],
+   "mobs": [],
+   "objects": [],
+   "mob_sightings": [],
+   "object_sightings": [],
+   "visits": 2,
+   "evidence": [
+    281,
+    309
+   ],
+   "first_seq": 281,
+   "last_seq": 309,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "known-neighbour+matching-signature"
+  },
+  {
+   "id": "place:8",
+   "place": 8,
+   "title": "The Beginning Of The Passage",
+   "description": {
+    "text": "You find yourself entering a long corridor.  You can hear the sound\nof creatures roaming about, but you can't tell where the sound emanates\nfrom exactly.\nExits lead to the east along the hallway, and south back to the\nentrance.",
+    "evidence": [
+     295
+    ]
+   },
+   "atlas": {
+    "vnum": 18601,
+    "zone_id": 186,
+    "zone_label": "Newbie Zone",
+    "sector": "inside",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 18600 north to 18601, gateway edge 7:8:north"
+    ]
+   },
+   "exits": [
+    "e",
+    "s"
+   ],
+   "mobs": [
+    "The newbie monster stands here looking confused.  Kill him!  Kill him!"
+   ],
+   "objects": [],
+   "mob_sightings": [
+    {
+     "name": "The newbie monster stands here looking confused.  Kill him!  Kill him!",
+     "count": 1,
+     "first_seq": 295,
+     "last_seq": 295,
+     "evidence": [
+      295
+     ]
+    }
+   ],
+   "object_sightings": [],
+   "visits": 1,
+   "evidence": [
+    295
+   ],
+   "first_seq": 295,
+   "last_seq": 295,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "new-arrival-path"
+  },
+  {
+   "id": "place:9",
+   "place": 9,
+   "title": "The Dirt Path",
+   "description": {
+    "text": "You are walking along a narrow dirt path through the lush, green,\nfresh Midgaard countryside.  You can see to the horizon to the north\nand east; the busy city of Midgaard lies to the south.  All around\nyou is healthy green grass and an occasional large oak tree.  The sun\nfeels wonderful on your face and a pleasant wind blows through your\nhair.  Birds chirp quietly to themselves and you can smell the faint\nscent of flowers and freshly cut grass.  You feel like you could lie\ndown in the grass and stay here forever, surrounded by powerful beauty\nin all directions.\nThere is a large rusty gate sitting in a stone archway just to the\nwest.",
+    "evidence": [
+     337
+    ]
+   },
+   "atlas": {
+    "vnum": 3066,
+    "zone_id": 30,
+    "zone_label": "Northern Midgaard Main City",
+    "sector": "field",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3061 west to 3066, gateway edge 6:9:west"
+    ]
+   },
+   "exits": [
+    "e",
+    "w"
+   ],
+   "mobs": [],
+   "objects": [],
+   "mob_sightings": [],
+   "object_sightings": [],
+   "visits": 1,
+   "evidence": [
+    337
+   ],
+   "first_seq": 337,
+   "last_seq": 337,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "new-arrival-path"
+  },
+  {
+   "id": "place:10",
+   "place": 10,
+   "title": "The Great Chessboard Of Midgaard",
+   "description": {
+    "text": "You stand in the archway of the Chessboard of Midgaard.  The giant\nwooden gate is rusted open.\nA narrow dirt path leads eastwards into the thick grass and the\nchessboard opens up to the west.",
+    "evidence": [
+     352
+    ]
+   },
+   "atlas": {
+    "vnum": 3600,
+    "zone_id": 36,
+    "zone_label": "The Chessboard of Midgaard",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3066 west to 3600, gateway edge 9:10:west"
+    ]
+   },
+   "exits": [
+    "e",
+    "w"
+   ],
+   "mobs": [],
+   "objects": [],
+   "mob_sightings": [],
+   "object_sightings": [],
+   "visits": 1,
+   "evidence": [
+    352
+   ],
+   "first_seq": 352,
+   "last_seq": 352,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "new-arrival-path"
+  },
+  {
+   "id": "place:11",
+   "place": 11,
+   "title": "A White Square",
+   "description": {
+    "text": "You are standing on a white marble square.  There is a large rusty\ngate to the east.",
+    "evidence": [
+     367
+    ]
+   },
+   "atlas": {
+    "vnum": 3632,
+    "zone_id": 36,
+    "zone_label": "The Chessboard of Midgaard",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3600 west to 3632, gateway edge 10:11:west"
+    ]
+   },
+   "exits": [
+    "n",
+    "e",
+    "s",
+    "w"
+   ],
+   "mobs": [],
+   "objects": [],
+   "mob_sightings": [],
+   "object_sightings": [],
+   "visits": 1,
+   "evidence": [
+    367
+   ],
+   "first_seq": 367,
+   "last_seq": 367,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "new-arrival-path"
+  },
+  {
+   "id": "place:12",
+   "place": 12,
+   "title": "A Black Square",
+   "description": {
+    "text": "You are standing on a black marble square.  You can see a rusty gate\nto the south.",
+    "evidence": [
+     382
+    ]
+   },
+   "atlas": {
+    "vnum": 3624,
+    "zone_id": 36,
+    "zone_label": "The Chessboard of Midgaard",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3632 north to 3624, gateway edge 11:12:north"
+    ]
+   },
+   "exits": [
+    "n",
+    "s",
+    "w"
+   ],
+   "mobs": [],
+   "objects": [],
+   "mob_sightings": [],
+   "object_sightings": [],
+   "visits": 1,
+   "evidence": [
+    382
+   ],
+   "first_seq": 382,
+   "last_seq": 382,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "new-arrival-path"
+  },
+  {
+   "id": "place:13",
+   "place": 13,
+   "title": "A White Square",
+   "description": {
+    "text": "You are standing on a white marble square.  This is usually the home\nof one of the Black King's Pawns.",
+    "evidence": [
+     427
+    ]
+   },
+   "atlas": {
+    "vnum": 3616,
+    "zone_id": 36,
+    "zone_label": "The Chessboard of Midgaard",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3624 north to 3616, gateway edge 12:13:north"
+    ]
+   },
+   "exits": [
+    "n",
+    "s",
+    "w"
+   ],
+   "mobs": [
+    "You see a pawn standing here waiting for orders."
+   ],
+   "objects": [],
+   "mob_sightings": [
+    {
+     "name": "You see a pawn standing here waiting for orders.",
+     "count": 2,
+     "first_seq": 397,
+     "last_seq": 427,
+     "evidence": [
+      397,
+      427
+     ]
+    }
+   ],
+   "object_sightings": [],
+   "visits": 2,
+   "evidence": [
+    397,
+    427
+   ],
+   "first_seq": 397,
+   "last_seq": 427,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "known-neighbour+matching-signature"
+  },
+  {
+   "id": "place:14",
+   "place": 14,
+   "title": "A Black Square",
+   "description": {
+    "text": "You are standing on a black marble square.  This is usually the home\nof the Black King's Rook.",
+    "evidence": [
+     412
+    ]
+   },
+   "atlas": {
+    "vnum": 3608,
+    "zone_id": 36,
+    "zone_label": "The Chessboard of Midgaard",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3616 north to 3608, gateway edge 13:14:north"
+    ]
+   },
+   "exits": [
+    "s",
+    "w"
+   ],
+   "mobs": [
+    "In the corner you see a large, black, stone castle on wheels."
+   ],
+   "objects": [],
+   "mob_sightings": [
+    {
+     "name": "In the corner you see a large, black, stone castle on wheels.",
+     "count": 1,
+     "first_seq": 412,
+     "last_seq": 412,
+     "evidence": [
+      412
+     ]
+    }
+   ],
+   "object_sightings": [],
+   "visits": 1,
+   "evidence": [
+    412
+   ],
+   "first_seq": 412,
+   "last_seq": 412,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "new-arrival-path"
+  },
+  {
+   "id": "place:15",
+   "place": 15,
+   "title": "A Black Square",
+   "description": {
+    "text": "You are standing on a black marble square.  This is usually the home\nof one of the Black King's Pawns.",
+    "evidence": [
+     442
+    ]
+   },
+   "atlas": {
+    "vnum": 3615,
+    "zone_id": 36,
+    "zone_label": "The Chessboard of Midgaard",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3616 west to 3615, gateway edge 13:15:west"
+    ]
+   },
+   "exits": [
+    "n",
+    "e",
+    "s",
+    "w"
+   ],
+   "mobs": [
+    "You see a pawn standing here waiting for orders."
+   ],
+   "objects": [],
+   "mob_sightings": [
+    {
+     "name": "You see a pawn standing here waiting for orders.",
+     "count": 1,
+     "first_seq": 442,
+     "last_seq": 442,
+     "evidence": [
+      442
+     ]
+    }
+   ],
+   "object_sightings": [],
+   "visits": 1,
+   "evidence": [
+    442
+   ],
+   "first_seq": 442,
+   "last_seq": 442,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "new-arrival-path"
+  },
+  {
+   "id": "place:16",
+   "place": 16,
+   "title": "A White Square",
+   "description": {
+    "text": "You are standing on a white marble square.  This is usually the home\nof one of the Black King's Pawns.",
+    "evidence": [
+     457
+    ]
+   },
+   "atlas": {
+    "vnum": 3614,
+    "zone_id": 36,
+    "zone_label": "The Chessboard of Midgaard",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3615 west to 3614, gateway edge 15:16:west"
+    ]
+   },
+   "exits": [
+    "n",
+    "e",
+    "s",
+    "w"
+   ],
+   "mobs": [
+    "You see a pawn standing here waiting for orders."
+   ],
+   "objects": [],
+   "mob_sightings": [
+    {
+     "name": "You see a pawn standing here waiting for orders.",
+     "count": 1,
+     "first_seq": 457,
+     "last_seq": 457,
+     "evidence": [
+      457
+     ]
+    }
+   ],
+   "object_sightings": [],
+   "visits": 1,
+   "evidence": [
+    457
+   ],
+   "first_seq": 457,
+   "last_seq": 457,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "new-arrival-path"
+  },
+  {
+   "id": "place:17",
+   "place": 17,
+   "title": "A Black Square",
+   "description": {
+    "text": "You are standing on a black marble square.  This is usually the home\nof the Black King's Bishop.",
+    "evidence": [
+     472
+    ]
+   },
+   "atlas": {
+    "vnum": 3606,
+    "zone_id": 36,
+    "zone_label": "The Chessboard of Midgaard",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3614 north to 3606, gateway edge 16:17:north"
+    ]
+   },
+   "exits": [
+    "e",
+    "s",
+    "w"
+   ],
+   "mobs": [
+    "A dark priest stands here."
+   ],
+   "objects": [],
+   "mob_sightings": [
+    {
+     "name": "A dark priest stands here.",
+     "count": 1,
+     "first_seq": 472,
+     "last_seq": 472,
+     "evidence": [
+      472
+     ]
+    }
+   ],
+   "object_sightings": [],
+   "visits": 1,
+   "evidence": [
+    472
+   ],
+   "first_seq": 472,
+   "last_seq": 472,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "new-arrival-path"
+  },
+  {
+   "id": "place:18",
+   "place": 18,
+   "title": "A White Square",
+   "description": {
+    "text": "You are standing on a white marble square.  This is usually the home\nof the Black King.",
+    "evidence": [
+     487
+    ]
+   },
+   "atlas": {
+    "vnum": 3605,
+    "zone_id": 36,
+    "zone_label": "The Chessboard of Midgaard",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3606 west to 3605, gateway edge 17:18:west"
+    ]
+   },
+   "exits": [
+    "e",
+    "s",
+    "w"
+   ],
+   "mobs": [
+    "The Black King stands here."
+   ],
+   "objects": [],
+   "mob_sightings": [
+    {
+     "name": "The Black King stands here.",
+     "count": 1,
+     "first_seq": 487,
+     "last_seq": 487,
+     "evidence": [
+      487
+     ]
+    }
+   ],
+   "object_sightings": [],
+   "visits": 1,
+   "evidence": [
+    487
+   ],
+   "first_seq": 487,
+   "last_seq": 487,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "new-arrival-path"
+  },
+  {
+   "id": "place:19",
+   "place": 19,
+   "title": "A Black Square",
+   "description": {
+    "text": "You are standing on a black marble square.  This is usually the home\nof the Black Queen.",
+    "evidence": [
+     502
+    ]
+   },
+   "atlas": {
+    "vnum": 3604,
+    "zone_id": 36,
+    "zone_label": "The Chessboard of Midgaard",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3605 west to 3604, gateway edge 18:19:west"
+    ]
+   },
+   "exits": [
+    "e",
+    "s",
+    "w",
+    "d"
+   ],
+   "mobs": [
+    "The Black Queen stands here."
+   ],
+   "objects": [],
+   "mob_sightings": [
+    {
+     "name": "The Black Queen stands here.",
+     "count": 1,
+     "first_seq": 502,
+     "last_seq": 502,
+     "evidence": [
+      502
+     ]
+    }
+   ],
+   "object_sightings": [],
+   "visits": 2,
+   "evidence": [
+    502,
+    515
+   ],
+   "first_seq": 502,
+   "last_seq": 515,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "move-did-not-happen"
+  },
+  {
+   "id": "place:20",
+   "place": 20,
+   "title": "A White Square",
+   "description": {
+    "text": "You are standing on a white marble square.  This is usually the home\nof one of the Black Queen's Pawns.",
+    "evidence": [
+     530
+    ]
+   },
+   "atlas": {
+    "vnum": 3612,
+    "zone_id": 36,
+    "zone_label": "The Chessboard of Midgaard",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3604 south to 3612, gateway edge 19:20:south"
+    ]
+   },
+   "exits": [
+    "n",
+    "e",
+    "s",
+    "w"
+   ],
+   "mobs": [
+    "You see a pawn standing here waiting for orders."
+   ],
+   "objects": [],
+   "mob_sightings": [
+    {
+     "name": "You see a pawn standing here waiting for orders.",
+     "count": 1,
+     "first_seq": 530,
+     "last_seq": 530,
+     "evidence": [
+      530
+     ]
+    }
+   ],
+   "object_sightings": [],
+   "visits": 1,
+   "evidence": [
+    530
+   ],
+   "first_seq": 530,
+   "last_seq": 530,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "new-arrival-path"
+  },
+  {
+   "id": "place:21",
+   "place": 21,
+   "title": "A Black Square",
+   "description": {
+    "text": "You are standing on a black marble square.  This is usually the home\nof one of the Black King's Pawns.",
+    "evidence": [
+     545
+    ]
+   },
+   "atlas": {
+    "vnum": 3613,
+    "zone_id": 36,
+    "zone_label": "The Chessboard of Midgaard",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3612 east to 3613, gateway edge 20:21:east"
+    ]
+   },
+   "exits": [
+    "n",
+    "e",
+    "s",
+    "w"
+   ],
+   "mobs": [
+    "You see a pawn standing here waiting for orders."
+   ],
+   "objects": [],
+   "mob_sightings": [
+    {
+     "name": "You see a pawn standing here waiting for orders.",
+     "count": 1,
+     "first_seq": 545,
+     "last_seq": 545,
+     "evidence": [
+      545
+     ]
+    }
+   ],
+   "object_sightings": [],
+   "visits": 1,
+   "evidence": [
+    545
+   ],
+   "first_seq": 545,
+   "last_seq": 545,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "new-arrival-path"
+  },
+  {
+   "id": "place:22",
+   "place": 22,
+   "title": "A White Square",
+   "description": {
+    "text": "You are standing on a white marble square.",
+    "evidence": [
+     560
+    ]
+   },
+   "atlas": {
+    "vnum": 3621,
+    "zone_id": 36,
+    "zone_label": "The Chessboard of Midgaard",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3613 south to 3621, gateway edge 21:22:south"
+    ]
+   },
+   "exits": [
+    "n",
+    "e",
+    "s",
+    "w"
+   ],
+   "mobs": [],
+   "objects": [],
+   "mob_sightings": [],
+   "object_sightings": [],
+   "visits": 1,
+   "evidence": [
+    560
+   ],
+   "first_seq": 560,
+   "last_seq": 560,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "new-arrival-path"
+  },
+  {
+   "id": "place:23",
+   "place": 23,
+   "title": "A Black Square",
+   "description": {
+    "text": "You are standing on a black marble square.",
+    "evidence": [
+     575
+    ]
+   },
+   "atlas": {
+    "vnum": 3629,
+    "zone_id": 36,
+    "zone_label": "The Chessboard of Midgaard",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3621 south to 3629, gateway edge 22:23:south"
+    ]
+   },
+   "exits": [
+    "n",
+    "e",
+    "s",
+    "w"
+   ],
+   "mobs": [],
+   "objects": [],
+   "mob_sightings": [],
+   "object_sightings": [],
+   "visits": 1,
+   "evidence": [
+    575
+   ],
+   "first_seq": 575,
+   "last_seq": 575,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "new-arrival-path"
+  },
+  {
+   "id": "place:24",
+   "place": 24,
+   "title": "A White Square",
+   "description": {
+    "text": "You are standing on a white marble square.",
+    "evidence": [
+     590
+    ]
+   },
+   "atlas": {
+    "vnum": 3637,
+    "zone_id": 36,
+    "zone_label": "The Chessboard of Midgaard",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3629 south to 3637, gateway edge 23:24:south"
+    ]
+   },
+   "exits": [
+    "n",
+    "e",
+    "s",
+    "w"
+   ],
+   "mobs": [],
+   "objects": [],
+   "mob_sightings": [],
+   "object_sightings": [],
+   "visits": 1,
+   "evidence": [
+    590
+   ],
+   "first_seq": 590,
+   "last_seq": 590,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "new-arrival-path"
+  },
+  {
+   "id": "place:25",
+   "place": 25,
+   "title": "A Black Square",
+   "description": {
+    "text": "You are standing on a black marble square.",
+    "evidence": [
+     605
+    ]
+   },
+   "atlas": {
+    "vnum": 3645,
+    "zone_id": 36,
+    "zone_label": "The Chessboard of Midgaard",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3637 south to 3645, gateway edge 24:25:south"
+    ]
+   },
+   "exits": [
+    "n",
+    "e",
+    "s",
+    "w"
+   ],
+   "mobs": [],
+   "objects": [],
+   "mob_sightings": [],
+   "object_sightings": [],
+   "visits": 1,
+   "evidence": [
+    605
+   ],
+   "first_seq": 605,
+   "last_seq": 605,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "new-arrival-path"
+  },
+  {
+   "id": "place:26",
+   "place": 26,
+   "title": "A White Square",
+   "description": {
+    "text": "You are standing on a white marble square.",
+    "evidence": [
+     620
+    ]
+   },
+   "atlas": {
+    "vnum": 3646,
+    "zone_id": 36,
+    "zone_label": "The Chessboard of Midgaard",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3645 east to 3646, gateway edge 25:26:east"
+    ]
+   },
+   "exits": [
+    "n",
+    "e",
+    "s",
+    "w"
+   ],
+   "mobs": [],
+   "objects": [],
+   "mob_sightings": [],
+   "object_sightings": [],
+   "visits": 1,
+   "evidence": [
+    620
+   ],
+   "first_seq": 620,
+   "last_seq": 620,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "new-arrival-path"
+  },
+  {
+   "id": "place:27",
+   "place": 27,
+   "title": "A Black Square",
+   "description": {
+    "text": "You are standing on a black marble square.",
+    "evidence": [
+     635
+    ]
+   },
+   "atlas": {
+    "vnum": 3647,
+    "zone_id": 36,
+    "zone_label": "The Chessboard of Midgaard",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3646 east to 3647, gateway edge 26:27:east"
+    ]
+   },
+   "exits": [
+    "n",
+    "e",
+    "s",
+    "w"
+   ],
+   "mobs": [],
+   "objects": [],
+   "mob_sightings": [],
+   "object_sightings": [],
+   "visits": 1,
+   "evidence": [
+    635
+   ],
+   "first_seq": 635,
+   "last_seq": 635,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "new-arrival-path"
+  },
+  {
+   "id": "place:28",
+   "place": 28,
+   "title": "A White Square",
+   "description": {
+    "text": "You are standing on a white marble square.",
+    "evidence": [
+     650
+    ]
+   },
+   "atlas": {
+    "vnum": 3648,
+    "zone_id": 36,
+    "zone_label": "The Chessboard of Midgaard",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3647 east to 3648, gateway edge 27:28:east"
+    ]
+   },
+   "exits": [
+    "n",
+    "s",
+    "w"
+   ],
+   "mobs": [],
+   "objects": [],
+   "mob_sightings": [],
+   "object_sightings": [],
+   "visits": 1,
+   "evidence": [
+    650
+   ],
+   "first_seq": 650,
+   "last_seq": 650,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "new-arrival-path"
+  },
+  {
+   "id": "place:29",
+   "place": 29,
+   "title": "A Black Square",
+   "description": {
+    "text": "You are standing on a black marble square.  This is usually the home\nof one of the White King's Pawns.",
+    "evidence": [
+     704
+    ]
+   },
+   "atlas": {
+    "vnum": 3656,
+    "zone_id": 36,
+    "zone_label": "The Chessboard of Midgaard",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3648 south to 3656, gateway edge 28:29:south"
+    ]
+   },
+   "exits": [
+    "n",
+    "s",
+    "w"
+   ],
+   "mobs": [
+    "You see a pawn standing here waiting for orders."
+   ],
+   "objects": [],
+   "mob_sightings": [
+    {
+     "name": "You see a pawn standing here waiting for orders.",
+     "count": 2,
+     "first_seq": 665,
+     "last_seq": 704,
+     "evidence": [
+      665,
+      704
+     ]
+    }
+   ],
+   "object_sightings": [],
+   "visits": 2,
+   "evidence": [
+    665,
+    704
+   ],
+   "first_seq": 665,
+   "last_seq": 704,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "known-neighbour+matching-signature"
+  },
+  {
+   "id": "place:30",
+   "place": 30,
+   "title": "A White Square",
+   "description": {
+    "text": "You are standing on a white marble square.  This is usually the home\nof the White King's Rook.",
+    "evidence": [
+     680
+    ]
+   },
+   "atlas": {
+    "vnum": 3664,
+    "zone_id": 36,
+    "zone_label": "The Chessboard of Midgaard",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3656 south to 3664, gateway edge 29:30:south"
+    ]
+   },
+   "exits": [
+    "n",
+    "w"
+   ],
+   "mobs": [
+    "In the corner you see a large, white, stone castle on wheels."
+   ],
+   "objects": [],
+   "mob_sightings": [
+    {
+     "name": "In the corner you see a large, white, stone castle on wheels.",
+     "count": 1,
+     "first_seq": 680,
+     "last_seq": 680,
+     "evidence": [
+      680
+     ]
+    }
+   ],
+   "object_sightings": [],
+   "visits": 1,
+   "evidence": [
+    680
+   ],
+   "first_seq": 680,
+   "last_seq": 680,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "new-arrival-path"
+  },
+  {
+   "id": "place:31",
+   "place": 31,
+   "title": "A White Square",
+   "description": {
+    "text": "You are standing on a white marble square.  This is usually the home\nof one of the White King's Pawns.",
+    "evidence": [
+     719
+    ]
+   },
+   "atlas": {
+    "vnum": 3655,
+    "zone_id": 36,
+    "zone_label": "The Chessboard of Midgaard",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3656 west to 3655, gateway edge 29:31:west"
+    ]
+   },
+   "exits": [
+    "n",
+    "e",
+    "s",
+    "w"
+   ],
+   "mobs": [
+    "You see a pawn standing here waiting for orders."
+   ],
+   "objects": [],
+   "mob_sightings": [
+    {
+     "name": "You see a pawn standing here waiting for orders.",
+     "count": 1,
+     "first_seq": 719,
+     "last_seq": 719,
+     "evidence": [
+      719
+     ]
+    }
+   ],
+   "object_sightings": [],
+   "visits": 1,
+   "evidence": [
+    719
+   ],
+   "first_seq": 719,
+   "last_seq": 719,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "new-arrival-path"
+  },
+  {
+   "id": "place:32",
+   "place": 32,
+   "title": "A Black Square",
+   "description": {
+    "text": "You are standing on a black marble square.  This is usually the home\nof the White King's Knight.",
+    "evidence": [
+     734
+    ]
+   },
+   "atlas": {
+    "vnum": 3663,
+    "zone_id": 36,
+    "zone_label": "The Chessboard of Midgaard",
+    "sector": "city",
+    "atlas_digest": "a742a54f755269edc466",
+    "confidence": "medium",
+    "evidence": [
+     "atlas edge 3655 south to 3663, gateway edge 31:32:south"
+    ]
+   },
+   "exits": [
+    "n",
+    "e",
+    "w"
+   ],
+   "mobs": [
+    "Here stands a magnificent knight of the light realm."
+   ],
+   "objects": [],
+   "mob_sightings": [
+    {
+     "name": "Here stands a magnificent knight of the light realm.",
+     "count": 1,
+     "first_seq": 734,
+     "last_seq": 734,
+     "evidence": [
+      734
+     ]
+    }
+   ],
+   "object_sightings": [],
+   "visits": 2,
+   "evidence": [
+    734,
+    802
+   ],
+   "first_seq": 734,
+   "last_seq": 802,
+   "state": "observed",
+   "confidence": "tracked",
+   "method": "move-did-not-happen"
+  }
+ ],
+ "edges": [
+  {
+   "id": "2:3:north",
+   "source": "place:2",
+   "target": "place:3",
+   "direction": "north",
+   "traversals": 1,
+   "evidence": [
+    225
+   ]
+  },
+  {
+   "id": "3:4:north",
+   "source": "place:3",
+   "target": "place:4",
+   "direction": "north",
+   "traversals": 1,
+   "evidence": [
+    239
+   ]
+  },
+  {
+   "id": "4:5:north",
+   "source": "place:4",
+   "target": "place:5",
+   "direction": "north",
+   "traversals": 1,
+   "evidence": [
+    253
+   ]
+  },
+  {
+   "id": "5:6:north",
+   "source": "place:5",
+   "target": "place:6",
+   "direction": "north",
+   "traversals": 1,
+   "evidence": [
+    267
+   ]
+  },
+  {
+   "id": "6:7:east",
+   "source": "place:6",
+   "target": "place:7",
+   "direction": "east",
+   "traversals": 1,
+   "evidence": [
+    281
+   ]
+  },
+  {
+   "id": "7:8:north",
+   "source": "place:7",
+   "target": "place:8",
+   "direction": "north",
+   "traversals": 1,
+   "evidence": [
+    295
+   ]
+  },
+  {
+   "id": "8:7:south",
+   "source": "place:8",
+   "target": "place:7",
+   "direction": "south",
+   "traversals": 1,
+   "evidence": [
+    309
+   ]
+  },
+  {
+   "id": "7:6:west",
+   "source": "place:7",
+   "target": "place:6",
+   "direction": "west",
+   "traversals": 1,
+   "evidence": [
+    323
+   ]
+  },
+  {
+   "id": "6:9:west",
+   "source": "place:6",
+   "target": "place:9",
+   "direction": "west",
+   "traversals": 1,
+   "evidence": [
+    337
+   ]
+  },
+  {
+   "id": "9:10:west",
+   "source": "place:9",
+   "target": "place:10",
+   "direction": "west",
+   "traversals": 1,
+   "evidence": [
+    352
+   ]
+  },
+  {
+   "id": "10:11:west",
+   "source": "place:10",
+   "target": "place:11",
+   "direction": "west",
+   "traversals": 1,
+   "evidence": [
+    367
+   ]
+  },
+  {
+   "id": "11:12:north",
+   "source": "place:11",
+   "target": "place:12",
+   "direction": "north",
+   "traversals": 1,
+   "evidence": [
+    382
+   ]
+  },
+  {
+   "id": "12:13:north",
+   "source": "place:12",
+   "target": "place:13",
+   "direction": "north",
+   "traversals": 1,
+   "evidence": [
+    397
+   ]
+  },
+  {
+   "id": "13:14:north",
+   "source": "place:13",
+   "target": "place:14",
+   "direction": "north",
+   "traversals": 1,
+   "evidence": [
+    412
+   ]
+  },
+  {
+   "id": "14:13:south",
+   "source": "place:14",
+   "target": "place:13",
+   "direction": "south",
+   "traversals": 1,
+   "evidence": [
+    427
+   ]
+  },
+  {
+   "id": "13:15:west",
+   "source": "place:13",
+   "target": "place:15",
+   "direction": "west",
+   "traversals": 1,
+   "evidence": [
+    442
+   ]
+  },
+  {
+   "id": "15:16:west",
+   "source": "place:15",
+   "target": "place:16",
+   "direction": "west",
+   "traversals": 1,
+   "evidence": [
+    457
+   ]
+  },
+  {
+   "id": "16:17:north",
+   "source": "place:16",
+   "target": "place:17",
+   "direction": "north",
+   "traversals": 1,
+   "evidence": [
+    472
+   ]
+  },
+  {
+   "id": "17:18:west",
+   "source": "place:17",
+   "target": "place:18",
+   "direction": "west",
+   "traversals": 1,
+   "evidence": [
+    487
+   ]
+  },
+  {
+   "id": "18:19:west",
+   "source": "place:18",
+   "target": "place:19",
+   "direction": "west",
+   "traversals": 1,
+   "evidence": [
+    502
+   ]
+  },
+  {
+   "id": "19:20:south",
+   "source": "place:19",
+   "target": "place:20",
+   "direction": "south",
+   "traversals": 1,
+   "evidence": [
+    530
+   ]
+  },
+  {
+   "id": "20:21:east",
+   "source": "place:20",
+   "target": "place:21",
+   "direction": "east",
+   "traversals": 1,
+   "evidence": [
+    545
+   ]
+  },
+  {
+   "id": "21:22:south",
+   "source": "place:21",
+   "target": "place:22",
+   "direction": "south",
+   "traversals": 1,
+   "evidence": [
+    560
+   ]
+  },
+  {
+   "id": "22:23:south",
+   "source": "place:22",
+   "target": "place:23",
+   "direction": "south",
+   "traversals": 1,
+   "evidence": [
+    575
+   ]
+  },
+  {
+   "id": "23:24:south",
+   "source": "place:23",
+   "target": "place:24",
+   "direction": "south",
+   "traversals": 1,
+   "evidence": [
+    590
+   ]
+  },
+  {
+   "id": "24:25:south",
+   "source": "place:24",
+   "target": "place:25",
+   "direction": "south",
+   "traversals": 1,
+   "evidence": [
+    605
+   ]
+  },
+  {
+   "id": "25:26:east",
+   "source": "place:25",
+   "target": "place:26",
+   "direction": "east",
+   "traversals": 1,
+   "evidence": [
+    620
+   ]
+  },
+  {
+   "id": "26:27:east",
+   "source": "place:26",
+   "target": "place:27",
+   "direction": "east",
+   "traversals": 1,
+   "evidence": [
+    635
+   ]
+  },
+  {
+   "id": "27:28:east",
+   "source": "place:27",
+   "target": "place:28",
+   "direction": "east",
+   "traversals": 1,
+   "evidence": [
+    650
+   ]
+  },
+  {
+   "id": "28:29:south",
+   "source": "place:28",
+   "target": "place:29",
+   "direction": "south",
+   "traversals": 1,
+   "evidence": [
+    665
+   ]
+  },
+  {
+   "id": "29:30:south",
+   "source": "place:29",
+   "target": "place:30",
+   "direction": "south",
+   "traversals": 1,
+   "evidence": [
+    680
+   ]
+  },
+  {
+   "id": "30:29:north",
+   "source": "place:30",
+   "target": "place:29",
+   "direction": "north",
+   "traversals": 1,
+   "evidence": [
+    704
+   ]
+  },
+  {
+   "id": "29:31:west",
+   "source": "place:29",
+   "target": "place:31",
+   "direction": "west",
+   "traversals": 1,
+   "evidence": [
+    719
+   ]
+  },
+  {
+   "id": "31:32:south",
+   "source": "place:31",
+   "target": "place:32",
+   "direction": "south",
+   "traversals": 1,
+   "evidence": [
+    734
+   ]
+  }
+ ]
+}

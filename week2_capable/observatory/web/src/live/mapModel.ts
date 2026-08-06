@@ -770,15 +770,25 @@ function placeRooms(
             x: other.x + placementVector.x,
             y: other.y + placementVector.y,
           };
-          openInsertionSlot(
-            wanted,
-            otherId,
-            placementVector,
-            points,
-            connections,
-            node.first_seq,
-          );
-          place(node.id, wanted);
+          try {
+            openInsertionSlot(
+              wanted,
+              otherId,
+              placementVector,
+              points,
+              connections,
+              node.first_seq,
+            );
+            place(node.id, wanted);
+          } catch (error) {
+            if (
+              !(error instanceof Error)
+              || !error.message.startsWith("Foreign map component occupies")
+            ) {
+              throw error;
+            }
+            place(node.id, nearestFree(wanted, [...points.values()]));
+          }
           continue;
         }
       }
