@@ -149,6 +149,47 @@ and the same evidence-based judge.
   remains open. The honest claim is efficiency, survival, and compound
   coverage, not victory.
 
+### 4. Reading the transcripts overturned the night's story
+
+The batch numbers were reported before any transcript was read. Opening
+one attempt's full log, message by message, changed the account.
+
+- The mission-phase line the model received on every call was broken: a
+  wiring fault fed it the wrong JSON layer, so every readiness field read
+  "None" and the line always said "sweep them". The phase machinery's
+  entire runtime effect was a constant instruction to explore.
+- The required end-of-response state line was ignored on 27 of 27
+  iterations even though the contract was verifiably in the prompt. The
+  cause is structural: responses that call tools carry little or no
+  text, so demanding a text line on every response fights the tool
+  mechanism itself. The idea needs a different carrier, not a retry.
+- A sweep died after four steps because the character was resting and
+  the game refused to move it ("You feel too relaxed to do that"). The
+  routine never checks posture before walking. Two earlier explanations
+  for this stop were wrong until the journal was read.
+- The model's own thoughts are 27 near-identical repetitions of
+  "continue sweeping to find the minotaur". Nothing it ever saw
+  mentioned its level, equipment, skills, or gold, so no other thought
+  was possible.
+
+The deeper findings are about the knowledge design itself. The store
+holds only the structural skeleton of what the parser sees: room names,
+exits, connections, creature and object names, own vitals. Everything
+qualitative stays in the raw logs and never becomes knowledge: what
+shops sell, what signs say, darkness, appraisals of monsters, doors and
+keys. And the model has no way to read even the stored part: its only
+window is a four-line count summary. Exploration reports pure geometry,
+so the model cannot steer toward promising areas or notice a shop, a
+corpse, or the target itself passing by. A swept-past minotaur would
+have been recorded silently and never announced. The week 0 play skill,
+with a plain text memory read before every action and a page of common
+sense rules, understood the game better than this machinery does.
+
+The call-count collapse from observation 3 stands as measured, but its
+meaning shrinks: it measures cheap walking, not competent play. The
+capability that matters, playing the game, was not built: no readiness
+against a target, no preparation, no economy loop reached, no strategy.
+
 ## Technical Conclusions
 
 - Repeated identical attempts did fail in a stable pattern, and that
@@ -164,12 +205,20 @@ and the same evidence-based judge.
   partially confirmed. Coverage compounds strongly, but the mission's
   cost ceiling, not knowledge, currently bounds each run, so the curve
   shows in mapped ground rather than dollars.
-- Open: whether the mission completes under a raised ceiling on the
-  persistent map, and whether the campaign's engage phase holds up when
-  a sighting finally occurs.
+- Moving decisions into deterministic machinery risks hiding failures
+  instead of fixing them: confirmed the hard way. Aggregate numbers
+  looked like progress while the transcripts showed a blind explorer
+  driven by a broken instruction. Machinery without transcript-level
+  verification, and without a success metric tied to the actual game
+  goal, optimizes the wrong thing efficiently.
+- Open: the knowledge contract needs a revision before more capability
+  work: completeness (qualitative observations must become facts),
+  access (the model must be able to read what it knows), and feedback
+  (exploration must return experience, not geometry). The game strategy
+  layer that week 0 held in prose has no carrier yet.
 
 ## Key Takeaway
 
-Moving what a model cannot know into earned, typed knowledge and what a
-model need not decide into deterministic machinery cut its decisions by
-two thirds and its deaths to zero before the mission itself was ever won.
+Machinery made the agent cheap and safe before anyone checked whether it
+understood the game; the transcripts showed it did not, and only reading
+them revealed it.
