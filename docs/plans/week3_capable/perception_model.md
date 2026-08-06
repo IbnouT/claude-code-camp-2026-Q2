@@ -42,9 +42,18 @@ Two training corpora, one shared evaluation set.
   templates with slot fills varied (names, items, rooms).
 - Corpus B: the same real blocks, plus synthetic blocks generated only
   from patterns observed in our logs, slot fills varied the same way.
-- Adoption rule: corpus B is adopted if its per-label metrics match
-  corpus A within one point of F1 on every label; otherwise A is used
-  and the gap is reported per label.
+- Corpus C: text generated from the label definitions alone, in
+  genuinely varied wording, with no engine templates, no journal text,
+  and nothing derived from the gold set. Training on A measures string
+  coverage of this game's messages; training on C measures whether the
+  model learned the concepts. Only C is a generalization test: the
+  game emits its templates at runtime, so A-trained scores are partly
+  memorization of the test distribution.
+- Adoption rule: a corpus is adopted on per-label floor performance on
+  the frozen gold set, with the A versus C gap reported per label and
+  the fragility tradeoff stated: an A-trained artifact that beats a
+  C-trained one only through template memorization is a string table,
+  and the report must say so.
 
 Training labels come from weak supervision: the existing detectors and
 parser where they exist, plus a one-time model-assisted labeling pass
