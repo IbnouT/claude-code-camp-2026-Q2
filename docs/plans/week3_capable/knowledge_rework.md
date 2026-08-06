@@ -30,6 +30,7 @@ What it must additionally hold, each with its source:
 | Item taken or seen in detail | entity facts from examine and inventory | the examine and inventory commands when used |
 | Area membership hints | place · area · free text | the model's note when it recognizes a district (a sewer, a shop street, a temple quarter) |
 | Aggression | entity · attacks_on_sight · true | an unprovoked combat start in that entity's presence |
+| Body conditions (hungry, thirsty, drunk, poisoned) | player · state.[condition] · true or false | the parser already produces these on player state observations and nothing consumes them: they are journaled and then lost. They become facts, they appear in the state block, and hunger and thirst gate the rest reflex, since neither health nor movement regenerates while the character is starving |
 
 Provenance rules stay as built: parser-derived facts are learned or
 parsed; model-derived facts are beliefs with low confidence; every fact
@@ -94,17 +95,43 @@ play skill as its source text, generalized to genre common sense:
 - loot after kills: corpses carry gold, keys, and gear
 - experience per kill falling means the targets are outleveled: move up
 
-Delivery: the rules ride the state block as one standing compact section
-(they are short); each rule has an id, and reflex or gate decisions cite
-the rule id in their journal events.
+The rules are configuration, not code. They live in an authored rules
+file beside the settings (one entry per rule: id, text, enabled flag,
+and references to the settings that carry its numbers), validated at
+load. Editing or disabling a rule never touches code, so a run can
+measure one rule's impact the same way a capability flag does.
 
-The readiness gate becomes real: the campaign phase function orders
-prepare before locate for an unready character, where unready is typed:
-no weapon or armor equipped, level below the target floor setting, gold
-below a basics floor, or a target appraisal at the forbidden tier. Each
-gate reads facts (equipment from the equipment check, level and gold
-from score, appraisals from recorded considers). The engage phase
-requires a fresh appraisal at an acceptable tier before attack.
+The model is the only decision-maker. The backend never initiates an
+action on its own, and a rule is never executed by code without the
+model's context. Delivery is dual within that authority:
+
+- the model sees every enabled rule: they ride the state block as one
+  standing compact section (they are short), rendered from the file
+  with the configured numbers filled in
+- the typed gates advise, never act: they evaluate facts and place
+  their verdict in the readiness line the model reads ("no weapon
+  equipped, rule R2 advises prepare before locate"), and the model
+  decides. Overriding advice is allowed and requires a stated reason,
+  recorded in the journal beside the cited rule id, so transcripts
+  show advice given, decision taken, and why.
+
+Exactly two mechanisms stay mechanical, both context-safe by nature:
+wimpy, the game's own safety net set once from a setting, and posture
+and rest handling inside a routine the model itself invoked.
+
+Each rule has an id, and gate verdicts and reflex firings cite the
+rule id in their journal events, so transcripts show which rule fired
+and why.
+
+The readiness gate becomes real as an advisor: the campaign phase
+function recommends prepare before locate for an unready character,
+where unready is typed: no weapon or armor equipped, level below the
+target floor setting, gold below a basics floor, or a target appraisal
+at the forbidden tier. Each check reads facts (equipment from the
+equipment check, level and gold from score, appraisals from recorded
+considers). The engage recommendation asks for a fresh appraisal at an
+acceptable tier before attack, and the model may proceed against it
+only with a stated reason.
 
 ## 5. The knowledge surface: a knowledge base, not a table
 
@@ -154,3 +181,83 @@ it, reusing the existing evidence-link pattern from Sessions.
   killed. Call counts and cost remain reported but never stand alone.
 - The knowledge surface is verified by using it as a person: scrolled,
   searched, read, in both themes, against the real store.
+
+## 8. The decision state: an agent that thinks from state, not history
+
+Today every model call carries the whole conversation, and the context
+compacts once it fills: old tool results become stubs, the oldest turns
+are dropped, and what was shed becomes one distilled note. Growth is
+unbounded until that cliff, and what survives it is not chosen by
+relevance.
+
+The alternative, built as a flag-gated experiment: each decision is
+taken from an assembled state of roughly fixed size, not from the
+record of how the agent got there. The path is disposable. What the
+agent knows and what it is doing are not.
+
+```mermaid
+flowchart LR
+    S["objective and rules<br/>(system)"] --> D{decide}
+    P["here and now<br/>room, exits, creatures"] --> D
+    C["character<br/>vitals, level, gold, gear"] --> D
+    T["recent actions<br/>and their outcomes"] --> D
+    N["plan and notes<br/>written by the agent"] --> D
+    K["relevant knowledge<br/>recalled facts"] --> D
+    D --> A["one action"]
+    A --> K
+    A --> N
+```
+
+### What the transcript silently provided, and what replaces it
+
+| Lost with the transcript | Replacement | Risk if missing |
+| --- | --- | --- |
+| Where I have already been | the map: visited rooms and unexplored exits are facts, so re-treading is answerable by arithmetic | re-walking known ground |
+| What already failed here | door and refusal facts per exit, recorded on the refusal | retrying a locked door forever |
+| What I am in the middle of | a current plan field the agent writes and that persists between turns | oscillation: each fresh turn re-decides, and the agent alternates between two intentions without advancing either |
+| How long I have been trying | progress counters in the state: rooms known, steps spent, attempts on the current goal | never escalating strategy, because effort spent is invisible |
+| A hint I read once in prose | a notes field the agent writes through its tool, stored as beliefs | an insight the design never modeled is lost the moment it scrolls |
+
+Measured before designing: across five recorded missions the agent
+re-entered known rooms in 30 to 63 percent of its room entries while
+carrying its full history, with immediate return-to-previous-room
+sequences 6 to 8 times per run. Some of that is unavoidable, since
+reaching new frontier means walking back through corridors. The
+conclusion it supports is narrow and sufficient: carrying the history
+is not what prevents re-treading, so removing it does not remove that
+protection. The map does that work.
+
+### The shape of the experiment
+
+- A setting, not a binary: the number of recent exchanges kept verbatim.
+  The full transcript, a short rolling window, and nothing are the same
+  mechanism at three values.
+- Resets happen at decision boundaries. A tool call and its result stay
+  together, so no cycle is ever cut in half.
+- The assembled state is one rendering with a fixed section order, so
+  what the model sees is designed and diffable rather than accumulated.
+
+### The risk that decides it
+
+The assembled state becomes the ceiling on what the agent can consider.
+Anything without a field does not exist for the model, and unlike a
+transcript it cannot be noticed later. Two guards, both testable:
+
+- the agent writes its own plan and notes, so it can carry an
+  intuition the design never anticipated
+- the notes and plan are shown in the knowledge surface, so a reader
+  can see whether the agent actually uses the affordance or ignores it
+
+### How it is judged
+
+Against the same mission, with the setting as the only difference:
+tokens per decision, re-tread rate, oscillation count, and above all
+game progress. A cheaper agent that reaches less is a failure, and the
+comparison reports both or neither.
+
+Open questions, to be answered by the runs rather than argued:
+
+- does a written plan stay stable across turns, or does the agent
+  rewrite it every turn and thrash
+- how many recent exchanges are needed, if any
+- does the agent use the notes affordance at all when nothing forces it
