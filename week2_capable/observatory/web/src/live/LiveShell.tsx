@@ -170,7 +170,7 @@ export function LiveShell({
         destinations={{
           sessions: { href: sessionsHref(identity?.playerId) },
           experiments: { title: "Experiments will be rebuilt after Live" },
-          knowledge: { title: "Knowledge will be rebuilt after Live" },
+          knowledge: { href: "/knowledge" },
         }}
         identity={identity}
         theme={theme}

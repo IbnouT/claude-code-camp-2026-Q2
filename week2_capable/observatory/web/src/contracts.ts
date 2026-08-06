@@ -796,3 +796,44 @@ function isWorldProjection(value: unknown): boolean {
     && typeof value.parse_miss_rate === "number"
     && typeof value.unknown_positions === "number";
 }
+
+export type KnowledgeEvidence = {
+  session_id: string;
+  source_seq: number;
+  wire_digest: string;
+  parser_version: string;
+  method: string;
+  observed_at: number;
+};
+
+export type KnowledgeAssertion = {
+  assertion_id: string;
+  fact_id: string;
+  subject: string;
+  predicate: string;
+  value: unknown;
+  layer: "belief" | "parsed" | "learned" | "observer_truth";
+  status: string;
+  confidence: string;
+  current: boolean;
+  conflict_group: string | null;
+  evidence: KnowledgeEvidence[];
+};
+
+export type KnowledgeMetric = {
+  id: string;
+  label: string;
+  value: number;
+  detail: string;
+};
+
+export type PlayerKnowledge = {
+  version: 1;
+  player_id: string;
+  state: "ready" | "unavailable" | "incomplete";
+  source: string;
+  cdc_cursor: number;
+  metrics: KnowledgeMetric[];
+  assertions: KnowledgeAssertion[];
+  capture_gaps: string[];
+};

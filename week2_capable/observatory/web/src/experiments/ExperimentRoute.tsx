@@ -115,7 +115,7 @@ export function ExperimentRoute({ theme, onThemeChange }: Props) {
         destinations={{
           live: { title: "Live opens from a running session" },
           sessions: { href: sessionsHref() },
-          knowledge: { title: "Knowledge is not available yet" },
+          knowledge: { href: "/knowledge" },
         }}
         theme={theme}
         onNavigate={(href) => window.location.assign(href)}

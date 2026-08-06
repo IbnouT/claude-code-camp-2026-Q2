@@ -212,7 +212,7 @@ export function SessionRoute({ theme, onThemeChange }: Props) {
             }
             : { title: "Live is available for the running session" },
           experiments: { href: "/experiments" },
-          knowledge: { title: "Knowledge is not available yet" },
+          knowledge: { href: "/knowledge" },
         }}
         identity={identity}
         theme={theme}

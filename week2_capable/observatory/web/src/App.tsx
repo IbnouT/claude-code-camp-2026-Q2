@@ -2,6 +2,7 @@ import { Launcher } from "./Launcher";
 import { LiveShell } from "./live/LiveShell";
 import { SessionRoute } from "./sessions/SessionRoute";
 import { ExperimentRoute } from "./experiments/ExperimentRoute";
+import { KnowledgeRoute } from "./knowledge/KnowledgeRoute";
 import { liveIdentity } from "./routes";
 import { useTheme } from "./theme";
 
@@ -20,6 +21,14 @@ export function App() {
   if (window.location.pathname === "/sessions") {
     return (
       <SessionRoute
+        theme={theme}
+        onThemeChange={setTheme}
+      />
+    );
+  }
+  if (window.location.pathname === "/knowledge") {
+    return (
+      <KnowledgeRoute
         theme={theme}
         onThemeChange={setTheme}
       />

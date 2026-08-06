@@ -38,6 +38,7 @@ observatory/
 │   │   ├── live/
 │   │   ├── sessions/
 │   │   ├── experiments/
+│   │   ├── knowledge/
 │   │   ├── shell/
 │   │   ├── App.tsx
 │   │   ├── Launcher.tsx
@@ -56,7 +57,7 @@ observatory/
   launcher and lifecycle controls.
 - `web/` owns the React application, strict TypeScript contracts, theme,
   launcher, the shared header in `shell/`, Live shell, map, room inspector,
-  Sessions, Experiments, and component tests.
+  Sessions, Experiments, Knowledge, and component tests.
 
 ## Install
 
@@ -203,6 +204,20 @@ ordinary non-experiment runs. Story, Map, Cost, and Ask share one selection.
   live session without resetting the reader's view.
 - Launcher load links route terminal sessions here. Running sessions retain the
   valid path back to Live.
+
+### Knowledge
+
+Knowledge renders the per-player store as inspectable state: every current
+fact with its subject, predicate, value, layer, and confidence, plus the
+session evidence behind it.
+
+- Metrics summarize current facts, known subjects, open conflicts, and
+  source sessions.
+- Search covers subject, predicate, value, layer, and confidence. Layer
+  filters and an include-superseded toggle bound the view.
+- Belief-layer facts (the agent's own assertions) stay visually distinct
+  from learned and parsed facts, and each evidence link opens the session
+  that produced the assertion.
 
 ### Experiments
 
