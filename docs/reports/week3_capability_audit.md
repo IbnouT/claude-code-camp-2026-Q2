@@ -54,7 +54,10 @@ shape, so the reflexes are not the only explanation.
   blocked exits, and the routine ended on its setback limit after four
   steps. Routines do not check posture before stepping.
 - The knowledge page cannot scroll past the first viewport: the Live
-  shell's fixed-viewport page state was never overridden for the route.
+  shell's fixed-viewport page state was never overridden for the route,
+  so of 4,851 facts only the rows that fit one screen are reachable at
+  all. The controls below the fold (layer filters, the superseded
+  toggle) exist but cannot be used.
 
 ## Design failures
 
@@ -67,10 +70,15 @@ shape, so the reflexes are not the only explanation.
   summary. Sightings, services, and beliefs are stored but unreachable
   by the component that decides.
 - Exploration reports geometry only: steps, rooms, frontier, stop
-  reason. Nothing about shops passed, creatures seen, or area character,
-  so the model cannot steer exploration or notice opportunities. The
-  recorded thoughts show the consequence: 27 near-identical resolutions
-  to keep sweeping.
+  reason. The walk parses and stores every room it enters, including
+  creature and object sightings, and then reports none of it: not the
+  names of rooms crossed, not a shop passed, not a creature present,
+  not an area change. The model therefore cannot steer exploration
+  toward promising ground, cannot notice an opportunity it walked
+  through, and cannot judge that a direction is wrong. The recorded
+  thoughts show the consequence: 27 near-identical resolutions to keep
+  sweeping, because pressing sweep again was the only informed action
+  available.
 - No sighting alarm exists. Sweeps do not stop when the mission target
   is seen and their reports omit creatures; the intended alarm through
   the readiness line was disabled by the envelope defect. A swept-past
@@ -83,6 +91,11 @@ shape, so the reflexes are not the only explanation.
   system.
 - The economy routines were never reachable in any run: no kill, no
   loot, no gold, so custody and purchasing remain unexercised code.
-- The knowledge page presents subject-predicate storage rows rather than
-  synthesized knowledge: rooms, a character sheet, and beliefs with
-  their evidence.
+- The knowledge page presents raw storage rows: machine identifiers as
+  primary labels (place and sighting ids with embedded UUIDs), one fact
+  per row with its predicate name, no grouping by room or by meaning,
+  no way to see everything known about one place, no character view,
+  and no statement of what the agent believes versus what it observed.
+  The information is present and humanly unreadable: a reader cannot
+  answer "what does the agent know about the temple" or "what has it
+  seen worth fighting" from this presentation.
