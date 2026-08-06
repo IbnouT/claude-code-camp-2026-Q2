@@ -128,19 +128,39 @@ when the experiment concludes.
 
 ## Execution
 
-Run by a spawned agent in the lab, in this order, reporting after each
-numbered step:
+Run by a spawned agent in the lab. The metric floors are the objective,
+and the loop continues until they are met. Stopping early on a failed
+simple model is not an outcome.
+
+Data phase, reported step by step:
 
 1. Extract and deduplicate reply blocks from all retained journals;
    report corpus size and label-frequency estimates.
 2. Build both synthetic corpora; report generated counts per label.
 3. Build, verify, and freeze the gold set.
-4. Run rung 3 on both corpora; report gold tables.
-5. Run rung 2 on both corpora; report gold tables.
-6. Run rung 4 on both corpora only if a floor remains unmet or a
-   lighter rung is beaten on validation; report gold tables.
-7. Export the winning artifact with its manifest and write the
-   experiment report.
+
+Improvement loop, repeated until every floor is met:
+
+4. Train the current rung on both corpora and evaluate on the gold set.
+5. For every label under its floor, run an error analysis: read the
+   misclassified blocks and name the failure (missing training
+   coverage, label noise, threshold, model capacity).
+6. Apply the cheapest fix the analysis names: targeted synthetic data
+   for the failing label, label corrections, threshold retuning, or
+   the next rung up. Escalation order: linear, frozen embeddings,
+   fine-tuned small encoder, base-size encoder. Data fixes are always
+   tried before model escalation at the same rung.
+7. Return to step 4.
+
+Exit conditions, exactly two:
+
+- Every floor met: export the winning artifact with its manifest and
+  write the experiment report, including every rung and fix attempted.
+- Every rung through the base-size escalation exhausted with error
+  analysis showing the residual failures are irreducibly ambiguous
+  text: report that conclusion with the misclassified blocks as
+  evidence. Silent stopping or unreported lowering of floors is not
+  permitted.
 
 The runtime integration (gateway loads the artifact, flags become typed
 observations with classifier provenance and probability-mapped
