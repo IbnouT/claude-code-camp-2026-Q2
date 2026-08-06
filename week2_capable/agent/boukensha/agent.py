@@ -17,6 +17,7 @@ from .errors import ApiError, TurnCancelled
 from .operator_control import OperatorMailbox, OperatorStopped
 from .logger import Logger
 from .message import Message, ReasoningBlock, TextBlock, ToolUseBlock
+from .state_fields import parse_state_fields
 from .prompt_builder import PromptBuilder
 from .usage import normalize
 
@@ -60,7 +61,8 @@ class Agent:
                  cancel_event: Any = None,
                  operator: OperatorMailbox | None = None,
                  logger: Logger | None = None,
-                 state_block_source: Any = None) -> None:
+                 state_block_source: Any = None,
+                 state_fields_sink: Any = None) -> None:
         self._context = context
         self._registry = registry
         self._builder = builder
@@ -75,6 +77,9 @@ class Agent:
         #: block, injected as a volatile final user message on every model
         #: call and never retained in history. None disables the mechanism.
         self._state_block_source = state_block_source
+        #: Optional callable receiving each response's parsed STATE fields.
+        #: None disables capture entirely.
+        self._state_fields_sink = state_fields_sink
         # Build a default Logger when none is passed, rather than a def-time
         # default, so agents never share one session file and Python's
         # mutable-default pitfall is avoided. A default Logger opens a session
@@ -183,6 +188,7 @@ class Agent:
             parsed = self._builder.parse_response(response)
             self._record_usage(response)
             self._log_reasoning(parsed.content)
+            self._capture_state_fields(parsed.content)
 
             if parsed.stop_reason == "tool_use":
                 self._handle_tool_calls(parsed.content, response,
@@ -392,6 +398,26 @@ class Agent:
             duration_ms = (time.monotonic() - start) * 1000.0
             self._turn_duration_ms += duration_ms
         return response, duration_ms
+
+    def _capture_state_fields(self, content: Any) -> None:
+        """Extract the required STATE line and hand it to the sink.
+
+        Only active when a sink is configured. A missing or malformed line
+        is logged as evidence rather than raised: the field contract's
+        adherence is itself a measurement.
+        """
+        if self._state_fields_sink is None:
+            return
+        text = self._extract_text(content)
+        fields = parse_state_fields(text) if text else None
+        if fields is None:
+            self._logger.state_fields_missing()
+            return
+        self._logger.state_fields(fields)
+        try:
+            self._state_fields_sink(fields)
+        except Exception as error:
+            self._logger.state_block_failed(str(error))
 
     def _volatile_state_message(self) -> Message | None:
         """The re-rendered state block as a message, or None.

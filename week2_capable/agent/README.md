@@ -167,6 +167,13 @@ The gateway configuration reference is in
 `week2_capable/gateway/README.md`. The Observatory configuration reference is
 in `week2_capable/observatory/README.md`.
 
+The top-level `capabilities:` block holds the week 3 capability master
+flags, all off by default. With the `knowledge` capability on, the agent
+appends the required STATE line contract to the system prompt, injects the
+gateway's rendered state block as a volatile final message on every model
+call, and forwards each response's parsed fields to the gateway as
+belief-layer facts. `state_fields.py` owns the contract and its parsing.
+
 ## Tests
 
 ```bash

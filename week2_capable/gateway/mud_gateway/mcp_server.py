@@ -18,6 +18,7 @@ from .knowledge import KnowledgeStore
 from .knowledge_projection import KnowledgeProjector
 from .navigation import NavigationExecutor
 from .state_block import render_state_block
+from .state_notes import record_state_fields
 from .profiles import (
     PROFILES,
     CapabilityUnavailable,
@@ -60,6 +61,7 @@ async def execute(
         event_session: str,
         navigation: NavigationExecutor | None = None,
         state_reader: Callable[[], str] | None = None,
+        state_notes: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
 ) -> CommandObservation:
     """Execute one authorized capability and trace it end to end."""
     capability = invocation.capability
@@ -92,6 +94,29 @@ async def execute(
         if session is None:
             raise RuntimeError(f"{capability.name} requires a game session")
         if capability.execution == "routine":
+            if capability.name == "note_state":
+                if state_notes is None:
+                    raise CapabilityUnavailable(
+                        f"{capability.name!r} needs the knowledge capability")
+                recorded = state_notes(invocation.arguments)
+                text = json.dumps(recorded, separators=(",", ":"),
+                                  sort_keys=True)
+                event = journal.append(
+                    event_session,
+                    "state_fields",
+                    recorded,
+                    trace_id=trace_id,
+                )
+                return CommandObservation(
+                    tool=invocation.tool,
+                    capability=capability.name,
+                    family=capability.family,
+                    command=None,
+                    text=text,
+                    complete=True,
+                    sequence=event.seq,
+                    trace_id=trace_id,
+                )
             if capability.name == "recall_state":
                 if state_reader is None:
                     raise CapabilityUnavailable(
@@ -316,9 +341,10 @@ async def serve(
     knowledge_store: KnowledgeStore | None = None
     navigation: NavigationExecutor | None = None
     state_reader: Callable[[], str] | None = None
+    state_notes: Callable[[dict[str, Any]], dict[str, Any]] | None = None
 
     async def game_session() -> Session:
-        nonlocal knowledge_store, navigation, session, state_reader
+        nonlocal knowledge_store, navigation, session, state_notes, state_reader
         if session is None:
             profile = settings.player(player_profile)
             password = settings.player_password(profile.id)
@@ -364,6 +390,19 @@ async def serve(
                     )
 
                 state_reader = read_state
+
+                def write_notes(arguments: dict[str, Any]) -> dict[str, Any]:
+                    return record_state_fields(
+                        store,
+                        live.observations.knowledge,
+                        live.id,
+                        live.journal.last_seq(live.id),
+                        perceive=arguments.get("perceive"),
+                        threat=arguments.get("threat"),
+                        learned=arguments.get("learned"),
+                    )
+
+                state_notes = write_notes
         return session
 
     @server.list_tools()
@@ -386,6 +425,7 @@ async def serve(
                 event_session=target.id if target is not None else run_id,
                 navigation=navigation,
                 state_reader=state_reader,
+                state_notes=state_notes,
             )
         except Exception as error:
             result = failure(
@@ -472,7 +512,7 @@ def main(argv: list[str] | None = None) -> int:
     extensions = frozenset().union(
         frozenset({"sweep", "travel_to"})
         if settings.capabilities.get("navigation") else frozenset(),
-        frozenset({"recall_state"})
+        frozenset({"recall_state", "note_state"})
         if settings.capabilities.get("knowledge") else frozenset(),
     )
     surface = Surface(profile, extensions)

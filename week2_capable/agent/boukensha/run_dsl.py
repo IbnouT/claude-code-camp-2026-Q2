@@ -39,6 +39,7 @@ from .session_control import (
     relocate_selected_session,
     reset_selected_session,
 )
+from .state_fields import CONTRACT as STATE_FIELDS_CONTRACT
 from .tasks import Player
 from .tools import mcp as mcp_host
 from .version import __version__
@@ -165,6 +166,8 @@ def _assemble(*,
             task_settings,
             override_path=cfg.user_prompt_path(Player.task_name),
         )
+    if cfg.capability("knowledge"):
+        system = f"{system}\n\n{STATE_FIELDS_CONTRACT}"
     if model is None:
         model = Player.model(task_settings)
     if backend is None:
@@ -320,6 +323,28 @@ def _state_block_source(cfg, registry: Registry):
     return fetch
 
 
+def _state_fields_sink(cfg, registry: Registry):
+    """Forwards parsed STATE fields to the gateway, or None when off."""
+    if cfg is None or not cfg.capability("knowledge"):
+        return None
+    names = [
+        name for name in registry.tools
+        if name == "note_state" or name.endswith("_note_state")
+    ]
+    if not names:
+        return None
+    tool_name = names[0]
+
+    def forward(fields: dict) -> None:
+        arguments = {
+            name: value for name, value in fields.items()
+            if value is not None
+        }
+        registry.dispatch(tool_name, arguments)
+
+    return forward
+
+
 def run(task: str, *,
         system: str | None = None,
         model: str | None = None,
@@ -386,6 +411,9 @@ def run(task: str, *,
             logger=logger,
             operator=operator,
             state_block_source=_state_block_source(
+                assembled.config, assembled.registry,
+            ),
+            state_fields_sink=_state_fields_sink(
                 assembled.config, assembled.registry,
             ),
         )

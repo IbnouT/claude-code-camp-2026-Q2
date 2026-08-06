@@ -101,6 +101,10 @@ the `capabilities.knowledge` settings flag.
 - The `recall_state` tool serves it while the flag is on, costing no game
   command. The agent also fetches it before every model call and injects
   it as a volatile final message that never persists in history.
+- The agent's required per-response STATE fields arrive through the
+  `note_state` tool and become belief-layer facts with model provenance
+  (`state_notes.py`): perception, present threat, and durable notes,
+  each low confidence and inspectable.
 
 ## Installation
 

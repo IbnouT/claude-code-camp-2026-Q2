@@ -110,6 +110,12 @@ class Logger:
     def state_block_failed(self, error: str) -> None:
         self._write_log({"phase": "state_block_failed", "error": error})
 
+    def state_fields(self, fields: dict) -> None:
+        self._write_log({"phase": "state_fields", **fields})
+
+    def state_fields_missing(self) -> None:
+        self._write_log({"phase": "state_fields_missing"})
+
     def turn_end(self, reason: str, iterations: int,
                  tokens: int | None = None, *,
                  input_tokens: int | None = None,

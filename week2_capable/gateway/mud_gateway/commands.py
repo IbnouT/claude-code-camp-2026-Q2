@@ -430,6 +430,19 @@ CAPABILITIES: tuple[Capability, ...] = (
         available=False,
     ),
     Capability(
+        "note_state",
+        "Record your required state assessment: perception, present "
+        "threat, and anything durable you just learned.",
+        "perception", "interact", "none",
+        (
+            _argument("perceive", choices=("clear", "dark", "unknown")),
+            _argument("threat"),
+            _argument("learned"),
+        ),
+        execution="routine",
+        available=False,
+    ),
+    Capability(
         "sweep",
         "Explore unmapped ground from the learned frontier until a bound "
         "or an interrupt stops the walk.",
