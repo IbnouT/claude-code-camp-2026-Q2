@@ -18,7 +18,8 @@ from .knowledge import KnowledgeStore
 from .knowledge_projection import KnowledgeProjector
 from .navigation import NavigationExecutor
 from .state_block import render_state_block
-from .state_notes import record_state_fields
+from .economy import Economy, report_text as economy_report_text
+from .state_notes import record_service, record_state_fields
 from .survival import Survival
 from .profiles import (
     PROFILES,
@@ -63,6 +64,8 @@ async def execute(
         navigation: NavigationExecutor | None = None,
         state_reader: Callable[[], str] | None = None,
         state_notes: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
+        service_notes: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
+        economy: Economy | None = None,
 ) -> CommandObservation:
     """Execute one authorized capability and trace it end to end."""
     capability = invocation.capability
@@ -95,6 +98,51 @@ async def execute(
         if session is None:
             raise RuntimeError(f"{capability.name} requires a game session")
         if capability.execution == "routine":
+            if capability.name == "note_service":
+                if service_notes is None:
+                    raise CapabilityUnavailable(
+                        f"{capability.name!r} needs the knowledge capability")
+                recorded = service_notes(invocation.arguments)
+                event = journal.append(
+                    event_session, "service_note", recorded,
+                    trace_id=trace_id,
+                )
+                return CommandObservation(
+                    tool=invocation.tool,
+                    capability=capability.name,
+                    family=capability.family,
+                    command=None,
+                    text=json.dumps(recorded, separators=(",", ":"),
+                                    sort_keys=True),
+                    complete=True,
+                    sequence=event.seq,
+                    trace_id=trace_id,
+                )
+            if capability.name == "bank_surplus":
+                if economy is None:
+                    raise CapabilityUnavailable(
+                        f"{capability.name!r} needs the economy capability")
+                recorded = await economy.bank_surplus()
+                event = journal.append(
+                    event_session, "tool_result",
+                    {
+                        "tool": invocation.tool,
+                        "capability": capability.name,
+                        "complete": True,
+                        "sequence": journal.last_seq(event_session),
+                    },
+                    trace_id=trace_id,
+                )
+                return CommandObservation(
+                    tool=invocation.tool,
+                    capability=capability.name,
+                    family=capability.family,
+                    command=None,
+                    text=economy_report_text(recorded),
+                    complete=True,
+                    sequence=event.seq,
+                    trace_id=trace_id,
+                )
             if capability.name == "note_state":
                 if state_notes is None:
                     raise CapabilityUnavailable(
@@ -343,9 +391,11 @@ async def serve(
     navigation: NavigationExecutor | None = None
     state_reader: Callable[[], str] | None = None
     state_notes: Callable[[dict[str, Any]], dict[str, Any]] | None = None
+    service_notes: Callable[[dict[str, Any]], dict[str, Any]] | None = None
+    economy: Economy | None = None
 
     async def game_session() -> Session:
-        nonlocal knowledge_store, navigation, session, state_notes, state_reader
+        nonlocal economy, knowledge_store, navigation, service_notes, session, state_notes, state_reader
         if session is None:
             profile = settings.player(player_profile)
             password = settings.player_password(profile.id)
@@ -414,6 +464,25 @@ async def serve(
                     )
 
                 state_notes = write_notes
+
+                def write_service(arguments: dict[str, Any]) -> dict[str, Any]:
+                    return record_service(
+                        store,
+                        live.observations.knowledge,
+                        live.id,
+                        live.journal.last_seq(live.id),
+                        kind=arguments["kind"],
+                        detail=arguments.get("detail"),
+                    )
+
+                service_notes = write_service
+            if settings.capabilities.get("economy") and knowledge_store:
+                economy = Economy(
+                    session,
+                    knowledge_store,
+                    navigation,
+                    settings.capability_settings.get("economy"),
+                )
         return session
 
     @server.list_tools()
@@ -437,6 +506,8 @@ async def serve(
                 navigation=navigation,
                 state_reader=state_reader,
                 state_notes=state_notes,
+                service_notes=service_notes,
+                economy=economy,
             )
         except Exception as error:
             result = failure(
@@ -523,8 +594,10 @@ def main(argv: list[str] | None = None) -> int:
     extensions = frozenset().union(
         frozenset({"sweep", "travel_to"})
         if settings.capabilities.get("navigation") else frozenset(),
-        frozenset({"recall_state", "note_state"})
+        frozenset({"recall_state", "note_state", "note_service"})
         if settings.capabilities.get("knowledge") else frozenset(),
+        frozenset({"bank_surplus"})
+        if settings.capabilities.get("economy") else frozenset(),
     )
     surface = Surface(profile, extensions)
     if args.prove:

@@ -120,6 +120,19 @@ the `capabilities.knowledge` settings flag.
 - Every reflex firing is journaled with its rule id, version, and the
   numbers that triggered it.
 
+## Economy capability
+
+`economy.py` is gold custody, off by default behind the
+`capabilities.economy` settings flag.
+
+- The model records recognized services (bank, shop, guild, fountain,
+  food, grinding, healer) through `note_service`; the store keeps them as
+  belief facts at the current place.
+- `bank_surplus` deposits gold above the configurable carry ceiling at a
+  recorded bank, travelling there over the learned map, and declines with
+  a typed reason when gold is unknown, no surplus exists, no bank is
+  recorded, or navigation is off.
+
 ## Installation
 
 Install the gateway as an isolated user-level command from the repository

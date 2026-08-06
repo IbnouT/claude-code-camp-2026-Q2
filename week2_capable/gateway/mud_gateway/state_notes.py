@@ -61,3 +61,44 @@ def record_state_fields(
         subject = place if place is not None else f"session:{session_id}"
         note(subject, "model.note", learned)
     return recorded
+
+
+SERVICE_KINDS = (
+    "bank", "shop", "guild", "fountain", "food", "grinding", "healer",
+)
+
+
+def record_service(
+    store: Any,
+    projector: Any,
+    session_id: str,
+    source_seq: int,
+    *,
+    kind: str,
+    detail: str | None = None,
+) -> dict[str, Any]:
+    """Record the current place as offering one recognized service."""
+    place = getattr(projector, "current_place_id", None)
+    recorded: dict[str, Any] = {"place": place, "kind": kind}
+    if kind not in SERVICE_KINDS or place is None:
+        recorded["stored"] = False
+        return recorded
+    evidence = EvidenceRef(
+        session_id=session_id,
+        source_seq=source_seq,
+        wire_digest="model",
+        parser_version=PARSER_VERSION,
+        method=METHOD,
+        observed_at=time.time(),
+    )
+    store.assert_fact(
+        place,
+        f"service.{kind}",
+        detail or True,
+        layer="belief",
+        confidence="low",
+        evidence=evidence,
+        transaction_id=f"service-{uuid.uuid4().hex[:12]}",
+    )
+    recorded["stored"] = True
+    return recorded

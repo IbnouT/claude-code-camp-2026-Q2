@@ -443,6 +443,33 @@ CAPABILITIES: tuple[Capability, ...] = (
         available=False,
     ),
     Capability(
+        "note_service",
+        "Record the current room as offering a recognized service, so "
+        "later routines can route back to it.",
+        "perception", "interact", "none",
+        (
+            _argument(
+                "kind",
+                required=True,
+                choices=(
+                    "bank", "shop", "guild", "fountain", "food",
+                    "grinding", "healer",
+                ),
+            ),
+            _argument("detail"),
+        ),
+        execution="routine",
+        available=False,
+    ),
+    Capability(
+        "bank_surplus",
+        "Deposit gold above the carry ceiling at a recorded bank.",
+        "items", "act", "none",
+        (),
+        execution="routine",
+        available=False,
+    ),
+    Capability(
         "sweep",
         "Explore unmapped ground from the learned frontier until a bound "
         "or an interrupt stops the walk.",
