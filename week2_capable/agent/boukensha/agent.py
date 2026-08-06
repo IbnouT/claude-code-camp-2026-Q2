@@ -59,7 +59,8 @@ class Agent:
                  thinking: str | None = None,
                  cancel_event: Any = None,
                  operator: OperatorMailbox | None = None,
-                 logger: Logger | None = None) -> None:
+                 logger: Logger | None = None,
+                 state_block_source: Any = None) -> None:
         self._context = context
         self._registry = registry
         self._builder = builder
@@ -70,6 +71,10 @@ class Agent:
         #: model call, so Esc in the TUI ends a turn promptly and cheaply.
         self._cancel_event = cancel_event
         self._operator = operator
+        #: Optional zero-argument callable returning the knowledge state
+        #: block, injected as a volatile final user message on every model
+        #: call and never retained in history. None disables the mechanism.
+        self._state_block_source = state_block_source
         # Build a default Logger when none is passed, rather than a def-time
         # default, so agents never share one session file and Python's
         # mutable-default pitfall is avoided. A default Logger opens a session
@@ -375,12 +380,35 @@ class Agent:
         it, which on a timeout is the largest number in the turn.
         """
         start = time.monotonic()
+        volatile = self._volatile_state_message()
+        if volatile is not None:
+            self._context.messages.append(volatile)
         try:
             response = (client or self._client).call(**opts)
         finally:
+            if volatile is not None and self._context.messages \
+                    and self._context.messages[-1] is volatile:
+                self._context.messages.pop()
             duration_ms = (time.monotonic() - start) * 1000.0
             self._turn_duration_ms += duration_ms
         return response, duration_ms
+
+    def _volatile_state_message(self) -> Message | None:
+        """The re-rendered state block as a message, or None.
+
+        A failing source never breaks the loop: the call proceeds without
+        the block, and the failure is visible in the session log.
+        """
+        if self._state_block_source is None:
+            return None
+        try:
+            block = self._state_block_source()
+        except Exception as error:
+            self._logger.state_block_failed(str(error))
+            return None
+        if not block:
+            return None
+        return Message.user(f"[state]\n{block}")
 
     def _call_opts(self) -> dict[str, Any]:
         """Per-call options shared by every work-iteration model round trip.

@@ -10,13 +10,14 @@ import argparse
 import json
 import sys
 import uuid
-from typing import Any
+from typing import Any, Callable
 
 from .commands import BY_NAME, IMMORTAL, Capability
 from .journal import Journal
 from .knowledge import KnowledgeStore
 from .knowledge_projection import KnowledgeProjector
 from .navigation import NavigationExecutor
+from .state_block import render_state_block
 from .profiles import (
     PROFILES,
     CapabilityUnavailable,
@@ -58,6 +59,7 @@ async def execute(
         journal: Journal,
         event_session: str,
         navigation: NavigationExecutor | None = None,
+        state_reader: Callable[[], str] | None = None,
 ) -> CommandObservation:
     """Execute one authorized capability and trace it end to end."""
     capability = invocation.capability
@@ -90,6 +92,32 @@ async def execute(
         if session is None:
             raise RuntimeError(f"{capability.name} requires a game session")
         if capability.execution == "routine":
+            if capability.name == "recall_state":
+                if state_reader is None:
+                    raise CapabilityUnavailable(
+                        f"{capability.name!r} needs the knowledge capability")
+                text = state_reader()
+                event = journal.append(
+                    event_session,
+                    "tool_result",
+                    {
+                        "tool": invocation.tool,
+                        "capability": capability.name,
+                        "complete": True,
+                        "sequence": journal.last_seq(event_session),
+                    },
+                    trace_id=trace_id,
+                )
+                return CommandObservation(
+                    tool=invocation.tool,
+                    capability=capability.name,
+                    family=capability.family,
+                    command=None,
+                    text=text,
+                    complete=True,
+                    sequence=event.seq,
+                    trace_id=trace_id,
+                )
             if navigation is None:
                 raise CapabilityUnavailable(
                     f"{capability.name!r} needs the navigation capability")
@@ -287,9 +315,10 @@ async def serve(
     control: ResetControlServer | None = None
     knowledge_store: KnowledgeStore | None = None
     navigation: NavigationExecutor | None = None
+    state_reader: Callable[[], str] | None = None
 
     async def game_session() -> Session:
-        nonlocal knowledge_store, navigation, session
+        nonlocal knowledge_store, navigation, session, state_reader
         if session is None:
             profile = settings.player(player_profile)
             password = settings.player_password(profile.id)
@@ -323,6 +352,18 @@ async def serve(
                     knowledge_store,
                     settings.capability_settings.get("navigation"),
                 )
+            if settings.capabilities.get("knowledge") and knowledge_store:
+                store = knowledge_store
+                live = session
+
+                def read_state() -> str:
+                    return render_state_block(
+                        store,
+                        live.observations,
+                        live.observations.knowledge,
+                    )
+
+                state_reader = read_state
         return session
 
     @server.list_tools()
@@ -344,6 +385,7 @@ async def serve(
                 journal=journal,
                 event_session=target.id if target is not None else run_id,
                 navigation=navigation,
+                state_reader=state_reader,
             )
         except Exception as error:
             result = failure(
@@ -427,10 +469,11 @@ def main(argv: list[str] | None = None) -> int:
             name.strip() for name in args.allow.split(",") if name.strip()
         )
         profile = load_profile(args.profile or settings.profile, allow)
-    extensions = (
+    extensions = frozenset().union(
         frozenset({"sweep", "travel_to"})
-        if settings.capabilities.get("navigation")
-        else frozenset()
+        if settings.capabilities.get("navigation") else frozenset(),
+        frozenset({"recall_state"})
+        if settings.capabilities.get("knowledge") else frozenset(),
     )
     surface = Surface(profile, extensions)
     if args.prove:

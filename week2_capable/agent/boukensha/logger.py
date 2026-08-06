@@ -107,6 +107,9 @@ class Logger:
     def limit_reached(self, kind: str, n: int, max: int | None) -> None:
         self._write_log({"phase": "limit_reached", "kind": kind, "n": n, "max": max})
 
+    def state_block_failed(self, error: str) -> None:
+        self._write_log({"phase": "state_block_failed", "error": error})
+
     def turn_end(self, reason: str, iterations: int,
                  tokens: int | None = None, *,
                  input_tokens: int | None = None,

@@ -421,6 +421,15 @@ CAPABILITIES: tuple[Capability, ...] = (
         available=False,
     ),
     Capability(
+        "recall_state",
+        "Summarize the current place, exits, vitals, and map coverage "
+        "from retained knowledge. Costs no game command.",
+        "perception", "interact", "none",
+        (),
+        execution="routine",
+        available=False,
+    ),
+    Capability(
         "sweep",
         "Explore unmapped ground from the learned frontier until a bound "
         "or an interrupt stops the walk.",

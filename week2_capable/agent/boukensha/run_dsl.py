@@ -133,6 +133,7 @@ class _Assembled(NamedTuple):
     provider: str
     model: str
     servers: dict[str, int]
+    config: Any = None
 
 
 def _assemble(*,
@@ -288,7 +289,35 @@ def _assemble(*,
         provider=backend,
         model=model,
         servers=servers,
+        config=cfg,
     )
+
+
+def _state_block_source(cfg, registry: Registry):
+    """The knowledge state-block fetcher, or None when the flag is off.
+
+    The block is served by the gateway's recall_state tool, whichever
+    prefixed name it registered under. A configured flag with no such tool
+    yields None rather than a broken agent.
+    """
+    if cfg is None or not cfg.capability("knowledge"):
+        return None
+    names = [
+        name for name in registry.tools
+        if name == "recall_state" or name.endswith("_recall_state")
+    ]
+    if not names:
+        return None
+    tool_name = names[0]
+
+    def fetch() -> str | None:
+        result = registry.dispatch(tool_name)
+        text = getattr(result, "text", None)
+        if isinstance(text, str):
+            return text
+        return result if isinstance(result, str) else None
+
+    return fetch
 
 
 def run(task: str, *,
@@ -356,6 +385,9 @@ def run(task: str, *,
             thinking=thinking,
             logger=logger,
             operator=operator,
+            state_block_source=_state_block_source(
+                assembled.config, assembled.registry,
+            ),
         )
         logger.turn(n=1, instruction=task)
         assembled.context.add(Message.user(task))

@@ -90,6 +90,18 @@ the `capabilities.navigation` settings flag.
   movement, or a health drop between steps.
 - With the flag off the advertised surface and its digest are unchanged.
 
+## Knowledge capability
+
+The first knowledge mechanism is the state block, off by default behind
+the `capabilities.knowledge` settings flag.
+
+- `state_block.py` renders one compact summary from the store and the
+  session's retained observations: the current place, each exit marked
+  known or unexplored, live vitals numbers, and map coverage.
+- The `recall_state` tool serves it while the flag is on, costing no game
+  command. The agent also fetches it before every model call and injects
+  it as a volatile final message that never persists in history.
+
 ## Installation
 
 Install the gateway as an isolated user-level command from the repository
