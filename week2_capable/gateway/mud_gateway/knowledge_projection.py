@@ -185,6 +185,11 @@ class KnowledgeProjector:
             f"{observation.wire_ref.last_seq}:{observation.wire_ref.digest}"
         )
 
+    @property
+    def current_place_id(self) -> str | None:
+        """The stable store identity of the last observed place, if any."""
+        return self._last_place
+
     def _position_place(self, position: PositionObservation) -> str | None:
         if position.place is None:
             return None

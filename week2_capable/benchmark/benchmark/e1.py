@@ -87,6 +87,12 @@ def main(argv: list[str] | None = None) -> int:
         help="count every launched attempt toward --runs, timeouts included",
     )
     parser.add_argument(
+        "--capability",
+        action="append",
+        default=[],
+        help="enable one named capability in the attempt overlay, repeatable",
+    )
+    parser.add_argument(
         "--player",
         help="one-off player character, requires --password-stdin",
     )
@@ -178,6 +184,7 @@ def main(argv: list[str] | None = None) -> int:
             compaction_threshold=arguments.compaction_threshold,
             max_iterations=arguments.max_iterations,
             max_turn_cost=arguments.max_sample_cost,
+            capabilities=tuple(arguments.capability),
         )
         runtime_environment = dict(os.environ)
         password = (

@@ -54,6 +54,10 @@ gateway/
 │   ├── position.py
 │   ├── stream.py
 │   ├── api.py
+│   ├── navigation/
+│   │   ├── graph.py
+│   │   ├── route.py
+│   │   └── executor.py
 │   ├── profiles.py
 │   ├── raw.py
 │   ├── results.py
@@ -67,6 +71,24 @@ gateway/
 
 `mud_gateway` is the import namespace. The outer `gateway` directory is the
 application project.
+
+## Navigation capability
+
+`navigation/` is the purposeful-movement capability, off by default behind
+the `capabilities.navigation` settings flag.
+
+- The learned map becomes a graph read from the knowledge store, and route
+  planning is shortest-path search over it. Edge weights default to hop
+  counts and accept an injected weight function.
+- Two routine tools appear on the surface only while the flag is enabled:
+  `sweep` explores from the nearest unexplored exit, `travel_to` walks a
+  computed route to a remembered room title. Travel has its own
+  `travel_enabled` setting inside the block.
+- Routines execute through the ordinary session command path, so every
+  step stays journaled wire evidence, and they stop with a typed reason:
+  arrived, frontier exhausted, a bound, a blocked or unexpected room, low
+  movement, or a health drop between steps.
+- With the flag off the advertised surface and its digest are unchanged.
 
 ## Installation
 

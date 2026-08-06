@@ -21,7 +21,7 @@ IMMORTAL = frozenset({
     "trans", "transfer", "users", "wizlock",
 })
 
-Execution = Literal["wire", "poll", "status", "raw", "future"]
+Execution = Literal["wire", "poll", "status", "raw", "routine", "future"]
 Group = Literal["act", "interact", "observe", "navigate"]
 
 
@@ -418,6 +418,26 @@ CAPABILITIES: tuple[Capability, ...] = (
             ),
         ),
         execution="future",
+        available=False,
+    ),
+    Capability(
+        "sweep",
+        "Explore unmapped ground from the learned frontier until a bound "
+        "or an interrupt stops the walk.",
+        "movement", "navigate", "none",
+        (),
+        execution="routine",
+        available=False,
+    ),
+    Capability(
+        "travel_to",
+        "Walk a computed route over the learned map to a room named by "
+        "its remembered title.",
+        "movement", "navigate", "none",
+        (
+            _argument("destination", required=True),
+        ),
+        execution="routine",
         available=False,
     ),
 )

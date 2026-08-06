@@ -16,6 +16,7 @@ from .commands import BY_NAME, IMMORTAL, Capability
 from .journal import Journal
 from .knowledge import KnowledgeStore
 from .knowledge_projection import KnowledgeProjector
+from .navigation import NavigationExecutor
 from .profiles import (
     PROFILES,
     CapabilityUnavailable,
@@ -56,6 +57,7 @@ async def execute(
         *,
         journal: Journal,
         event_session: str,
+        navigation: NavigationExecutor | None = None,
 ) -> CommandObservation:
     """Execute one authorized capability and trace it end to end."""
     capability = invocation.capability
@@ -87,6 +89,40 @@ async def execute(
     else:
         if session is None:
             raise RuntimeError(f"{capability.name} requires a game session")
+        if capability.execution == "routine":
+            if navigation is None:
+                raise CapabilityUnavailable(
+                    f"{capability.name!r} needs the navigation capability")
+            if capability.name == "sweep":
+                report = await navigation.sweep()
+            elif capability.name == "travel_to":
+                report = await navigation.travel(
+                    invocation.arguments["destination"]
+                )
+            else:
+                raise CapabilityUnavailable(
+                    f"{capability.name!r} has no routine implementation")
+            journal.append(
+                event_session,
+                "tool_result",
+                {
+                    "tool": invocation.tool,
+                    "capability": capability.name,
+                    "complete": True,
+                    "sequence": journal.last_seq(event_session),
+                },
+                trace_id=trace_id,
+            )
+            return CommandObservation(
+                tool=invocation.tool,
+                capability=capability.name,
+                family=capability.family,
+                command=None,
+                text=report.text(),
+                complete=True,
+                sequence=journal.last_seq(event_session),
+                trace_id=trace_id,
+            )
         if capability.execution == "wire":
             command = capability.build(invocation.arguments)
             reply = await session.command(command, trace_id=trace_id)
@@ -250,9 +286,10 @@ async def serve(
     session: Session | None = None
     control: ResetControlServer | None = None
     knowledge_store: KnowledgeStore | None = None
+    navigation: NavigationExecutor | None = None
 
     async def game_session() -> Session:
-        nonlocal knowledge_store, session
+        nonlocal knowledge_store, navigation, session
         if session is None:
             profile = settings.player(player_profile)
             password = settings.player_password(profile.id)
@@ -280,6 +317,12 @@ async def serve(
             record_profile(journal, session.id, surface)
             await session.open()
             await seed_login_observations(session, journal)
+            if settings.capabilities.get("navigation") and knowledge_store:
+                navigation = NavigationExecutor(
+                    session,
+                    knowledge_store,
+                    settings.capability_settings.get("navigation"),
+                )
         return session
 
     @server.list_tools()
@@ -300,6 +343,7 @@ async def serve(
                 surface,
                 journal=journal,
                 event_session=target.id if target is not None else run_id,
+                navigation=navigation,
             )
         except Exception as error:
             result = failure(
@@ -383,7 +427,12 @@ def main(argv: list[str] | None = None) -> int:
             name.strip() for name in args.allow.split(",") if name.strip()
         )
         profile = load_profile(args.profile or settings.profile, allow)
-    surface = Surface(profile)
+    extensions = (
+        frozenset({"sweep", "travel_to"})
+        if settings.capabilities.get("navigation")
+        else frozenset()
+    )
+    surface = Surface(profile, extensions)
     if args.prove:
         return prove(surface)
     import asyncio

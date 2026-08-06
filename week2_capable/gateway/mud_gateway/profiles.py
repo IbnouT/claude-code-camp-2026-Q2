@@ -105,10 +105,35 @@ class Invocation:
 
 
 class Surface:
-    """Generated schemas plus server-side enforcement for one profile."""
+    """Generated schemas plus server-side enforcement for one profile.
 
-    def __init__(self, profile: Profile) -> None:
+    ``extensions`` are routine capabilities added by an enabled capability
+    flag. They live outside every profile so a disabled flag leaves the
+    profile's surface byte-identical, and enabling one changes the
+    advertised tool count visibly.
+    """
+
+    def __init__(
+        self,
+        profile: Profile,
+        extensions: frozenset[str] = frozenset(),
+    ) -> None:
+        unknown = extensions - set(BY_NAME)
+        if unknown:
+            raise ProfileError(
+                f"unknown extension capabilities: {sorted(unknown)}"
+            )
+        not_routine = {
+            name for name in extensions
+            if BY_NAME[name].execution != "routine"
+        }
+        if not_routine:
+            raise ProfileError(
+                f"extensions must be routine capabilities: "
+                f"{sorted(not_routine)}"
+            )
         self.profile = profile
+        self.extensions = frozenset(extensions)
         self._schemas = tuple(self._generate_schemas())
 
     def schemas(self) -> list[dict[str, Any]]:
@@ -134,6 +159,7 @@ class Surface:
             "raw_enabled": "send_raw" in self.profile.allowed,
             "advertised_tools": len(self._schemas),
             "schema_bytes": self.schema_bytes,
+            "extensions": sorted(self.extensions),
         }
 
     def resolve(
@@ -154,6 +180,9 @@ class Surface:
         return Invocation(tool, capability, capability.validate(arguments))
 
     def _resolve_hybrid(self, tool: str, arguments: dict[str, Any]) -> Invocation:
+        if tool in self.extensions:
+            capability = BY_NAME[tool]
+            return Invocation(tool, capability, capability.validate(arguments))
         if tool == "move":
             capability = BY_NAME["move"]
             self._authorize(capability)
@@ -182,6 +211,8 @@ class Surface:
         return Invocation(tool, capability, capability.validate(nested))
 
     def _authorize(self, capability: Capability) -> None:
+        if capability.name in self.extensions:
+            return
         if not capability.available:
             raise CapabilityUnavailable(
                 f"{capability.name!r} is defined but not implemented")
@@ -193,6 +224,8 @@ class Surface:
             capability for capability in AVAILABLE
             if capability.name in self.profile.allowed
         ]
+        for name in sorted(self.extensions):
+            yield BY_NAME[name].schema()
         if self.profile.projection == "direct":
             for capability in allowed:
                 yield capability.schema()

@@ -104,6 +104,7 @@ def create_attempt(
     compaction_threshold: float | None = None,
     max_iterations: int | None = None,
     max_turn_cost: float | None = None,
+    capabilities: tuple[str, ...] = (),
 ) -> AttemptConfig:
     """Create a secret-free settings overlay for one run."""
     if result_mode not in RESULT_MODES:
@@ -185,6 +186,24 @@ def create_attempt(
         ) from error
     if max_turn_cost <= 0:
         raise BenchmarkConfigError("max_turn_cost must be positive")
+
+    known_capabilities = (
+        "knowledge", "navigation", "survival", "economy", "campaign",
+    )
+    for name in capabilities:
+        if name not in known_capabilities:
+            raise BenchmarkConfigError(f"unknown capability {name!r}")
+    if capabilities:
+        block = settings.setdefault("capabilities", {})
+        if not isinstance(block, dict):
+            raise BenchmarkConfigError("settings capabilities must be a mapping")
+        for name in capabilities:
+            entry = block.setdefault(name, {})
+            if not isinstance(entry, dict):
+                raise BenchmarkConfigError(
+                    f"settings capabilities.{name} must be a mapping"
+                )
+            entry["enabled"] = True
 
     (directory / "settings.yaml").write_text(
         yaml.safe_dump(settings, sort_keys=False), encoding="utf-8"
