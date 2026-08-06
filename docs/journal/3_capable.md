@@ -122,11 +122,54 @@ per-capability measurements, and the learning curve remain queued rather
 than claimed. Nothing in this observation asserts mission improvement:
 that number does not exist until the batch runs.
 
+### 3. The before and after: fewer decisions, no deaths, a map that compounds
+
+With credits restored, the same mission ran as three measured cohorts
+against the retained thirteen-attempt baseline, all under the same reset
+and the same evidence-based judge.
+
+- Cold, all capabilities on, eleven attempts: 28.5 model calls per
+  attempt against the baseline's 86.3, a 67% reduction, and the spread
+  collapsed from ±21.4 calls to ±0.5. Deterministic routines made
+  attempts nearly identical where the baseline was noise. Zero deaths
+  against three, and none of the baseline's hazard signatures (79
+  darkness lines, 12 attacks, 6 exhaustion rejections) appeared at all.
+  Two caveats stated: the per-attempt cost ceilings differed slightly,
+  and bounded sweeps may avoid hazards partly by staying nearer safe
+  ground.
+- The tool mix explains the reduction: a capable attempt issues sweep
+  routines and reads its state summary, with zero single-step move
+  calls. The model spends its calls deciding, not walking.
+- Warm, knowledge retained across five runs: call counts stay flat at
+  the spend ceiling, but coverage compounds. The persistent map grew to
+  235 distinct rooms where a cold attempt maps about 35, and every run
+  pushed into new ground.
+- The minotaur was never sighted in any cohort. The world is larger
+  than the explored radius under these budgets, so the mission itself
+  remains open. The honest claim is efficiency, survival, and compound
+  coverage, not victory.
+
 ## Technical Conclusions
 
-Open. The week is in flight, and the conclusions must answer the
-hypotheses from the measured before and after of each landed capability.
+- Repeated identical attempts did fail in a stable pattern, and that
+  pattern ranked the build order better than argument: confirmed.
+- Most of the budget was lost to navigation, not decisions: confirmed,
+  and moving navigation into deterministic routines removed two thirds
+  of all model calls.
+- Survival mechanics fired inside short runs without the agent
+  understanding them: confirmed at baseline, and the reflex layer plus
+  bounded routines reduced observed hazard events to zero in the
+  measured cohorts, with the safer-ground caveat retained.
+- Knowledge retained across runs makes repeat missions cheaper:
+  partially confirmed. Coverage compounds strongly, but the mission's
+  cost ceiling, not knowledge, currently bounds each run, so the curve
+  shows in mapped ground rather than dollars.
+- Open: whether the mission completes under a raised ceiling on the
+  persistent map, and whether the campaign's engage phase holds up when
+  a sighting finally occurs.
 
 ## Key Takeaway
 
-Open until the week closes.
+Moving what a model cannot know into earned, typed knowledge and what a
+model need not decide into deterministic machinery cut its decisions by
+two thirds and its deaths to zero before the mission itself was ever won.
