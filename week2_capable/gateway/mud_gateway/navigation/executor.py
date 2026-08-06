@@ -61,10 +61,12 @@ class NavigationExecutor:
         session: Any,
         store: Any,
         settings: Mapping[str, Any] | None = None,
+        reflexes: Any = None,
     ) -> None:
         block = dict(settings or {})
         self.session = session
         self.store = store
+        self.reflexes = reflexes
         self.max_rooms = int(block.get("sweep_max_rooms", 30))
         self.max_steps = int(block.get("max_steps", 60))
         self.min_move_points = int(block.get("min_move_points", 15))
@@ -129,7 +131,16 @@ class NavigationExecutor:
             if previous_hit is not None and vitals.hit < previous_hit:
                 return "interrupted"
             if vitals.move < self.min_move_points:
-                return "low_vitals"
+                if self.reflexes is not None:
+                    recovered = await self.reflexes.recover_movement(
+                        vitals.move, trace_id
+                    )
+                    if recovered == "rested":
+                        state["move"] = None
+                    else:
+                        return "low_vitals"
+                else:
+                    return "low_vitals"
         if not reply.position.certain:
             return "position_uncertain"
         after = self._projector.current_place_id

@@ -106,6 +106,20 @@ the `capabilities.knowledge` settings flag.
   (`state_notes.py`): perception, present threat, and durable notes,
   each low confidence and inspectable.
 
+## Survival capability
+
+`survival.py` is the reflex engine, off by default behind the
+`capabilities.survival` settings flag. Reflexes act on typed numbers only.
+
+- At session start the engine sets the game's own auto-flee threshold
+  (`wimpy`) from the observed maximum hit points, and declines honestly
+  when no maximum has been observed yet.
+- When movement falls below its floor during a routine, the engine rests,
+  polls recovery with a bounded wait, and stands back up. A timeout
+  surfaces as a typed stop instead of a stuck agent.
+- Every reflex firing is journaled with its rule id, version, and the
+  numbers that triggered it.
+
 ## Installation
 
 Install the gateway as an isolated user-level command from the repository

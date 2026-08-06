@@ -19,6 +19,7 @@ from .knowledge_projection import KnowledgeProjector
 from .navigation import NavigationExecutor
 from .state_block import render_state_block
 from .state_notes import record_state_fields
+from .survival import Survival
 from .profiles import (
     PROFILES,
     CapabilityUnavailable,
@@ -372,12 +373,22 @@ async def serve(
             record_profile(journal, session.id, surface)
             await session.open()
             await seed_login_observations(session, journal)
+            survival = None
+            if settings.capabilities.get("survival") and knowledge_store:
+                survival = Survival(
+                    session,
+                    knowledge_store,
+                    settings.capability_settings.get("survival"),
+                )
             if settings.capabilities.get("navigation") and knowledge_store:
                 navigation = NavigationExecutor(
                     session,
                     knowledge_store,
                     settings.capability_settings.get("navigation"),
+                    reflexes=survival,
                 )
+            if survival is not None:
+                await survival.apply_wimpy()
             if settings.capabilities.get("knowledge") and knowledge_store:
                 store = knowledge_store
                 live = session
