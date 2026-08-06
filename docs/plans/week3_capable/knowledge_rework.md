@@ -22,7 +22,7 @@ What it must additionally hold, each with its source:
 
 | Fact | Subject and predicate shape | Source |
 | --- | --- | --- |
-| Room is dark or perception failed there | place · quality.dark | structural signal (move succeeded, no perceivable room) plus the model's perception field |
+| Room is dark or perception failed there | place · quality.dark | structural signal only: movement points were spent and no room parsed, which also separates dark from a refused move (a refusal costs nothing); corroborated by the model's perception note and the carried-light correlation. The week 2 pitch-black phrase rule stays journal-only: no behavior and no fact may depend on it, and the position tracker's current use of it moves to the movement-cost signal |
 | Sign and board text | place · sign.text | the model reads the prose and records it through its note tool |
 | Shop stock and prices | place · stock.[item, price] rows | the shop list command's output when visited |
 | Monster appraisal | entity · consider_at_level_N · verdict tier | the consider command, read by the model, recorded as a typed tier |
