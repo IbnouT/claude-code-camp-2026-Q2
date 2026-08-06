@@ -105,6 +105,19 @@ lab/perception/
 └── runs/                 events and artifacts, never committed
 ```
 
+## Compute
+
+Training runs locally on the M4 Max (16-core CPU, 40-core GPU, 128GB
+unified memory) using the MPS backend. At this scale every rung is
+fast: the linear rung in seconds, the frozen-embedding rung in minutes,
+the fine-tuned small encoder in well under an hour with generous batch
+sizes. If the small encoders miss a floor, one escalation rung is
+allowed before any conclusion of infeasibility: a base-size encoder
+(deberta-v3-base or ModernBERT-base class, 100-200M parameters), which
+this memory holds trivially. Runtime inference still targets CPU ONNX
+int8 in the gateway regardless of what training used, so the deployment
+budget stays milliseconds.
+
 ## Live monitoring
 
 TensorBoard over `lab/perception/runs`, one run per grid cell, named
