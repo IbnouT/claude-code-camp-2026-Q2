@@ -261,3 +261,111 @@ Open questions, to be answered by the runs rather than argued:
   rewrite it every turn and thrash
 - how many recent exchanges are needed, if any
 - does the agent use the notes affordance at all when nothing forces it
+
+## 9. Exploration as an engine: coverage is infrastructure, judgment is the agent
+
+The premise: when nothing is known about where a target is, no amount
+of reasoning locates it. A person who has never seen the maze cannot
+deduce its entrance. Only coverage finds the unknown, and coverage is a
+guarantee, which belongs in code rather than in a model's discretion.
+
+The evidence that the model cannot be trusted with it: 27 near-identical
+resolutions to keep sweeping in one mission, and 30 to 63 percent of
+room entries landing on already-known ground.
+
+The system runs as two roles with a harness between them.
+
+```mermaid
+flowchart TB
+    O["strategist<br/>holds the mission"] -->|"explore around here"| H
+    H["harness<br/>owns coverage order and budgets"] -->|"brief: this area,<br/>this budget"| S
+    S["scout<br/>walks and judges locally"] -->|"typed report"| H
+    H -->|"digest, one per area"| O
+    H -->|"budget spent: move"| S
+    S -->|"abort: target or danger"| H
+    H -->|"decision needed"| O
+```
+
+### The three parts
+
+- The strategist holds the mission and the character. It reads one
+  digest per area, decides what to do about what was found, and says
+  where to look next in its own terms ("further from the temple",
+  "toward wherever the sewers were"). It never sees raw game text and
+  never learns the traversal order.
+- The harness owns the guarantee. It maintains the queue of areas, plans
+  the route to the next one over the known map, sets the budget for an
+  excursion, and pulls the scout out when that budget is spent. Nothing
+  it does costs a model call.
+- The scout walks. It holds one short brief, judges locally which
+  frontier exit to take and what deserves flagging, and returns a typed
+  report. Its context is disposable: every excursion starts fresh and
+  ends at the report, so nothing accumulates and nothing is compacted.
+
+The value of the split is where the tokens go. The strategist's context
+stays small because it only ever sees digests. The scout's context stays
+small because it is thrown away. Neither ever holds a session's worth of
+prose, which is what makes the fixed-size decision state of section 8
+structural rather than a discipline to maintain.
+
+### What wakes a model at all
+
+Walking every room through a model is what made exploration cost a call
+per step. Instead the perception classifier scores each room as it is
+entered, and only a salient room escalates: the target, a creature worth
+appraising, an item or corpse, a merchant or service, a danger warning.
+Everything else is walked silently and recorded as facts.
+
+The cost model becomes one call per interesting thing, plus one per
+excursion for the scout's judgment and one per area for the strategist.
+
+### Semi-breadth-first, not strict
+
+Strict breadth-first order visits every room at one distance before any
+room further out, and those rooms are scattered, so the agent pays for
+constant walking between them. The harness instead takes an area to a
+useful depth, then moves on: breadth-first between areas, exhaustive
+within one. The strategist experiences this as being asked to look
+around here, then somewhere else.
+
+### Areas without world data
+
+An area is never read from the game's own zone tables. It is derived
+from what has been walked, a contiguous excursion or the subgraph behind
+a bottleneck, proposed by the harness and named by the strategist when
+it recognizes what it is. The name is a belief with evidence like any
+other.
+
+### Ordering the queue
+
+Coverage is ordered, not blind, and ordering never becomes starvation:
+
+- distance and walking cost first, so cheap ground is taken first
+- evidence adjusts priority: a danger warning defers an area until the
+  character is stronger, a promising hint promotes one
+- a fairness rule guarantees every reachable area is eventually taken,
+  so a heuristic can be wrong without being fatal
+
+### The risks this design carries
+
+- Disorientation: the scout is placed somewhere by something other than
+  itself, so its brief must say where it is, what is already known here,
+  and what its budget is.
+- Handoff loss: anything the scout noticed but did not put in its typed
+  report is gone, because its context is discarded. The report carries
+  the rooms walked with their titles, so the strategist can ask for a
+  second look at one.
+- Hazard: systematic coverage walks into lethal ground a cautious model
+  would have avoided. Danger evidence gates the queue, and the survival
+  reflexes remain the last line.
+- Coordination cost: two roles can spend more on talking than they save.
+  The digest is one per excursion, and the strategist is not called
+  between them.
+
+### How it is judged
+
+- new rooms per model call, and per dollar
+- fraction of room entries landing on already-known ground
+- whether the target is found, at what coverage, and at what cost
+- against the same mission with the explorer off, so the guarantee is
+  shown to be worth its constraint
