@@ -62,7 +62,8 @@ class Agent:
                  operator: OperatorMailbox | None = None,
                  logger: Logger | None = None,
                  state_block_source: Any = None,
-                 state_fields_sink: Any = None) -> None:
+                 state_fields_sink: Any = None,
+                 campaign_line_source: Any = None) -> None:
         self._context = context
         self._registry = registry
         self._builder = builder
@@ -80,6 +81,9 @@ class Agent:
         #: Optional callable receiving each response's parsed STATE fields.
         #: None disables capture entirely.
         self._state_fields_sink = state_fields_sink
+        #: Optional zero-argument callable returning the campaign line,
+        #: composed into the same volatile message as the state block.
+        self._campaign_line_source = campaign_line_source
         # Build a default Logger when none is passed, rather than a def-time
         # default, so agents never share one session file and Python's
         # mutable-default pitfall is avoided. A default Logger opens a session
@@ -425,16 +429,21 @@ class Agent:
         A failing source never breaks the loop: the call proceeds without
         the block, and the failure is visible in the session log.
         """
-        if self._state_block_source is None:
+        parts: list[str] = []
+        for source in (self._campaign_line_source, self._state_block_source):
+            if source is None:
+                continue
+            try:
+                value = source()
+            except Exception as error:
+                self._logger.state_block_failed(str(error))
+                continue
+            if value:
+                parts.append(value)
+        if not parts:
             return None
-        try:
-            block = self._state_block_source()
-        except Exception as error:
-            self._logger.state_block_failed(str(error))
-            return None
-        if not block:
-            return None
-        return Message.user(f"[state]\n{block}")
+        joined = "\n".join(parts)
+        return Message.user(f"[state]\n{joined}")
 
     def _call_opts(self) -> dict[str, Any]:
         """Per-call options shared by every work-iteration model round trip.

@@ -470,6 +470,17 @@ CAPABILITIES: tuple[Capability, ...] = (
         available=False,
     ),
     Capability(
+        "mission_readiness",
+        "Report typed readiness for the named mission target: sightings, "
+        "vitals, level, gold, and remaining unexplored ground.",
+        "perception", "interact", "none",
+        (
+            _argument("target", required=True),
+        ),
+        execution="routine",
+        available=False,
+    ),
+    Capability(
         "sweep",
         "Explore unmapped ground from the learned frontier until a bound "
         "or an interrupt stops the walk.",

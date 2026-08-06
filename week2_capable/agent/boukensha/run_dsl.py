@@ -39,6 +39,7 @@ from .session_control import (
     relocate_selected_session,
     reset_selected_session,
 )
+from .campaign import CampaignController
 from .state_fields import CONTRACT as STATE_FIELDS_CONTRACT
 from .tasks import Player
 from .tools import mcp as mcp_host
@@ -345,6 +346,33 @@ def _state_fields_sink(cfg, registry: Registry):
     return forward
 
 
+def _campaign_line_source(cfg, registry: Registry):
+    """The campaign controller's line source, or None when off."""
+    if cfg is None or not cfg.capability("campaign"):
+        return None
+    settings = cfg.capability_settings("campaign")
+    if not str(settings.get("target", "")).strip():
+        return None
+    names = [
+        name for name in registry.tools
+        if name == "mission_readiness"
+        or name.endswith("_mission_readiness")
+    ]
+    if not names:
+        return None
+    tool_name = names[0]
+    target = str(settings["target"]).strip()
+
+    def fetch() -> str | None:
+        result = registry.dispatch(tool_name, {"target": target})
+        text = getattr(result, "text", None)
+        if isinstance(text, str):
+            return text
+        return result if isinstance(result, str) else None
+
+    return CampaignController(fetch, settings).line
+
+
 def run(task: str, *,
         system: str | None = None,
         model: str | None = None,
@@ -414,6 +442,9 @@ def run(task: str, *,
                 assembled.config, assembled.registry,
             ),
             state_fields_sink=_state_fields_sink(
+                assembled.config, assembled.registry,
+            ),
+            campaign_line_source=_campaign_line_source(
                 assembled.config, assembled.registry,
             ),
         )

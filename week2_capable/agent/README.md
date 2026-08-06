@@ -174,6 +174,12 @@ gateway's rendered state block as a volatile final message on every model
 call, and forwards each response's parsed fields to the gateway as
 belief-layer facts. `state_fields.py` owns the contract and its parsing.
 
+With the `campaign` capability on and a `target` named in its settings,
+`campaign.py` chooses the mission phase deterministically from typed
+readiness (survive, locate, prepare, engage) and rides the choice on the
+same volatile message: the model decides within the phase, never which
+phase.
+
 ## Tests
 
 ```bash

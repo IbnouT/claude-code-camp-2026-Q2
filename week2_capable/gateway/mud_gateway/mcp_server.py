@@ -18,6 +18,7 @@ from .knowledge import KnowledgeStore
 from .knowledge_projection import KnowledgeProjector
 from .navigation import NavigationExecutor
 from .state_block import render_state_block
+from .campaign import mission_readiness, readiness_text
 from .economy import Economy, report_text as economy_report_text
 from .state_notes import record_service, record_state_fields
 from .survival import Survival
@@ -66,6 +67,7 @@ async def execute(
         state_notes: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
         service_notes: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
         economy: Economy | None = None,
+        knowledge_reader: Any = None,
 ) -> CommandObservation:
     """Execute one authorized capability and trace it end to end."""
     capability = invocation.capability
@@ -98,6 +100,27 @@ async def execute(
         if session is None:
             raise RuntimeError(f"{capability.name} requires a game session")
         if capability.execution == "routine":
+            if capability.name == "mission_readiness":
+                if knowledge_reader is None:
+                    raise CapabilityUnavailable(
+                        f"{capability.name!r} needs the campaign capability")
+                report = mission_readiness(
+                    knowledge_reader, invocation.arguments["target"]
+                )
+                event = journal.append(
+                    event_session, "mission_readiness", report,
+                    trace_id=trace_id,
+                )
+                return CommandObservation(
+                    tool=invocation.tool,
+                    capability=capability.name,
+                    family=capability.family,
+                    command=None,
+                    text=readiness_text(report),
+                    complete=True,
+                    sequence=event.seq,
+                    trace_id=trace_id,
+                )
             if capability.name == "note_service":
                 if service_notes is None:
                     raise CapabilityUnavailable(
@@ -393,9 +416,10 @@ async def serve(
     state_notes: Callable[[dict[str, Any]], dict[str, Any]] | None = None
     service_notes: Callable[[dict[str, Any]], dict[str, Any]] | None = None
     economy: Economy | None = None
+    knowledge_reader: Any = None
 
     async def game_session() -> Session:
-        nonlocal economy, knowledge_store, navigation, service_notes, session, state_notes, state_reader
+        nonlocal economy, knowledge_reader, knowledge_store, navigation, service_notes, session, state_notes, state_reader
         if session is None:
             profile = settings.player(player_profile)
             password = settings.player_password(profile.id)
@@ -476,6 +500,8 @@ async def serve(
                     )
 
                 service_notes = write_service
+            if settings.capabilities.get("campaign") and knowledge_store:
+                knowledge_reader = knowledge_store
             if settings.capabilities.get("economy") and knowledge_store:
                 economy = Economy(
                     session,
@@ -508,6 +534,7 @@ async def serve(
                 state_notes=state_notes,
                 service_notes=service_notes,
                 economy=economy,
+                knowledge_reader=knowledge_reader,
             )
         except Exception as error:
             result = failure(
@@ -598,6 +625,8 @@ def main(argv: list[str] | None = None) -> int:
         if settings.capabilities.get("knowledge") else frozenset(),
         frozenset({"bank_surplus"})
         if settings.capabilities.get("economy") else frozenset(),
+        frozenset({"mission_readiness"})
+        if settings.capabilities.get("campaign") else frozenset(),
     )
     surface = Surface(profile, extensions)
     if args.prove:

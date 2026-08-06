@@ -133,6 +133,15 @@ the `capabilities.knowledge` settings flag.
   a typed reason when gold is unknown, no surplus exists, no bank is
   recorded, or navigation is off.
 
+## Campaign capability
+
+`campaign.py` serves typed mission readiness, off by default behind the
+`capabilities.campaign` settings flag: whether the named target has been
+sighted and where, vitals against maxima, level, gold, and remaining
+unexplored ground, assembled from facts the agent earned. The
+`mission_readiness` tool exposes it, and the agent's campaign controller
+reads it every call.
+
 ## Installation
 
 Install the gateway as an isolated user-level command from the repository

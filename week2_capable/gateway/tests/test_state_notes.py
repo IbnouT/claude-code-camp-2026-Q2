@@ -63,3 +63,40 @@ def test_knowledge_extensions_resolve_both_tools() -> None:
     assert {"recall_state", "note_state"} <= names
     invocation = surface.resolve("note_state", {"perceive": "dark"})
     assert invocation.capability.name == "note_state"
+
+
+def test_mission_readiness_reports_typed_snapshot(tmp_path: Path) -> None:
+    import time as _time
+
+    from mud_gateway.campaign import mission_readiness
+    from mud_gateway.knowledge_models import EvidenceRef
+
+    store = KnowledgeStore(tmp_path / "readiness.db", player_id="tester")
+    evidence = EvidenceRef(
+        session_id="test", source_seq=1, wire_digest="d",
+        parser_version="p1", method="test", observed_at=_time.time(),
+    )
+
+    def fact(subject, predicate, value, layer):
+        store.assert_fact(
+            subject, predicate, value, layer=layer,
+            confidence="confirmed", evidence=evidence, transaction_id="t1",
+        )
+
+    fact("player:tester", "state.hit", 40, "parsed")
+    fact("player:tester", "state.max_hit", 46, "parsed")
+    fact("player:tester", "state.level", 3, "parsed")
+    fact("place:s:1:1", "title", "The Maze Entrance", "learned")
+    fact("place:s:1:1", "exits", ["n"], "learned")
+    fact("sighting:s:9:mob:0", "kind", "mob", "learned")
+    fact("sighting:s:9:mob:0", "name", "The Massive Minotaur", "learned")
+    fact("sighting:s:9:mob:0", "room", "place:s:1:1", "learned")
+
+    report = mission_readiness(store, "minotaur")
+    store.close()
+    assert report["sighted_places"] == ["place:s:1:1"]
+    assert report["sighted_titles"] == ["The Maze Entrance"]
+    assert report["hit"] == 40 and report["max_hit"] == 46
+    assert report["rooms_known"] == 1
+    empty = report["frontier_remaining"]
+    assert isinstance(empty, int)
