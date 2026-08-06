@@ -49,7 +49,9 @@ construction.
 - 400 real reply blocks sampled from the journals, stratified so every
   label has meaningful support, including hard negatives (combat spam
   that is not a death, shop text without a shopkeeper line).
-- Labeled once by a strong model, then human-verified, then frozen.
+- Labeled once by a strong model through a local Claude Code instance
+  in non-interactive mode (subscription seat, no metered API), then
+  human-verified, then frozen.
 - Never used for training or threshold tuning. A separate validation
   split from training data serves tuning.
 - Circularity guard: gold labels are produced independently of the
@@ -170,6 +172,6 @@ approved.
 
 ## Spend
 
-Model-assisted labeling only: one pass over the stratified sample and
-the gold set, estimated under three dollars at current prices. Training
-runs locally and costs nothing.
+None. Model-assisted labeling runs through a local Claude Code instance
+in non-interactive mode on the existing subscription, never the metered
+API. Training runs locally and costs nothing.
