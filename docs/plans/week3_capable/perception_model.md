@@ -37,11 +37,25 @@ from stored facts, never predicted by the classifier.
 
 Two training corpora, one shared evaluation set.
 
-- Corpus A: real reply blocks extracted from every retained journal,
-  plus synthetic blocks generated from the game engine's message
-  templates with slot fills varied (names, items, rooms).
+- Governing rule: the deployed model must be buildable from
+  observation of the game's output alone, the position a player holds
+  with any game whose source is closed. Nothing trained on the engine's
+  templates or source ships. Observed vocabulary is allowed in
+  generated text: words the game has been seen to say are experience,
+  not source access.
+- Corpus A (reference only, never deployed): real reply blocks plus
+  synthetic blocks generated from the engine's message templates. It
+  measures string coverage when the source is read, as a comparison
+  bound.
 - Corpus B: the same real blocks, plus synthetic blocks generated only
   from patterns observed in our logs, slot fills varied the same way.
+- Corpus D (the deployment corpus): observation-only with hygiene.
+  Real training-split blocks, plus synthetics seeded exclusively from
+  training-split blocks, plus definition-generated text for rare
+  labels using observed vocabulary. No gold block or derivative of one
+  ever enters the generator, by construction. A rare-label floor
+  unreachable from observation alone is reported per label as an
+  honest finding, never patched with template text.
 - Corpus C: text generated from the label definitions alone, in
   genuinely varied wording, with no engine templates, no journal text,
   and nothing derived from the gold set. Training on A measures string
