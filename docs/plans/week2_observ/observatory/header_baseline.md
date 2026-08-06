@@ -116,10 +116,10 @@ but Experiments duplicates the markup.
    bound to `control_available`; Sessions' Live nav item stays bound to
    `selected?.live`.
 3. No new control is invented, and no existing control is dropped, without
-   Ibnou agreeing first.
+   explicit approval first.
 4. Experiments gains nothing beyond what it has; it only stops duplicating.
 
-## 5. Approved header changes (Ibnou, in chat)
+## 5. Header changes
 
 - Sessions renders the shared header: the context chip, Ask, and theme. Its
   player `<select>`, inline picker, and recorded-experiment chip are removed.
