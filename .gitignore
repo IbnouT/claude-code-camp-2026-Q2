@@ -66,3 +66,7 @@ week2_capable/observatory/web/test-results/
 
 # CircleMUD runtime state written by the container
 week0_explore/infrastructure/lib/
+
+# The perception training lab: an experiment, kept out of the graded tree.
+lab/
+PROGRESS.md
