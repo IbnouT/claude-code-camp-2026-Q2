@@ -392,6 +392,7 @@ def parse(raw: bytes | str, wire_ref: WireReference) -> list[Observation]:
                 "exits_text": None,
                 "mobs": [],
                 "objects": [],
+                "events": [],
                 "source_lines": 1,
             }
             continue
@@ -406,7 +407,11 @@ def parse(raw: bytes | str, wire_ref: WireReference) -> list[Observation]:
                 room["source_lines"] += 1
                 continue
             if room["described"]:
-                room["mobs"].append(line)
+                # After the exits, a line that looks like neither a creature
+                # nor an object is something that happened, not something
+                # present. Filing it as a creature would have the agent
+                # remember "You flee head over heels" as an inhabitant.
+                room["events"].append(line)
             else:
                 room["description"].append(line)
             room["source_lines"] += 1

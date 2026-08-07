@@ -51,13 +51,13 @@ def test_losing_experience_is_not_counted_as_a_gain(tmp_path: Path) -> None:
 
 
 def test_falling_gains_are_recognised(tmp_path: Path) -> None:
-    """The prey is being outgrown when each kill pays less than before."""
+    """Steps that shrink at a steady reading pace mean the prey is outgrown."""
     store = _store(tmp_path)
     _record(store, "exp", [0, 50, 100, 150, 160, 170, 180])
     progress = read(store, "tester")
     store.close()
 
-    assert progress.gains_are_falling() is True
+    assert progress.gains_per_reading_are_falling() is True
 
 
 def test_steady_gains_are_not_falling(tmp_path: Path) -> None:
@@ -66,7 +66,7 @@ def test_steady_gains_are_not_falling(tmp_path: Path) -> None:
     progress = read(store, "tester")
     store.close()
 
-    assert progress.gains_are_falling() is False
+    assert progress.gains_per_reading_are_falling() is False
 
 
 def test_too_few_gains_to_judge_says_nothing(tmp_path: Path) -> None:
@@ -75,7 +75,7 @@ def test_too_few_gains_to_judge_says_nothing(tmp_path: Path) -> None:
     progress = read(store, "tester")
     store.close()
 
-    assert progress.gains_are_falling() is False
+    assert progress.gains_per_reading_are_falling() is False
 
 
 def test_levels_and_gold_are_counted_too(tmp_path: Path) -> None:
@@ -87,3 +87,21 @@ def test_levels_and_gold_are_counted_too(tmp_path: Path) -> None:
 
     assert progress.levels_gained == 1
     assert progress.gold_gained == 30
+
+
+def test_reading_the_score_less_often_is_not_a_richer_hunt(
+    tmp_path: Path,
+) -> None:
+    """The same prey, checked twice as often, must not read as decline.
+
+    Each step is the ground between two readings, so halving the pace
+    halves every step. Nothing about the hunting changed.
+    """
+    store = _store(tmp_path)
+    _record(store, "exp", [0, 100, 200, 300, 350, 400, 450])
+    progress = read(store, "tester")
+    store.close()
+
+    assert progress.gains_per_reading_are_falling() is True, (
+        "this is the trap: identical prey, only the reading pace changed"
+    )

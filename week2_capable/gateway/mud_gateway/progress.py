@@ -31,6 +31,13 @@ class Progress:
 
     @property
     def experience_gained(self) -> int:
+        """Every rise in experience added up, over the whole history held.
+
+        Losses are not subtracted, so a character that died and ground the
+        loss back counts the same experience twice. This is how much was
+        ever earned, not how far the character has come, and the two part
+        company the first time it dies.
+        """
         return sum(step.delta for step in self.experience if step.delta > 0)
 
     @property
@@ -39,6 +46,12 @@ class Progress:
 
     @property
     def gold_gained(self) -> int:
+        """Every rise in carried gold added up, whatever caused it.
+
+        Taking money out of the bank raises carried gold, so this counts
+        withdrawals alongside loot. It says what passed through the purse,
+        not what was won.
+        """
         return sum(step.delta for step in self.gold if step.delta > 0)
 
     def recent_gains(self, count: int) -> tuple[int, ...]:
@@ -46,12 +59,19 @@ class Progress:
         gains = [step.delta for step in self.experience if step.delta > 0]
         return tuple(gains[-count:])
 
-    def gains_are_falling(self, window: int = 3) -> bool:
-        """True when recent gains are smaller than the ones before them.
+    def gains_per_reading_are_falling(self, window: int = 3) -> bool:
+        """True when recent rises are smaller than the ones before them.
 
         A hunting ground that pays less than it used to has been outgrown,
         which is the moment to look for stronger prey rather than to keep
         killing what is nearby.
+
+        Read it for what it measures: the step between two readings of the
+        score, not the reward of one kill. Checking the score half as often
+        doubles each step and makes a steady hunt look like a rich one, so
+        this only means anything while the score is read at a steady pace.
+        Reward per kill needs a kill to be recognised, which is prose, and
+        waits for the perception model.
         """
         gains = [step.delta for step in self.experience if step.delta > 0]
         if len(gains) < window * 2:

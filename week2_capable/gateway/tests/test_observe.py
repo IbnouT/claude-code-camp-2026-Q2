@@ -189,3 +189,26 @@ def test_a_rooms_description_stops_at_its_exits() -> None:
     assert "temple square" in description.casefold()
     assert "Drunk" not in description
     assert "flee" not in description
+
+
+def test_something_that_happened_is_not_recorded_as_an_inhabitant() -> None:
+    """A combat line arriving after the exits is an event, not a creature.
+
+    Filing it with the creatures would have the agent remember "You flee
+    head over heels" as something living in the room, and answer that when
+    asked what it has seen.
+    """
+    frame = (
+        "\x1b[0;33mThe Dark Alley\x1b[0m\r\n"
+        "   Rubbish lines the walls.\r\n"
+        "\x1b[0;36m[ Exits: n s ]\x1b[0m\r\n"
+        "You flee head over heels.\r\n"
+        "14H 100M 55V > "
+    )
+    rooms = [
+        observation for observation in parse(frame, WIRE)
+        if isinstance(observation, RoomObservation)
+    ]
+
+    assert len(rooms) == 1
+    assert not [m for m in rooms[0].mobs if "flee" in m]

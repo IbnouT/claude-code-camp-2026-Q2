@@ -368,6 +368,43 @@ existing store is unchanged. It changes what every future run records,
 and the recorded past can only be repaired by replaying the journals,
 which is its own step.
 
+### 10. Facts that were written where nobody was reading
+
+Three facts landed this round and a review found each of them addressed
+to the wrong place, in a different way.
+
+Cleaning the room description moved combat prose out of what a room is,
+which was the point, but it moved it into the list of creatures present.
+So the agent would have remembered "You flee head over heels" as
+something living in the alley, and said so when asked what it had seen.
+The line had stopped corrupting the map and started corrupting the
+memory instead. Anything after the exits that looks like neither a
+creature nor an object is now filed as something that happened.
+
+The refusal fact was written against the joined room and read against
+the observed place, so the one reader written for it never found it, and
+worse, it would have orphaned every time identity was recomputed. Then
+the claim that walking the way later replaced the refusal turned out to
+be a sentence in a docstring: the successful walk wrote a different
+predicate entirely, so a door found shut stayed shut in memory for good.
+Chasing that produced the better idea. The store keeps a changed value as
+a contradiction worth preserving, which is right for what was learned and
+wrong for a door. Whether a way is open is how it stands now, so it
+belongs with the other things that are true at the moment, where a newer
+reading simply replaces an older one.
+
+The third was the most dangerous, because it wrote confident nonsense. A
+character that had just rested, or been knocked down, would fail to move
+and have a permanent shut door recorded on a perfectly walkable exit. The
+fix came from the contract we had already written for darkness: a way
+that refuses costs nothing. Paying movement and arriving nowhere is
+something else entirely, and when the cost cannot be established,
+nothing is claimed at all.
+
+The pattern across all three is one thing. Recording a fact and reading
+it are two halves of the same feature, and I keep landing the first and
+calling it done.
+
 ## Technical Conclusions
 
 - Repeated identical attempts did fail in a stable pattern, and that
