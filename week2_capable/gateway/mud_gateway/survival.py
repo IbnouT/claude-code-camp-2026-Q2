@@ -10,9 +10,13 @@ any other decision.
 from __future__ import annotations
 
 import asyncio
+import re
 from typing import Any, Mapping
 
 RULES_VERSION = "survival-1"
+
+# One switch and its state, as the game lists them: "AutoLoot: ON".
+TOGGLE_ENTRY = re.compile(r"([A-Za-z]+):\s*(ON|OFF)\b", re.I)
 
 
 class Survival:
@@ -38,7 +42,7 @@ class Survival:
             # set, so sending them once is idempotent in effect. The exit
             # display is a plain toggle with no way to ask for "on", so
             # sending it would turn off the very lines the parser reads.
-            block.get("game_toggles", ("toggle autoloot", "toggle autogold"))
+            block.get("game_toggles", ("autoloot", "autogold"))
         )
 
     # -- store reads -------------------------------------------------------
@@ -63,19 +67,44 @@ class Survival:
     # -- reflexes ----------------------------------------------------------
 
     async def let_the_game_do_the_work(self) -> tuple[str, ...]:
-        """Turn on the game's own conveniences, once, at the start.
+        """Turn on the game's own conveniences, without turning any off.
 
-        The game will pick up coins and loot a corpse by itself if asked.
-        Doing that here costs one command each and saves a decision after
-        every kill, which is a decision the model would otherwise pay for
-        and sometimes forget.
+        The game will pick up coins and loot a corpse by itself, which
+        saves a decision after every kill. These are switches and they are
+        remembered between sessions, so sending one blindly turns off what
+        was already on. The game lists them when asked, so what is already
+        set is read first and only what is missing is changed.
         """
-        applied = []
-        for toggle in self.game_toggles:
-            await self.session.command(toggle)
-            applied.append(toggle)
-        self._journal("game-settings", {"applied": applied})
-        return tuple(applied)
+        current = await self._toggle_states()
+        changed = []
+        for name in self.game_toggles:
+            state = current.get(name.casefold())
+            if state is True:
+                continue
+            if state is None:
+                # Unknown state, so changing it could as easily turn the
+                # thing off. Left alone and recorded.
+                self._journal("game-settings", {"unknown": name})
+                continue
+            await self.session.command(name)
+            changed.append(name)
+        self._journal(
+            "game-settings", {"turned_on": changed, "already_on": [
+                name for name in self.game_toggles
+                if current.get(name.casefold()) is True
+            ]},
+        )
+        return tuple(changed)
+
+    async def _toggle_states(self) -> dict[str, bool]:
+        """What the game says each of its switches is set to."""
+        reply = await self.session.command("toggle")
+        found: dict[str, bool] = {}
+        for match in TOGGLE_ENTRY.finditer(reply.text):
+            found[match.group(1).casefold()] = (
+                match.group(2).casefold() == "on"
+            )
+        return found
 
     async def apply_wimpy(self) -> int | None:
         """Set the game's own auto-flee threshold from observed maximum hp."""

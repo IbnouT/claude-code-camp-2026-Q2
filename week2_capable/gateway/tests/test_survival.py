@@ -23,21 +23,25 @@ class _Vitals:
 
 
 class _Reply:
-    def __init__(self, move: int | None = None) -> None:
+    def __init__(self, move: int | None = None, text: str = "") -> None:
         self.observations = (_Vitals(move),) if move is not None else ()
+        self.text = text
 
 
 class _Session:
-    def __init__(self, score_moves: list[int]) -> None:
+    def __init__(self, score_moves: list[int], toggles: str = "") -> None:
         self.id = "fake"
         self.journal = _Journal()
         self.commands: list[str] = []
         self.score_moves = list(score_moves)
+        self.toggles = toggles
 
     async def command(self, line: str, trace_id=None) -> _Reply:
         self.commands.append(line)
         if line == "score" and self.score_moves:
             return _Reply(self.score_moves.pop(0))
+        if line == "toggle":
+            return _Reply(text=self.toggles)
         return _Reply()
 
 
@@ -115,29 +119,53 @@ def test_no_rest_needed_above_the_floor(tmp_path: Path) -> None:
 
 def test_the_game_is_asked_to_loot_for_us(tmp_path: Path) -> None:
     """A corpse looted by the game costs no decision after every kill."""
-    session = _Session([])
+    session = _Session([], toggles="AutoLoot: OFF   AutoGold: OFF")
     store = _store_with_maxima(tmp_path)
     survival = Survival(session, store, {})
 
     applied = asyncio.run(survival.let_the_game_do_the_work())
 
-    assert "toggle autoloot" in session.commands
-    assert "toggle autogold" in session.commands
-    assert applied == ("toggle autoloot", "toggle autogold")
-    assert not [c for c in session.commands if "autoexit" in c], (
-        "a blind toggle would turn off the exits the parser reads"
-    )
+    assert applied == ("autoloot", "autogold")
+    assert session.commands[0] == "toggle", "read the switches before setting"
     store.close()
 
 
 def test_the_toggles_are_settings(tmp_path: Path) -> None:
-    session = _Session([])
+    session = _Session([], toggles="AutoLoot: OFF")
     store = _store_with_maxima(tmp_path)
-    survival = Survival(
-        session, store, {"game_toggles": ("toggle autoloot",)}
-    )
+    survival = Survival(session, store, {"game_toggles": ("autoloot",)})
 
     asyncio.run(survival.let_the_game_do_the_work())
 
-    assert session.commands == ["toggle autoloot"]
+    assert session.commands == ["toggle", "autoloot"]
     store.close()
+
+
+def test_something_already_on_is_left_alone(tmp_path: Path) -> None:
+    """These switches are remembered, so setting one that is on turns it off."""
+    session = _Session([], toggles="AutoLoot: ON    AutoGold: ON")
+    store = _store_with_maxima(tmp_path)
+
+    changed = asyncio.run(
+        Survival(session, store, {}).let_the_game_do_the_work()
+    )
+    store.close()
+
+    assert changed == ()
+    assert session.commands == ["toggle"], "asked, and touched nothing"
+
+
+def test_a_switch_the_game_did_not_mention_is_left_alone(
+    tmp_path: Path,
+) -> None:
+    """Not knowing the state is not a reason to guess at it."""
+    session = _Session([], toggles="Brief: OFF")
+    store = _store_with_maxima(tmp_path)
+
+    changed = asyncio.run(
+        Survival(session, store, {}).let_the_game_do_the_work()
+    )
+    store.close()
+
+    assert changed == ()
+    assert session.commands == ["toggle"]
