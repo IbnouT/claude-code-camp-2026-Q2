@@ -1,0 +1,46 @@
+# Standing advice the agent carries. Genre common sense only: nothing here
+# names a place, a creature, or anything that has to be discovered by
+# playing. Every number lives in settings, so the advice reads the same
+# whatever the numbers are set to.
+#
+# Switch any rule off to measure what it was worth.
+rules:
+  - id: appraise-before-fighting
+    text: >-
+      Size up anything before you choose to fight it, and walk away from
+      what is beyond you rather than testing it.
+    enabled: true
+  - id: outmatched-means-prepare
+    text: >-
+      Being outmatched is not solved by trying again. Grow stronger or
+      come back better equipped.
+    enabled: true
+  - id: carry-little-gold
+    text: >-
+      Money you carry is lost when you die. Bank what you are not about
+      to spend, keeping about {gold_carry_ceiling} for immediate needs.
+    enabled: true
+  - id: rest-before-going-on
+    text: >-
+      Rest when movement runs low, and eat or drink when hungry or
+      thirsty. Nothing recovers while you are starving.
+    enabled: true
+  - id: take-what-is-free
+    text: >-
+      Collect free equipment before hunting. Wearing something is better
+      than carrying nothing.
+    enabled: true
+  - id: loot-after-a-kill
+    text: >-
+      Search what you kill. Coins, keys and gear are left behind.
+    enabled: true
+  - id: move-on-when-it-stops-paying
+    text: >-
+      When each kill rewards less than the last, the prey has been
+      outgrown. Find harder ground.
+    enabled: true
+  - id: know-before-deciding
+    text: >-
+      Ask what you already know before deciding. You have walked further
+      than you remember.
+    enabled: true
