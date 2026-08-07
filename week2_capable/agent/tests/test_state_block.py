@@ -162,53 +162,24 @@ class TestStateBlockWiring(unittest.TestCase):
         self.assertIsNone(source())
 
 
-class TestStateFields(unittest.TestCase):
-    def test_valid_line_reaches_the_sink_and_the_log(self):
-        from boukensha.state_fields import parse_state_fields
+class TestNoteDuty(unittest.TestCase):
+    def test_no_response_line_is_required_of_the_model(self):
+        """A reply with no state line is ordinary, not a contract breach.
 
-        fields = parse_state_fields(
-            'Moving on.\nSTATE {"perceive": "dark", "threat": null, '
-            '"learned": "the alley is unlit"}'
-        )
-        self.assertEqual(
-            {"perceive": "dark", "threat": None,
-             "learned": "the alley is unlit"},
-            fields,
-        )
-
-        captured = []
-        transport = CapturingTransport(ok(end_turn(
-            'Done.\nSTATE {"perceive": "clear", "threat": null, '
-            '"learned": null}'
-        )))
-        agent, assembled = build_agent(transport, "fields", None)
-        agent._state_fields_sink = captured.append
-        assembled.context.add(
-            run_dsl.Message.user("Find the minotaur and kill it.")
-        )
-        agent.run()
-        self.assertEqual(1, len(captured))
-        self.assertEqual("clear", captured[0]["perceive"])
-        log_text = Path(assembled.logger.path).read_text()
-        self.assertIn("state_fields", log_text)
-
-    def test_missing_or_malformed_line_is_counted_not_raised(self):
-        from boukensha.state_fields import parse_state_fields
-
-        self.assertIsNone(parse_state_fields("no line here"))
-        self.assertIsNone(parse_state_fields('STATE {"perceive": "purple"}'))
-
-        captured = []
+        A required text line conflicts with tool use: a response that calls
+        a tool carries little or no text, so the line was ignored on every
+        iteration it was demanded. Noting moved to the note tool.
+        """
         transport = CapturingTransport(ok(end_turn("Done, no state line.")))
-        agent, assembled = build_agent(transport, "fields-missing", None)
-        agent._state_fields_sink = captured.append
+        agent, assembled = build_agent(transport, "note-duty", None)
         assembled.context.add(
             run_dsl.Message.user("Find the minotaur and kill it.")
         )
         agent.run()
-        self.assertEqual([], captured)
+
         log_text = Path(assembled.logger.path).read_text()
-        self.assertIn("state_fields_missing", log_text)
+        self.assertNotIn("state_fields_missing", log_text)
+        self.assertNotIn("STATE ", json.dumps(transport.bodies[0]["system"]))
 
 
 if __name__ == "__main__":

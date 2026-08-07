@@ -51,6 +51,10 @@ def render_state_block(
         f"map: {len(graph.rooms)} rooms known · "
         f"{frontier} with unexplored exits"
     )
+    lines.append(
+        "note anything worth remembering with the note tool: "
+        "what you perceive, a threat, or something learned"
+    )
     return "\n".join(lines)
 
 

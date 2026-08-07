@@ -1,0 +1,74 @@
+tasks:
+  player:
+    provider: anthropic
+    model: claude-haiku-4-5
+    prompt_override:
+      system: true
+    max_iterations: 4
+    max_output_tokens: 1024
+    max_turn_tokens: 0
+    max_turn_cost: 0.5
+    compaction_threshold: 0.85
+mcp_servers:
+  mud:
+    command: boukensha-gateway
+    args: []
+    prefix: tbamud
+    required: true
+    result_mode: full
+gateway:
+  connection:
+    host: localhost
+    port: 4000
+    player_profile: poucet
+  players:
+    poucet:
+      character: poucet
+      password_env: MUD_PASSWORD
+    elenor:
+      character: Elenor
+      password_env: MUD_PASSWORD_ELENOR
+  journal: .boukensha/gateway/gateway.db
+  surface:
+    profile: direct-full
+    enable: []
+    disable: []
+    allow_raw: false
+  api:
+    host: 127.0.0.1
+    port: 8765
+  admin:
+    character: admin
+    password_env: MUD_ADMIN_PASSWORD
+  reset:
+    pause_timeout_seconds: 15
+    child_timeout_seconds: 30
+    client_timeout_seconds: 45
+observatory:
+  disabled_features: []
+  benchmark:
+    path: .boukensha/benchmarks
+  experiments:
+    execution_enabled: false
+    max_spend_cap_usd: 10.0
+    state_path: .boukensha/experiments
+  world:
+    path: week0_explore/circlemud-world-parser/assets/wld
+  copilot:
+    model: claude-haiku-4-5
+    endpoint: https://api.anthropic.com/v1/messages
+    spend_cap_usd: 0.25
+    input_rate_per_million: 1.0
+    output_rate_per_million: 5.0
+capabilities:
+  knowledge:
+    enabled: true
+  navigation:
+    enabled: false
+  survival:
+    enabled: false
+  economy:
+    enabled: false
+  campaign:
+    enabled: true
+    target: minotaur
