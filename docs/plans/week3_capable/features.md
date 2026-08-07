@@ -125,15 +125,15 @@ and the pace of gains says whether the current hunting ground has been
 outgrown. A kill itself is prose and waits for the perception model,
 which is what that feature is for.
 
-What a room holds is sorted into creatures and objects by colour and by
-a few shapes of line. Lines that match neither are filed as creatures,
-so gloves on the ground and a statue in the square are recorded as
-living things, and asking what creatures are about answers with
-furniture. Colour is structural and can be trusted; telling a creature
-from an object by how the sentence reads is prose, and belongs to the
-perception model. Until then the sorting is wrong for anything the
-colour did not cover, and everything already recorded keeps the wrong
-answer.
+What a room holds is sorted into creatures and objects by colour, which
+this game prints on every such line. It was being read wrongly: the
+colour is closed after the line break, so each line opened with the
+previous line's reset and the reset was read instead of the colour. One
+sighting in seven was filed as the wrong kind, and asking what creatures
+were about answered with furniture. Reading the colour in force where
+the text begins fixes it for every run from here. What is already
+recorded keeps the wrong kind until the store is rebuilt from the
+journals, which is its own step.
 
 One recorded fact is also wrong rather than missing. A room's stored
 description sometimes carries what was happening in the room, a combat

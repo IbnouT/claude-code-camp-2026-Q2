@@ -212,3 +212,34 @@ def test_something_that_happened_is_not_recorded_as_an_inhabitant() -> None:
 
     assert len(rooms) == 1
     assert not [m for m in rooms[0].mobs if "flee" in m]
+
+
+def test_a_line_is_read_in_the_colour_it_is_printed_in() -> None:
+    """The game closes a colour after the line break, not before it.
+
+    So every line but the first opens with the previous line's reset.
+    Reading that reset instead of the colour the line is written in loses
+    the one signal that says whether a thing is a creature or an object.
+    """
+    frame = (
+        "\x1b[0;33mThe Armory\x1b[0m\r\n"
+        "   Weapons line the walls.\r\n"
+        "\x1b[0;36m[ Exits: s ]\x1b[0m\r\n"
+        "\x1b[0;32m\x1b[0;32mA small sword lies here.\r\n"
+        "\x1b[0m\x1b[0;32m\x1b[0;32mA pair of leather gloves is lying on "
+        "the ground.\r\n"
+        "\x1b[0m\x1b[0;33mA janitor is walking around, cleaning up.\r\n"
+        "14H 100M 55V > "
+    )
+    rooms = [
+        observation for observation in parse(frame, WIRE)
+        if isinstance(observation, RoomObservation)
+    ]
+
+    assert len(rooms) == 1
+    objects = " ".join(rooms[0].objects)
+    creatures = " ".join(rooms[0].mobs)
+    assert "gloves" in objects, "the gloves are printed as an object"
+    assert "sword" in objects
+    assert "janitor" in creatures
+    assert "gloves" not in creatures

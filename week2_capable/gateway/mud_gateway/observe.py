@@ -171,15 +171,30 @@ class UnparsedObservation(Observation):
 
 
 def segments(raw: bytes | str) -> list[Segment]:
+    """The frame as lines, each with the colour it is actually printed in.
+
+    The game closes a colour after the line break, so every line but the
+    first opens with the previous line's reset. Reading the first code
+    found therefore reports the reset rather than the colour the line is
+    written in, and the colour is how this game says whether a thing is a
+    creature or an object. What counts is the code in force where the
+    text begins.
+    """
     text = raw.decode("latin-1") if isinstance(raw, bytes) else raw
     found: list[Segment] = []
     for line in text.replace("\r\n", "\n").replace("\r", "\n").split("\n"):
         if not line.strip():
             continue
-        match = SGR.search(line)
         plain = SGR.sub("", line).strip()
-        if plain:
-            found.append(Segment(plain, match.group(1) if match else None))
+        if not plain:
+            continue
+        opening = line[:line.index(plain[0])] if plain[0] in line else line
+        codes = SGR.findall(opening)
+        colour = codes[-1] if codes else None
+        if colour in (None, "0", "00"):
+            match = SGR.search(line)
+            colour = match.group(1) if match else None
+        found.append(Segment(plain, colour))
     return found
 
 
