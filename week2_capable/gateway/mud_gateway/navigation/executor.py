@@ -20,6 +20,8 @@ from .route import RoutePlan, nearest_frontier, plan_route
 _DIRECTION_WORDS = {
     "north", "south", "east", "west", "up", "down",
 }
+# Postures a character can walk from. Anything else needs standing first.
+_WALKING_POSTURES = {"standing", "fighting"}
 
 
 @dataclass(frozen=True)
@@ -104,6 +106,17 @@ class NavigationExecutor:
                 return direction
         return None
 
+    async def _ensure_standing(self, trace_id: str) -> None:
+        """Stand before walking, since a resting character refuses to move.
+
+        The refusal costs a step and reads as a blocked exit, so a routine
+        that starts from rest exhausts its setback budget without moving.
+        """
+        posture = getattr(self.session.observations, "posture", None)
+        if posture in _WALKING_POSTURES or posture is None:
+            return
+        await self.session.command("stand", trace_id=trace_id)
+
     async def _step(
         self,
         direction: str,
@@ -114,6 +127,7 @@ class NavigationExecutor:
         """One walked step. Returns a typed outcome, never prose."""
         if direction not in _DIRECTION_WORDS:
             return "invalid_direction"
+        await self._ensure_standing(trace_id)
         before = self._projector.current_place_id
         reply = await self.session.command(direction, trace_id=trace_id)
         state["steps"] += 1

@@ -235,6 +235,34 @@ The wider lesson is the same one as observation 4, one level deeper. The
 earlier number was not wrong because the measurement was careless. It
 was wrong because nobody asked what the thing being counted was.
 
+### 6. Two lines of wiring made every measurement noise
+
+Before building anything on the plan, the defects the transcripts had
+already shown got fixed, because a measurement taken through them means
+nothing.
+
+The first was invisible in the code and obvious in the output. A tool
+result is shaped for the model before it reaches it, and in the compact
+shapes that wrapper is itself JSON. The internal fetchers that build the
+agent's standing context read that shaped value instead of the gateway's
+own text, so the mission line arrived as machine noise and rendered
+every field as "None". Two features that were supposed to tell the agent
+where it stood told it nothing, for every call of every run. The fix
+reads the transformation evidence that already carried the original
+envelope, so it works whatever shape the model's view takes.
+
+The second was a sweep walking a character that was sitting down. The
+game refuses a move from rest, the refusal reads to the executor exactly
+like a blocked exit, and three refusals exhaust the routine's setback
+budget, so the sweep ended after four steps having gone nowhere. Nothing
+in the routine had ever checked posture. The parser had been reporting
+it the whole time and nobody was listening, which is the same shape as
+the hunger signal being parsed and dropped.
+
+Neither is interesting as engineering. Both are worth recording because
+they were present during every measured run this week, including the
+ones whose numbers were reported as progress.
+
 ## Technical Conclusions
 
 - Repeated identical attempts did fail in a stable pattern, and that

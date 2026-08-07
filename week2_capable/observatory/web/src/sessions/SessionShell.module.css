@@ -148,9 +148,6 @@
   padding: 0 max(24px, calc((100% - 1180px) / 2));
   border-bottom: 1px solid var(--session-line);
   background: var(--session-bg);
-  position: sticky;
-  top: 62px;
-  z-index: 18;
 }
 
 .viewSwitch {

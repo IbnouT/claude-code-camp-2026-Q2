@@ -44,6 +44,7 @@ class ObservationPipeline:
         self.tracker = PositionTracker()
         self.room: RoomObservation | None = None
         self.vitals: VitalsObservation | None = None
+        self.posture: str | None = None
 
     def ingest(
         self,
@@ -88,6 +89,10 @@ class ObservationPipeline:
                 self.room = observation
             elif isinstance(observation, VitalsObservation):
                 self.vitals = observation
+            else:
+                posture = getattr(observation, "values", {}).get("posture")
+                if isinstance(posture, str):
+                    self.posture = posture
             self.journal.append(
                 self.session,
                 "unparsed" if observation.kind == "unparsed" else "observation",

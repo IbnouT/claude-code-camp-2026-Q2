@@ -115,6 +115,52 @@ class TestStateBlockWiring(unittest.TestCase):
         self.assertIsNotNone(source)
         self.assertEqual("[here] rendered", source())
 
+    def test_source_unwraps_the_gateway_envelope(self):
+        """The block reaches the model as text, never as the result wrapper."""
+        from boukensha.tool_result import TransformedToolResult
+
+        registry = Registry()
+        envelope = json.dumps(
+            {"type": "observation", "text": "[here] Temple", "complete": True}
+        )
+        minimal = json.dumps({"text": "[here] Temple", "complete": True})
+
+        @registry.tool("mud__recall_state", "state")
+        def recall_state():
+            return TransformedToolResult(
+                minimal,
+                source=envelope,
+                rendered=minimal,
+                mode="minimal",
+                error=False,
+                truncated_chars=0,
+            )
+
+        source = run_dsl._state_block_source(self._Config(True), registry)
+        self.assertEqual("[here] Temple", source())
+
+    def test_source_yields_nothing_for_an_error_result(self):
+        from boukensha.tool_result import TransformedToolResult
+
+        registry = Registry()
+        envelope = json.dumps(
+            {"type": "error", "code": "unavailable", "message": "no session"}
+        )
+
+        @registry.tool("mud__recall_state", "state")
+        def recall_state():
+            return TransformedToolResult(
+                "error: unavailable: no session",
+                source=envelope,
+                rendered="error: unavailable: no session",
+                mode="minimal",
+                error=True,
+                truncated_chars=0,
+            )
+
+        source = run_dsl._state_block_source(self._Config(True), registry)
+        self.assertIsNone(source())
+
 
 class TestStateFields(unittest.TestCase):
     def test_valid_line_reaches_the_sink_and_the_log(self):

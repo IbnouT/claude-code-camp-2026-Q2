@@ -103,8 +103,9 @@ class _Projector:
 
 
 class _Observations:
-    def __init__(self, projector: _Projector) -> None:
+    def __init__(self, projector: _Projector, posture: str | None = None) -> None:
         self.knowledge = projector
+        self.posture = posture
 
 
 class _Position:
@@ -132,17 +133,21 @@ class _Session:
     """Scripted world: moves relocate the projector along a room map."""
 
     def __init__(self, world: dict[str, dict[str, str]], start: str,
-                 vitals: list[VitalsObservation] | None = None) -> None:
+                 vitals: list[VitalsObservation] | None = None,
+                 posture: str | None = None) -> None:
         self.id = "fake"
         self.world = world
         self.projector = _Projector(start)
-        self.observations = _Observations(self.projector)
+        self.observations = _Observations(self.projector, posture)
         self.journal = _Journal()
         self.vitals = list(vitals or [])
         self.commands: list[str] = []
 
     async def command(self, line: str, trace_id=None) -> _Reply:
         self.commands.append(line)
+        if line == "stand":
+            self.observations.posture = "standing"
+            return _Reply()
         here = self.projector.current_place_id
         target = self.world.get(here, {}).get(line)
         if target is not None:
@@ -294,3 +299,50 @@ def test_graph_canonicalizes_abbreviated_exits(tmp_path: Path) -> None:
     room = graph.rooms["place:s:1:1"]
     assert room.exits == frozenset({"north", "east"})
     assert room.frontier() == frozenset({"east"})
+
+
+def _two_room_store(tmp_path: Path) -> KnowledgeStore:
+    store = KnowledgeStore(tmp_path / "knowledge.db", player_id="tester")
+    evidence = _evidence()
+    for subject, predicate, value in (
+        ("place:s:1:1", "title", "Temple"),
+        ("place:s:1:1", "exits", ["north"]),
+        ("place:s:1:1", "exit.north", "place:s:2:2"),
+        ("place:s:2:2", "title", "Square"),
+        ("place:s:2:2", "exits", ["south"]),
+    ):
+        store.assert_fact(
+            subject, predicate, value,
+            layer="learned", confidence="confirmed",
+            evidence=evidence, transaction_id="t1",
+        )
+    return store
+
+
+def test_a_resting_character_stands_before_walking(tmp_path: Path) -> None:
+    """A resting character refuses every move, so the routine stands first."""
+    store = _two_room_store(tmp_path)
+    session = _Session(
+        {"place:s:1:1": {"north": "place:s:2:2"}},
+        "place:s:1:1",
+        posture="resting",
+    )
+    report = asyncio.run(_executor(session, store).travel("Square"))
+    store.close()
+
+    assert session.commands[0] == "stand"
+    assert "north" in session.commands
+    assert report.arrived is True
+
+
+def test_a_standing_character_is_not_told_to_stand(tmp_path: Path) -> None:
+    store = _two_room_store(tmp_path)
+    session = _Session(
+        {"place:s:1:1": {"north": "place:s:2:2"}},
+        "place:s:1:1",
+        posture="standing",
+    )
+    asyncio.run(_executor(session, store).travel("Square"))
+    store.close()
+
+    assert "stand" not in session.commands

@@ -28,6 +28,7 @@ from .config import Config
 from .context import Context
 from .errors import ConfigError, McpServerError, McpToolCollisionError
 from .logger import Logger
+from .tool_result import view_tool_result
 from .message import Message
 from .operator_control import OperatorStopped, start_operator_control
 from .objective import ObjectiveContext
@@ -297,6 +298,24 @@ def _assemble(*,
     )
 
 
+def _gateway_text(result: Any) -> str | None:
+    """The gateway's own text for a tool result, whatever the result mode.
+
+    A tool result reaches this side already shaped for the model, and in
+    the compact modes that shaping is itself JSON. The transformation
+    evidence carries the gateway's original envelope, so the internal
+    fetchers read that and decode it, and never hand the model's own
+    wrapper back to the model.
+    """
+    stages = getattr(result, "evidence_stages", None)
+    source = stages.get("mcp_result") if isinstance(stages, dict) else None
+    view = view_tool_result(source if isinstance(source, str) else result)
+    if view.is_error:
+        return None
+    text = view.text.strip()
+    return text or None
+
+
 def _state_block_source(cfg, registry: Registry):
     """The knowledge state-block fetcher, or None when the flag is off.
 
@@ -315,11 +334,7 @@ def _state_block_source(cfg, registry: Registry):
     tool_name = names[0]
 
     def fetch() -> str | None:
-        result = registry.dispatch(tool_name)
-        text = getattr(result, "text", None)
-        if isinstance(text, str):
-            return text
-        return result if isinstance(result, str) else None
+        return _gateway_text(registry.dispatch(tool_name))
 
     return fetch
 
@@ -364,11 +379,7 @@ def _campaign_line_source(cfg, registry: Registry):
     target = str(settings["target"]).strip()
 
     def fetch() -> str | None:
-        result = registry.dispatch(tool_name, {"target": target})
-        text = getattr(result, "text", None)
-        if isinstance(text, str):
-            return text
-        return result if isinstance(result, str) else None
+        return _gateway_text(registry.dispatch(tool_name, {"target": target}))
 
     return CampaignController(fetch, settings).line
 
