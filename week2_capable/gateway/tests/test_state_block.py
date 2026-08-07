@@ -190,3 +190,33 @@ def test_a_walk_disagreeing_with_the_listing_is_said_aloud(
     store.close()
 
     assert "north → Square (the game calls it Somewhere Else)" in block
+
+
+def test_the_block_says_what_the_character_should_weigh(
+    tmp_path: Path,
+) -> None:
+    """Advice belongs where the decision is made, not behind a tool call."""
+    store = KnowledgeStore(tmp_path / "knowledge.db", player_id="tester")
+    _seed(store)
+    evidence = EvidenceRef(
+        session_id="test", source_seq=5, wire_digest="d",
+        parser_version="p1", method="score", observed_at=time.time(),
+    )
+    for predicate, value in (
+        ("state.hit", 6), ("state.max_hit", 46), ("state.gold", 400),
+    ):
+        store.assert_fact(
+            "player:tester", predicate, value, layer="parsed",
+            confidence="high", evidence=evidence,
+        )
+    block = render_state_block(
+        store,
+        _Pipeline(room=_Room("The Temple Of Midgaard", ("n",))),
+        _Projector("place:s:1:1"),
+        player_id="tester",
+        settings={"gold_carry_ceiling": 20, "fit_health_percent": 70},
+    )
+    store.close()
+
+    assert "resting first costs less than dying" in block
+    assert "carry-little-gold" in block

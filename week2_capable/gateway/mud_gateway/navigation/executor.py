@@ -80,7 +80,6 @@ class NavigationExecutor:
         self.ask_where_ways_lead = bool(
             block.get("ask_where_ways_lead", True)
         )
-        self._asked: set[str] = set()
 
     # -- shared step machinery ---------------------------------------------
 
@@ -244,20 +243,19 @@ class NavigationExecutor:
             )
 
     async def _ask_where_ways_lead(self, room: str, trace_id: str) -> None:
-        """Ask the game where this room's ways lead, once per room.
+        """Ask the game where this room's ways lead, on every arrival.
 
-        The game will name the room behind every exit for the price of one
-        command, which is cheaper than walking each one to find out and
-        cheaper still than a decision made without knowing. Asking again
-        in a room already asked about buys nothing, so it is asked once.
+        One cheap command names the room behind every exit, which beats
+        walking each one to find out. It is asked again on every arrival
+        rather than remembered, because a door that was shut can be open
+        and an answer from an earlier visit would be quietly wrong.
         """
-        if not self.ask_where_ways_lead or room in self._asked:
+        if not self.ask_where_ways_lead:
             return
-        self._asked.add(room)
         try:
             await self.session.command("exits", trace_id=trace_id)
         except Exception:
-            self._asked.discard(room)
+            return
 
     async def _walk(
         self,

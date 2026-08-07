@@ -516,9 +516,10 @@ def test_arriving_somewhere_new_asks_where_its_ways_lead(
     assert session.commands == ["north", "exits"]
 
 
-def test_a_room_already_asked_about_is_not_asked_again(
+def test_every_arrival_asks_again_rather_than_trusting_an_old_answer(
     tmp_path: Path,
 ) -> None:
+    """A door shut on the last visit may be open now."""
     store = _two_room_store(tmp_path)
     evidence = _evidence()
     store.assert_fact(
@@ -537,7 +538,7 @@ def test_a_room_already_asked_about_is_not_asked_again(
     asyncio.run(executor.travel("Square"))
     store.close()
 
-    assert session.commands.count("exits") == 2, "one per room, not per visit"
+    assert session.commands.count("exits") == 3, "one per arrival"
 
 
 def test_asking_can_be_switched_off(tmp_path: Path) -> None:

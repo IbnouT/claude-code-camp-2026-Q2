@@ -27,6 +27,7 @@ def render_state_block(
     *,
     advice: str = "",
     player_id: str = "",
+    settings: Mapping[str, Any] | None = None,
 ) -> str:
     """The situation as the agent should carry it into its next decision."""
     place_id = getattr(projector, "current_place_id", None)
@@ -61,9 +62,27 @@ def render_state_block(
     )
     for line in _notes(store, graph, here):
         lines.append(line)
+    worth = _worth_knowing(store, player_id, settings or {})
+    if worth:
+        lines.append(worth)
     if advice:
         lines.append(advice)
     return "\n".join(lines)
+
+
+def _worth_knowing(
+    store: Any, player_id: str, settings: Mapping[str, Any]
+) -> str:
+    """What the character's own condition suggests, before it decides."""
+    from .readiness import before_hunting, render
+
+    state = {
+        fact.predicate.removeprefix("state."): fact.value
+        for fact in store.current_facts(layer="parsed")
+        if fact.subject == f"player:{player_id}"
+        and fact.predicate.startswith("state.")
+    }
+    return render(before_hunting(state, settings))
 
 
 def _title(room: Any, known: Any) -> str | None:

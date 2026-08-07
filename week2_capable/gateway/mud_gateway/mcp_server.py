@@ -529,6 +529,9 @@ async def serve(
                         live.observations.knowledge,
                         advice=advice,
                         player_id=profile.id,
+                        settings=settings.capability_settings.get(
+                            "knowledge", {}
+                        ),
                     )
 
                 state_reader = read_state
