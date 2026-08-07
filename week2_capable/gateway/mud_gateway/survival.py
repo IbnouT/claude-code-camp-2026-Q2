@@ -128,18 +128,36 @@ class Survival:
         return found
 
     async def apply_wimpy(self) -> int | None:
-        """Set the game's own auto-flee threshold from observed maximum hp."""
+        """Set the game's own auto-flee threshold from observed maximum hp.
+
+        The game spells this `toggle wimpy N`, and refuses any threshold
+        above half of maximum health, so the asked-for share is clamped
+        rather than sent to be rejected. What the game answers is recorded
+        instead of assumed: a threshold that did not take is worth more
+        than a record saying it did.
+        """
         max_hit = self.player_maximum("hit")
         if max_hit is None:
             self._journal("wimpy", {"applied": False, "reason": "no_max_hit"})
             return None
-        threshold = max(1, int(max_hit * self.wimpy_fraction))
-        await self.session.command(f"wimpy {threshold}")
+        share = min(self.wimpy_fraction, 0.5)
+        threshold = max(1, min(int(max_hit * share), max_hit // 2))
+        reply = await self.session.command(f"toggle wimpy {threshold}")
+        answer = next(
+            (line.strip() for line in reply.text.split("\n") if line.strip()),
+            "",
+        )
+        applied = "wimp out if you drop below" in answer.casefold()
         self._journal(
             "wimpy",
-            {"applied": True, "threshold": threshold, "max_hit": max_hit},
+            {
+                "applied": applied,
+                "threshold": threshold,
+                "max_hit": max_hit,
+                "answer": answer,
+            },
         )
-        return threshold
+        return threshold if applied else None
 
     async def recover_movement(
         self,

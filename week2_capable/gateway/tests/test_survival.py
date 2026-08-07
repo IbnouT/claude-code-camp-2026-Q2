@@ -29,7 +29,9 @@ class _Reply:
 
 
 class _Session:
-    def __init__(self, score_moves: list[int], toggles: str = "") -> None:
+    def __init__(self, score_moves: list[int], toggles: str = "",
+                 wimpy_ok: bool = True) -> None:
+        self.wimpy_ok = wimpy_ok
         self.id = "fake"
         self.journal = _Journal()
         self.commands: list[str] = []
@@ -40,6 +42,13 @@ class _Session:
         self.commands.append(line)
         if line == "score" and self.score_moves:
             return _Reply(self.score_moves.pop(0))
+        if line.startswith("toggle wimpy"):
+            n = line.rsplit(" ", 1)[-1]
+            return _Reply(text=(
+                f"Okay, you'll wimp out if you drop below {n} hit points."
+                if self.wimpy_ok else
+                "You can't set your wimp level above half your hit points."
+            ))
         if line == "toggle":
             return _Reply(text=self.toggles)
         return _Reply()
@@ -66,7 +75,7 @@ def test_wimpy_is_set_from_observed_maximum_hp(tmp_path: Path) -> None:
     threshold = asyncio.run(Survival(session, store).apply_wimpy())
     store.close()
     assert threshold == 13
-    assert session.commands == ["wimpy 13"]
+    assert session.commands == ["toggle wimpy 13"]
     kinds = [payload["rule"] for kind, payload in session.journal.events]
     assert kinds == ["wimpy"]
 
@@ -174,3 +183,40 @@ def test_a_switch_the_game_did_not_mention_is_left_alone(
 
     assert changed == ()
     assert session.commands == ["toggle"]
+
+
+def test_the_flee_threshold_is_set_in_words_the_game_knows(
+    tmp_path: Path,
+) -> None:
+    """`wimpy N` is not a command here. The game answered Huh!?! all run."""
+    session = _Session([])
+    store = _store_with_maxima(tmp_path, hit=46)
+    threshold = asyncio.run(Survival(session, store, {}).apply_wimpy())
+    store.close()
+
+    assert session.commands == ["toggle wimpy 13"]
+    assert threshold == 13
+
+
+def test_the_threshold_never_exceeds_half_of_health(tmp_path: Path) -> None:
+    """The game refuses more than half, so asking for more wastes the try."""
+    session = _Session([])
+    store = _store_with_maxima(tmp_path, hit=46)
+    asyncio.run(
+        Survival(session, store, {"wimpy_fraction": 0.9}).apply_wimpy()
+    )
+    store.close()
+
+    assert session.commands == ["toggle wimpy 23"]
+
+
+def test_a_refused_threshold_is_recorded_as_refused(tmp_path: Path) -> None:
+    """A record saying it was applied is worse than knowing it was not."""
+    session = _Session([], wimpy_ok=False)
+    store = _store_with_maxima(tmp_path, hit=46)
+    result = asyncio.run(Survival(session, store, {}).apply_wimpy())
+    store.close()
+
+    assert result is None
+    kinds = [payload for _, payload in session.journal.events]
+    assert any(p.get("applied") is False for p in kinds)
