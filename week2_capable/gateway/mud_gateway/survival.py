@@ -32,6 +32,9 @@ class Survival:
         self.rest_resume = float(block.get("rest_resume", 0.8))
         self.rest_poll_seconds = float(block.get("rest_poll_seconds", 6.0))
         self.rest_max_polls = int(block.get("rest_max_polls", 20))
+        self.game_toggles = tuple(
+            block.get("game_toggles", ("autoloot", "autogold", "autoexit"))
+        )
 
     # -- store reads -------------------------------------------------------
 
@@ -53,6 +56,21 @@ class Survival:
         )
 
     # -- reflexes ----------------------------------------------------------
+
+    async def let_the_game_do_the_work(self) -> tuple[str, ...]:
+        """Turn on the game's own conveniences, once, at the start.
+
+        The game will pick up coins and loot a corpse by itself if asked.
+        Doing that here costs one command each and saves a decision after
+        every kill, which is a decision the model would otherwise pay for
+        and sometimes forget.
+        """
+        applied = []
+        for toggle in self.game_toggles:
+            await self.session.command(toggle)
+            applied.append(toggle)
+        self._journal("game-settings", {"applied": applied})
+        return tuple(applied)
 
     async def apply_wimpy(self) -> int | None:
         """Set the game's own auto-flee threshold from observed maximum hp."""

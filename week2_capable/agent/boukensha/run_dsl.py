@@ -167,6 +167,12 @@ def _assemble(*,
             task_settings,
             override_path=cfg.user_prompt_path(Player.task_name),
         )
+    # Standing advice belongs with the standing instructions. It does not
+    # change during a run, so putting it in every turn costs on every call
+    # and teaches the model to skim it.
+    advice = _standing_advice(cfg)
+    if advice:
+        system = f"{system}\n\n{advice}"
     if model is None:
         model = Player.model(task_settings)
     if backend is None:
@@ -293,6 +299,35 @@ def _assemble(*,
         servers=servers,
         config=cfg,
     )
+
+
+def _standing_advice(cfg) -> str:
+    """How to play, from the authored rules beside the configuration."""
+    if cfg is None or not cfg.capability("knowledge"):
+        return ""
+    path = Path(cfg.dir) / "rules.yaml"
+    if not path.is_file():
+        return ""
+    try:
+        import yaml
+
+        document = yaml.safe_load(path.read_text()) or {}
+    except Exception:
+        return ""
+    numbers = cfg.capability_settings("knowledge") or {}
+    lines = []
+    for entry in document.get("rules") or []:
+        if not isinstance(entry, dict) or not entry.get("enabled", True):
+            continue
+        text = str(entry.get("text") or "").strip()
+        if not text:
+            continue
+        try:
+            text = text.format(**numbers)
+        except (KeyError, IndexError):
+            pass
+        lines.append(f"- {text}")
+    return "# How to play\n\n" + "\n".join(lines) if lines else ""
 
 
 def _gateway_text(result: Any) -> str | None:

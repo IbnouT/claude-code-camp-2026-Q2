@@ -511,16 +511,16 @@ async def serve(
                     reflexes=survival,
                 )
             if survival is not None:
+                await survival.let_the_game_do_the_work()
                 await survival.apply_wimpy()
             if settings.capabilities.get("knowledge") and knowledge_store:
                 store = knowledge_store
                 live = session
-                # Advice the agent reads every turn. A rule it never sees
-                # is a rule it does not have.
-                advice = rules.render(
-                    rules.load(settings.rules_file),
-                    settings.capability_settings.get("knowledge", {}),
-                )
+                # The standing rules ride with the standing instructions,
+                # not here: they never change, and repeating them every
+                # turn costs on every call. What belongs here is what has
+                # changed and what it suggests.
+                advice = ""
 
                 def read_state() -> str:
                     return render_state_block(

@@ -111,3 +111,28 @@ def test_no_rest_needed_above_the_floor(tmp_path: Path) -> None:
     store.close()
     assert outcome is None
     assert session.commands == []
+
+
+def test_the_game_is_asked_to_loot_for_us(tmp_path: Path) -> None:
+    """A corpse looted by the game costs no decision after every kill."""
+    session = _Session([])
+    store = _store_with_maxima(tmp_path)
+    survival = Survival(session, store, {})
+
+    applied = asyncio.run(survival.let_the_game_do_the_work())
+
+    assert "autoloot" in session.commands
+    assert "autogold" in session.commands
+    assert applied == ("autoloot", "autogold", "autoexit")
+    store.close()
+
+
+def test_the_toggles_are_settings(tmp_path: Path) -> None:
+    session = _Session([])
+    store = _store_with_maxima(tmp_path)
+    survival = Survival(session, store, {"game_toggles": ("autoloot",)})
+
+    asyncio.run(survival.let_the_game_do_the_work())
+
+    assert session.commands == ["autoloot"]
+    store.close()
