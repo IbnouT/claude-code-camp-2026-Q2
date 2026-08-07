@@ -36,9 +36,32 @@ Consequences, all previously misread as other problems:
   until identity is defined.
 
 This is a knowledge-rework concern and lands there, but nothing in this
-plan is measurable before it does. Identity rule to decide there: title
-plus exit signature plus link consistency, with aliasing recorded rather
-than discarded.
+plan is measurable before it does.
+
+The rule, designed against the real data: a candidate key of title plus
+sorted exits plus description digest, with graph evidence deciding.
+Two candidates bind to one room only when no linked direction leads to
+different places and at least one shared direction agrees, or the key
+has never had two live aliases in any session. Anything else stays
+split and is recorded as a weak belief, because splitting costs
+efficiency while a wrong merge invents routes that do not exist.
+
+Measured on the real store: title alone would wrongly merge half the
+map. The rule folds 478 aliases into 265 rooms, joining 61 percent,
+including the Armory's 16 separate identities across 16 sessions. The
+hard case is real: a forest maze holds 7 rooms identical in title,
+exits and description, separable only by where their exits lead.
+
+Identity facts live in a new derived layer, so a wrong merge is undone
+by recomputing rather than by editing evidence. Aliases are never
+rewritten.
+
+Grading identity against truth: the atlas vnum stays observer truth,
+never agent knowledge. Recorded in the observer_truth layer it becomes
+the answer key for measuring merge precision and recall, so the rule is
+scored rather than assumed. Agent-facing reads are guarded to belief,
+parsed and learned, so nothing the agent decides with can ever come
+from it.
 
 - Success: after the rule lands, replaying two recorded missions over
   the joined store yields one connected map, and the count of distinct
