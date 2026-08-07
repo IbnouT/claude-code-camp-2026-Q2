@@ -308,6 +308,40 @@ The reviews that found them all did the same thing: constructed a world
 where my rule had to choose, and checked the choice against something
 outside my judgment.
 
+### 8. A map that joined only after the run had ended
+
+With the identity rule approved, wiring it looked like bookkeeping: write
+the conclusions into the store, read them when building the map. The
+review found that the wiring worked perfectly and delivered nothing.
+
+Places are named per run. Recomputing identity when a run starts joins
+everything earlier runs saw, but every room this run enters is named
+fresh and belongs to no joined room until the run ends. So the agent
+always stands in a place the joined map does not contain. Asking to walk
+to a room known from yesterday returned unreachable, every time, in
+exactly the situation the whole feature exists for. The recorded map was
+correct and the agent could never use it.
+
+The fix was to compute identity where the map is built rather than read
+it from what was written down, so the room being stood in is joined as
+soon as it is seen, and to keep the written record as the thing a person
+can inspect. That inverted which part is authoritative: the stored
+identity is a report, and the live computation is what the agent walks.
+
+Two store defects fell out of the same work. Withdrawing a layer of
+facts told no one: the change feed the Observatory follows never learned
+the facts had gone, so a reader would show a binding that no longer
+existed indefinitely. And re-observing a value that had been withdrawn
+attached the observation to the withdrawn claim instead of making it
+current again, so after a knowledge reset the store could report an
+observation while the fact stayed absent. That is the most likely
+explanation for the empty map after resets we had been attributing to
+the projector.
+
+None of the three was visible from the tests. All three were found by
+someone asking what the code does when the situation is not the one it
+was written for.
+
 ## Technical Conclusions
 
 - Repeated identical attempts did fail in a stable pattern, and that

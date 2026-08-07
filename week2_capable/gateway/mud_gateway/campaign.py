@@ -40,9 +40,10 @@ def mission_readiness(store: Any, target: str) -> dict[str, Any]:
 
     graph = WorldGraph.from_store(store)
     sighted_titles = sorted({
-        graph.rooms[place].title
+        graph.rooms[graph.room_of(place)].title
         for place in sighted_places
-        if place in graph.rooms and graph.rooms[place].title
+        if graph.room_of(place) in graph.rooms
+        and graph.rooms[graph.room_of(place)].title
     })
     return {
         "target": target,

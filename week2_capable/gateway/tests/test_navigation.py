@@ -57,9 +57,11 @@ def test_graph_reads_places_exits_and_frontier(tmp_path: Path) -> None:
         )
     graph = WorldGraph.from_store(store)
     store.close()
-    assert set(graph.rooms) == {"place:s:1:1", "place:s:2:2"}
-    temple = graph.rooms["place:s:1:1"]
-    assert temple.links["north"] == "place:s:2:2"
+    assert set(graph.rooms) == {
+        graph.room_of("place:s:1:1"), graph.room_of("place:s:2:2")
+    }
+    temple = graph.rooms[graph.room_of("place:s:1:1")]
+    assert temple.links["north"] == graph.room_of("place:s:2:2")
     assert temple.frontier() == frozenset({"east"})
     assert graph.by_title("temple")[0] is temple
 
@@ -296,7 +298,7 @@ def test_graph_canonicalizes_abbreviated_exits(tmp_path: Path) -> None:
         )
     graph = WorldGraph.from_store(store)
     store.close()
-    room = graph.rooms["place:s:1:1"]
+    room = graph.rooms[graph.room_of("place:s:1:1")]
     assert room.exits == frozenset({"north", "east"})
     assert room.frontier() == frozenset({"east"})
 
@@ -370,19 +372,17 @@ def test_the_map_joins_rooms_when_identity_was_recorded(tmp_path: Path) -> None:
             confidence="confirmed", evidence=evidence, transaction_id="t1",
         )
 
-    before = WorldGraph.from_store(store)
-    assert len([r for r in before.rooms.values() if r.title == "The Armory"]) == 2
-
+    graph = WorldGraph.from_store(store)
     record(store, store.current_facts(layer="learned"))
-    after = WorldGraph.from_store(store)
     store.close()
 
-    armories = [r for r in after.rooms.values() if r.title == "The Armory"]
-    assert len(armories) == 1
+    armories = [r for r in graph.rooms.values() if r.title == "The Armory"]
+    assert len(armories) == 1, "the two runs' Armory must be one room"
     assert "north" in armories[0].links
+    assert graph.room_of("place:s1:1:1") == graph.room_of("place:s2:1:1")
 
 
-def test_the_map_reads_places_when_identity_was_never_recorded(
+def test_a_place_seen_once_is_still_a_room_on_the_map(
     tmp_path: Path,
 ) -> None:
     store = KnowledgeStore(tmp_path / "knowledge.db", player_id="tester")
@@ -393,4 +393,5 @@ def test_the_map_reads_places_when_identity_was_never_recorded(
     )
     graph = WorldGraph.from_store(store)
     store.close()
-    assert list(graph.rooms) == ["place:s1:1:1"]
+    assert len(graph.rooms) == 1
+    assert graph.room_of("place:s1:1:1") in graph.rooms

@@ -301,16 +301,24 @@ class KnowledgeStore:
             "UPDATE facts SET current_assertion_id = NULL WHERE fact_id = ?",
             (row["fact_id"],),
         )
-        self._add_evidence(
+        evidence = EvidenceRef(
+            session_id=str(row["session_id"]),
+            source_seq=int(row["source_seq"]),
+            wire_digest=str(row["wire_digest"]),
+            parser_version=str(row["parser_version"]),
+            method=method,
+            observed_at=now,
+        )
+        self._add_evidence(assertion_id, evidence)
+        self._change(
+            tx,
+            "retract",
+            "assertion",
             assertion_id,
-            EvidenceRef(
-                session_id=str(row["session_id"]),
-                source_seq=int(row["source_seq"]),
-                wire_digest=str(row["wire_digest"]),
-                parser_version=str(row["parser_version"]),
-                method=method,
-                observed_at=now,
-            ),
+            str(row["value_digest"]),
+            None,
+            evidence,
+            now,
         )
 
     def reset_learned(self, *, reason: str, snapshot_id: str) -> int:
@@ -753,12 +761,19 @@ class KnowledgeStore:
             and current is not None
             and matching["assertion_id"] == current["assertion_id"]
         )
-        # A fact whose current assertion was withdrawn has to be claimed
-        # again, not merely supported: attaching evidence to the assertion
-        # that was retracted would leave the fact absent while looking
-        # recorded.
-        withdrawn = fact is not None and current is None
-        if matching is not None and not withdrawn and (
+        # A claim that some retraction withdrew cannot be supported again,
+        # it has to be made again. Attaching evidence to a withdrawn row
+        # would leave the fact absent from the store while reading as
+        # recorded, and would lose a contradiction with whatever became
+        # current in the meantime.
+        superseded = matching is not None and bool(
+            self._db.execute(
+                "SELECT 1 FROM assertions WHERE supersedes = ? "
+                "AND status = 'retracted' LIMIT 1",
+                (matching["assertion_id"],),
+            ).fetchone()
+        )
+        if matching is not None and not superseded and (
             not force_append or matching["transaction_id"] == transaction_id
         ) and (not temporal or matching_is_current):
             added = self._add_evidence(str(matching["assertion_id"]), evidence)

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Iterable
+from typing import Any, Iterable
 
 from ..knowledge import KnowledgeStore
 
@@ -35,20 +35,51 @@ class Room:
         return frozenset(self.exits - self.links.keys())
 
 
-def _recorded_identity(store: KnowledgeStore) -> dict[str, str]:
-    """The place-to-room mapping, empty when identity was never recorded."""
-    return {
-        fact.subject: fact.value
-        for fact in store.current_facts(layer="derived")
-        if fact.predicate == "identity.room" and isinstance(fact.value, str)
+_IDENTITY_CACHE: dict[int, dict[str, str]] = {}
+
+
+def _live_identity(
+    store: KnowledgeStore, facts: list[Any]
+) -> dict[str, str]:
+    """The place-to-room mapping for the facts as they stand right now.
+
+    Identity is computed here rather than read from what was recorded,
+    because a place first seen in this run would otherwise belong to no
+    room until the run ended, which is precisely when the agent needs to
+    know that the room it is standing in is one it has walked before.
+
+    The answer is kept until the store changes, so building the map many
+    times in one routine costs one computation.
+    """
+    from .. import identity as identity_module
+
+    cursor = store.last_change_seq()
+    cached = _IDENTITY_CACHE.get(cursor)
+    if cached is not None:
+        return cached
+    bound = {
+        binding.place_id: binding.room_id
+        for binding in identity_module.resolve(
+            identity_module.places_from_facts(facts)
+        )
     }
+    _IDENTITY_CACHE.clear()
+    _IDENTITY_CACHE[cursor] = bound
+    return bound
 
 
 @dataclass
 class WorldGraph:
-    """Every learned place, keyed by its stable store identity."""
+    """Every known room, with the places each was observed as."""
 
     rooms: dict[str, Room]
+    identity: dict[str, str] = field(default_factory=dict)
+
+    def room_of(self, place_id: str | None) -> str | None:
+        """The room a place belongs to, or the place when it stands alone."""
+        if place_id is None:
+            return None
+        return self.identity.get(place_id, place_id)
 
     @classmethod
     def from_store(cls, store: KnowledgeStore) -> "WorldGraph":
@@ -58,7 +89,8 @@ class WorldGraph:
         cross a session boundary. Without it every run holds a separate
         copy of the same ground and the map never joins.
         """
-        identity = _recorded_identity(store)
+        facts = list(store.current_facts(layer="learned"))
+        identity = _live_identity(store, facts)
         rooms: dict[str, Room] = {}
 
         def named(place_id: str) -> str:
@@ -68,7 +100,7 @@ class WorldGraph:
             key = named(place_id)
             return rooms.setdefault(key, Room(key))
 
-        for fact in store.current_facts(layer="learned"):
+        for fact in facts:
             if not fact.subject.startswith("place:"):
                 continue
             if fact.predicate == "title" and isinstance(fact.value, str):
@@ -89,7 +121,7 @@ class WorldGraph:
                 )
                 if direction is not None:
                     room(fact.subject).links[direction] = named(fact.value)
-        return cls(rooms)
+        return cls(rooms, dict(identity))
 
     def by_title(self, title: str) -> list[Room]:
         """Learned rooms matching a remembered title.

@@ -385,3 +385,69 @@ def test_a_withdrawn_fact_returns_when_it_is_observed_again(tmp_path) -> None:
         ("place:s1:1:1", "The Armory")
     ]
     store.close()
+
+
+def _store_with(tmp_path, layer="learned"):
+    from mud_gateway.knowledge import KnowledgeStore
+    from mud_gateway.knowledge_models import EvidenceRef
+
+    store = KnowledgeStore(tmp_path / "knowledge.db", player_id="tester")
+    evidence = EvidenceRef(
+        session_id="s1", source_seq=1, wire_digest="d" * 64,
+        parser_version="1", method="test", observed_at=1.0,
+    )
+    return store, evidence
+
+
+def test_withdrawing_a_layer_is_announced_to_readers(tmp_path) -> None:
+    """A reader following the changes must learn a fact went away."""
+    store, evidence = _store_with(tmp_path)
+    store.assert_fact(
+        "place:s1:1:1", "identity.room", "room:a", layer="derived",
+        confidence="tracked", evidence=evidence,
+    )
+    mark = store.last_change_seq()
+
+    store.retract_layer("derived", reason="recompute")
+
+    changes = store.changes_since(mark)
+    assert [c.operation for c in changes] == ["retract"]
+    store.close()
+
+
+def test_a_withdrawn_claim_cannot_be_revived_by_supporting_it(
+    tmp_path,
+) -> None:
+    """After a reset, re-observing an old value must contest what is current.
+
+    Attaching evidence to the withdrawn claim instead would leave the
+    contradiction invisible and the wrong value standing.
+    """
+    store, evidence = _store_with(tmp_path)
+    store.assert_fact(
+        "place:s1:1:1", "title", "The Armory", layer="learned",
+        confidence="confirmed", evidence=evidence,
+    )
+    store.assert_fact(
+        "place:s1:1:1", "title", "The Old Armory", layer="learned",
+        confidence="confirmed", evidence=evidence,
+    )
+    store.retract_layer("learned", reason="reset")
+
+    store.assert_fact(
+        "place:s1:1:1", "title", "The Old Armory", layer="learned",
+        confidence="confirmed", evidence=evidence,
+    )
+    store.assert_fact(
+        "place:s1:1:1", "title", "The Armory", layer="learned",
+        confidence="confirmed", evidence=evidence,
+    )
+
+    current = [
+        a.value for a in store.current_facts(layer="learned")
+        if a.predicate == "title"
+    ]
+    assert current == ["The Armory"], (
+        "the newly observed title must be what the store holds"
+    )
+    store.close()

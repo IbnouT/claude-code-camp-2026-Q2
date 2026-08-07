@@ -447,22 +447,22 @@ async def serve(
             )
             record_profile(journal, session.id, surface)
             if settings.capabilities.get("knowledge") and knowledge_store:
-                # Join what earlier runs saw before this one starts, so the
-                # map the agent walks is one map rather than a fresh copy
-                # of ground already covered.
-                bound = identity.record(
-                    knowledge_store,
-                    knowledge_store.current_facts(layer="learned"),
-                )
-                journal.append(
-                    session.id,
-                    "identity",
-                    {
+                # Record what earlier runs saw as one map. The map the
+                # agent walks is computed live, so a failure here costs a
+                # report rather than the run.
+                try:
+                    bound = identity.record(
+                        knowledge_store,
+                        knowledge_store.current_facts(layer="learned"),
+                    )
+                    payload = {
                         "phase": "start",
                         "places": len(bound),
                         "rooms": len(set(bound.values())),
-                    },
-                )
+                    }
+                except Exception as error:
+                    payload = {"phase": "start", "failed": str(error)}
+                journal.append(session.id, "identity", payload)
             await session.open()
             await seed_login_observations(session, journal)
             survival = None

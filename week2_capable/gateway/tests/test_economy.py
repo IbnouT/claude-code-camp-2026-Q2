@@ -64,6 +64,9 @@ class _Graph:
             place: _GraphRoom(title) for place, title in rooms.items()
         }
 
+    def room_of(self, place_id):
+        return place_id
+
 
 def _evidence() -> EvidenceRef:
     return EvidenceRef(

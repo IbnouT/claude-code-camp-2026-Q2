@@ -23,7 +23,7 @@ def render_state_block(
     place_id = getattr(projector, "current_place_id", None)
     room = getattr(pipeline, "room", None)
     graph = WorldGraph.from_store(store)
-    known = graph.rooms.get(place_id) if place_id else None
+    known = graph.rooms.get(graph.room_of(place_id)) if place_id else None
 
     title = None
     if room is not None and room.title:

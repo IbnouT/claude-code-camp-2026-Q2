@@ -98,7 +98,7 @@ class NavigationExecutor:
         live = getattr(self.session.observations, "room", None)
         if live is None or not live.exits:
             return None
-        known = graph.rooms.get(current) if current else None
+        known = graph.rooms.get(graph.room_of(current)) if current else None
         linked = set(known.links) if known is not None else set()
         for raw in sorted(live.exits):
             direction = canonical_direction(raw)
@@ -128,7 +128,8 @@ class NavigationExecutor:
         if direction not in _DIRECTION_WORDS:
             return "invalid_direction"
         await self._ensure_standing(trace_id)
-        before = self._projector.current_place_id
+        graph = self._graph()
+        before = graph.room_of(self._projector.current_place_id)
         reply = await self.session.command(direction, trace_id=trace_id)
         state["steps"] += 1
         vitals = next(
@@ -157,7 +158,7 @@ class NavigationExecutor:
                     return "low_vitals"
         if not reply.position.certain:
             return "position_uncertain"
-        after = self._projector.current_place_id
+        after = graph.room_of(self._projector.current_place_id)
         if after is None:
             return "position_unknown"
         if after == before:
@@ -249,7 +250,9 @@ class NavigationExecutor:
                 return self._report("sweep", "step_limit", state)
             if len(state["visited"]) >= self.max_rooms:
                 return self._report("sweep", "room_limit", state)
-            current = self._projector.current_place_id
+            current = self._graph().room_of(
+                self._projector.current_place_id
+            )
             if current is None:
                 return self._report("sweep", "position_unknown", state)
             state["visited"].add(current)
@@ -259,7 +262,9 @@ class NavigationExecutor:
                 looked = True
                 await self.session.command("look", trace_id=state["trace_id"])
                 graph = self._graph()
-                current = self._projector.current_place_id or current
+                current = graph.room_of(
+                    self._projector.current_place_id
+                ) or current
                 target = nearest_frontier(graph, current, failed_rooms)
             if target is None:
                 direction = self._live_frontier(graph, current)
@@ -308,7 +313,9 @@ class NavigationExecutor:
             return self._report(
                 "travel", "travel_disabled", state, destination=destination
             )
-        current = self._projector.current_place_id
+        current = self._graph().room_of(
+            self._projector.current_place_id
+        )
         if current is None:
             return self._report(
                 "travel", "position_unknown", state, destination=destination

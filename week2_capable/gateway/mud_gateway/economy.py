@@ -70,8 +70,8 @@ class Economy:
             return self._done(report, "navigation_disabled")
         graph = self.navigation._graph()
         titles = {
-            place: graph.rooms[place].title
-            for place in banks if place in graph.rooms
+            place: graph.rooms[graph.room_of(place)].title
+            for place in banks if graph.room_of(place) in graph.rooms
         }
         if not titles:
             return self._done(report, "bank_not_on_map")

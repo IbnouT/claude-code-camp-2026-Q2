@@ -468,6 +468,13 @@ def record(store: Any, assertions: Sequence[Any]) -> dict[str, str]:
                 assertion.subject,
                 assertion.latest_evidence or assertion.evidence,
             )
+    wanted = {
+        binding.place_id: binding.room_id for binding in bindings
+    }
+    if wanted and wanted == rooms_of(store):
+        # Nothing moved, so rewriting would only grow the record and tell
+        # every reader a fact changed when none did.
+        return wanted
     store.retract_layer("derived", reason="identity recompute")
     transaction = uuid.uuid4().hex
     recorded: dict[str, str] = {}

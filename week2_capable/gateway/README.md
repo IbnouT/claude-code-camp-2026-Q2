@@ -368,7 +368,7 @@ flowchart LR
     B --> K
 ```
 
-The store keeps four layers separate:
+The store keeps five layers separate:
 
 | Layer | Meaning |
 | --- | --- |
@@ -376,6 +376,7 @@ The store keeps four layers separate:
 | `parsed` | current player state and position derived from wire evidence |
 | `learned` | cumulative rooms, sightings, and verified traversals |
 | `observer_truth` | an independent observer result, never inferred from belief |
+| `derived` | computed from other facts, dropped and rebuilt rather than edited |
 
 Every assertion keeps its confidence, method, parser version, gateway session,
 source sequence, wire digest, and observation time. Repeated values add
