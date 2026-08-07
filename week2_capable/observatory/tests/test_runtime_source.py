@@ -2508,3 +2508,56 @@ async def test_destination_action_requires_beacon_and_learned_route(
             written[7].seq,
         ],
     }
+
+
+def test_measured_runs_are_visible_too(tmp_path: Path):
+    """A run nobody can watch is a run nobody can check.
+
+    A benchmark keeps its own tree so it cannot disturb the player it
+    measures. That isolation is about writing, not about looking.
+    """
+    root = runtime_root(tmp_path)
+    attempt = root / "benchmarks" / "minotaur" / "attempts" / "01"
+    attempt.mkdir(parents=True)
+    database = sqlite3.connect(attempt / "registry.db")
+    database.executescript(REGISTRY_SCHEMA)
+    database.close()
+    add_session(
+        attempt,
+        player="alpha",
+        character="Alpha",
+        session="session-measured",
+        gateway_session="gateway-measured",
+        state="stopped",
+        cost=0.05,
+    )
+
+    found = {session.id for session in RuntimeSource(root).sessions()}
+
+    assert "session-measured" in found
+    assert {"session-alpha", "session-beta"} <= found
+
+
+def test_a_measured_session_reads_from_its_own_tree(tmp_path: Path):
+    """Its files live under the run, not under the player being measured."""
+    root = runtime_root(tmp_path)
+    attempt = root / "benchmarks" / "minotaur" / "attempts" / "01"
+    attempt.mkdir(parents=True)
+    database = sqlite3.connect(attempt / "registry.db")
+    database.executescript(REGISTRY_SCHEMA)
+    database.close()
+    add_session(
+        attempt,
+        player="alpha",
+        character="Alpha",
+        session="session-measured",
+        gateway_session="gateway-measured",
+        state="stopped",
+        cost=0.05,
+    )
+
+    source = RuntimeSource(root)
+    session = source.session("session-measured")
+
+    assert session is not None
+    assert str(attempt) in str(source._session_dir("session-measured"))

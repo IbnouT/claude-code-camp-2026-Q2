@@ -88,13 +88,40 @@ class RuntimeSource:
 
     @property
     def available(self) -> bool:
-        return self.registry.is_file()
+        return self.registry.is_file() or bool(self._measured_roots())
+
+    def _measured_roots(self) -> tuple[Path, ...]:
+        """Roots of measured runs, which keep their own state on purpose.
+
+        A benchmark run writes into a tree of its own so it cannot disturb
+        the player it is measuring. That isolation is about writing, not
+        about looking: a run nobody can watch is a run nobody can check.
+        """
+        found = [
+            registry.parent
+            for registry in sorted(
+                self.config_dir.glob("benchmarks/*/attempts/*/registry.db")
+            )
+        ]
+        return tuple(found)
+
+    def _roots(self) -> tuple[Path, ...]:
+        roots = [self.config_dir] if self.registry.is_file() else []
+        roots.extend(self._measured_roots())
+        return tuple(roots)
 
     def sessions(self) -> tuple[RuntimeSession, ...]:
-        if not self.available:
+        found: list[RuntimeSession] = []
+        for root in self._roots():
+            found.extend(self._sessions_of(root))
+        return tuple(found)
+
+    def _sessions_of(self, root: Path) -> tuple[RuntimeSession, ...]:
+        registry = root / "registry.db"
+        if not registry.is_file():
             return ()
         try:
-            with self._database(self.registry) as database:
+            with self._database(registry) as database:
                 columns = {
                     str(row["name"])
                     for row in database.execute("PRAGMA table_info(sessions)")
@@ -125,7 +152,7 @@ class RuntimeSource:
                 ).fetchall()
         except sqlite3.Error as error:
             raise RuntimeSourceError("runtime registry is unreadable") from error
-        return tuple(self._session(row) for row in rows)
+        return tuple(self._session(row, root) for row in rows)
 
     def session(self, session_id: str) -> RuntimeSession | None:
         return next(
@@ -460,11 +487,14 @@ class RuntimeSource:
             )
         return receipt
 
-    def _session(self, row: sqlite3.Row) -> RuntimeSession:
+    def _session(
+        self, row: sqlite3.Row, root: Path | None = None
+    ) -> RuntimeSession:
         session_dir = self._safe_session_dir(
             str(row["session_id"]),
             str(row["player_id"]),
             Path(str(row["session_dir"])),
+            root,
         )
         control_state = self._control_state(session_dir)
         control_available = self._operator_available(
@@ -563,34 +593,40 @@ class RuntimeSource:
         return first_turn
 
     def _session_dir(self, session_id: str) -> Path:
-        if not self.available:
+        roots = self._roots()
+        if not roots:
             raise RuntimeSourceError("runtime registry is unavailable")
-        try:
-            with self._database(self.registry) as database:
-                row = database.execute(
-                    "SELECT session_id, player_id, session_dir "
-                    "FROM sessions WHERE session_id = ?",
-                    (session_id,),
-                ).fetchone()
-        except sqlite3.Error as error:
-            raise RuntimeSourceError("runtime registry is unreadable") from error
-        if row is None:
-            raise RuntimeSourceError(f"unknown runtime session {session_id!r}")
-        return self._safe_session_dir(
-            str(row["session_id"]),
-            str(row["player_id"]),
-            Path(str(row["session_dir"])),
-        )
+        for root in roots:
+            try:
+                with self._database(root / "registry.db") as database:
+                    row = database.execute(
+                        "SELECT session_id, player_id, session_dir "
+                        "FROM sessions WHERE session_id = ?",
+                        (session_id,),
+                    ).fetchone()
+            except sqlite3.Error as error:
+                raise RuntimeSourceError(
+                    "runtime registry is unreadable"
+                ) from error
+            if row is not None:
+                return self._safe_session_dir(
+                    str(row["session_id"]),
+                    str(row["player_id"]),
+                    Path(str(row["session_dir"])),
+                    root,
+                )
+        raise RuntimeSourceError(f"unknown runtime session {session_id!r}")
 
     def _safe_session_dir(
         self,
         session_id: str,
         player_id: str,
         path: Path,
+        root: Path | None = None,
     ) -> Path:
         resolved = path.expanduser().resolve()
         expected = (
-            self.config_dir
+            (root or self.config_dir)
             / "profiles"
             / player_id
             / "sessions"

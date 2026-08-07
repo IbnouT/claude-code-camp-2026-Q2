@@ -100,11 +100,11 @@ Every experiment writes ordinary sessions with ordinary journals. They
 are invisible only because each run writes into its own private root
 that the Observatory never reads.
 
-- Decision to record: either the Observatory reads those roots, or
-  experiments stop isolating and write ordinary sessions with an
-  experiment tag. The second is simpler and makes live watching
-  automatic. The first keeps runs from touching the main knowledge
-  store.
+- Decided: the Observatory sees everything, benchmark runs included.
+  Runs keep their own roots, so a measured run still cannot touch the
+  main knowledge store or the player it belongs to, and the Observatory
+  learns to read those roots as well as the main one. Discovery is
+  read-side only: nothing a run writes changes.
 - Live watching needs nothing beyond whichever choice is made, since
   the Live view already follows a running session's journal.
 - The runner records the mission verdict beside cost, so a list of
@@ -350,7 +350,6 @@ Known defects that make every measurement noise. Not new scope, repair.
 
 ## Decisions waiting
 
-- F2: isolated runs the Observatory reads, or ordinary tagged sessions.
 - F8: whether perception is a sixth capability, a setting group under
   knowledge, or a gateway device outside capabilities.
 - The order of work.
