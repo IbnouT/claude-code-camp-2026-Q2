@@ -119,13 +119,13 @@ def test_no_rest_needed_above_the_floor(tmp_path: Path) -> None:
 
 def test_the_game_is_asked_to_loot_for_us(tmp_path: Path) -> None:
     """A corpse looted by the game costs no decision after every kill."""
-    session = _Session([], toggles="AutoLoot: OFF   AutoGold: OFF")
+    session = _Session([], toggles="AutoLoot: OFF  AutoGold: OFF  Autodoor: OFF  Autokey: OFF")
     store = _store_with_maxima(tmp_path)
     survival = Survival(session, store, {})
 
     applied = asyncio.run(survival.let_the_game_do_the_work())
 
-    assert applied == ("autoloot", "autogold")
+    assert applied == ("autoloot", "autogold", "autodoor", "autokey")
     assert session.commands[0] == "toggle", "read the switches before setting"
     store.close()
 
@@ -143,7 +143,7 @@ def test_the_toggles_are_settings(tmp_path: Path) -> None:
 
 def test_something_already_on_is_left_alone(tmp_path: Path) -> None:
     """These switches are remembered, so setting one that is on turns it off."""
-    session = _Session([], toggles="AutoLoot: ON    AutoGold: ON")
+    session = _Session([], toggles="AutoLoot: ON  AutoGold: ON  Autodoor: ON  Autokey: ON")
     store = _store_with_maxima(tmp_path)
 
     changed = asyncio.run(

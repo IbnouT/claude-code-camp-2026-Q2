@@ -42,7 +42,13 @@ class Survival:
             # set, so sending them once is idempotent in effect. The exit
             # display is a plain toggle with no way to ask for "on", so
             # sending it would turn off the very lines the parser reads.
-            block.get("game_toggles", ("autoloot", "autogold"))
+            # Work the game will do that the agent would otherwise pay a
+            # decision for: empty the corpse, take the coins, open the door
+            # in the way, and use a key already carried.
+            block.get(
+                "game_toggles",
+                ("autoloot", "autogold", "autodoor", "autokey"),
+            )
         )
 
     # -- store reads -------------------------------------------------------
