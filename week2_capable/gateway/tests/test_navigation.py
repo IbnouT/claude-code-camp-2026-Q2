@@ -153,6 +153,10 @@ class _Session:
     async def command(self, line: str, trace_id=None) -> _Reply:
         self.commands.append(line)
         reply_wire = getattr(self, "wire_ref", None)
+        if line == "exits":
+            # Asking where the ways lead moves nobody and is scripted
+            # separately from the walk.
+            return _Reply()
         if line == "stand":
             self.observations.posture = "standing"
             return _Reply()
@@ -215,7 +219,8 @@ def test_travel_walks_the_learned_route(tmp_path: Path) -> None:
     store.close()
     assert report.stop == "arrived"
     assert report.arrived is True
-    assert session.commands == ["north", "east"]
+    walked = [c for c in session.commands if c != "exits"]
+    assert walked == ["north", "east"]
 
 
 def test_travel_can_be_disabled_by_its_setting(tmp_path: Path) -> None:
@@ -493,3 +498,58 @@ def test_paying_movement_and_arriving_nowhere_is_not_a_shut_door(
     ]
     store.close()
     assert refusals == []
+
+
+def test_arriving_somewhere_new_asks_where_its_ways_lead(
+    tmp_path: Path,
+) -> None:
+    """One command names every room beyond, which beats walking each one."""
+    store = _two_room_store(tmp_path)
+    session = _Session(
+        {"place:s:1:1": {"north": "place:s:2:2"}},
+        "place:s:1:1",
+        posture="standing",
+    )
+    asyncio.run(_executor(session, store).travel("Square"))
+    store.close()
+
+    assert session.commands == ["north", "exits"]
+
+
+def test_a_room_already_asked_about_is_not_asked_again(
+    tmp_path: Path,
+) -> None:
+    store = _two_room_store(tmp_path)
+    evidence = _evidence()
+    store.assert_fact(
+        "place:s:2:2", "exit.south", "place:s:1:1", layer="learned",
+        confidence="confirmed", evidence=evidence, transaction_id="t2",
+    )
+    session = _Session(
+        {"place:s:1:1": {"north": "place:s:2:2"},
+         "place:s:2:2": {"south": "place:s:1:1"}},
+        "place:s:1:1",
+        posture="standing",
+    )
+    executor = _executor(session, store)
+    asyncio.run(executor.travel("Square"))
+    asyncio.run(executor.travel("Temple"))
+    asyncio.run(executor.travel("Square"))
+    store.close()
+
+    assert session.commands.count("exits") == 2, "one per room, not per visit"
+
+
+def test_asking_can_be_switched_off(tmp_path: Path) -> None:
+    store = _two_room_store(tmp_path)
+    session = _Session(
+        {"place:s:1:1": {"north": "place:s:2:2"}},
+        "place:s:1:1",
+        posture="standing",
+    )
+    asyncio.run(
+        _executor(session, store, ask_where_ways_lead=False).travel("Square")
+    )
+    store.close()
+
+    assert "exits" not in session.commands

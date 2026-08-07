@@ -77,6 +77,10 @@ class NavigationExecutor:
         self.min_move_points = int(block.get("min_move_points", 15))
         self.max_setbacks = int(block.get("max_setbacks", 3))
         self.travel_enabled = bool(block.get("travel_enabled", True))
+        self.ask_where_ways_lead = bool(
+            block.get("ask_where_ways_lead", True)
+        )
+        self._asked: set[str] = set()
 
     # -- shared step machinery ---------------------------------------------
 
@@ -190,6 +194,7 @@ class NavigationExecutor:
             return "blocked_exit"
         state["visited"].add(after)
         self._remember_passage(origin_place, direction, "open", reply)
+        await self._ask_where_ways_lead(after, trace_id)
         if expected is not None and after != expected:
             return "unexpected_room"
         return "moved"
@@ -237,6 +242,22 @@ class NavigationExecutor:
                 "passage_note_failed",
                 {"place": place, "direction": direction, "error": str(error)},
             )
+
+    async def _ask_where_ways_lead(self, room: str, trace_id: str) -> None:
+        """Ask the game where this room's ways lead, once per room.
+
+        The game will name the room behind every exit for the price of one
+        command, which is cheaper than walking each one to find out and
+        cheaper still than a decision made without knowing. Asking again
+        in a room already asked about buys nothing, so it is asked once.
+        """
+        if not self.ask_where_ways_lead or room in self._asked:
+            return
+        self._asked.add(room)
+        try:
+            await self.session.command("exits", trace_id=trace_id)
+        except Exception:
+            self._asked.discard(room)
 
     async def _walk(
         self,
