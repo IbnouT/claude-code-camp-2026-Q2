@@ -171,8 +171,17 @@ into play, and it was the week 0 agent's whole advantage.
 - Rules are configuration, one file, each rule with an id, a text, an
   on switch, and the settings carrying its numbers. Editing a rule
   never touches code, and any rule can be turned off to measure it.
-- The model sees every enabled rule in its standing context. The model
-  decides, always.
+- Each rule names the action it is about. Advice the agent cannot act
+  on is not advice: telling it to search what it kills, without naming
+  the tool that searches, leaves it exactly where it was. The week 0
+  agent was told the command every time, and it played better.
+- The rules belong in the standing instructions, not in the per-turn
+  situation. They never change during a run, so repeating them every
+  turn costs on every call and teaches the model to skim them. What
+  changes each turn is the situation and what that situation suggests.
+- The mission target is read from the objective the run is given, never
+  set in configuration. A capability that can only hunt one named thing
+  is not a capability.
 - Gates advise from typed facts and never act: no weapon or armour, a
   level below the floor, gold below the floor, a forbidden appraisal.
   The model may override with a stated reason, and both the advice and
