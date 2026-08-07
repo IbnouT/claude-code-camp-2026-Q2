@@ -87,8 +87,11 @@ class AttemptConfig:
     max_turn_cost: float
 
     def environment(self) -> dict[str, str]:
+        # Absolute: the agent is started from its own package directory, so
+        # a relative path here would resolve against the wrong place and the
+        # run would begin with an empty configuration.
         return {
-            "BOUKENSHA_DIR": str(self.directory),
+            "BOUKENSHA_DIR": str(self.directory.resolve()),
         }
 
 
