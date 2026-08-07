@@ -66,6 +66,30 @@ exactly what was served and is never enriched, and nothing from the
 observer layers may reach the block, the recall answers, or any surface
 the agent reads.
 
+## The design is the constraint
+
+The Sessions space keeps the look it has. Nothing here is an excuse to
+redraw it: the header, the view bar, the story rhythm, the evidence
+drill-down, the spacing and the type all stay as they are.
+
+What is missing plugs into what exists:
+
+- Harness activity is a story step like any other, in the same card
+  shape and the same rhythm, distinguished by its label and an issuer
+  chip rather than by a new visual language.
+- A sweep collapses to one step by default, exactly as a tool cycle
+  does, and opens into its commands through the drill-down that is
+  already there.
+- The situation block goes inside the prompt card that already claims to
+  show it, beside the messages, not into a panel of its own.
+- Readiness rides in a place that already exists rather than adding a
+  region to the page.
+- Every value comes from the existing tokens. No new colours, no new
+  spacing scale, no markup built by hand.
+
+A change that needs a new component is allowed. A change that needs a
+new visual idea is a change of scope and needs saying so first.
+
 ## How each step is judged
 
 By a person using the app on this recorded run, not by tests alone: the
