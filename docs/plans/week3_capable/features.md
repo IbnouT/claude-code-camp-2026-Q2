@@ -100,11 +100,25 @@ Every experiment writes ordinary sessions with ordinary journals. They
 are invisible only because each run writes into its own private root
 that the Observatory never reads.
 
-- Decided: the Observatory sees everything, benchmark runs included.
-  Runs keep their own roots, so a measured run still cannot touch the
-  main knowledge store or the player it belongs to, and the Observatory
-  learns to read those roots as well as the main one. Discovery is
-  read-side only: nothing a run writes changes.
+- Decided: a measured run is an ordinary session. It uses the normal
+  configuration and writes where every session writes, so it appears in
+  the Observatory, shows as running while it runs, and can be watched
+  live, with no code in the Observatory that knows benchmarks exist.
+- What a run may change, it changes by overriding settings, never by
+  copying the configuration into a tree of its own: which capabilities
+  are on, the model, the tool surface, the result shape, the iteration
+  and cost ceilings, and where the knowledge store lives so a measured
+  run starts from the state it means to measure. Nothing else is
+  redirected.
+- The isolation that mattered was the knowledge store and the character's
+  own state, and both are one override each. Cloning the whole
+  configuration to get them is what made every measured run invisible.
+- Consequences to expect rather than discover: the registry permits one
+  live session per character, so a measured run and a hand-started
+  session for the same player collide, which is correct and matches the
+  game. The session directory guard is satisfied by construction once
+  runs write to the normal place. The read-side discovery added to the
+  Observatory becomes dead and is removed.
 - Live watching needs nothing beyond whichever choice is made, since
   the Live view already follows a running session's journal.
 - The runner records the mission verdict beside cost, so a list of
