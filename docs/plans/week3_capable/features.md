@@ -100,25 +100,15 @@ Every experiment writes ordinary sessions with ordinary journals. They
 are invisible only because each run writes into its own private root
 that the Observatory never reads.
 
-- Decided: a measured run is an ordinary session. It uses the normal
-  configuration and writes where every session writes, so it appears in
-  the Observatory, shows as running while it runs, and can be watched
-  live, with no code in the Observatory that knows benchmarks exist.
-- What a run may change, it changes by overriding settings, never by
-  copying the configuration into a tree of its own: which capabilities
-  are on, the model, the tool surface, the result shape, the iteration
-  and cost ceilings, and where the knowledge store lives so a measured
-  run starts from the state it means to measure. Nothing else is
-  redirected.
-- The isolation that mattered was the knowledge store and the character's
-  own state, and both are one override each. Cloning the whole
-  configuration to get them is what made every measured run invisible.
-- Consequences to expect rather than discover: the registry permits one
-  live session per character, so a measured run and a hand-started
-  session for the same player collide, which is correct and matches the
-  game. The session directory guard is satisfied by construction once
-  runs write to the normal place. The read-side discovery added to the
-  Observatory becomes dead and is removed.
+- Decided by what works: the Observatory reads the roots measured runs
+  write into, and a run keeps its own tree. Confirmed in the app, with a
+  running benchmark showing live and its record readable.
+- The cost of that choice, stated so it is not forgotten: the Observatory
+  carries one piece of knowledge about how measured runs are laid out.
+  The alternative, a run writing where every session writes and
+  overriding only the knowledge store, keeps the viewer ignorant of
+  benchmarks entirely. It is the cleaner shape and it is not worth a
+  refactor while the current one works.
 - Live watching needs nothing beyond whichever choice is made, since
   the Live view already follows a running session's journal.
 - The runner records the mission verdict beside cost, so a list of
