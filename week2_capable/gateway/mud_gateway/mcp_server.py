@@ -13,7 +13,7 @@ import uuid
 from typing import Any, Callable
 
 from .commands import BY_NAME, IMMORTAL, Capability
-from . import identity, recall
+from . import identity, recall, rules
 from .journal import Journal
 from .knowledge import KnowledgeStore
 from .knowledge_projection import KnowledgeProjector
@@ -515,12 +515,20 @@ async def serve(
             if settings.capabilities.get("knowledge") and knowledge_store:
                 store = knowledge_store
                 live = session
+                # Advice the agent reads every turn. A rule it never sees
+                # is a rule it does not have.
+                advice = rules.render(
+                    rules.load(settings.rules_file),
+                    settings.capability_settings.get("knowledge", {}),
+                )
 
                 def read_state() -> str:
                     return render_state_block(
                         store,
                         live.observations,
                         live.observations.knowledge,
+                        advice=advice,
+                        player_id=profile.id,
                     )
 
                 state_reader = read_state

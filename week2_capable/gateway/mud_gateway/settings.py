@@ -67,6 +67,8 @@ class GatewaySettings:
     # where the agent cannot read it, so identity and coverage can be
     # graded against truth rather than against our own conclusions.
     record_room_numbers: bool = False
+    # The authored advice the agent carries. Editing it never touches code.
+    rules_file: Path = Path(__file__).resolve().parent / "rules.yaml"
     capabilities: Mapping[str, bool] = field(default_factory=lambda: {
         name: False for name in CAPABILITIES
     })
