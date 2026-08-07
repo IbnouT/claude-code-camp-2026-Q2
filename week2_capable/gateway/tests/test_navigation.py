@@ -105,9 +105,11 @@ class _Projector:
 
 
 class _Observations:
-    def __init__(self, projector: _Projector, posture: str | None = None) -> None:
+    def __init__(self, projector: _Projector, posture: str | None = None,
+                 vitals=None) -> None:
         self.knowledge = projector
         self.posture = posture
+        self.vitals = vitals
 
 
 class _Position:
@@ -141,7 +143,9 @@ class _Session:
         self.id = "fake"
         self.world = world
         self.projector = _Projector(start)
-        self.observations = _Observations(self.projector, posture)
+        self.observations = _Observations(
+            self.projector, posture, (vitals or [None])[0]
+        )
         self.journal = _Journal()
         self.vitals = list(vitals or [])
         self.commands: list[str] = []
@@ -411,16 +415,81 @@ def test_a_refused_direction_is_remembered(tmp_path: Path) -> None:
     from mud_gateway.observe import WireReference
 
     store = _two_room_store(tmp_path)
-    session = _Session({"place:s:1:1": {}}, "place:s:1:1", posture="standing")
+    session = _Session(
+        {"place:s:1:1": {}},
+        "place:s:1:1",
+        vitals=[_vitals(20, 40), _vitals(20, 40)],
+        posture="standing",
+    )
     session.wire_ref = WireReference.from_bytes("s", 1, 2, "blocked")
     executor = _executor(session, store)
 
     report = asyncio.run(executor.travel("Square"))
-    facts = store.current_facts(layer="learned")
+    refused = [
+        f for f in store.current_facts(layer="parsed")
+        if f.predicate.startswith("passage.")
+    ]
     store.close()
-
-    refused = [f for f in facts if f.predicate.startswith("passage.")]
     assert [(f.predicate, f.value) for f in refused] == [
         ("passage.north", "refused")
     ]
     assert report.arrived is False
+
+
+def test_a_way_that_opens_later_is_no_longer_remembered_shut(
+    tmp_path: Path,
+) -> None:
+    """A door found shut and later walked must not stay recorded shut."""
+    from mud_gateway.observe import WireReference
+
+    store = _two_room_store(tmp_path)
+    wire = WireReference.from_bytes("s", 1, 2, "step")
+    blocked = _Session(
+        {"place:s:1:1": {}},
+        "place:s:1:1",
+        vitals=[_vitals(20, 40), _vitals(20, 40)],
+        posture="standing",
+    )
+    blocked.wire_ref = wire
+    asyncio.run(_executor(blocked, store).travel("Square"))
+
+    opened = _Session(
+        {"place:s:1:1": {"north": "place:s:2:2"}},
+        "place:s:1:1",
+        posture="standing",
+    )
+    opened.wire_ref = wire
+    asyncio.run(_executor(opened, store).travel("Square"))
+
+    passages = [
+        (f.predicate, f.value)
+        for f in store.current_facts(layer="parsed")
+        if f.predicate.startswith("passage.")
+    ]
+    store.close()
+    assert passages == [("passage.north", "open")]
+
+
+def test_paying_movement_and_arriving_nowhere_is_not_a_shut_door(
+    tmp_path: Path,
+) -> None:
+    """An unlit room costs movement and parses no room. That is not a door."""
+    from mud_gateway.observe import WireReference
+
+    store = _two_room_store(tmp_path)
+    session = _Session(
+        {"place:s:1:1": {}},
+        "place:s:1:1",
+        vitals=[_vitals(20, 39)],
+        posture="standing",
+    )
+    session.observations.vitals = _vitals(20, 40)
+    session.wire_ref = WireReference.from_bytes("s", 1, 2, "dark")
+    asyncio.run(_executor(session, store).travel("Square"))
+
+    refusals = [
+        f for f in store.current_facts(layer="parsed")
+        if f.predicate.startswith("passage.") and f.value == "refused"
+    ]
+    store.close()
+    assert refusals == []

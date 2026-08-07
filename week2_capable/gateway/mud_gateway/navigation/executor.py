@@ -132,7 +132,12 @@ class NavigationExecutor:
             return "invalid_direction"
         await self._ensure_standing(trace_id)
         graph = self._graph()
-        before = graph.room_of(self._projector.current_place_id)
+        origin_place = self._projector.current_place_id
+        before = graph.room_of(origin_place)
+        live = getattr(self.session.observations, "vitals", None)
+        move_before = state.get("move")
+        if move_before is None and live is not None:
+            move_before = live.move
         reply = await self.session.command(direction, trace_id=trace_id)
         state["steps"] += 1
         vitals = next(
@@ -159,35 +164,62 @@ class NavigationExecutor:
                         return "low_vitals"
                 else:
                     return "low_vitals"
+        # Only a move that cost nothing is evidence of a way refusing. When
+        # the cost is unknown, nothing is claimed: a wrong "shut door" is
+        # remembered forever and steers every later route around a way that
+        # was open all along.
+        cost_nothing = (
+            move_before is not None
+            and state.get("move") is not None
+            and state["move"] == move_before
+        )
         if not reply.position.certain:
             return "position_uncertain"
         after = graph.room_of(self._projector.current_place_id)
         if after is None:
             return "position_unknown"
         if after == before:
-            self._remember_refusal(before, direction, reply)
+            if cost_nothing:
+                # A way that refuses costs nothing. Having paid movement and
+                # arrived nowhere is something else entirely, an unlit room
+                # among them, and must not be remembered as a shut door.
+                self._remember_passage(
+                    self._projector.current_place_id, direction, "refused",
+                    reply,
+                )
             return "blocked_exit"
         state["visited"].add(after)
+        self._remember_passage(origin_place, direction, "open", reply)
         if expected is not None and after != expected:
             return "unexpected_room"
         return "moved"
 
-    def _remember_refusal(self, room: str, direction: str, reply: Any) -> None:
-        """Record that walking this way left the character where it was.
+    def _remember_passage(
+        self,
+        place: str | None,
+        direction: str,
+        state: str,
+        reply: Any,
+    ) -> None:
+        """Record whether this way opened, against the place as observed.
 
-        What stopped it takes another action to learn, a shut door, a lock,
-        someone barring the way, so only the refusal is recorded. A later
-        traversal writes the exit and supersedes this.
+        What stopped a refusal takes another action to learn, a shut door,
+        a lock, someone barring the way, so only the refusal itself is
+        recorded. Walking the same way later records that it opened, which
+        replaces the refusal rather than leaving both standing.
         """
         wire = getattr(reply, "wire_ref", None)
-        if wire is None or self.store is None:
+        if wire is None or self.store is None or place is None:
             return
         try:
             self.store.assert_fact(
-                room,
+                place,
                 f"passage.{direction}",
-                "refused",
-                layer="learned",
+                state,
+                # Whether a way is open is how it stands now, not something
+                # learned once. A door shut yesterday and walked today is
+                # not a contradiction to keep, it is a newer reading.
+                layer="parsed",
                 confidence="tracked",
                 evidence=EvidenceRef(
                     session_id=wire.source,
@@ -198,9 +230,13 @@ class NavigationExecutor:
                     observed_at=time.time(),
                 ),
             )
-        except Exception:
-            # Instrumentation of a refusal must never end a routine.
-            return
+        except Exception as error:  # pragma: no cover - instrumentation only
+            # Recording what a way did must never end a routine.
+            self.session.journal.append(
+                self.session.id,
+                "passage_note_failed",
+                {"place": place, "direction": direction, "error": str(error)},
+            )
 
     async def _walk(
         self,

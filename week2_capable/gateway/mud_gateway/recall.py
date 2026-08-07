@@ -70,12 +70,13 @@ def _here(store: Any, graph: WorldGraph, place_id: str | None) -> str:
     seen = _sightings_at(store, graph, graph.room_of(place_id))
     for what in seen[:LIMIT]:
         lines.append(f"  seen here: {what}")
+    here = graph.room_of(place_id)
     refused = [
         fact.predicate.removeprefix("passage.")
-        for fact in _facts(store)
-        if fact.subject == place_id
-        and fact.predicate.startswith("passage.")
+        for fact in store.current_facts(layer="parsed")
+        if fact.predicate.startswith("passage.")
         and fact.value == "refused"
+        and graph.room_of(fact.subject) == here
     ]
     for direction in sorted(refused):
         lines.append(f"  {direction}: would not open when tried")
