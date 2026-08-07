@@ -5,26 +5,27 @@ checked against the game rather than against our own conclusions: which
 observed places really were one room, and whether a walk arrived where
 it meant to.
 
-The answer key is kept in a file of its own, outside the store the agent
-reads from. That is a stronger guarantee than filtering it out on the
-way in: what is not there cannot leak, whatever a future reader forgets
-to exclude. Grading joins the two afterwards, which is the only moment
-both are needed.
+It is kept in its own layer, which nothing the agent reads ever names.
+Keeping it out of the agent's hands is a matter of not handing it over,
+not of hiding it: a room number tells nobody where anything is.
 """
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
 from typing import Any
+
+from .knowledge_models import EvidenceRef
+
+LAYER = "observer_truth"
+PREDICATE = "room.number"
 
 
 class RoomNumbers:
     """Records the game's room number for the place just observed."""
 
-    def __init__(self, admin: Any, path: Path, character: str) -> None:
+    def __init__(self, admin: Any, store: Any, character: str) -> None:
         self.admin = admin
-        self.path = Path(path)
+        self.store = store
         self.character = character
         self.recorded = 0
         self.skipped = 0
@@ -32,7 +33,7 @@ class RoomNumbers:
     async def observe(
         self,
         place_id: str | None,
-        session_id: str = "",
+        evidence: EvidenceRef,
         expected_title: str | None = None,
     ) -> int | None:
         """Record where the game says the character is, when it is settled.
@@ -56,13 +57,13 @@ class RoomNumbers:
         ):
             self.skipped += 1
             return None
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self.path.open("a") as sink:
-            sink.write(json.dumps({
-                "session": session_id,
-                "place": place_id,
-                "room_number": first[0],
-                "room_title": first[1],
-            }) + "\n")
+        self.store.assert_fact(
+            place_id,
+            PREDICATE,
+            first[0],
+            layer=LAYER,
+            confidence="confirmed",
+            evidence=evidence,
+        )
         self.recorded += 1
         return first[0]

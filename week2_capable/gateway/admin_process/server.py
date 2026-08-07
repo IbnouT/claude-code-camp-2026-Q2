@@ -78,7 +78,7 @@ async def execute(
     port: int,
 ) -> dict[str, Any]:
     """Apply exactly one validated reset or location-only operation."""
-    if request.protocol_version != 1 or request.action not in {"reset", "relocate"}:
+    if request.protocol_version != 1 or request.action not in {"reset", "relocate", "locate"}:
         raise ValueError("unsupported reset protocol request")
     selected = None
     if request.action == "reset":
