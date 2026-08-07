@@ -125,6 +125,16 @@ and the pace of gains says whether the current hunting ground has been
 outgrown. A kill itself is prose and waits for the perception model,
 which is what that feature is for.
 
+What a room holds is sorted into creatures and objects by colour and by
+a few shapes of line. Lines that match neither are filed as creatures,
+so gloves on the ground and a statue in the square are recorded as
+living things, and asking what creatures are about answers with
+furniture. Colour is structural and can be trusted; telling a creature
+from an object by how the sentence reads is prose, and belongs to the
+perception model. Until then the sorting is wrong for anything the
+colour did not cover, and everything already recorded keeps the wrong
+answer.
+
 One recorded fact is also wrong rather than missing. A room's stored
 description sometimes carries what was happening in the room, a combat
 line, loot on the ground, a mob standing there, so the same room reads

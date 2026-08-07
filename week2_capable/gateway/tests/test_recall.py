@@ -28,8 +28,16 @@ def _world(tmp_path: Path) -> KnowledgeStore:
         ("place:s1:1:1", "passage.east", "refused", "parsed"),
         ("place:s1:2:1", "title", "The Temple", "learned"),
         ("place:s1:2:1", "exits", ["south", "up"], "learned"),
-        ("room-sighting:1", "name", "a large minotaur", "learned"),
-        ("room-sighting:1", "room", "place:s1:2:1", "learned"),
+        ("sighting:s1:9:mob:0", "name", "a large minotaur", "learned"),
+        ("sighting:s1:9:mob:0", "kind", "mob", "learned"),
+        ("sighting:s1:9:mob:0", "room", "place:s1:2:1", "learned"),
+        ("sighting:s1:9:object:0", "name", "a rusty sword lies here.",
+         "learned"),
+        ("sighting:s1:9:object:0", "kind", "object", "learned"),
+        ("sighting:s1:9:object:0", "room", "place:s1:2:1", "learned"),
+        ("sighting:s1:11:mob:0", "name", "a large minotaur", "learned"),
+        ("sighting:s1:11:mob:0", "kind", "mob", "learned"),
+        ("sighting:s1:11:mob:0", "room", "place:s1:2:1", "learned"),
         ("place:s1:2:1", "service.bank", True, "belief"),
         ("player:tester", "state.hit", 30, "parsed"),
         ("player:tester", "state.max_hit", 46, "parsed"),
@@ -94,7 +102,8 @@ def test_unexplored_names_where_there_is_still_ground(tmp_path) -> None:
     reply = answer(store, graph, "unexplored", place_id="place:s1:1:1")
     store.close()
 
-    assert "not walked yet" in reply
+    assert "not walked" in reply
+    assert "right here" in reply, "the room you stand in is nearest"
 
 
 def test_services_report_where_they_were_recorded(tmp_path) -> None:
@@ -161,3 +170,41 @@ def test_the_tool_states_the_questions_it_answers() -> None:
     )
     choices = schema["inputSchema"]["properties"]["about"]["enum"]
     assert set(choices) == set(QUESTIONS)
+
+
+def test_objects_are_not_reported_as_creatures(tmp_path) -> None:
+    """The store holds both. Asking for creatures must not answer swords."""
+    store = _world(tmp_path)
+    graph = WorldGraph.from_store(store)
+    reply = answer(store, graph, "creatures")
+    store.close()
+
+    assert "minotaur" in reply
+    assert "sword" not in reply
+
+
+def test_the_same_creature_seen_repeatedly_is_one_line(tmp_path) -> None:
+    """A corridor walked ten times must not fill the answer with one guard."""
+    store = _world(tmp_path)
+    graph = WorldGraph.from_store(store)
+    reply = answer(store, graph, "creatures")
+    store.close()
+
+    assert reply.count("minotaur") == 1
+
+
+def test_self_says_what_it_does_not_know(tmp_path) -> None:
+    """Leaving out equipment reads as having none, which is worse."""
+    store = _world(tmp_path)
+    graph = WorldGraph.from_store(store)
+    reply = answer(store, graph, "self", player_id="tester")
+    store.close()
+
+    assert "not recorded yet" in reply
+
+
+def test_a_long_answer_says_how_much_it_left_out(tmp_path) -> None:
+    """Silent truncation is how the creatures answer lost every creature."""
+    from mud_gateway.recall import _listed
+
+    assert _listed([f"line {n}" for n in range(30)]).endswith("and 18 more")

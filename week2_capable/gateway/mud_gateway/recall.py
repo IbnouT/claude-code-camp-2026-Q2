@@ -67,9 +67,24 @@ def _here(store: Any, graph: WorldGraph, place_id: str | None) -> str:
             lines.append(
                 f"  {direction}: {known.title if known else 'somewhere known'}"
             )
-    seen = _sightings_at(store, graph, graph.room_of(place_id))
-    for what in seen[:LIMIT]:
-        lines.append(f"  seen here: {what}")
+    here = graph.room_of(place_id)
+    for entry in _seen(store, graph):
+        if entry["room"] != here:
+            continue
+        kind = {"mob": "creature", "object": "object"}.get(
+            entry["kind"], "something"
+        )
+        again = "" if entry["times"] < 2 else f" (seen {entry['times']} times)"
+        lines.append(f"  {kind} here: {entry['name']}{again}")
+    for fact in store.current_facts(layer="belief"):
+        if not fact.predicate.startswith("model."):
+            continue
+        if graph.room_of(fact.subject) != here:
+            continue
+        lines.append(
+            f"  you noted ({fact.predicate.removeprefix('model.')}): "
+            f"{fact.value}"
+        )
     here = graph.room_of(place_id)
     refused = [
         fact.predicate.removeprefix("passage.")
@@ -83,20 +98,45 @@ def _here(store: Any, graph: WorldGraph, place_id: str | None) -> str:
     return "\n".join(lines)
 
 
-def _sightings_at(store: Any, graph: WorldGraph, room: str | None) -> list[str]:
-    names: dict[str, str] = {}
-    rooms: dict[str, str] = {}
-    for fact in _facts(store):
-        if not fact.subject.startswith(("room-sighting:", "sighting:")):
+def _seen(store: Any, graph: WorldGraph) -> list[dict]:
+    """What has been seen, folded to one entry per thing per room.
+
+    Every look records a fresh sighting, so a corridor walked ten times
+    holds ten sightings of the same guard. Reporting them one by one
+    fills the answer with repetition and pushes everything else out, so
+    the same thing in the same room becomes one entry with a count.
+    """
+    entries: dict[str, dict[str, Any]] = {}
+    for layer in ("learned", "belief"):
+        for fact in store.current_facts(layer=layer):
+            if not fact.subject.startswith(("room-sighting:", "sighting:")):
+                continue
+            if fact.predicate in ("name", "kind", "room"):
+                entries.setdefault(fact.subject, {})[fact.predicate] = fact.value
+    folded: dict[tuple, dict] = {}
+    for entry in entries.values():
+        name = entry.get("name")
+        if not isinstance(name, str):
             continue
-        if fact.predicate == "name" and isinstance(fact.value, str):
-            names[fact.subject] = fact.value
-        elif fact.predicate == "room" and isinstance(fact.value, str):
-            rooms[fact.subject] = fact.value
+        room = graph.room_of(entry.get("room"))
+        key = (room, name.casefold(), entry.get("kind"))
+        found = folded.setdefault(key, {
+            "name": name,
+            "kind": entry.get("kind"),
+            "room": room,
+            "times": 0,
+        })
+        found["times"] += 1
     return sorted(
-        name for subject, name in names.items()
-        if room is None or graph.room_of(rooms.get(subject)) == room
+        folded.values(), key=lambda item: (-item["times"], item["name"])
     )
+
+
+def _listed(lines: list[str]) -> str:
+    """At most a screenful, saying plainly when there is more."""
+    if len(lines) <= LIMIT:
+        return "\n".join(lines)
+    return "\n".join(lines[:LIMIT] + [f"and {len(lines) - LIMIT} more"])
 
 
 def _creatures(
@@ -105,27 +145,23 @@ def _creatures(
     name: str | None,
     only_named: bool = False,
 ) -> str:
-    names: dict[str, str] = {}
-    rooms: dict[str, str] = {}
-    for fact in _facts(store):
-        if not fact.subject.startswith(("room-sighting:", "sighting:")):
-            continue
-        if fact.predicate == "name" and isinstance(fact.value, str):
-            names[fact.subject] = fact.value
-        elif fact.predicate == "room" and isinstance(fact.value, str):
-            rooms[fact.subject] = fact.value
+    """Creatures seen, and where. An object is not a creature."""
     wanted = (name or "").casefold()
     lines = []
-    for subject, seen in sorted(names.items(), key=lambda item: item[1]):
-        if wanted and wanted not in seen.casefold():
+    for entry in _seen(store, graph):
+        # Only what was recorded as a creature. A sighting of unknown kind
+        # is not offered as one: answering an object when asked for
+        # creatures is how this answer became useless before.
+        if entry["kind"] != "mob":
             continue
-        where = _title(graph, rooms.get(subject))
-        lines.append(f"{seen} at {where}")
+        if wanted and wanted not in entry["name"].casefold():
+            continue
+        lines.append(f"{entry['name']} at {_title(graph, entry['room'])}")
     if not lines:
         if only_named and name:
             return f"you have not seen anything called {name!r}"
         return "you have not seen any creature yet"
-    return "\n".join(lines[:LIMIT])
+    return _listed(lines)
 
 
 def _services(store: Any, graph: WorldGraph) -> str:
@@ -135,18 +171,36 @@ def _services(store: Any, graph: WorldGraph) -> str:
             continue
         kind = fact.predicate.removeprefix("service.")
         lines.append(f"{kind} at {_title(graph, fact.subject)}")
-    return "\n".join(lines[:LIMIT]) or "you have not recorded any service yet"
+    return _listed(lines) or "you have not recorded any service yet"
 
 
 def _unexplored(graph: WorldGraph, place_id: str | None) -> str:
+    """Where there is still ground, nearest first."""
+    from .navigation.route import plan_route
+
     frontier = graph.frontier_rooms()
     if not frontier:
         return "every exit you know about has been walked"
+    here = graph.room_of(place_id)
+    measured = []
+    for room in frontier:
+        steps = None
+        if here is not None and here in graph.rooms:
+            plan = plan_route(graph, here, room.place_id)
+            steps = None if plan is None else plan.moves
+        measured.append((steps if steps is not None else 10**6, steps, room))
+    measured.sort(key=lambda item: (item[0], item[2].title or ""))
     lines = []
-    for room in frontier[:LIMIT]:
+    for _rank, steps, room in measured:
         ways = ", ".join(sorted(room.frontier()))
-        lines.append(f"{room.title or 'a place'}: {ways} not walked yet")
-    return "\n".join(lines)
+        if steps == 0:
+            where = "right here"
+        elif steps is None:
+            where = "no known way there"
+        else:
+            where = f"{steps} steps away"
+        lines.append(f"{room.title or 'a place'} ({where}): {ways} not walked")
+    return _listed(lines)
 
 
 def _self(store: Any, player_id: str) -> str:
@@ -169,10 +223,18 @@ def _self(store: Any, player_id: str) -> str:
         lines.append(
             f"movement {state['move']}" + (f" of {top}" if top else "")
         )
+    if "mana" in state:
+        top = state.get("max_mana")
+        lines.append(f"mana {state['mana']}" + (f" of {top}" if top else ""))
     for name in ("level", "exp", "gold"):
         if name in state:
             lines.append(f"{name} {state[name]}")
-    for name in ("hungry", "thirsty"):
+    if state.get("posture"):
+        lines.append(str(state["posture"]))
+    for name in ("hungry", "thirsty", "drunk", "poisoned"):
         if state.get(name):
             lines.append(f"you are {name}")
+    # Said plainly rather than left out: an answer that omits what it does
+    # not know reads as an answer that says there is nothing to know.
+    lines.append("what you carry and can do is not recorded yet")
     return ", ".join(lines)
