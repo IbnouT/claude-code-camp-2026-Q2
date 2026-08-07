@@ -129,6 +129,7 @@ class _Reply:
     def __init__(self, observations=()) -> None:
         self.observations = tuple(observations)
         self.position = _Position()
+        self.wire_ref = None
 
 
 class _Session:
@@ -147,6 +148,7 @@ class _Session:
 
     async def command(self, line: str, trace_id=None) -> _Reply:
         self.commands.append(line)
+        reply_wire = getattr(self, "wire_ref", None)
         if line == "stand":
             self.observations.posture = "standing"
             return _Reply()
@@ -157,7 +159,9 @@ class _Session:
         observations = ()
         if self.vitals:
             observations = (self.vitals.pop(0),)
-        return _Reply(observations)
+        reply = _Reply(observations)
+        reply.wire_ref = reply_wire
+        return reply
 
 
 def _vitals(hit: int, move: int) -> VitalsObservation:
@@ -395,3 +399,28 @@ def test_a_place_seen_once_is_still_a_room_on_the_map(
     store.close()
     assert len(graph.rooms) == 1
     assert graph.room_of("place:s1:1:1") in graph.rooms
+
+
+def test_a_refused_direction_is_remembered(tmp_path: Path) -> None:
+    """A way that did not open is worth remembering, whatever shut it.
+
+    The character stays where it was, so the routine learns nothing about
+    the room beyond, and paying for the same refusal on every later visit
+    is waste the map can prevent.
+    """
+    from mud_gateway.observe import WireReference
+
+    store = _two_room_store(tmp_path)
+    session = _Session({"place:s:1:1": {}}, "place:s:1:1", posture="standing")
+    session.wire_ref = WireReference.from_bytes("s", 1, 2, "blocked")
+    executor = _executor(session, store)
+
+    report = asyncio.run(executor.travel("Square"))
+    facts = store.current_facts(layer="learned")
+    store.close()
+
+    refused = [f for f in facts if f.predicate.startswith("passage.")]
+    assert [(f.predicate, f.value) for f in refused] == [
+        ("passage.north", "refused")
+    ]
+    assert report.arrived is False

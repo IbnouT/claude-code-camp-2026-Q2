@@ -13,6 +13,9 @@ import uuid
 from dataclasses import dataclass
 from typing import Any, Mapping
 
+import time
+
+from ..knowledge_models import EvidenceRef
 from ..observe import VitalsObservation
 from .graph import WorldGraph, canonical_direction
 from .route import RoutePlan, nearest_frontier, plan_route
@@ -162,11 +165,42 @@ class NavigationExecutor:
         if after is None:
             return "position_unknown"
         if after == before:
+            self._remember_refusal(before, direction, reply)
             return "blocked_exit"
         state["visited"].add(after)
         if expected is not None and after != expected:
             return "unexpected_room"
         return "moved"
+
+    def _remember_refusal(self, room: str, direction: str, reply: Any) -> None:
+        """Record that walking this way left the character where it was.
+
+        What stopped it takes another action to learn, a shut door, a lock,
+        someone barring the way, so only the refusal is recorded. A later
+        traversal writes the exit and supersedes this.
+        """
+        wire = getattr(reply, "wire_ref", None)
+        if wire is None or self.store is None:
+            return
+        try:
+            self.store.assert_fact(
+                room,
+                f"passage.{direction}",
+                "refused",
+                layer="learned",
+                confidence="tracked",
+                evidence=EvidenceRef(
+                    session_id=wire.source,
+                    source_seq=wire.last_seq,
+                    wire_digest=wire.digest,
+                    parser_version=getattr(reply, "parser_version", "1"),
+                    method="movement-refused",
+                    observed_at=time.time(),
+                ),
+            )
+        except Exception:
+            # Instrumentation of a refusal must never end a routine.
+            return
 
     async def _walk(
         self,
