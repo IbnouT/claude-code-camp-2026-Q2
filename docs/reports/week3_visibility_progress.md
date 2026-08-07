@@ -127,3 +127,50 @@ re-tread rate, or travel-by-title is well defined until identity is.
 - Measured cost of the defect on the existing store: 27 pairs falsely
   proven different, 188 correct merges blocked. The fix changes future
   runs only. Repairing the recorded past needs journal replay.
+
+## Open defects and missing pieces, as of the newbie-zone run
+
+Found by hand during one live run, not by tests. Recorded here so the
+work survives whatever comes next.
+
+### What the agent is shown
+
+- The room's own text now reaches the agent nowhere. Brief mode was
+  turned on and the look that reads a room is issued by the harness, so
+  the text is parsed into facts and dropped. Before, the agent saw a
+  description on every move. The intent is the opposite of what landed:
+  the description belongs in the first arrival and nowhere else.
+- The look meant to happen once per room happens on nearly every
+  arrival: 89 looks against 96 moves over 17 rooms in the recorded run.
+  Whatever the check asks, it is not "do I already hold this room's
+  text".
+- An exits listing entry of "Too dark to tell." is stored as the name of
+  the room beyond. It is not a name, it is the game saying the way is
+  unlit, which is the darkness signal the contract wants.
+- An exit can name the room it leaves from, which is either a loop or
+  two rooms sharing a name, and is shown as though it were neither.
+
+### What the Observatory does not show
+
+- The standing block is sent as its own message beside the tool result
+  and appears nowhere in the session view, so what the agent is actually
+  told can only be read out of a log file. Every claim about it is
+  therefore unverifiable by the person reading the app.
+- Commands the harness issues on its own, which in the recorded run were
+  89 looks, 83 exits, the toggles, wimpy and rest, are absent from the
+  story. The story shows the 19 model calls and hides the work that did
+  most of the walking. Moving work out of the model made that work
+  invisible in the tool built to see it.
+- Sessions need a section of their own for harness-issued steps, marked
+  as the harness acting rather than the model deciding, so a reader can
+  tell them apart and count them.
+
+### What has and has not been reviewed
+
+- Reviewed: the wiring repairs, room identity, the facts work, recall.
+- Not reviewed: the authored rules, readiness advice, the state block
+  rewrite, exit destinations, the game toggles, look-once, standing
+  advice in the system prompt, the Observatory multi-root discovery,
+  and the benchmark path fix. Four defects were found in that batch by
+  hand within an hour, so the rest of it should be assumed to hold more
+  until a review says otherwise.
