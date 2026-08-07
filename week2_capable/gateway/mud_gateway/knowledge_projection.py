@@ -151,9 +151,14 @@ class KnowledgeProjector:
     ) -> None:
         facts = {
             "title": observation.title,
-            "description": list(observation.description),
             "exits": list(observation.exits),
         }
+        # An arrival in brief mode carries no room text. Recording that
+        # emptiness erases what an earlier look earned, and room identity
+        # is keyed partly on the text, so the map comes apart. Saying
+        # nothing is not the same as there being nothing.
+        if observation.description:
+            facts["description"] = list(observation.description)
         for predicate, value in facts.items():
             self.store.assert_fact(
                 room_id,

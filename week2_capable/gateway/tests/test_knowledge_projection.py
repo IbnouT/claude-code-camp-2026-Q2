@@ -168,3 +168,45 @@ def test_only_observed_traversal_creates_a_learned_exit(tmp_path: Path) -> None:
     exit_fact = next(fact for fact in facts if fact.predicate == "exit.north")
     assert exit_fact.subject == titles["South Hall"]
     assert exit_fact.value == titles["North Hall"]
+
+
+def test_a_brief_arrival_does_not_erase_a_room_s_text(tmp_path: Path) -> None:
+    """Coming back to a room in brief mode must not forget what it says.
+
+    Identity is keyed partly on the room's own text, so erasing it makes
+    the same room look like a different one on the next step, and the map
+    comes apart.
+    """
+    journal = Journal(tmp_path / "gateway.db")
+    knowledge = KnowledgeStore(tmp_path / "knowledge.db", player_id="alpha")
+    pipeline = ObservationPipeline(
+        journal,
+        "gateway-alpha",
+        knowledge=KnowledgeProjector(knowledge, player_id="alpha"),
+    )
+    full = (
+        "\x1b[0;33mSouth Hall\x1b[0m\r\n"
+        "A long hall of grey stone.\r\n"
+        "\x1b[0;36m[ Exits: north ]\x1b[0m\r\n"
+        "20H 100M 82V > "
+    )
+    brief = (
+        "\x1b[0;33mSouth Hall\x1b[0m\r\n"
+        "\x1b[0;36m[ Exits: north ]\x1b[0m\r\n"
+        "20H 100M 82V > "
+    )
+
+    pipeline.ingest(
+        full.encode("latin-1"),
+        WireReference.from_bytes("gateway-alpha", 1, 2, full),
+    )
+    pipeline.ingest(
+        brief.encode("latin-1"),
+        WireReference.from_bytes("gateway-alpha", 3, 4, brief),
+    )
+
+    kept = [
+        fact.value for fact in knowledge.current_facts(layer="learned")
+        if fact.predicate == "description"
+    ]
+    assert kept == [["A long hall of grey stone."]], kept
