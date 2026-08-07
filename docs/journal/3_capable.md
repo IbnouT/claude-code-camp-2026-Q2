@@ -263,6 +263,51 @@ Neither is interesting as engineering. Both are worth recording because
 they were present during every measured run this week, including the
 ones whose numbers were reported as progress.
 
+### 7. Four reviews to get one rule right
+
+Room identity looked like a small piece of bookkeeping and took four
+adversarial reviews, each of which found something I had not.
+
+The first rule I wrote joined 55 percent of the recorded places and I
+was pleased with it. The review took the game's own room numbers as an
+answer key and showed that it merged five genuinely different rooms in a
+maze, which is the one failure the design says must never happen: a
+wrong merge invents a door that does not exist, and a route planner will
+happily walk an agent through it.
+
+Tightening it dropped joining to 7 percent, which was safe and useless.
+Finding out why exposed my real mistake. My test for "these two rooms
+are different" treated two exits that had not yet been proven to lead to
+the same place as proof that they led to different places. Since every
+place starts out alone, a single walked exit could disqualify a room
+forever. That one inversion was why the Armory, seen in sixteen
+different runs, refused to become one room.
+
+The next review found the same class of error one level up: the check
+looked at one side of a merge instead of both, so two rooms that
+directly disagreed could still be glued together by a third,
+partly-observed room that happened to agree with each of them. The one
+after that found it again one hop further out: two lookalike rooms whose
+own neighbours are proven different are themselves proven different, and
+I was merging them and labelling the merge confirmed. Difference is not
+a comparison, it is a closure.
+
+The final measurement, against the game's room numbers: every merge the
+rule makes is correct, and it joins 43 percent of the pairs that are
+truly the same room. The reviewer also found why the rest are missed,
+and it is not the rule. A room's stored description sometimes contains
+what was happening in the room rather than the room itself, a fled
+combat line, loot on the floor, one extra drunk, so the same room reads
+as two. That single defect accounts for most of the lost joins, and it
+belongs to the observation pipeline, not here.
+
+What I take from it is narrower than "reviews are good". Every one of
+these bugs was invisible to the tests I wrote, because I wrote tests for
+the cases I had thought of, and each defect lived in a case I had not.
+The reviews that found them all did the same thing: constructed a world
+where my rule had to choose, and checked the choice against something
+outside my judgment.
+
 ## Technical Conclusions
 
 - Repeated identical attempts did fail in a stable pattern, and that

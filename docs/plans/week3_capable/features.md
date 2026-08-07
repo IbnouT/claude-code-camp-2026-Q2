@@ -118,6 +118,15 @@ The store holds room titles, exits, and sightings. Everything that
 decides play is missing: darkness, shop stock, monster appraisals, door
 states, hunger, aggression, area names.
 
+One recorded fact is also wrong rather than missing. A room's stored
+description sometimes carries what was happening in the room, a combat
+line, loot on the ground, a mob standing there, so the same room reads
+differently on different visits. Measured cost: it falsely proves 27
+pairs of places to be different rooms and holds apart 188 pairs that
+observer truth says are the same, which is most of the identity recall
+currently lost. The description fact becomes the static room text, and
+what was happening becomes its own observations.
+
 - Each fact type has a source, a shape, and a provenance, per the
   knowledge contract.
 - Judged by: after a mission, the store answers what a player would
