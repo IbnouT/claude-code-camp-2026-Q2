@@ -45,9 +45,16 @@ class Survival:
             # Work the game will do that the agent would otherwise pay a
             # decision for: empty the corpse, take the coins, open the door
             # in the way, and use a key already carried.
+            # Work the game will do that the agent would otherwise pay a
+            # decision for: empty the corpse, take the coins, open the door
+            # in the way, and use a key already carried.
+            #
+            # Order matters for the last one. Sacrificing a corpse destroys
+            # what is in it unless looting is on, so autosac is listed after
+            # autoloot and is only safe while autoloot is on with it.
             block.get(
                 "game_toggles",
-                ("autoloot", "autogold", "autodoor", "autokey"),
+                ("autoloot", "autogold", "autodoor", "autokey", "autosac"),
             )
         )
 
