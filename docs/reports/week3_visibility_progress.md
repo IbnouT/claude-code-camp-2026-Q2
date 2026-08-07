@@ -30,29 +30,38 @@ re-tread rate, or travel-by-title is well defined until identity is.
   registry, and the Observatory reads only the main root.
 - 20 suites, including 16 minotaur attempts and 12 capability-batch
   attempts, are invisible in the app built to inspect runs.
-- The audit that found the capability defects was therefore done by
-  reading SQLite directly. That is the reason defects were missed until
-  questioned.
+- Capability defects were therefore found by reading SQLite directly
+  rather than by using the app, which is why several were missed.
 
-## Plan review overturned three assumptions before any code was written
+## Constraints the plan must respect, measured
 
-The plan was reviewed against the code. Corrections carried into it:
-
-- Registering attempts in the shared registry would trip the
+- Registering attempts in the shared registry trips the
   one-live-character unique index and the session-directory guard, and
-  would cause the contamination the plan forbids. Discovery is read-side
+  causes the contamination the plan forbids. Discovery is read-side
   only.
 - There is no indexer. The sessions API recomputes per request, so
-  verdicts need a cache or must be written by the runner into the
-  ledger.
+  verdicts are written by the runner into the ledger.
 - The exploration simulator's substrate does not exist: the store holds
   no refusals, no door states, and no hazards, and its rooms are
-  aliased. Replay runs from gateway journals instead, and policy sweeps
-  are deferred behind the knowledge rework.
+  aliased. Replay runs from gateway journals instead.
 - `capabilities.perception` is rejected by validation in three packages
   and would be a sixth capability against a binding five-capability
-  rule. That is a decision for Ibnou, recorded in the plan, and nothing
-  in that track is built before it is answered.
+  rule. That is a decision for Ibnou, recorded in the plan.
+
+## The first identity rule failed against its own data
+
+- An absolute "same-session aliases never merge" rule is refuted by the
+  store: Temple Square holds two aliases in one session and Market
+  Square three, minted when the position tracker loses confidence. The
+  rule would split the hub rooms every route crosses, leaving Temple
+  Square as 12 rooms and Main Street as 13.
+- The advertised fold of 478 aliases to 265 rooms is not reproducible.
+  Two faithful readings produced 348 and 288, because with no
+  cross-session links, agreement between two aliases is only definable
+  through the identity relation itself. Identity is a fixpoint and the
+  first draft never said so.
+- Consequence for this plan: identity criteria are predicates, and the
+  measurement script lands with the step.
 
 ## Perception experiment, final honest state
 

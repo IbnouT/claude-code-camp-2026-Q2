@@ -190,6 +190,51 @@ meaning shrinks: it measures cheap walking, not competent play. The
 capability that matters, playing the game, was not built: no readiness
 against a target, no preparation, no economy loop reached, no strategy.
 
+### 5. The map that compounded was 235 copies of a small neighbourhood
+
+Observation 3 reported that warm runs accumulated 235 rooms while a cold
+run mapped about 35, and called it knowledge compounding. Checking that
+number against the store before building anything on top of it showed
+what it actually counts.
+
+Every room the agent enters is recorded under an identity minted from
+the session it was seen in. Enter the Armory in sixteen different runs
+and the store holds sixteen unrelated rooms that happen to share a
+title. Counting the main store: 478 room identities, 114 distinct
+titles, 588 links between rooms, and not one link that crosses a
+session boundary. Main Street exists thirty-four times.
+
+So the map never joins. Five warm runs do not build one larger map, they
+build five disconnected partial copies of the same small area, and the
+frontier arithmetic that decides where to explore next counts the
+unexplored exits of copies. Coverage, re-treading, and travelling to a
+room by name are all undefined until a room means one thing.
+
+The fix looked easy and was not. Matching rooms by title alone would
+merge half the map, including a forest maze whose seven rooms share a
+title, an exit list, and a description, and differ only in where their
+exits lead. Merging them would invent doors that do not exist. A first
+rule that refused to merge anything seen twice in one session failed
+against the same store for the opposite reason: the position tracker
+re-mints a room whenever it loses track of where it is, so Temple Square
+and Market Square already appear several times inside a single run, and
+refusing those merges splits precisely the hub rooms every route passes
+through.
+
+What survived is a rule that proposes matches by title, exits, and
+description, then lets the graph decide: two candidates join only when
+no exit contradicts, and preferably when a shared exit agrees. Because
+no link crosses a session yet, agreement between two rooms can only be
+defined through the matching being computed, so the resolver has to
+iterate until it stops changing. Two readings of an earlier draft that
+missed this produced 348 rooms and 288 rooms from identical data, which
+is why the plan now carries predicates and a measurement script instead
+of a headline number.
+
+The wider lesson is the same one as observation 4, one level deeper. The
+earlier number was not wrong because the measurement was careless. It
+was wrong because nobody asked what the thing being counted was.
+
 ## Technical Conclusions
 
 - Repeated identical attempts did fail in a stable pattern, and that
@@ -211,6 +256,9 @@ against a target, no preparation, no economy loop reached, no strategy.
   driven by a broken instruction. Machinery without transcript-level
   verification, and without a success metric tied to the actual game
   goal, optimizes the wrong thing efficiently.
+- Room identity is a prerequisite nobody planned for. Knowledge that
+  cannot be joined across runs is not memory, and the compounding-map
+  result was an artifact of counting identities instead of rooms.
 - Open: the knowledge contract needs a revision before more capability
   work: completeness (qualitative observations must become facts),
   access (the model must be able to read what it knows), and feedback

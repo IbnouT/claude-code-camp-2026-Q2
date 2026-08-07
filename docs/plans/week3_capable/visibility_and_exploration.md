@@ -6,10 +6,6 @@ measurable before changing how it decides. The
 and how it should explore. This plan states how that work is watched,
 tried cheaply, and proven.
 
-It was reviewed against the code before any step was taken, and the
-review overturned three of its assumptions. Those corrections are
-carried below as stated facts, not as history.
-
 ```mermaid
 flowchart TB
     P["P0. room identity<br/>blocks the rest"] --> A["A. run visibility"]
@@ -21,10 +17,16 @@ flowchart TB
 
 ## P0. Room identity, the blocker under everything
 
-Measured on the main store: 478 place ids, 114 distinct titles, 588 exit
-links, and zero links that cross a session. Place ids are minted per
-session (`place:{session}:{seq}:{n}`), so the same room becomes a new
-place in every run and the map never joins.
+Measured on the main store, counting live current assertions on
+`place:` subjects only: 478 place ids, 114 distinct titles, 588 exit
+links, and zero links that cross a session. The counting rule matters.
+The raw table holds 818 place subjects, the rest retracted by knowledge
+resets, and three exit facts hang on sighting subjects rather than
+places. A measurement that skips the filter gets different numbers and
+concludes this section is wrong.
+
+Place ids are minted per session (`place:{session}:{seq}:{n}`), so the
+same room becomes a new place in every run and the map never joins.
 
 Consequences, all previously misread as other problems:
 
@@ -87,10 +89,10 @@ runtime layout with its own registry and session directories. The
 Observatory reads only the main runtime root, so every measured
 experiment is invisible to the app built to inspect experiments.
 
-The review corrected the intended mechanism. Registering attempts in the
-shared registry would trip the one-live-character unique index and be
-rejected by the session-directory guard, and would be the contamination
-this plan forbids. The change is read-side only.
+The change is read-side only. Registering attempts in the shared
+registry would trip the one-live-character unique index and be rejected
+by the session-directory guard, and would cause the contamination this
+plan forbids.
 
 ### A1a. The Observatory discovers overlay roots
 
@@ -107,14 +109,16 @@ this plan forbids. The change is read-side only.
 - Cost note: the sessions API recomputes per request, so discovery must
   bound its scan. Ended attempts are read once and cached by their last
   sequence.
+- A suite written outside the benchmarks directory through an explicit
+  output path is not discovered by the glob. Configured roots cover it.
 
 ### A1b. Attempts are findable as experiments
 
 - Change: suite and attempt id, derived from the overlay path, carried
   on the session row, with the goal taken from the ledger journey or the
-  recorded session objective. Warm suites share one overlay, so the
-  attempt-to-session mapping rule is stated: the session whose start
-  falls inside the attempt's window.
+  recorded session objective. Warm suites share one overlay, and the
+  mapping needs no clock arithmetic: every ledger row already names its
+  session in its gateway journal path, so that path is the mapping.
 - Success: the finder filters by suite and by goal, and a warm suite's
   attempts each resolve to exactly one session.
 - Failure: an attempt resolving to zero or several sessions.
@@ -126,8 +130,12 @@ this plan forbids. The change is read-side only.
 - Change: the evidence-based judge writes its verdict into the ledger
   row (sighted, killed, died, capped, error) beside cost and stop
   reason. The Observatory renders that verdict and never re-judges.
-- Success: every ledger row carries a verdict, and a sampled attempt's
-  verdict matches what its transcript shows on a full read.
+- Success: every new ledger row carries a verdict, and a sampled
+  attempt's verdict matches what its transcript shows on a full read.
+  Existing suites predate the field, so they are backfilled by rerunning
+  the judge over their retained journals, or the plan states they stay
+  verdict-less. Backfilled, since the minotaur attempts are the evidence
+  the audit rests on.
 - Failure: a verdict contradicted by its transcript, or prose matching
   reintroduced on the Observatory side.
 - Tests: judge unit tests per verdict from fixture journals.
@@ -158,8 +166,8 @@ file read-only, so watching needs no control socket and no new stream.
 
 ## Track B: replay first, simulation only when the facts exist
 
-The review dismantled the original premise. There is no 235-room
-recorded map to simulate over: those were session-scoped aliases. The
+There is no 235-room recorded map to simulate over: those were
+session-scoped aliases. The
 store also holds no refusals, no door states, and no hazards, so it
 cannot yield the typed outcomes a walking simulator needs. Building a
 policy simulator on it would model a different game, which is this
@@ -257,14 +265,24 @@ in settings. The decision and its numbers are recorded.
 
 ## Sequencing under the deadline
 
+The full plan is more work than the days remaining, so what is cut is
+stated rather than discovered late.
+
 | Order | Work | Why |
 | --- | --- | --- |
-| 1 | P0 room identity | everything else is unmeasurable without it |
-| 2 | A1a, A1b, A2a, A2b | the evidence for every later claim |
-| 3 | B1 replay baseline | pins re-tread honestly, cheap |
-| 4 | knowledge rework body | the audit-critical work |
-| 5 | A3 live watching | a demonstration, timeboxed |
-| 6 | C, after its decision | matters once labels are consumed |
+| 1 | P0 room identity, timeboxed to one day | everything downstream is unmeasurable without it |
+| 2 | A1a, A1b, A2a, A2b | the evidence for every later claim, and cheap because read-side |
+| 3 | B1 replay, doubling as P0's stability test | one harness, two purposes |
+| 4 | knowledge rework sections 1 and 2 | the facts the agent lacks, and its ability to read them |
+
+Cut for this week, deliberately:
+
+- track C, which its own decision gate already blocks
+- A3 live watching, a demonstration rather than audit evidence
+- knowledge rework sections 8 and 9, which stay designs until the
+  facts they depend on exist
+- atlas grading as a built system. It runs once as a script and its
+  numbers go in the progress report
 
 ## Reporting
 
