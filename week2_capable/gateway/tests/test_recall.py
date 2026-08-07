@@ -25,7 +25,7 @@ def _world(tmp_path: Path) -> KnowledgeStore:
         ("place:s1:1:1", "title", "The Temple Square", "learned"),
         ("place:s1:1:1", "exits", ["north", "east"], "learned"),
         ("place:s1:1:1", "exit.north", "place:s1:2:1", "learned"),
-        ("place:s1:1:1", "passage.east", "refused", "learned"),
+        ("place:s1:1:1", "passage.east", "refused", "parsed"),
         ("place:s1:2:1", "title", "The Temple", "learned"),
         ("place:s1:2:1", "exits", ["south", "up"], "learned"),
         ("room-sighting:1", "name", "a large minotaur", "learned"),
