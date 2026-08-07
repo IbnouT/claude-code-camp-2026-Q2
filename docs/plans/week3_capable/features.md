@@ -118,6 +118,13 @@ The store holds room titles, exits, and sightings. Everything that
 decides play is missing: darkness, shop stock, monster appraisals, door
 states, hunger, aggression, area names.
 
+What the character has to show for playing is read from the numbers the
+game reports, never from prose: experience, level and gold each keep
+their history in the store, so a gain is the step between two readings
+and the pace of gains says whether the current hunting ground has been
+outgrown. A kill itself is prose and waits for the perception model,
+which is what that feature is for.
+
 One recorded fact is also wrong rather than missing. A room's stored
 description sometimes carries what was happening in the room, a combat
 line, loot on the ground, a mob standing there, so the same room reads
