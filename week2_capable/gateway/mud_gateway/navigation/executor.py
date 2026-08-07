@@ -80,6 +80,7 @@ class NavigationExecutor:
         self.ask_where_ways_lead = bool(
             block.get("ask_where_ways_lead", True)
         )
+        self.read_new_rooms = bool(block.get("read_new_rooms", True))
 
     # -- shared step machinery ---------------------------------------------
 
@@ -193,6 +194,7 @@ class NavigationExecutor:
             return "blocked_exit"
         state["visited"].add(after)
         self._remember_passage(origin_place, direction, "open", reply)
+        await self._read_the_room(after, trace_id)
         await self._ask_where_ways_lead(after, trace_id)
         if expected is not None and after != expected:
             return "unexpected_room"
@@ -241,6 +243,39 @@ class NavigationExecutor:
                 "passage_note_failed",
                 {"place": place, "direction": direction, "error": str(error)},
             )
+
+    async def _read_the_room(self, room: str, trace_id: str) -> None:
+        """Read a room's own text the first time, and never again.
+
+        Rooms are told apart by what they say about themselves, so the
+        text has to be read once. It never changes after that, and the
+        game repeats it on every visit, so it is read on the first arrival
+        and skipped once the store holds it.
+        """
+        if not self.read_new_rooms:
+            return
+        graph = self._graph()
+        known = graph.rooms.get(room)
+        if known is not None and getattr(known, "description", None):
+            return
+        if self._describes(room):
+            return
+        try:
+            await self.session.command("look", trace_id=trace_id)
+        except Exception:
+            return
+
+    def _describes(self, room: str) -> bool:
+        """True when the store already holds this room's own text."""
+        if self.store is None:
+            return False
+        graph = self._graph()
+        for fact in self.store.current_facts(layer="learned"):
+            if fact.predicate != "description":
+                continue
+            if graph.room_of(fact.subject) == room and fact.value:
+                return True
+        return False
 
     async def _ask_where_ways_lead(self, room: str, trace_id: str) -> None:
         """Ask the game where this room's ways lead, on every arrival.

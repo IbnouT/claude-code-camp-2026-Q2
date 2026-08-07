@@ -54,7 +54,15 @@ class Survival:
             # autoloot and is only safe while autoloot is on with it.
             block.get(
                 "game_toggles",
-                ("autoloot", "autogold", "autodoor", "autokey", "autosac"),
+                (
+                    "autoloot", "autogold", "autodoor", "autokey",
+                    "autosac",
+                    # Brief keeps the room text out of every later visit.
+                    # The text is still read once per room by looking,
+                    # which is what room identity needs, so this saves the
+                    # repetition and none of the knowledge.
+                    "brief",
+                ),
             )
         )
 

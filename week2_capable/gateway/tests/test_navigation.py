@@ -153,7 +153,7 @@ class _Session:
     async def command(self, line: str, trace_id=None) -> _Reply:
         self.commands.append(line)
         reply_wire = getattr(self, "wire_ref", None)
-        if line == "exits":
+        if line in ("exits", "look"):
             # Asking where the ways lead moves nobody and is scripted
             # separately from the walk.
             return _Reply()
@@ -219,7 +219,7 @@ def test_travel_walks_the_learned_route(tmp_path: Path) -> None:
     store.close()
     assert report.stop == "arrived"
     assert report.arrived is True
-    walked = [c for c in session.commands if c != "exits"]
+    walked = [c for c in session.commands if c not in ("exits", "look")]
     assert walked == ["north", "east"]
 
 
@@ -513,7 +513,9 @@ def test_arriving_somewhere_new_asks_where_its_ways_lead(
     asyncio.run(_executor(session, store).travel("Square"))
     store.close()
 
-    assert session.commands == ["north", "exits"]
+    assert session.commands == ["north", "look", "exits"], (
+        "a room never seen before is read once, then its ways are asked"
+    )
 
 
 def test_every_arrival_asks_again_rather_than_trusting_an_old_answer(
@@ -539,6 +541,10 @@ def test_every_arrival_asks_again_rather_than_trusting_an_old_answer(
     store.close()
 
     assert session.commands.count("exits") == 3, "one per arrival"
+    # Nothing records a description in this fake, so the room text is
+    # still missing on each arrival and is rightly read again. The room
+    # whose text IS known is covered below.
+    assert session.commands.count("look") == 3
 
 
 def test_asking_can_be_switched_off(tmp_path: Path) -> None:
@@ -554,3 +560,22 @@ def test_asking_can_be_switched_off(tmp_path: Path) -> None:
     store.close()
 
     assert "exits" not in session.commands
+
+
+def test_a_room_whose_text_is_known_is_not_read_again(tmp_path: Path) -> None:
+    """The room text never changes, so reading it twice buys nothing."""
+    store = _two_room_store(tmp_path)
+    store.assert_fact(
+        "place:s:2:2", "description", ["A wide square."], layer="learned",
+        confidence="confirmed", evidence=_evidence(), transaction_id="t3",
+    )
+    session = _Session(
+        {"place:s:1:1": {"north": "place:s:2:2"}},
+        "place:s:1:1",
+        posture="standing",
+    )
+    asyncio.run(_executor(session, store).travel("Square"))
+    store.close()
+
+    assert "look" not in session.commands
+    assert "exits" in session.commands, "where the ways lead is still asked"
