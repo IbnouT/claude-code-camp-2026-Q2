@@ -405,6 +405,46 @@ The pattern across all three is one thing. Recording a fact and reading
 it are two halves of the same feature, and I keep landing the first and
 calling it done.
 
+### 11. Four cheap conveniences that took the map apart
+
+Each of these was defensible on its own. The game names the room behind
+every exit, so ask on arrival. The room text never changes, so read it
+once. The text repeats on every visit, so turn it off. The game will
+loot a corpse itself, so let it.
+
+Together they produced a run that ended with a level 1 character, no
+gold, no kills, stuck resting, and a record claiming its auto-flee
+threshold had been set.
+
+The chain, in the order it happens. Turning the room text off means
+every arrival records an empty description, overwriting the text an
+earlier look had earned. Room identity is keyed partly on that text, so
+the keys flip on every step and rooms with the same title merge and come
+apart again. The map stops growing. The sweep walks the same four rooms
+in a circle for twenty six moves. Three commands per step against a
+thirty second limit on the call blows the limit, so the model is told
+its sweep failed while the routine keeps walking. Nothing cancels it.
+Its own rest reflex sits the character down underneath the model, which
+spends its last five turns trying to walk a character it cannot see is
+resting, because the block does not mention posture.
+
+Meanwhile the auto-flee command was not a command. The game answered
+"Huh!?!" and we wrote "applied" into the record. The advice the agent
+was supposed to carry never reached it either: the file is not copied
+into a measured run and the capability is off by default, and the code
+treats a missing file as no advice rather than as a fault. So the run
+intended to measure that feature measured its absence and said nothing.
+
+None of it was visible in the tests. Each piece was tested alone against
+inputs built by hand, and the pipeline that clobbers the data was never
+in any test. It was visible immediately in one real run, to a reader
+who went looking for what the code does rather than what it says.
+
+What I take from it: cheap is not free, and four cheap things landed in
+one afternoon interact in ways that no one of them predicts. The rule I
+would give myself is that anything which changes what is recorded, not
+just what is displayed, has to be run before the next such change lands.
+
 ## Technical Conclusions
 
 - Repeated identical attempts did fail in a stable pattern, and that
