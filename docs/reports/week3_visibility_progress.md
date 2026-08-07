@@ -74,3 +74,27 @@ re-tread rate, or travel-by-title is well defined until identity is.
   after every round and the data and protocol were changed to move it,
   roughly twenty times. An honest number requires fresh reviewed text,
   which is what shadow mode is for.
+
+## F0 landed, F1 rule approved after four reviews
+
+- F0, the wiring repairs: envelope unwrap, posture check before walking, and
+  the withdrawal of the required response line. Committed. The envelope fix
+  and the posture fix were each watched working against the live game.
+- F1's identity rule: approved on the fourth review. Merge precision against
+  the game's own room numbers is 100 percent over 502 merged pairs, against
+  94.3 percent for the first rule written and 70.1 percent for matching on
+  title. It joins 43 percent of the pairs that are truly one room.
+- Four reviews, four defects, none of which the tests written beforehand could
+  see: a rule that merged five different maze rooms, a difference test that
+  read "not yet proven same" as "proven different", a block that checked one
+  side of a merge, and a difference relation that stopped one hop short.
+- Recorded as known limitations rather than hidden: room descriptions carry
+  what was happening in the room, which falsely proves 27 pairs different and
+  blocks 188 correct merges, and difference is proven between places rather
+  than between the rooms they were merged into.
+- The derived layer, its retraction path, and the map reading joined rooms are
+  landed. Recording identity also exposed a store defect: a fact re-asserted
+  after retraction attached evidence to the withdrawn assertion and never came
+  back, so the store looked as if it had recorded an observation while the
+  fact stayed absent. That is the likely cause of the empty map after a
+  knowledge reset.
