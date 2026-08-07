@@ -243,6 +243,76 @@ class KnowledgeStore:
             )
         return Snapshot(snapshot_id, high_water, reason, digest, generation, now)
 
+    def retract_layer(self, layer: str, *, reason: str) -> int:
+        """Withdraw every current fact of one layer. Returns how many.
+
+        Written for the derived layer, which holds conclusions computed
+        from other facts: when the facts underneath move, the conclusions
+        are dropped whole and computed again rather than edited.
+        """
+        self._writable()
+        if layer not in LAYERS:
+            raise KnowledgeError(f"unknown knowledge layer {layer!r}")
+        if not reason.strip():
+            raise KnowledgeError("a retraction reason must not be empty")
+        rows = self._db.execute(
+            "SELECT f.fact_id, f.current_assertion_id, a.* "
+            "FROM facts AS f JOIN assertions AS a "
+            "ON a.assertion_id = f.current_assertion_id "
+            "WHERE f.layer = ?",
+            (layer,),
+        ).fetchall()
+        tx = uuid.uuid4().hex
+        now = time.time()
+        with self._transaction():
+            for row in rows:
+                self._retract_row(row, method=reason, now=now, tx=tx)
+        return len(rows)
+
+    def _retract_row(self, row: Any, *, method: str, now: float,
+                     tx: str) -> None:
+        """Append one retraction and clear the fact's current assertion."""
+        assertion_id = uuid.uuid4().hex
+        self._db.execute(
+            "INSERT INTO assertions "
+            "(assertion_id, fact_id, value_json, value_digest, status, "
+            "confidence, method, parser_version, session_id, source_seq, "
+            "wire_digest, observed_at, supersedes, conflict_group, "
+            "transaction_id) "
+            "VALUES (?, ?, ?, ?, 'retracted', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                assertion_id,
+                row["fact_id"],
+                row["value_json"],
+                row["value_digest"],
+                row["confidence"],
+                method,
+                row["parser_version"],
+                row["session_id"],
+                row["source_seq"],
+                row["wire_digest"],
+                now,
+                row["assertion_id"],
+                row["conflict_group"],
+                tx,
+            ),
+        )
+        self._db.execute(
+            "UPDATE facts SET current_assertion_id = NULL WHERE fact_id = ?",
+            (row["fact_id"],),
+        )
+        self._add_evidence(
+            assertion_id,
+            EvidenceRef(
+                session_id=str(row["session_id"]),
+                source_seq=int(row["source_seq"]),
+                wire_digest=str(row["wire_digest"]),
+                parser_version=str(row["parser_version"]),
+                method=method,
+                observed_at=now,
+            ),
+        )
+
     def reset_learned(self, *, reason: str, snapshot_id: str) -> int:
         """Append retractions for current learned facts after a verified reset."""
         self._writable()
@@ -683,7 +753,12 @@ class KnowledgeStore:
             and current is not None
             and matching["assertion_id"] == current["assertion_id"]
         )
-        if matching is not None and (
+        # A fact whose current assertion was withdrawn has to be claimed
+        # again, not merely supported: attaching evidence to the assertion
+        # that was retracted would leave the fact absent while looking
+        # recorded.
+        withdrawn = fact is not None and current is None
+        if matching is not None and not withdrawn and (
             not force_append or matching["transaction_id"] == transaction_id
         ) and (not temporal or matching_is_current):
             added = self._add_evidence(str(matching["assertion_id"]), evidence)

@@ -294,3 +294,94 @@ def test_lookalikes_one_hop_above_a_contradiction_stay_apart() -> None:
     assert rooms["place:s1:1:1"] != rooms["place:s2:1:1"]
     labels = {b.place_id: b.confidence for b in bindings}
     assert labels["place:s1:1:1"] == UNCONTESTED
+
+
+def test_identity_is_recorded_and_recomputed(tmp_path) -> None:
+    """Recording replaces what was there, so a recompute never accretes."""
+    from mud_gateway.identity import record, rooms_of
+    from mud_gateway.knowledge import KnowledgeStore
+    from mud_gateway.knowledge_models import EvidenceRef
+
+    store = KnowledgeStore(tmp_path / "knowledge.db", player_id="tester")
+    evidence = EvidenceRef(
+        session_id="s1", source_seq=1, wire_digest="d" * 64,
+        parser_version="1", method="test", observed_at=1.0,
+    )
+    for subject, predicate, value in (
+        ("place:s1:1:1", "title", "The Armory"),
+        ("place:s1:1:1", "exits", ["north"]),
+        ("place:s2:1:1", "title", "The Armory"),
+        ("place:s2:1:1", "exits", ["north"]),
+    ):
+        store.assert_fact(
+            subject, predicate, value, layer="learned",
+            confidence="confirmed", evidence=evidence, transaction_id="t1",
+        )
+
+    first = record(store, store.current_facts(layer="learned"))
+    assert first["place:s1:1:1"] == first["place:s2:1:1"]
+    assert rooms_of(store) == first
+
+    again = record(store, store.current_facts(layer="learned"))
+    assert rooms_of(store) == again
+    assert len(rooms_of(store)) == 2
+    store.close()
+
+
+def test_recorded_identity_never_touches_the_learned_layer(tmp_path) -> None:
+    from mud_gateway.identity import record
+    from mud_gateway.knowledge import KnowledgeStore
+    from mud_gateway.knowledge_models import EvidenceRef
+
+    store = KnowledgeStore(tmp_path / "knowledge.db", player_id="tester")
+    evidence = EvidenceRef(
+        session_id="s1", source_seq=1, wire_digest="d" * 64,
+        parser_version="1", method="test", observed_at=1.0,
+    )
+    store.assert_fact(
+        "place:s1:1:1", "title", "The Armory", layer="learned",
+        confidence="confirmed", evidence=evidence, transaction_id="t1",
+    )
+    before = {
+        (a.subject, a.predicate, a.value)
+        for a in store.current_facts(layer="learned")
+    }
+    record(store, store.current_facts(layer="learned"))
+    after = {
+        (a.subject, a.predicate, a.value)
+        for a in store.current_facts(layer="learned")
+    }
+    assert before == after
+    store.close()
+
+
+def test_a_withdrawn_fact_returns_when_it_is_observed_again(tmp_path) -> None:
+    """Re-observing a retracted fact must restore it, not just note it.
+
+    Adding evidence to the assertion that was withdrawn would leave the
+    fact absent from the store while looking recorded.
+    """
+    from mud_gateway.knowledge import KnowledgeStore
+    from mud_gateway.knowledge_models import EvidenceRef
+
+    store = KnowledgeStore(tmp_path / "knowledge.db", player_id="tester")
+    evidence = EvidenceRef(
+        session_id="s1", source_seq=1, wire_digest="d" * 64,
+        parser_version="1", method="test", observed_at=1.0,
+    )
+    store.assert_fact(
+        "place:s1:1:1", "title", "The Armory", layer="derived",
+        confidence="tracked", evidence=evidence, transaction_id="t1",
+    )
+    store.retract_layer("derived", reason="test")
+    assert store.current_facts(layer="derived") == []
+
+    store.assert_fact(
+        "place:s1:1:1", "title", "The Armory", layer="derived",
+        confidence="tracked", evidence=evidence, transaction_id="t2",
+    )
+    current = store.current_facts(layer="derived")
+    assert [(a.subject, a.value) for a in current] == [
+        ("place:s1:1:1", "The Armory")
+    ]
+    store.close()

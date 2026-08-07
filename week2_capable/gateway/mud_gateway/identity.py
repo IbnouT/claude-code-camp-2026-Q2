@@ -25,6 +25,7 @@ Two limits are known and measured, both waiting on work elsewhere:
 from __future__ import annotations
 
 import hashlib
+import uuid
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Mapping, Sequence
@@ -449,3 +450,49 @@ def _never_duplicated(candidates: Sequence[Place]) -> bool:
     return True
 
 
+
+
+def record(store: Any, assertions: Sequence[Any]) -> dict[str, str]:
+    """Recompute room identity from the store and write it down.
+
+    The derived layer is dropped whole and rebuilt, because identity is a
+    conclusion about the facts underneath rather than an observation of
+    its own. Returns the place-to-room mapping that was recorded.
+    """
+    places = places_from_facts(assertions)
+    bindings = resolve(places)
+    evidence: dict[str, Any] = {}
+    for assertion in assertions:
+        if assertion.subject.startswith("place:"):
+            evidence.setdefault(
+                assertion.subject,
+                assertion.latest_evidence or assertion.evidence,
+            )
+    store.retract_layer("derived", reason="identity recompute")
+    transaction = uuid.uuid4().hex
+    recorded: dict[str, str] = {}
+    for binding in bindings:
+        source = evidence.get(binding.place_id)
+        if source is None:
+            continue
+        store.assert_fact(
+            binding.place_id,
+            "identity.room",
+            binding.room_id,
+            layer="derived",
+            confidence=binding.confidence,
+            evidence=source,
+            transaction_id=transaction,
+        )
+        recorded[binding.place_id] = binding.room_id
+    return recorded
+
+
+def rooms_of(store: Any) -> dict[str, str]:
+    """The recorded place-to-room mapping, empty when none was written."""
+    return {
+        assertion.subject: assertion.value
+        for assertion in store.current_facts(layer="derived")
+        if assertion.predicate == "identity.room"
+        and isinstance(assertion.value, str)
+    }

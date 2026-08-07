@@ -6,7 +6,11 @@ from dataclasses import dataclass
 from typing import Any
 
 SCHEMA_VERSION = 1
-LAYERS = frozenset({"belief", "parsed", "learned", "observer_truth"})
+# "derived" holds what was computed from other facts, so it is dropped and
+# recomputed rather than corrected. Nothing observed is ever written there.
+LAYERS = frozenset(
+    {"belief", "parsed", "learned", "observer_truth", "derived"}
+)
 CONFIDENCES = frozenset(
     {"high", "medium", "low", "confirmed", "tracked", "ambiguous", "unknown"}
 )
