@@ -161,3 +161,31 @@ def test_carry_failure_does_not_invent_an_encumbered_state() -> None:
     ]
 
     assert all("encumbered" not in state for state in states)
+
+
+def test_a_rooms_description_stops_at_its_exits() -> None:
+    """What happens in a room is not part of what the room is.
+
+    A creature, an item on the floor, or a line of combat arriving after
+    the exits belongs to the moment, not to the place. Keeping any of it
+    in the description makes the same room read as a different one on a
+    later visit, which is how a map stops joining.
+    """
+    frame = (
+        "\x1b[0;33mThe Temple Square\x1b[0m\r\n"
+        "   You are standing on the temple square.\r\n"
+        "\x1b[0;36m[ Exits: n e s w ]\x1b[0m\r\n"
+        "A singing, happy Drunk.\r\n"
+        "You flee head over heels.\r\n"
+        "14H 100M 55V > "
+    )
+    rooms = [
+        observation for observation in parse(frame, WIRE)
+        if isinstance(observation, RoomObservation)
+    ]
+
+    assert len(rooms) == 1
+    description = " ".join(rooms[0].description)
+    assert "temple square" in description.casefold()
+    assert "Drunk" not in description
+    assert "flee" not in description

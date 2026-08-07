@@ -342,6 +342,32 @@ None of the three was visible from the tests. All three were found by
 someone asking what the code does when the situation is not the one it
 was written for.
 
+### 9. The room description was recording the moment, not the place
+
+Room identity was missing joins it should have made, and the reason was
+not the rule. A room's stored description was carrying whatever happened
+to be in the room when it was looked at.
+
+The parser treated every line it could not classify as part of the
+description. A creature whose line it did not recognise, an item lying
+on the floor, a combat message arriving mid-look, all became part of
+what the room supposedly is. So the Dark Alley At The Levee had two
+descriptions across two visits, differing by a fled combat line, and the
+resolver correctly concluded they were different rooms. Measured cost:
+27 pairs of places falsely proven different, and 188 pairs the game's own
+room numbers say are the same held apart.
+
+The fix is structural rather than another pattern to match. This game
+prints a room as title, description, exits, then whatever is present. The
+description therefore ends at the exits line, and everything after it
+belongs to the moment. One flag in the parser.
+
+It does not repair what is already recorded, since those descriptions
+were stored with the pollution in them, so the measured recall on the
+existing store is unchanged. It changes what every future run records,
+and the recorded past can only be repaired by replaying the journals,
+which is its own step.
+
 ## Technical Conclusions
 
 - Repeated identical attempts did fail in a stable pattern, and that

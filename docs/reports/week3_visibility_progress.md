@@ -98,3 +98,32 @@ re-tread rate, or travel-by-title is well defined until identity is.
   back, so the store looked as if it had recorded an observation while the
   fact stayed absent. That is the likely cause of the empty map after a
   knowledge reset.
+
+
+## F1 wiring landed, with one part blocked
+
+- The map now joins during play, not only after a run ends. The review
+  found the earlier wiring correct and useless: every room entered in a
+  run belongs to no joined room until the run ends, so the agent always
+  stood somewhere the joined map did not contain, and travel to a room
+  known from a previous run returned unreachable every time.
+- Two store defects found by the same review and now tested: withdrawing
+  facts emitted no change records, so a reader following the feed would
+  show vanished facts indefinitely, and re-observing a withdrawn value
+  attached evidence to the withdrawn claim rather than contesting what
+  had become current.
+- Blocked and recorded rather than forced: recording the game's own room
+  numbers needs a channel that does not cross the boundary keeping
+  immortal code out of the agent's runtime, which is enforced by a test.
+  Two designs are written in the plan for Ibnou to choose.
+- F1 cannot be measured against baseline until a mission runs with the
+  knowledge capability on. That measurement is outstanding.
+
+## F3 started: the description was recording the moment, not the place
+
+- A room's description absorbed every line the parser could not classify,
+  including creatures, floor items and combat messages, so the same room
+  read differently on different visits. It now ends at the exits line.
+- Measured cost of the defect on the existing store: 27 pairs falsely
+  proven different, 188 correct merges blocked. The fix changes future
+  runs only. Repairing the recorded past needs journal replay.

@@ -360,6 +360,12 @@ def parse(raw: bytes | str, wire_ref: WireReference) -> list[Observation]:
             if room is not None:
                 room["exits"] = list(exits)
                 room["exits_text"] = line
+                # The room's own text ends here. Everything after the exits
+                # is what happens to be in the room right now: a creature,
+                # something on the floor, a line of combat. Letting any of
+                # that into the description makes one room read as two on a
+                # later visit.
+                room["described"] = True
             else:
                 add(
                     "exits",
@@ -381,6 +387,7 @@ def parse(raw: bytes | str, wire_ref: WireReference) -> list[Observation]:
             room = {
                 "title": line,
                 "description": [],
+                "described": False,
                 "exits": [],
                 "exits_text": None,
                 "mobs": [],
@@ -398,7 +405,10 @@ def parse(raw: bytes | str, wire_ref: WireReference) -> list[Observation]:
                 room["mobs"].append(line)
                 room["source_lines"] += 1
                 continue
-            room["description"].append(line)
+            if room["described"]:
+                room["mobs"].append(line)
+            else:
+                room["description"].append(line)
             room["source_lines"] += 1
             continue
 
