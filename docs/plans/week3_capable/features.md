@@ -45,10 +45,25 @@ against each other rather than described:
 | model calls and dollars per attempt | what it cost |
 | deaths and hazard events | did it survive |
 
-Each feature lands with a batch run with the feature off and on,
-everything else equal, and the difference is reported per measure. A
-feature that improves cost while leaving mission progress unchanged is
-reported as exactly that, never as success.
+Measurement is per configuration unit, not per code change. A unit is
+what one switch turns on, so features that only work together are
+measured together and named as one unit.
+
+Every unit is measured the same way, and no unit is finished before it
+is:
+
+- a baseline batch with the unit off, and a batch with it on, everything
+  else equal, same journey, same caps, same model
+- the difference reported per measure above, with the attempt count and
+  the spread, since a single run proves nothing
+- the verdict stated plainly, including no effect and worse. A feature
+  that improves cost while leaving mission progress unchanged is
+  reported as exactly that, never as success
+- a unit that cannot be measured yet says so and names what it waits
+  for, rather than being called done
+
+The order of work is therefore: implement, review until approved, then
+measure against baseline, then the next unit.
 
 ## Isolation rules that apply to every feature
 
