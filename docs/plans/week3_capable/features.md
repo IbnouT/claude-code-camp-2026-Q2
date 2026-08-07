@@ -333,6 +333,28 @@ Known defects that make every measurement noise. Not new scope, repair.
 
 ## Decisions waiting
 
+- Where the observer that records the game's own room numbers lives. The
+  gateway process may not import immortal code: that boundary is enforced
+  by a test that reads the imports of every mortal module, and it exists
+  so the agent's runtime cannot reach commands it must not have. The
+  knowledge store also admits one writer at a time, which the gateway
+  holds while it plays. Two designs fit those constraints:
+
+  - the observer runs in the existing separate immortal process, follows
+    the gateway journal to know when a command finished and which place
+    was recorded, and writes room numbers into a file of its own, joined
+    to the agent's record only when grading. The answer key then cannot
+    physically enter the store the agent reads.
+  - the gateway asks the immortal process for the number over the control
+    channel it already uses for resets, and writes it into the observer
+    truth layer itself. Fewer moving parts, one more thing crossing the
+    boundary.
+
+  The recorder itself is built and tested, with the reading discarded
+  unless two readings agree and name the room just observed. What is not
+  built is the channel, because choosing it changes where the answer key
+  is allowed to exist.
+
 - F2: isolated runs the Observatory reads, or ordinary tagged sessions.
 - F8: whether perception is a sixth capability, a setting group under
   knowledge, or a gateway device outside capabilities.

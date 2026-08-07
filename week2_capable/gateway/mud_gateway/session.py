@@ -23,7 +23,7 @@ import re
 import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import AsyncIterator
+from typing import Any, AsyncIterator
 
 from .journal import Journal
 from .knowledge_projection import KnowledgeProjector

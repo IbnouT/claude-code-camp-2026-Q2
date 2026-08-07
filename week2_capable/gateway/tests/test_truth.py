@@ -89,3 +89,19 @@ def test_nothing_is_recorded_without_a_place(tmp_path: Path) -> None:
     assert result is None
     assert admin.asked == 0
     store.close()
+
+
+def test_a_reading_naming_another_room_is_not_recorded(tmp_path: Path) -> None:
+    """Both readings agree, but on a room the character has moved to."""
+    store = _store(tmp_path)
+    admin = _Admin([(3001, "The Temple"), (3001, "The Temple")])
+    numbers = RoomNumbers(admin, store, "poucet")
+
+    result = asyncio.run(numbers.observe(
+        "place:s1:1:1", _evidence(), expected_title="The Temple Square"
+    ))
+
+    assert result is None
+    assert store.current_facts(layer=LAYER) == []
+    assert numbers.skipped == 1
+    store.close()

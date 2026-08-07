@@ -30,18 +30,31 @@ class RoomNumbers:
         self.recorded = 0
         self.skipped = 0
 
-    async def observe(self, place_id: str | None, evidence: EvidenceRef) -> int | None:
+    async def observe(
+        self,
+        place_id: str | None,
+        evidence: EvidenceRef,
+        expected_title: str | None = None,
+    ) -> int | None:
         """Record where the game says the character is, when it is settled.
 
-        The number is read twice. A character that moved between the two
-        readings, by fleeing or being sent somewhere, has no single answer
-        for the place just parsed, so nothing is recorded.
+        The number is read twice, and where the room just parsed is known
+        the answer must name that room. A character that fled, died, or
+        was sent elsewhere between the parse and the reading has no single
+        answer for the place it was standing in, so nothing is recorded.
+        Recording the wrong room here would poison the very measurement
+        this exists to provide.
         """
         if place_id is None:
             return None
         first = await self.admin.locate(self.character)
         second = await self.admin.locate(self.character)
         if first is None or second is None or first[0] != second[0]:
+            self.skipped += 1
+            return None
+        if expected_title is not None and (
+            first[1].casefold() != expected_title.casefold()
+        ):
             self.skipped += 1
             return None
         self.store.assert_fact(
