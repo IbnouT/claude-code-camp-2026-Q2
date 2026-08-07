@@ -121,18 +121,23 @@ def test_the_game_is_asked_to_loot_for_us(tmp_path: Path) -> None:
 
     applied = asyncio.run(survival.let_the_game_do_the_work())
 
-    assert "autoloot" in session.commands
-    assert "autogold" in session.commands
-    assert applied == ("autoloot", "autogold", "autoexit")
+    assert "toggle autoloot" in session.commands
+    assert "toggle autogold" in session.commands
+    assert applied == ("toggle autoloot", "toggle autogold")
+    assert not [c for c in session.commands if "autoexit" in c], (
+        "a blind toggle would turn off the exits the parser reads"
+    )
     store.close()
 
 
 def test_the_toggles_are_settings(tmp_path: Path) -> None:
     session = _Session([])
     store = _store_with_maxima(tmp_path)
-    survival = Survival(session, store, {"game_toggles": ("autoloot",)})
+    survival = Survival(
+        session, store, {"game_toggles": ("toggle autoloot",)}
+    )
 
     asyncio.run(survival.let_the_game_do_the_work())
 
-    assert session.commands == ["autoloot"]
+    assert session.commands == ["toggle autoloot"]
     store.close()

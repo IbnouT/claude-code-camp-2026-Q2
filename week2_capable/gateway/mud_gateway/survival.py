@@ -33,7 +33,12 @@ class Survival:
         self.rest_poll_seconds = float(block.get("rest_poll_seconds", 6.0))
         self.rest_max_polls = int(block.get("rest_max_polls", 20))
         self.game_toggles = tuple(
-            block.get("game_toggles", ("autoloot", "autogold", "autoexit"))
+            # Spelled as the game's own help spells them, and limited to
+            # what is safe to send blind. These two report "enabled" when
+            # set, so sending them once is idempotent in effect. The exit
+            # display is a plain toggle with no way to ask for "on", so
+            # sending it would turn off the very lines the parser reads.
+            block.get("game_toggles", ("toggle autoloot", "toggle autogold"))
         )
 
     # -- store reads -------------------------------------------------------
