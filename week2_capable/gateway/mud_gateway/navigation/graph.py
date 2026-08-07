@@ -35,6 +35,15 @@ class Room:
         return frozenset(self.exits - self.links.keys())
 
 
+def _recorded_identity(store: KnowledgeStore) -> dict[str, str]:
+    """The place-to-room mapping, empty when identity was never recorded."""
+    return {
+        fact.subject: fact.value
+        for fact in store.current_facts(layer="derived")
+        if fact.predicate == "identity.room" and isinstance(fact.value, str)
+    }
+
+
 @dataclass
 class WorldGraph:
     """Every learned place, keyed by its stable store identity."""
@@ -43,10 +52,21 @@ class WorldGraph:
 
     @classmethod
     def from_store(cls, store: KnowledgeStore) -> "WorldGraph":
+        """The map, over rooms when identity was recorded, else over places.
+
+        Identity joins the places one room was seen as, so a route can
+        cross a session boundary. Without it every run holds a separate
+        copy of the same ground and the map never joins.
+        """
+        identity = _recorded_identity(store)
         rooms: dict[str, Room] = {}
 
+        def named(place_id: str) -> str:
+            return identity.get(place_id, place_id)
+
         def room(place_id: str) -> Room:
-            return rooms.setdefault(place_id, Room(place_id))
+            key = named(place_id)
+            return rooms.setdefault(key, Room(key))
 
         for fact in store.current_facts(layer="learned"):
             if not fact.subject.startswith("place:"):
@@ -68,7 +88,7 @@ class WorldGraph:
                     fact.predicate.removeprefix("exit.")
                 )
                 if direction is not None:
-                    room(fact.subject).links[direction] = fact.value
+                    room(fact.subject).links[direction] = named(fact.value)
         return cls(rooms)
 
     def by_title(self, title: str) -> list[Room]:

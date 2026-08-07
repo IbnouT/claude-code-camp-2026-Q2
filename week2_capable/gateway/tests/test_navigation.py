@@ -346,3 +346,51 @@ def test_a_standing_character_is_not_told_to_stand(tmp_path: Path) -> None:
     store.close()
 
     assert "stand" not in session.commands
+
+
+def test_the_map_joins_rooms_when_identity_was_recorded(tmp_path: Path) -> None:
+    """Two runs of the same ground become one map, not two copies."""
+    from mud_gateway.identity import record
+
+    store = KnowledgeStore(tmp_path / "knowledge.db", player_id="tester")
+    evidence = _evidence()
+    for subject, predicate, value in (
+        ("place:s1:1:1", "title", "The Armory"),
+        ("place:s1:1:1", "exits", ["north"]),
+        ("place:s1:1:1", "exit.north", "place:s1:2:1"),
+        ("place:s1:2:1", "title", "Main Street"),
+        ("place:s1:2:1", "exits", ["south"]),
+        ("place:s2:1:1", "title", "The Armory"),
+        ("place:s2:1:1", "exits", ["north"]),
+        ("place:s2:9:1", "title", "The Bakery"),
+        ("place:s2:9:1", "exits", ["west"]),
+    ):
+        store.assert_fact(
+            subject, predicate, value, layer="learned",
+            confidence="confirmed", evidence=evidence, transaction_id="t1",
+        )
+
+    before = WorldGraph.from_store(store)
+    assert len([r for r in before.rooms.values() if r.title == "The Armory"]) == 2
+
+    record(store, store.current_facts(layer="learned"))
+    after = WorldGraph.from_store(store)
+    store.close()
+
+    armories = [r for r in after.rooms.values() if r.title == "The Armory"]
+    assert len(armories) == 1
+    assert "north" in armories[0].links
+
+
+def test_the_map_reads_places_when_identity_was_never_recorded(
+    tmp_path: Path,
+) -> None:
+    store = KnowledgeStore(tmp_path / "knowledge.db", player_id="tester")
+    evidence = _evidence()
+    store.assert_fact(
+        "place:s1:1:1", "title", "The Armory", layer="learned",
+        confidence="confirmed", evidence=evidence, transaction_id="t1",
+    )
+    graph = WorldGraph.from_store(store)
+    store.close()
+    assert list(graph.rooms) == ["place:s1:1:1"]
