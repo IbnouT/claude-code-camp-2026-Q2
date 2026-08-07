@@ -128,3 +128,36 @@ def test_an_empty_store_answers_honestly(tmp_path) -> None:
     assert "not in what you have mapped" in replies[0]
     assert "have not seen any creature" in replies[1]
     assert "have not looked at yourself" in replies[2]
+
+
+def test_the_tool_is_offered_only_with_the_knowledge_capability() -> None:
+    """A tool the agent cannot call is the defect this feature exists to fix."""
+    from mud_gateway.profiles import PROFILES, Surface
+
+    plain = {schema["name"] for schema in Surface(PROFILES["direct-full"]).schemas()}
+    assert "recall" not in plain
+
+    with_knowledge = {
+        schema["name"]
+        for schema in Surface(
+            PROFILES["direct-full"],
+            extensions=frozenset({"recall"}),
+        ).schemas()
+    }
+    assert "recall" in with_knowledge
+
+
+def test_the_tool_states_the_questions_it_answers() -> None:
+    """The model must be able to see what it may ask without guessing."""
+    from mud_gateway.profiles import PROFILES, Surface
+    from mud_gateway.recall import QUESTIONS
+
+    schema = next(
+        schema
+        for schema in Surface(
+            PROFILES["direct-full"], extensions=frozenset({"recall"})
+        ).schemas()
+        if schema["name"] == "recall"
+    )
+    choices = schema["inputSchema"]["properties"]["about"]["enum"]
+    assert set(choices) == set(QUESTIONS)

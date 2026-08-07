@@ -421,6 +421,32 @@ CAPABILITIES: tuple[Capability, ...] = (
         available=False,
     ),
     Capability(
+        "recall",
+        "Ask what you already know: the room you are in and where its "
+        "exits lead, creatures you have seen and where, services you have "
+        "found, whether a named target has been sighted, where there is "
+        "still unwalked ground, or your own condition. Costs no game "
+        "command.",
+        "perception", "interact", "none",
+        (
+            _argument(
+                "about",
+                description="what you want to know",
+                required=True,
+                choices=(
+                    "here", "creatures", "services", "target",
+                    "unexplored", "self",
+                ),
+            ),
+            _argument(
+                "name",
+                description="the creature or target to ask about",
+            ),
+        ),
+        execution="routine",
+        available=False,
+    ),
+    Capability(
         "recall_state",
         "Summarize the current place, exits, vitals, and map coverage "
         "from retained knowledge. Costs no game command.",

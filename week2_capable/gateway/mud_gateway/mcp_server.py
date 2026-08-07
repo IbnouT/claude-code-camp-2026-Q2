@@ -13,11 +13,12 @@ import uuid
 from typing import Any, Callable
 
 from .commands import BY_NAME, IMMORTAL, Capability
-from . import identity
+from . import identity, recall
 from .journal import Journal
 from .knowledge import KnowledgeStore
 from .knowledge_projection import KnowledgeProjector
 from .navigation import NavigationExecutor
+from .navigation.graph import WorldGraph
 from .state_block import render_state_block
 from .campaign import mission_readiness, readiness_text
 from .economy import Economy, report_text as economy_report_text
@@ -69,6 +70,7 @@ async def execute(
         service_notes: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
         economy: Economy | None = None,
         knowledge_reader: Any = None,
+        recall_reader: Callable[[str, Any], str] | None = None,
 ) -> CommandObservation:
     """Execute one authorized capability and trace it end to end."""
     capability = invocation.capability
@@ -178,6 +180,34 @@ async def execute(
                     event_session,
                     "state_fields",
                     recorded,
+                    trace_id=trace_id,
+                )
+                return CommandObservation(
+                    tool=invocation.tool,
+                    capability=capability.name,
+                    family=capability.family,
+                    command=None,
+                    text=text,
+                    complete=True,
+                    sequence=event.seq,
+                    trace_id=trace_id,
+                )
+            if capability.name == "recall":
+                if recall_reader is None:
+                    raise CapabilityUnavailable(
+                        f"{capability.name!r} needs the knowledge capability")
+                text = recall_reader(
+                    str(invocation.arguments.get("about") or ""),
+                    invocation.arguments.get("name"),
+                )
+                event = journal.append(
+                    event_session,
+                    "tool_result",
+                    {
+                        "tool": invocation.tool,
+                        "capability": capability.name,
+                        "complete": True,
+                    },
                     trace_id=trace_id,
                 )
                 return CommandObservation(
@@ -418,9 +448,10 @@ async def serve(
     service_notes: Callable[[dict[str, Any]], dict[str, Any]] | None = None
     economy: Economy | None = None
     knowledge_reader: Any = None
+    recall_reader: Callable[[str, Any], str] | None = None
 
     async def game_session() -> Session:
-        nonlocal economy, knowledge_reader, knowledge_store, navigation, service_notes, session, state_notes, state_reader
+        nonlocal economy, knowledge_reader, knowledge_store, navigation, recall_reader, service_notes, session, state_notes, state_reader
         if session is None:
             profile = settings.player(player_profile)
             password = settings.player_password(profile.id)
@@ -494,6 +525,18 @@ async def serve(
 
                 state_reader = read_state
 
+                def read_knowledge(about: str, name: Any = None) -> str:
+                    return recall.answer(
+                        store,
+                        WorldGraph.from_store(store),
+                        about,
+                        place_id=live.observations.knowledge.current_place_id,
+                        name=None if name is None else str(name),
+                        player_id=profile.id,
+                    )
+
+                recall_reader = read_knowledge
+
                 def write_notes(arguments: dict[str, Any]) -> dict[str, Any]:
                     return record_state_fields(
                         store,
@@ -549,6 +592,7 @@ async def serve(
                 event_session=target.id if target is not None else run_id,
                 navigation=navigation,
                 state_reader=state_reader,
+                recall_reader=recall_reader,
                 state_notes=state_notes,
                 service_notes=service_notes,
                 economy=economy,
@@ -653,7 +697,7 @@ def main(argv: list[str] | None = None) -> int:
     extensions = frozenset().union(
         frozenset({"sweep", "travel_to"})
         if settings.capabilities.get("navigation") else frozenset(),
-        frozenset({"recall_state", "note_state", "note_service"})
+        frozenset({"recall", "recall_state", "note_state", "note_service"})
         if settings.capabilities.get("knowledge") else frozenset(),
         frozenset({"bank_surplus"})
         if settings.capabilities.get("economy") else frozenset(),
