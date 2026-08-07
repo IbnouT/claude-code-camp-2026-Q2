@@ -243,3 +243,29 @@ def test_a_line_is_read_in_the_colour_it_is_printed_in() -> None:
     assert "sword" in objects
     assert "janitor" in creatures
     assert "gloves" not in creatures
+
+
+def test_asking_for_the_exits_learns_where_they_lead() -> None:
+    """The game names the room each way opens on. Walking to find out
+    what it already said is a wasted trip."""
+    frame = (
+        "Obvious exits:\r\n"
+        "north - By The Temple Altar\r\n"
+        "east  - The Midgaard Donation Room\r\n"
+        "south - The Temple Square\r\n"
+        "down  - The Temple Square\r\n"
+        "46H 100M 84V (news) (motd) > "
+    )
+    exits = [
+        observation for observation in parse(frame, WIRE)
+        if isinstance(observation, ExitsObservation)
+    ]
+
+    assert len(exits) == 1
+    assert exits[0].destinations == {
+        "north": "By The Temple Altar",
+        "east": "The Midgaard Donation Room",
+        "south": "The Temple Square",
+        "down": "The Temple Square",
+    }
+    assert set(exits[0].exits) == {"north", "east", "south", "down"}

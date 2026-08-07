@@ -8,6 +8,7 @@ from collections.abc import Sequence
 
 from .knowledge import EvidenceRef, KnowledgeStore
 from .observe import (
+    ExitsObservation,
     Observation,
     PlayerStateObservation,
     RoomObservation,
@@ -73,6 +74,25 @@ class KnowledgeProjector:
                         evidence=evidence,
                         transaction_id=transaction_id,
                     )
+            elif isinstance(observation, ExitsObservation):
+                # What the game says lies each way. A name is not proof of
+                # identity, so it is kept apart from the ways actually
+                # walked: it tells the agent where to aim, and a walk
+                # settles what is really there.
+                place = self.current_place_id
+                if place is not None:
+                    for direction, name in (
+                        observation.destinations or {}
+                    ).items():
+                        self.store.assert_fact(
+                            place,
+                            f"exit_named.{direction}",
+                            name,
+                            layer="learned",
+                            confidence=observation.confidence.value,
+                            evidence=evidence,
+                            transaction_id=transaction_id,
+                        )
             elif isinstance(observation, RoomObservation):
                 room_id = self._room_id(position, observation)
                 self._learn_room(

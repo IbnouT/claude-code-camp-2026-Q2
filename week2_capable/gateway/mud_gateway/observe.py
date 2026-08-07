@@ -6,7 +6,7 @@ import hashlib
 import re
 from dataclasses import asdict, dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, Mapping
 
 PARSER_VERSION = "rules-2"
 SGR = re.compile(r"\x1b\[([0-9;]*)m")
@@ -16,6 +16,10 @@ OBJECT_COLOUR = "0;32"
 DANGER_COLOUR = "0;31"
 
 EXITS_LINE = re.compile(r"^\[?\s*(Obvious exits|Exits):", re.I)
+# One way out and the room it opens on, as the exits listing prints it.
+EXITS_ENTRY = re.compile(
+    r"^(north|east|south|west|up|down)\s*-\s*(\S.*?)\s*$", re.I
+)
 EXITS_NONE = re.compile(r"^\s*None!?\s*$", re.I)
 VITALS_LINE = re.compile(r"(\d+)H\s+(\d+)M\s+(\d+)V")
 PROMPT_LINE = re.compile(r"^[\d\s]*H[\d\s]*M[\d\s]*V.*>\s*$")
@@ -137,6 +141,10 @@ class RoomObservation(Observation):
 @dataclass(frozen=True)
 class ExitsObservation(Observation):
     exits: tuple[str, ...] = ()
+    # Where each way leads, when the game was asked and said so. The
+    # listing names the room beyond, which is knowledge that would
+    # otherwise cost a walk to learn.
+    destinations: Mapping[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -210,6 +218,29 @@ def _is_title(line: str) -> bool:
     return not CREATURE_ACTING.match(line)
 
 
+def _destinations(frame: list[Segment]) -> dict[str, str]:
+    """Where each way leads, when the game listed it.
+
+    Asking for the exits prints the room each one opens on. Reading that
+    is knowledge the agent would otherwise have to spend a walk to get,
+    and it names ways it has never taken.
+    """
+    found: dict[str, str] = {}
+    listing = False
+    for segment in frame:
+        if EXITS_LINE.match(segment.text):
+            listing = True
+            continue
+        if not listing:
+            continue
+        entry = EXITS_ENTRY.match(segment.text)
+        if entry is None:
+            listing = False
+            continue
+        found[entry.group(1).casefold()] = entry.group(2).strip()
+    return found
+
+
 def _exits_from(line: str) -> tuple[str, ...]:
     body = re.sub(r"^\[?\s*(Obvious exits|Exits):", "", line, flags=re.I)
     body = body.strip().rstrip("]").strip()
@@ -231,6 +262,7 @@ def parse(raw: bytes | str, wire_ref: WireReference) -> list[Observation]:
     room: dict[str, Any] | None = None
     frame_segments = segments(raw)
     frame_text = "\n".join(segment.text for segment in frame_segments)
+    destinations = _destinations(frame_segments)
     score_conditions = {
         "hungry": bool(re.search(r"\bYou are hungry\.", frame_text, re.I)),
         "thirsty": bool(re.search(r"\bYou are thirsty\.", frame_text, re.I)),
@@ -370,6 +402,9 @@ def parse(raw: bytes | str, wire_ref: WireReference) -> list[Observation]:
             )
             continue
 
+        if EXITS_ENTRY.match(line) and destinations:
+            continue
+
         if EXITS_LINE.match(line):
             exits = _exits_from(line)
             if room is not None:
@@ -388,7 +423,8 @@ def parse(raw: bytes | str, wire_ref: WireReference) -> list[Observation]:
                     Confidence.HIGH,
                     "exits-shape+ansi",
                     ExitsObservation,
-                    exits=exits,
+                    exits=exits or tuple(destinations),
+                    destinations=destinations,
                 )
             continue
 

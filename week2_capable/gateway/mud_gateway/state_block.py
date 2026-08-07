@@ -103,24 +103,42 @@ def _ways(
         if fact.predicate.startswith("passage.")
         and graph.room_of(fact.subject) == here
     }
+    told = {
+        fact.predicate.removeprefix("exit_named."): str(fact.value)
+        for fact in store.current_facts(layer="learned")
+        if fact.predicate.startswith("exit_named.")
+        and graph.room_of(fact.subject) == here
+    }
     ordered = sorted(
         {d for d in (canonical_direction(str(r)) for r in raw) if d},
         key=lambda d: _ORDER.index(d) if d in _ORDER else len(_ORDER),
     )
     lines = []
-    for direction in ordered:
+    for direction in sorted(set(ordered) | set(told),
+                            key=lambda d: _ORDER.index(d)
+                            if d in _ORDER else len(_ORDER)):
         target = links.get(direction)
-        if refused.get(direction) == "refused":
-            where = "would not open when tried"
-        elif target is None:
-            where = "not walked yet"
-        else:
+        named = told.get(direction)
+        if target is not None:
             room_there = graph.rooms.get(target)
-            where = (
+            walked = (
                 room_there.title
                 if room_there is not None and room_there.title
                 else "somewhere already mapped"
             )
+            # The game named one room and the walk found another. Say so
+            # rather than pick: it means the way changed, or two rooms
+            # share a name, and either is worth knowing.
+            if named and named.casefold() != walked.casefold():
+                where = f"{walked} (the game calls it {named})"
+            else:
+                where = walked
+        elif refused.get(direction) == "refused":
+            where = "would not open when tried"
+        elif named:
+            where = f"{named}, never walked"
+        else:
+            where = "not walked yet"
         lines.append(f"{direction} → {where}")
     return lines
 

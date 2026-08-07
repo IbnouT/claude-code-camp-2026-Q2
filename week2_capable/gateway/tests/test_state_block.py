@@ -141,3 +141,52 @@ def test_advice_rides_with_the_situation(tmp_path: Path) -> None:
     store.close()
 
     assert "size up anything before you fight it" in block
+
+
+def test_a_way_never_walked_still_says_where_it_goes(tmp_path: Path) -> None:
+    """The game names the room each way opens on. Knowing that before
+    walking is what lets the agent choose a direction on purpose."""
+    store = KnowledgeStore(tmp_path / "knowledge.db", player_id="tester")
+    _seed(store)
+    evidence = EvidenceRef(
+        session_id="test", source_seq=3, wire_digest="d",
+        parser_version="p1", method="exits", observed_at=time.time(),
+    )
+    store.assert_fact(
+        "place:s:1:1", "exit_named.east", "The Midgaard Donation Room",
+        layer="learned", confidence="high", evidence=evidence,
+    )
+    block = render_state_block(
+        store,
+        _Pipeline(room=_Room("The Temple Of Midgaard", ("n", "e"))),
+        _Projector("place:s:1:1"),
+    )
+    store.close()
+
+    assert "east → The Midgaard Donation Room, never walked" in block
+    assert "north → Square" in block, "a walked way keeps what walking proved"
+
+
+def test_a_walk_disagreeing_with_the_listing_is_said_aloud(
+    tmp_path: Path,
+) -> None:
+    """Two rooms may share a name, or a way may have changed. Either is
+    worth knowing, and neither is worth silently choosing between."""
+    store = KnowledgeStore(tmp_path / "knowledge.db", player_id="tester")
+    _seed(store)
+    evidence = EvidenceRef(
+        session_id="test", source_seq=4, wire_digest="d",
+        parser_version="p1", method="exits", observed_at=time.time(),
+    )
+    store.assert_fact(
+        "place:s:1:1", "exit_named.north", "Somewhere Else",
+        layer="learned", confidence="high", evidence=evidence,
+    )
+    block = render_state_block(
+        store,
+        _Pipeline(room=_Room("The Temple Of Midgaard", ("n",))),
+        _Projector("place:s:1:1"),
+    )
+    store.close()
+
+    assert "north → Square (the game calls it Somewhere Else)" in block
