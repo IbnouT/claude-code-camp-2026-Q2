@@ -62,6 +62,11 @@ class GatewaySettings:
     reset_pause_timeout: float = 15.0
     reset_child_timeout: float = 30.0
     reset_client_timeout: float = 45.0
+    # Observer instrumentation, never agent knowledge: when on, the game's
+    # own room number is read on a separate immortal connection and stored
+    # where the agent cannot read it, so identity and coverage can be
+    # graded against truth rather than against our own conclusions.
+    record_room_numbers: bool = False
     capabilities: Mapping[str, bool] = field(default_factory=lambda: {
         name: False for name in CAPABILITIES
     })
@@ -87,6 +92,7 @@ class GatewaySettings:
         api = _mapping(configured, "api")
         admin = _mapping(configured, "admin")
         reset = _mapping(configured, "reset")
+        observer = _mapping(configured, "observer")
         root = config_dir.parent
         selected = _profile_id(
             os.environ.get("BOUKENSHA_PLAYER_ID")
@@ -144,6 +150,7 @@ class GatewaySettings:
                 "gateway.reset.client_timeout_seconds",
             ),
             capabilities=flags,
+            record_room_numbers=bool(observer.get("record_room_numbers")),
             capability_settings=capability_blocks,
             agent_id=os.environ.get("BOUKENSHA_AGENT_ID"),
             session_id=os.environ.get("BOUKENSHA_SESSION_ID"),

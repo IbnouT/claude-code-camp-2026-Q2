@@ -13,6 +13,7 @@ import uuid
 from typing import Any, Callable
 
 from .commands import BY_NAME, IMMORTAL, Capability
+from . import identity
 from .journal import Journal
 from .knowledge import KnowledgeStore
 from .knowledge_projection import KnowledgeProjector
@@ -445,6 +446,23 @@ async def serve(
                 ),
             )
             record_profile(journal, session.id, surface)
+            if settings.capabilities.get("knowledge") and knowledge_store:
+                # Join what earlier runs saw before this one starts, so the
+                # map the agent walks is one map rather than a fresh copy
+                # of ground already covered.
+                bound = identity.record(
+                    knowledge_store,
+                    knowledge_store.current_facts(layer="learned"),
+                )
+                journal.append(
+                    session.id,
+                    "identity",
+                    {
+                        "phase": "start",
+                        "places": len(bound),
+                        "rooms": len(set(bound.values())),
+                    },
+                )
             await session.open()
             await seed_login_observations(session, journal)
             survival = None
@@ -577,6 +595,20 @@ async def serve(
         if session is not None:
             await session.close()
         if knowledge_store is not None:
+            if settings.capabilities.get("knowledge"):
+                # Fold what this run saw into the joined map, so the next
+                # run starts from one map instead of re-learning ground.
+                try:
+                    identity.record(
+                        knowledge_store,
+                        knowledge_store.current_facts(layer="learned"),
+                    )
+                except Exception as error:
+                    journal.append(
+                        "gateway",
+                        "identity",
+                        {"phase": "end", "failed": str(error)},
+                    )
             knowledge_store.close()
         journal.close()
 
