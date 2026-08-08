@@ -18,6 +18,7 @@ import {
 import type {
   SessionEvidenceRecord,
   SessionInvestigation,
+  SessionRecordFields,
 } from "../contracts";
 import {
   evidenceText,
@@ -25,18 +26,27 @@ import {
   type SessionSelection,
   type SessionStory as Story,
   type StoryObjectiveEpoch,
-  type StoryOperatorMessage,
   type StoryIteration,
   type StoryStep,
   type StoryToolCycle,
   type StoryTurn,
 } from "./storyProjection";
+import { StoryRecordFields } from "./StoryRecordFields";
 import { StoryWireEvidence } from "./StoryWireEvidence";
 import styles from "./SessionStory.module.css";
 
 function cx(...names: string[]): string {
   return names.map((name) => styles[name]).filter(Boolean).join(" ");
 }
+
+// The record kinds whose heavy members the story withholds and one
+// endpoint serves on request.
+const withheldKinds = new Set([
+  "session_start",
+  "prompt",
+  "model_request",
+  "provider_response",
+]);
 
 type Props = {
   investigation: SessionInvestigation;
@@ -76,14 +86,6 @@ export function SessionStory({
         ))
       : undefined
   );
-  const selectedNudge = selectedIteration === undefined
-    ? null
-    : activeNudgeForIteration(
-        story.objectiveEpochs.find(
-          (epoch) => epoch.number === selectedIteration.objectiveEpoch,
-        ),
-        selectedIteration,
-      );
   const [openGoals, setOpenGoals] = useState<Set<number>>(
     () => new Set(
       selection.recordId !== null && selectedIteration !== undefined
@@ -91,10 +93,11 @@ export function SessionStory({
         : [],
     ),
   );
-  const [openNudges, setOpenNudges] = useState<Set<string>>(
+  // A session opens on its turn headings, so only a chosen record opens a turn.
+  const [openTurns, setOpenTurns] = useState<Set<number>>(
     () => new Set(
-      selection.recordId !== null && selectedNudge !== null
-        ? [selectedNudge.record.id]
+      selection.recordId !== null && selection.turn !== null
+        ? [selection.turn]
         : [],
     ),
   );
@@ -108,6 +111,15 @@ export function SessionStory({
       return new Set([...current, key]);
     });
   }, [selection.iteration, selection.turn]);
+
+  // A selected record must stay reachable, so selecting it opens its turn.
+  useEffect(() => {
+    if (selection.recordId === null || selection.turn === null) return;
+    const turn = selection.turn;
+    setOpenTurns((current) => (
+      current.has(turn) ? current : new Set([...current, turn])
+    ));
+  }, [selection.recordId, selection.turn]);
 
   useEffect(() => {
     if (selection.recordId === null) return;
@@ -173,6 +185,10 @@ export function SessionStory({
     .filter((chapter) => (
       !normalizedSearch || chapter.turns.length > 0
     )), [normalizedSearch, story.objectiveEpochs, story.turns, turns]);
+  // A filter has to reach evidence inside a turn, so every turn it keeps opens.
+  const matchingTurns = useMemo(() => new Set(
+    chapters.flatMap((chapter) => chapter.turns.map((turn) => turn.number)),
+  ), [chapters]);
   const matchingIterations = chapters.reduce(
     (total, chapter) => total + chapter.turns.reduce(
       (chapterTotal, turn) => chapterTotal + turn.iterations.length,
@@ -233,7 +249,6 @@ export function SessionStory({
           : openGoals.has(epoch.number);
         const current = epoch.number === story.objectiveEpochs.at(-1)?.number;
         const focused = epoch.number === focusedGoalNumber;
-        const segments = segmentTurnsByNudges(epoch, chapterTurns);
         const totalIterationCount = story.turns.reduce(
           (total, turn) => total + turn.iterations.filter(
             (iteration) => iteration.objectiveEpoch === epoch.number,
@@ -279,82 +294,17 @@ export function SessionStory({
               </p>
             ) : null}
             {expanded ? (
-              <>
-                <StoryTurns
-                  investigation={investigation}
-                  openIterations={openIterations}
-                  selection={selection}
-                  selectedRef={selectedRef}
-                  turns={segments.beforeFirstNudge}
-                  onOpenIterationsChange={setOpenIterations}
-                  onSelect={onSelect}
-                />
-                {segments.nudges.map(({ message, turns: nudgeTurns }) => {
-                  const nudgeExpanded = normalizedSearch
-                    ? nudgeTurns.length > 0
-                    : openNudges.has(message.record.id);
-                  const nudgeIterationCount = nudgeTurns.reduce(
-                    (total, turn) => total + turn.iterations.length,
-                    0,
-                  );
-                  return (
-                    <section
-                      aria-label={`Nudge: ${sentenceCase(message.instruction)}`}
-                      className={cx(
-                        "story-nudge-chapter",
-                        ...(nudgeExpanded ? ["is-expanded"] : ["is-collapsed"]),
-                      )}
-                      key={message.record.id}
-                    >
-                      <button
-                        aria-expanded={nudgeExpanded}
-                        className={cx("story-nudge-heading")}
-                        type="button"
-                        onClick={() => {
-                          setOpenNudges((existing) => {
-                            const next = new Set(existing);
-                            if (next.has(message.record.id)) {
-                              next.delete(message.record.id);
-                            } else {
-                              next.add(message.record.id);
-                            }
-                            return next;
-                          });
-                          onSelect({
-                            turn: message.record.turn,
-                            iteration: message.record.iteration,
-                            recordId: message.record.id,
-                          });
-                        }}
-                      >
-                        <span aria-hidden="true">
-                          <MessageSquareText size={16} />
-                        </span>
-                        <span>
-                          <small>Nudge · applied {formatClock(message.record.at, true)}</small>
-                          <strong>{sentenceCase(message.instruction)}</strong>
-                        </span>
-                        <span>
-                          {nudgeIterationCount} iteration
-                          {nudgeIterationCount === 1 ? "" : "s"}
-                          <ChevronRight aria-hidden="true" size={16} />
-                        </span>
-                      </button>
-                      {nudgeExpanded ? (
-                        <StoryTurns
-                          investigation={investigation}
-                          openIterations={openIterations}
-                          selection={selection}
-                          selectedRef={selectedRef}
-                          turns={nudgeTurns}
-                          onOpenIterationsChange={setOpenIterations}
-                          onSelect={onSelect}
-                        />
-                      ) : null}
-                    </section>
-                  );
-                })}
-              </>
+              <StoryTurns
+                investigation={investigation}
+                openIterations={openIterations}
+                openTurns={normalizedSearch ? matchingTurns : openTurns}
+                selection={selection}
+                selectedRef={selectedRef}
+                turns={chapterTurns}
+                onOpenIterationsChange={setOpenIterations}
+                onOpenTurnsChange={setOpenTurns}
+                onSelect={onSelect}
+              />
             ) : null}
           </section>
         );
@@ -372,151 +322,108 @@ export function SessionStory({
 function StoryTurns({
   investigation,
   openIterations,
+  openTurns,
   selection,
   selectedRef,
   turns,
   onOpenIterationsChange,
+  onOpenTurnsChange,
   onSelect,
 }: {
   investigation: SessionInvestigation;
   openIterations: Set<string>;
+  openTurns: Set<number>;
   selection: SessionSelection;
   selectedRef: React.RefObject<HTMLElement | null>;
   turns: StoryTurn[];
   onOpenIterationsChange: React.Dispatch<React.SetStateAction<Set<string>>>;
+  onOpenTurnsChange: React.Dispatch<React.SetStateAction<Set<number>>>;
   onSelect: (selection: SessionSelection) => void;
 }) {
-  return turns.map((turn) => (
-    <section
-      className={cx("story-turn")}
-      key={`${turn.number}:${turn.iterations[0]?.id ?? "empty"}`}
-    >
-      <header className={cx("story-turn-heading")}>
-        <h3>Turn {turn.number}</h3>
-        <span>
-          {formatClock(turn.startedAt, true)} to {formatClock(turn.endedAt, true)}
-          {" · "}
-          {turn.iterations.length} iteration
-          {turn.iterations.length === 1 ? "" : "s"}
-        </span>
-        <b>{usd(turn.costUsd)}</b>
-      </header>
-      {turn.iterations.map((iteration) => (
-        <StoryIterationCard
-          investigation={investigation}
-          iteration={iteration}
-          key={iteration.id}
-          open={openIterations.has(iterationKey(
-            iteration.turn,
-            iteration.number,
-          ))}
-          selected={selection.turn === iteration.turn
-            && selection.iteration === iteration.number}
-          selectedRecordId={selection.recordId}
-          selectedRef={selection.turn === iteration.turn
-            && selection.iteration === iteration.number
-            ? selectedRef
-            : undefined}
-          onSelect={onSelect}
-          onToggle={() => {
-            const key = iterationKey(iteration.turn, iteration.number);
-            onOpenIterationsChange((current) => {
+  return turns.map((turn) => {
+    const open = openTurns.has(turn.number);
+    return (
+      <section
+        aria-label={`Turn ${turn.number}`}
+        className={cx(
+          "story-turn",
+          ...(open ? ["is-open"] : []),
+        )}
+        key={`${turn.number}:${turn.iterations[0]?.id ?? "empty"}`}
+      >
+        <h3 className={cx("story-turn-heading")}>
+          <button
+            aria-expanded={open}
+            className={cx("story-turn-toggle")}
+            type="button"
+            onClick={() => onOpenTurnsChange((current) => {
               const next = new Set(current);
-              if (next.has(key)) next.delete(key);
-              else next.add(key);
+              if (next.has(turn.number)) next.delete(turn.number);
+              else next.add(turn.number);
               return next;
-            });
-            onSelect({
-              turn: iteration.turn,
-              iteration: iteration.number,
-              recordId: null,
-            });
-          }}
-        />
-      ))}
-    </section>
-  ));
-}
-
-function segmentTurnsByNudges(
-  epoch: StoryObjectiveEpoch,
-  turns: StoryTurn[],
-): {
-  beforeFirstNudge: StoryTurn[];
-  nudges: Array<{ message: StoryOperatorMessage; turns: StoryTurn[] }>;
-} {
-  const nudges = [...epoch.nudges].sort(
-    (left, right) => Date.parse(left.record.at) - Date.parse(right.record.at),
-  );
-  const buckets = new Map<string, Set<string>>([
-    ["before", new Set<string>()],
-    ...nudges.map((nudge) => [nudge.record.id, new Set<string>()] as const),
-  ]);
-  for (const turn of turns) {
-    for (const iteration of turn.iterations) {
-      const active = activeNudgeForIteration(epoch, iteration);
-      buckets.get(active?.record.id ?? "before")?.add(iteration.id);
-    }
-  }
-  return {
-    beforeFirstNudge: filterTurnsByIterationIds(
-      turns,
-      buckets.get("before") ?? new Set(),
-    ),
-    nudges: nudges.map((message) => ({
-      message,
-      turns: filterTurnsByIterationIds(
-        turns,
-        buckets.get(message.record.id) ?? new Set(),
-      ),
-    })),
-  };
-}
-
-function activeNudgeForIteration(
-  epoch: StoryObjectiveEpoch | undefined,
-  iteration: StoryIteration,
-): StoryOperatorMessage | null {
-  if (epoch === undefined) return null;
-  return [...epoch.nudges]
-    .sort(
-      (left, right) => Date.parse(left.record.at) - Date.parse(right.record.at),
-    )
-    .filter((message) => (
-      (
-        message.record.turn === iteration.turn
-        && message.record.iteration === iteration.number
-      )
-      || Date.parse(message.record.at) <= Date.parse(iteration.startedAt)
-    ))
-    .at(-1) ?? null;
-}
-
-function filterTurnsByIterationIds(
-  turns: StoryTurn[],
-  iterationIds: Set<string>,
-): StoryTurn[] {
-  return turns
-    .map((turn): StoryTurn => {
-      const iterations = turn.iterations.filter(
-        (iteration) => iterationIds.has(iteration.id),
-      );
-      return {
-        ...turn,
-        startedAt: iterations[0]?.startedAt ?? turn.startedAt,
-        endedAt: iterations.at(-1)?.endedAt ?? turn.endedAt,
-        durationMs: iterations.reduce(
-          (total, iteration) => total + iteration.durationMs,
-          0,
-        ),
-        costUsd: iterations.reduce(
-          (total, iteration) => total + iteration.costUsd,
-          0,
-        ),
-        iterations,
-      };
-    })
-    .filter((turn) => turn.iterations.length > 0);
+            })}
+          >
+            <span className={cx("story-turn-number")}>Turn {turn.number}</span>
+            {turn.instruction === null ? null : (
+              <span className={cx("story-turn-instruction")}>
+                <span
+                  className={cx(
+                    "story-eyebrow",
+                    "story-turn-tag",
+                    `is-${turn.instruction.kind}`,
+                  )}
+                >
+                  {turn.instruction.kind === "nudge" ? "Nudge" : "Goal"}
+                </span>
+                {sentenceCase(turn.instruction.text)}
+              </span>
+            )}
+            <span className={cx("story-turn-measures")}>
+              {formatClock(turn.startedAt, true)} to {formatClock(turn.endedAt, true)}
+              {" · "}
+              {turn.iterations.length} iteration
+              {turn.iterations.length === 1 ? "" : "s"}
+            </span>
+            <b>{usd(turn.costUsd)}</b>
+            <ChevronRight className={cx("story-caret")} size={18} />
+          </button>
+        </h3>
+        {open ? turn.iterations.map((iteration) => (
+          <StoryIterationCard
+            investigation={investigation}
+            iteration={iteration}
+            key={iteration.id}
+            open={openIterations.has(iterationKey(
+              iteration.turn,
+              iteration.number,
+            ))}
+            selected={selection.turn === iteration.turn
+              && selection.iteration === iteration.number}
+            selectedRecordId={selection.recordId}
+            selectedRef={selection.turn === iteration.turn
+              && selection.iteration === iteration.number
+              ? selectedRef
+              : undefined}
+            onSelect={onSelect}
+            onToggle={() => {
+              const key = iterationKey(iteration.turn, iteration.number);
+              onOpenIterationsChange((current) => {
+                const next = new Set(current);
+                if (next.has(key)) next.delete(key);
+                else next.add(key);
+                return next;
+              });
+              onSelect({
+                turn: iteration.turn,
+                iteration: iteration.number,
+                recordId: null,
+              });
+            }}
+          />
+        )) : null}
+      </section>
+    );
+  });
 }
 
 function GoalChapterHeader({
@@ -677,6 +584,7 @@ function StoryStepView({
     );
   }
   const record = step.record;
+  const sessionId = runtimeSessionId(investigation);
   if (record.kind === "prompt") {
     return (
       <CausalStep
@@ -693,8 +601,21 @@ function StoryStepView({
             Exact model request, system prompt, messages, and tool schemas
           </summary>
           <div className={cx("story-detail-body")} >
-            <MessageBody record={record} />
-            <ToolSurface record={record} />
+            {sessionId === null ? (
+              <div className={cx("story-availability")} >
+                Exact request loading is available for registered runtime
+                sessions. This experiment sample retains its prompt summary.
+              </div>
+            ) : (
+              <StoryRecordFields record={record} sessionId={sessionId}>
+                {(detail: SessionRecordFields) => (
+                  <>
+                    <MessageBody fields={detail.fields} preview={record.preview} />
+                    <ToolSurface fields={detail.fields} />
+                  </>
+                )}
+              </StoryRecordFields>
+            )}
             <Provenance record={record} />
           </div>
         </details>
@@ -712,7 +633,7 @@ function StoryStepView({
         onSelect={() => onSelect({ turn, iteration, recordId: record.id })}
       >
         <div className={cx("story-content-card")} >{evidenceText(record)}</div>
-        <EvidenceDetail record={record} />
+        <EvidenceDetail record={record} sessionId={sessionId} />
       </CausalStep>
     );
   }
@@ -730,7 +651,7 @@ function StoryStepView({
           {responseText(record)}
         </div>
         <ResponseEconomics record={record} />
-        <EvidenceDetail record={record} />
+        <EvidenceDetail record={record} sessionId={sessionId} />
       </CausalStep>
     );
   }
@@ -745,7 +666,7 @@ function StoryStepView({
         onSelect={() => onSelect({ turn, iteration, recordId: record.id })}
       >
         <div className={cx("story-availability", "is-warning")} >{evidenceText(record)}</div>
-        <EvidenceDetail record={record} />
+        <EvidenceDetail record={record} sessionId={sessionId} />
       </CausalStep>
     );
   }
@@ -759,7 +680,7 @@ function StoryStepView({
       onSelect={() => onSelect({ turn, iteration, recordId: record.id })}
     >
       <div className={cx("story-content-card")} >{evidenceText(record)}</div>
-      <EvidenceDetail record={record} />
+      <EvidenceDetail record={record} sessionId={sessionId} />
     </CausalStep>
   );
 }
@@ -784,9 +705,7 @@ function ToolCycle({
   const deliveredText = toolDeliveredText(cycle);
   const stages = cycle.agentResult?.fields.stages;
   const hasTransformStages = typeof stages === "object" && stages !== null;
-  const runtimeSessionId = investigation.source_kind === "runtime_session"
-    ? investigation.run.id
-    : null;
+  const sessionId = runtimeSessionId(investigation);
   return (
     <>
       <CausalStep
@@ -814,19 +733,19 @@ function ToolCycle({
                   {wire.label} · {numberField(wire.fields.bytes)} bytes · {formatClock(wire.at, true)}
                 </summary>
                 <div className={cx("story-detail-body")} >
-                  {runtimeSessionId === null ? (
+                  {sessionId === null ? (
                     <div className={cx("story-availability")} >
                       Exact wire loading is available for registered runtime
                       sessions. This experiment sample retains its wire metadata.
                     </div>
                   ) : (
-                    <StoryWireEvidence record={wire} sessionId={runtimeSessionId} />
+                    <StoryWireEvidence record={wire} sessionId={sessionId} />
                   )}
                   <Provenance record={wire} />
                 </div>
               </details>
             ))}
-            <EvidenceDetail record={cycle.call} />
+            <EvidenceDetail record={cycle.call} sessionId={sessionId} />
           </div>
         </details>
       </CausalStep>
@@ -852,7 +771,7 @@ function ToolCycle({
             Original MUD text was not retained for this tool cycle.
           </div>
         )}
-        {cycle.wireTexts.map((record) => <EvidenceDetail key={record.id} record={record} />)}
+        {cycle.wireTexts.map((record) => <EvidenceDetail key={record.id} record={record} sessionId={sessionId} />)}
       </CausalStep>
 
       <CausalStep
@@ -938,7 +857,9 @@ function ToolCycle({
         {hasTransformStages ? (
           <TransformationStages stages={stages as Record<string, unknown>} />
         ) : null}
-        {cycle.agentResult ? <EvidenceDetail record={cycle.agentResult} /> : null}
+        {cycle.agentResult ? (
+          <EvidenceDetail record={cycle.agentResult} sessionId={sessionId} />
+        ) : null}
       </CausalStep>
     </>
   );
@@ -986,8 +907,7 @@ function CausalStep({
 }
 
 function MessagePreview({ record }: { record: SessionEvidenceRecord }) {
-  const messages = arrayField(record.fields.messages);
-  const last = messages.at(-1);
+  const last = record.fields.last_message;
   if (typeof last !== "object" || last === null) {
     return <div className={cx("story-content-card")} >{record.preview}</div>;
   }
@@ -1001,9 +921,15 @@ function MessagePreview({ record }: { record: SessionEvidenceRecord }) {
   );
 }
 
-function MessageBody({ record }: { record: SessionEvidenceRecord }) {
-  const messages = arrayField(record.fields.messages);
-  if (messages.length === 0) return <pre>{record.preview}</pre>;
+function MessageBody({
+  fields,
+  preview,
+}: {
+  fields: Record<string, unknown>;
+  preview: string;
+}) {
+  const messages = arrayField(fields.messages);
+  if (messages.length === 0) return <pre>{preview}</pre>;
   return (
     <div className={cx("story-message-list")} >
       {messages.map((message, index) => {
@@ -1021,8 +947,8 @@ function MessageBody({ record }: { record: SessionEvidenceRecord }) {
   );
 }
 
-function ToolSurface({ record }: { record: SessionEvidenceRecord }) {
-  const tools = arrayField(record.fields.tools);
+function ToolSurface({ fields }: { fields: Record<string, unknown> }) {
+  const tools = arrayField(fields.tools);
   return (
     <details className={cx("story-nested-detail")} >
       <summary>{tools.length} available tool{tools.length === 1 ? "" : "s"}</summary>
@@ -1109,19 +1035,41 @@ function TransformationStages({ stages }: { stages: Record<string, unknown> }) {
   );
 }
 
-function EvidenceDetail({ record }: { record: SessionEvidenceRecord }) {
+function EvidenceDetail({
+  record,
+  sessionId,
+}: {
+  record: SessionEvidenceRecord;
+  sessionId: string | null;
+}) {
+  const withheld = sessionId !== null
+    && record.source === "agent"
+    && withheldKinds.has(record.kind);
   return (
     <details className={cx("story-detail")} >
       <summary><FileJson2 size={15} /> Evidence and provenance</summary>
       <div className={cx("story-detail-body")} >
         <Provenance record={record} />
         <pre>{JSON.stringify(record.fields, null, 2)}</pre>
+        {withheld ? (
+          <StoryRecordFields record={record} sessionId={sessionId}>
+            {(detail: SessionRecordFields) => (
+              <pre>{JSON.stringify(detail.fields, null, 2)}</pre>
+            )}
+          </StoryRecordFields>
+        ) : null}
         {record.capture_gaps.length > 0 ? (
           <CaptureGaps gaps={record.capture_gaps} />
         ) : null}
       </div>
     </details>
   );
+}
+
+function runtimeSessionId(investigation: SessionInvestigation): string | null {
+  return investigation.source_kind === "runtime_session"
+    ? investigation.run.id
+    : null;
 }
 
 function Provenance({ record }: { record: SessionEvidenceRecord }) {

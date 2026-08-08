@@ -232,7 +232,7 @@ def _load(
         investigation = project_runtime_session(
             session,
             runtime.events(session.id),
-            runtime.agent_events(session.id),
+            runtime.agent_events(session),
             operator_messages=runtime.operator_messages(session.id),
         )
     except RuntimeSourceError:

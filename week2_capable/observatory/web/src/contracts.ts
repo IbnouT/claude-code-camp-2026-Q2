@@ -102,6 +102,22 @@ export type SessionWireEvidence = {
   content_text: string;
 };
 
+export type SessionChangeSignal = {
+  version: 1;
+  session_id: string;
+  latest_seq: number;
+  agent_log_size: number;
+  live: boolean;
+};
+
+export type SessionRecordFields = {
+  version: 1;
+  record_id: string;
+  source_ref: string;
+  kind: string;
+  fields: Record<string, unknown>;
+};
+
 export type SessionRun = {
   id: string;
   label: string;
@@ -525,7 +541,7 @@ export type LiveMilestone = {
 
 export type LiveAgentExcerpt = {
   text: string;
-  phase: "reasoning" | "plan" | "tool_call";
+  phase: "reasoning" | "plan" | "tool_call" | "completion";
   observed_at: string;
   line: number;
   evidence: string;

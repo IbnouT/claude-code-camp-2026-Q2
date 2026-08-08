@@ -53,6 +53,7 @@ describe("live map overlays", () => {
   it.each([
     ["reasoning", "Thinking"],
     ["tool_call", "Acting"],
+    ["completion", "Finished"],
   ] as const)("maps %s to %s", (phase, label) => {
     render(
       <LiveThoughtDock
@@ -62,6 +63,37 @@ describe("live map overlays", () => {
       />,
     );
     expect(screen.getByText(new RegExp(`Agent · ${label} ·`))).toBeInTheDocument();
+  });
+
+  it("marks a completion apart from planning", () => {
+    const completion: LiveAgentExcerpt = {
+      ...thought,
+      text: "I drank from the fountain in the Midgaard temple.",
+      phase: "completion",
+    };
+    const { rerender } = render(
+      <LiveThoughtDock
+        expanded
+        thought={thought}
+        onToggle={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("complementary", { name: "Agent thought" }))
+      .not.toHaveClass("is-finished");
+
+    rerender(
+      <LiveThoughtDock
+        expanded
+        thought={completion}
+        onToggle={vi.fn()}
+      />,
+    );
+
+    const dock = screen.getByRole("complementary", { name: "Agent thought" });
+    expect(dock).toHaveClass("is-finished");
+    expect(dock).toHaveTextContent("Agent · Finished");
+    expect(screen.getByText(completion.text)).toBeInTheDocument();
   });
 
   it("exposes one labeled collapse control per dock", async () => {

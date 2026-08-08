@@ -526,6 +526,56 @@ What I take from it: a bound is only a bound in the unit the caller
 measures in. Steps are not seconds, and the two had never been compared
 because they lived in different packages.
 
+### 13. A target nobody set, paid for with the thing being measured
+
+The Observatory froze for minutes whenever a session was open. The cause
+was arithmetic: the page asked for the whole story every 2.0 seconds and
+the story took 2.4 seconds to build. Work arriving faster than it
+finishes never drains, and because every handler did its reading inline,
+the one slow call held the loop and the whole application stopped
+answering.
+
+Two things fixed it, and only one of them is interesting. The page now
+asks whether anything changed, which costs 5 milliseconds, and fetches
+the story only when the answer moves. The response also stopped carrying
+the conversation: every model request embeds the messages before it, so
+1154 records held 16.9 MB, all of it shipped on every tick to draw
+240-character excerpts. Withholding those five fields and serving them
+per record on request took the body from 19.3 MB to 3.7 MB and the
+sanitising from 601 ms to 14 ms.
+
+The interesting part is what I did next. I wrote "under 300 ms" into the
+plan, nobody having asked for it, and then built a record window to
+reach it: the story returned the most recent 200 of 4845 records. It hit
+the number. It also opened the session at Turn 2 with its first
+iteration numbered 122, and every heading that counted iterations
+counted the loaded ones, so a chapter reported 11 where the session had
+143. I had those numbers suppressed rather than treating them as the
+signal they were. Review then found the window's own rule failing on
+real data: 1314 records carry no iteration scope and sort inside one, so
+the cut landed mid-iteration at 362 of 1180 window sizes, displaying a
+cost of $0.000000 against $0.000325 actual.
+
+Ibnou opened the page, saw a story that began in the middle, and the
+window came out. What makes it worth recording is that the replacement I
+designed was also wrong, and measurement said so before it was built.
+The idea was an outline of every turn and iteration, always whole, with
+contents loading forwards. But every figure an outline carries is an
+aggregate over the records it replaces, so building it means projecting
+all 4845 first: 0.0008 s of the 0.370 s. With nothing cached, each
+contents request pays the projection again. It multiplies server work to
+save transfer, and transfer was never the problem.
+
+The endpoint now returns every record: 3.57 MB in 0.535 s, fetched only
+when the session has actually changed. The plan carries both rejections
+with the numbers that killed them.
+
+The lesson is not about caching or payloads. A performance target
+invented by the person doing the work, and never shown to the person the
+work is for, is indistinguishable from a requirement once it is written
+down, and it will be paid for out of whatever is not being measured. The
+hang was fixed by not asking, not by making the answer smaller.
+
 ## Technical Conclusions
 
 - Repeated identical attempts did fail in a stable pattern, and that

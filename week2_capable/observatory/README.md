@@ -146,6 +146,10 @@ iteration boundary, and also queues a persistent wake envelope. An active turn
 consumes the directive and later ignores the wake. An idle agent uses the wake
 to start a turn whose first checkpoint consumes the directive. This removes
 the turn-end race without placing internal wake data in model context.
+The thought dock carries the agent's own latest statement in sequence: the
+newest planning while a turn runs, then the prose the turn ended on, held
+until newer planning follows a nudge. A completion is marked apart from
+planning, so a finished goal does not read like a stalled one.
 The active-combat panel follows the initial Live mock's left-side spotlight,
 streams retained MUD combat lines in sequence order, and follows the newest
 line as the fight grows. Unsolicited combat frames update the stream and prompt
@@ -191,6 +195,10 @@ ordinary non-experiment runs. Story, Map, Cost, and Ask share one selection.
   response contributors that return to Story.
 - Wire and raw detail links original bytes, ANSI-preserving decoded text,
   normalized parser input, typed observations, and delivered model input.
+- The exact model request, system prompt, messages, and tool schemas load one
+  record at a time, on the reader's press rather than on expanding a section.
+  The story carries every other field, so the response is a fraction of its
+  former size without losing a step.
 - Missing historical bodies stay explicit as capture gaps.
 - Ask defaults to the complete session and cites retained lifecycle or record
   evidence. A selected-record boundary is explicit and optional.
@@ -201,7 +209,8 @@ ordinary non-experiment runs. Story, Map, Cost, and Ask share one selection.
   opens the session finder over the complete player history. Finder search
   matches goal, displayed lifecycle, displayed or ISO date, and session id.
 - The route bypasses browser caching, refreshes on return, and polls a selected
-  live session without resetting the reader's view.
+  live session without resetting the reader's view. The poll asks what changed
+  and refetches the story only when the journal or the agent log has moved.
 - Launcher load links route terminal sessions here. Running sessions retain the
   valid path back to Live.
 
@@ -269,7 +278,7 @@ npm test
 npm run build
 ```
 
-The frontend suite contains 173 tests across 25 files. `npm run build` runs
+The frontend suite contains 182 tests across 26 files. `npm run build` runs
 strict TypeScript checking with `tsc --noEmit` before producing the Vite
 production bundle.
 

@@ -8,6 +8,7 @@ import {
 import type {
   Catalog,
   Session,
+  SessionChangeSignal,
   SessionInvestigation,
 } from "../contracts";
 import { liveHref } from "../routes";
@@ -41,10 +42,13 @@ export function SessionRoute({ theme, onThemeChange }: Props) {
   const [askOpen, setAskOpen] = useState(false);
   const [finderOpen, setFinderOpen] = useState(false);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
-  const [refreshRevision, setRefreshRevision] = useState(0);
+  const [catalogRevision, setCatalogRevision] = useState(0);
+  const [storyRevision, setStoryRevision] = useState(0);
   const loadedInvestigation = useRef("");
+  const lastChange = useRef("");
   const refresh = useCallback(() => {
-    setRefreshRevision((current) => current + 1);
+    setCatalogRevision((current) => current + 1);
+    setStoryRevision((current) => current + 1);
   }, []);
 
   useEffect(() => {
@@ -80,7 +84,7 @@ export function SessionRoute({ theme, onThemeChange }: Props) {
         }
       });
     return () => abort.abort();
-  }, [refreshRevision]);
+  }, [catalogRevision]);
 
   useEffect(() => {
     if (!sessionId && !runId) {
@@ -124,7 +128,7 @@ export function SessionRoute({ theme, onThemeChange }: Props) {
         if (!abort.signal.aborted) setLoading(false);
       });
     return () => abort.abort();
-  }, [refreshRevision, runId, sessionId]);
+  }, [runId, sessionId, storyRevision]);
 
   useEffect(() => {
     const onVisible = () => {
@@ -170,9 +174,35 @@ export function SessionRoute({ theme, onThemeChange }: Props) {
 
   useEffect(() => {
     if (runId || selected?.live !== true) return undefined;
-    const timer = window.setInterval(refresh, 2_000);
+    lastChange.current = "";
+    let timer = 0;
+    const poll = (): void => {
+      fetch(
+        `/api/sessions/${encodeURIComponent(sessionId)}/changed`,
+        { cache: "no-store" },
+      )
+        .then(async (response) => (
+          response.ok
+            ? await response.json() as SessionChangeSignal
+            : null
+        ))
+        .then((signal) => {
+          if (signal === null) return;
+          const seen = `${signal.latest_seq}:${signal.agent_log_size}`;
+          if (seen !== lastChange.current) {
+            lastChange.current = seen;
+            setStoryRevision((current) => current + 1);
+          }
+          // The catalog refreshes on demand, so it keeps saying live long
+          // after the run ended. The signal is read fresh every time, and
+          // it is what ends the poll.
+          if (!signal.live) window.clearInterval(timer);
+        })
+        .catch(() => undefined);
+    };
+    timer = window.setInterval(poll, 2_000);
     return () => window.clearInterval(timer);
-  }, [refresh, runId, selected?.live]);
+  }, [runId, selected?.live, sessionId]);
 
   const identity = runId
     ? (investigation === null

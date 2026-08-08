@@ -6,10 +6,13 @@ import argparse
 import asyncio
 import base64
 import os
+import threading
 from pathlib import Path
+from typing import Any
 
 import httpx
 from mud_gateway.contracts import contract_schemas
+from mud_gateway.journal import Event
 from mud_gateway.stream import serialize_event
 from pydantic import ValidationError
 from starlette.applications import Starlette
@@ -28,10 +31,15 @@ from .contracts import (
     ExperimentRunRequest,
     ExperimentForkRequest,
     ExperimentValidateRequest,
+    IncidentCapsule,
     IncidentExportRequest,
     LiveControlRequest,
+    LiveJourneySnapshot,
     LiveVoiceRequest,
     ObservatoryQuery,
+    RecordedSessionInvestigation,
+    RuntimeSessionInvestigation,
+    RuntimeSessionRecordFields,
     RuntimeSessionWireEvidence,
 )
 from .incidents import build_capsule
@@ -46,8 +54,12 @@ from .projections.session import (
     project_recorded_session,
     project_recorded_session_prefix,
 )
-from .projections.runtime_session import project_runtime_session
+from .projections.runtime_session import (
+    project_runtime_session,
+    withheld_agent_fields,
+)
 from .queries import answer
+from .queries.live import session_change
 from .queries.model import ModelTranslator
 from .settings import Settings
 from .sources.benchmark import BenchmarkSource
@@ -117,6 +129,9 @@ def create_app(
         else None
     )
     model_spend = 0.0
+    #: Handlers answer from worker threads, so the counter guarding the
+    #: local spend cap is reached from more than one of them at a time.
+    spend_lock = threading.Lock()
     translator = (
         ModelTranslator(
             endpoint=active.copilot_endpoint,
@@ -167,7 +182,7 @@ def create_app(
     async def sessions(_request: Request) -> JSONResponse:
         if runtime is not None and runtime.available:
             try:
-                available = runtime.sessions()
+                available = await asyncio.to_thread(runtime.sessions)
             except RuntimeSourceError as error:
                 return _runtime_error(error)
             players: dict[str, dict[str, str]] = {}
@@ -233,7 +248,7 @@ def create_app(
             return JSONResponse({"error": "not_found"}, status_code=404)
         if runtime is not None and runtime.available:
             try:
-                selected = runtime.session(session)
+                selected = await asyncio.to_thread(runtime.session, session)
             except RuntimeSourceError as error:
                 return _runtime_error(error)
             if selected is None:
@@ -275,22 +290,31 @@ def create_app(
                 status_code=503,
             )
         session_id = request.path_params["session"]
+        through_value = request.query_params.get("through")
         try:
+            through = int(through_value) if through_value else None
+        except ValueError as error:
+            return _runtime_error(error)
+
+        def load() -> LiveJourneySnapshot | None:
             selected = runtime.session(session_id)
             if selected is None:
-                return JSONResponse({"error": "not_found"}, status_code=404)
-            through_value = request.query_params.get("through")
-            through = int(through_value) if through_value else None
-            result = project_live(
+                return None
+            return project_live(
                 selected,
                 runtime.events(session_id),
-                runtime.agent_events(session_id),
+                runtime.agent_events(selected),
                 through=through,
                 atlas=atlas,
                 operator_messages=runtime.operator_messages(session_id),
             )
+
+        try:
+            result = await asyncio.to_thread(load)
         except (RuntimeSourceError, ValueError) as error:
             return _runtime_error(error)
+        if result is None:
+            return JSONResponse({"error": "not_found"}, status_code=404)
         return JSONResponse(result.model_dump(mode="json"))
 
     async def session_investigation(request: Request) -> JSONResponse:
@@ -303,19 +327,83 @@ def create_app(
                 status_code=503,
             )
         session_id = request.path_params["session"]
-        try:
+
+        def load() -> RuntimeSessionInvestigation | None:
             selected = runtime.session(session_id)
             if selected is None:
-                return JSONResponse({"error": "not_found"}, status_code=404)
-            result = project_runtime_session(
+                return None
+            return project_runtime_session(
                 selected,
                 runtime.events(session_id),
-                runtime.agent_events(session_id),
+                runtime.agent_events(selected),
                 atlas=atlas,
                 operator_messages=runtime.operator_messages(session_id),
             )
+
+        try:
+            result = await asyncio.to_thread(load)
         except RuntimeSourceError as error:
             return _runtime_error(error)
+        if result is None:
+            return JSONResponse({"error": "not_found"}, status_code=404)
+        return JSONResponse(result.model_dump(mode="json"))
+
+    async def session_changed(request: Request) -> JSONResponse:
+        if runtime is None or not runtime.available:
+            return JSONResponse(
+                {
+                    "error": "runtime_unavailable",
+                    "detail": "No launcher runtime registry is available",
+                },
+                status_code=503,
+            )
+        session_id = request.path_params["session"]
+        try:
+            result = await asyncio.to_thread(
+                session_change,
+                runtime,
+                session_id,
+            )
+        except RuntimeSourceError as error:
+            return _runtime_error(error)
+        if result is None:
+            return JSONResponse({"error": "not_found"}, status_code=404)
+        return JSONResponse(result.model_dump(mode="json"))
+
+    async def session_record_fields(request: Request) -> JSONResponse:
+        if runtime is None or not runtime.available:
+            return JSONResponse(
+                {
+                    "error": "runtime_unavailable",
+                    "detail": "No launcher runtime registry is available",
+                },
+                status_code=503,
+            )
+        session_id = request.path_params["session"]
+        record_id = request.path_params["record"]
+        prefix, _, line_value = record_id.partition(":")
+        if prefix != "agent" or not line_value.isdigit():
+            return JSONResponse({"error": "not_found"}, status_code=404)
+        line = int(line_value)
+
+        def load() -> dict[str, Any] | None:
+            selected = runtime.session(session_id)
+            if selected is None:
+                return None
+            return runtime.agent_record(selected, line)
+
+        try:
+            event = await asyncio.to_thread(load)
+        except RuntimeSourceError as error:
+            return _runtime_error(error)
+        if event is None:
+            return JSONResponse({"error": "not_found"}, status_code=404)
+        result = RuntimeSessionRecordFields(
+            record_id=record_id,
+            source_ref=f"agent.jsonl line {line}",
+            kind=str(event.get("phase") or "event"),
+            fields=withheld_agent_fields(event),
+        )
         return JSONResponse(result.model_dump(mode="json"))
 
     async def session_wire_evidence(request: Request) -> JSONResponse:
@@ -328,17 +416,21 @@ def create_app(
                 status_code=503,
             )
         session_id = request.path_params["session"]
-        try:
-            sequence = int(request.path_params["sequence"])
+        sequence = int(request.path_params["sequence"])
+
+        def load() -> tuple[Event, bytes] | None:
             selected = runtime.session(session_id)
             if selected is None:
-                return JSONResponse({"error": "not_found"}, status_code=404)
-            result = runtime.wire_blob(session_id, sequence)
-            if result is None:
-                return JSONResponse({"error": "not_found"}, status_code=404)
-            event, body = result
+                return None
+            return runtime.wire_blob(session_id, sequence)
+
+        try:
+            loaded = await asyncio.to_thread(load)
         except (RuntimeSourceError, ValueError) as error:
             return _runtime_error(error)
+        if loaded is None:
+            return JSONResponse({"error": "not_found"}, status_code=404)
+        event, body = loaded
         result = RuntimeSessionWireEvidence(
             record_id=f"gateway:{event.seq}",
             source_ref=f"gateway.db event {event.seq}",
@@ -363,7 +455,8 @@ def create_app(
             )
         try:
             payload = LiveControlRequest.model_validate(await request.json())
-            receipt = runtime.control(
+            receipt = await asyncio.to_thread(
+                runtime.control,
                 request.path_params["session"],
                 request_id=payload.request_id,
                 action=payload.action,
@@ -400,19 +493,28 @@ def create_app(
                 status_code=503,
             )
         session_id = request.path_params["session"]
-        try:
-            payload = LiveVoiceRequest.model_validate(await request.json())
+
+        def load(through: int) -> LiveJourneySnapshot | None:
             selected = runtime.session(session_id)
             if selected is None:
-                return JSONResponse({"error": "not_found"}, status_code=404)
-            snapshot = project_live(
+                return None
+            return project_live(
                 selected,
                 runtime.events(session_id),
-                runtime.agent_events(session_id),
-                through=payload.expected_sequence,
+                runtime.agent_events(selected),
+                through=through,
                 atlas=atlas,
                 operator_messages=runtime.operator_messages(session_id),
             )
+
+        try:
+            payload = LiveVoiceRequest.model_validate(await request.json())
+            snapshot = await asyncio.to_thread(
+                load,
+                payload.expected_sequence,
+            )
+            if snapshot is None:
+                return JSONResponse({"error": "not_found"}, status_code=404)
             if snapshot.agent_thought is None:
                 return JSONResponse(
                     {
@@ -452,7 +554,11 @@ def create_app(
         )
 
     async def runs(_request: Request) -> JSONResponse:
-        available = () if benchmark is None else benchmark.runs()
+        available = (
+            ()
+            if benchmark is None
+            else await asyncio.to_thread(benchmark.runs)
+        )
         return JSONResponse(
             {"runs": [run.model_dump(mode="json") for run in available]}
         )
@@ -461,7 +567,7 @@ def create_app(
         available = (
             ()
             if recorded_sessions is None
-            else recorded_sessions.catalog()
+            else await asyncio.to_thread(recorded_sessions.catalog)
         )
         return JSONResponse(
             {
@@ -480,10 +586,13 @@ def create_app(
                 },
                 status_code=503,
             )
-        bundle = recorded_sessions.load(request.path_params["run_id"])
+        bundle = await asyncio.to_thread(
+            recorded_sessions.load,
+            request.path_params["run_id"],
+        )
         if bundle is None:
             return JSONResponse({"error": "not_found"}, status_code=404)
-        result = project_recorded_session(bundle)
+        result = await asyncio.to_thread(project_recorded_session, bundle)
         return JSONResponse(result.model_dump(mode="json"))
 
     async def investigation(request: Request) -> JSONResponse:
@@ -495,7 +604,10 @@ def create_app(
                 },
                 status_code=503,
             )
-        result = benchmark.investigation(request.path_params["run_id"])
+        result = await asyncio.to_thread(
+            benchmark.investigation,
+            request.path_params["run_id"],
+        )
         if result is None:
             return JSONResponse({"error": "not_found"}, status_code=404)
         return JSONResponse(result.model_dump(mode="json"))
@@ -509,7 +621,10 @@ def create_app(
                 },
                 status_code=503,
             )
-        result = benchmark.investigation(request.path_params["run_id"])
+        result = await asyncio.to_thread(
+            benchmark.investigation,
+            request.path_params["run_id"],
+        )
         if result is None:
             return JSONResponse({"error": "not_found"}, status_code=404)
         projection = project_knowledge(result)
@@ -541,7 +656,8 @@ def create_app(
                 status_code=422,
             )
         try:
-            result = knowledge_source.read(
+            result = await asyncio.to_thread(
+                knowledge_source.read,
                 request.path_params["player_id"],
                 after=after,
             )
@@ -595,7 +711,8 @@ def create_app(
                 },
                 status_code=503,
             )
-        result = diagnostic_history(
+        result = await asyncio.to_thread(
+            diagnostic_history,
             benchmark,
             recorded=recorded_sessions,
             player_id=request.query_params.get("player"),
@@ -622,7 +739,10 @@ def create_app(
                 {"error": "invalid_incident", "detail": str(error)},
                 status_code=422,
             )
-        bundle = recorded_sessions.load(payload.run_id)
+        bundle = await asyncio.to_thread(
+            recorded_sessions.load,
+            payload.run_id,
+        )
         if bundle is None:
             return JSONResponse({"error": "not_found"}, status_code=404)
         try:
@@ -636,15 +756,13 @@ def create_app(
                 status_code=422,
             )
         try:
-            capsule = build_capsule(
+            capsule = await asyncio.to_thread(
+                _incident_capsule,
                 payload,
                 result,
-                knowledge_source.read(result.player_id),
-                diagnostic_history(
-                    benchmark,
-                    recorded=recorded_sessions,
-                    player_id=result.player_id,
-                ),
+                knowledge_source,
+                benchmark,
+                recorded_sessions,
                 active.revision,
             )
         except (KnowledgeSourceError, ValueError) as error:
@@ -672,7 +790,10 @@ def create_app(
         result = (
             None
             if active.benchmark_root is None
-            else rendering_comparison(active.benchmark_root)
+            else await asyncio.to_thread(
+                rendering_comparison,
+                active.benchmark_root,
+            )
         )
         return JSONResponse(
             {
@@ -717,7 +838,10 @@ def create_app(
                 },
                 status_code=503,
             )
-        result = rendering_comparison(active.benchmark_root)
+        result = await asyncio.to_thread(
+            rendering_comparison,
+            active.benchmark_root,
+        )
         if result is None or result.id != request.path_params["comparison_id"]:
             return JSONResponse({"error": "not_found"}, status_code=404)
         return JSONResponse(result.model_dump(mode="json"))
@@ -975,11 +1099,33 @@ def create_app(
                 {"error": "invalid_zone", "detail": "Zone must be an integer"},
                 status_code=422,
             )
-        result = atlas.projection(level=level, zone=zone)
+        result = await asyncio.to_thread(
+            atlas.projection,
+            level=level,
+            zone=zone,
+        )
         return JSONResponse(result.model_dump(mode="json"))
 
-    async def ask(request: Request) -> JSONResponse:
+    def reserve_spend(amount: float) -> bool:
+        """Claim headroom before a paid call, under the counter's lock.
+
+        Two requests that only read the counter would both find room and
+        both spend it, so the decision and the claim are one step.
+        """
         nonlocal model_spend
+        with spend_lock:
+            if model_spend + amount > active.copilot_spend_cap:
+                return False
+            model_spend += amount
+            return True
+
+    def settle_spend(reserved: float, actual: float) -> None:
+        """Replace a claim with what the call actually cost."""
+        nonlocal model_spend
+        with spend_lock:
+            model_spend += actual - reserved
+
+    async def ask(request: Request) -> JSONResponse:
         try:
             payload = AskRequest.model_validate(await request.json())
         except (ValidationError, ValueError) as error:
@@ -987,7 +1133,8 @@ def create_app(
                 {"error": "invalid_query", "detail": str(error)},
                 status_code=422,
             )
-        result = answer(
+        result = await asyncio.to_thread(
+            answer,
             payload,
             benchmark,
             recorded_sessions,
@@ -1004,14 +1151,21 @@ def create_app(
                 1_000 * active.copilot_input_rate
                 + 80 * active.copilot_output_rate
             ) / 1_000_000
-            if model_spend + reserve <= active.copilot_spend_cap:
+            if reserve_spend(reserve):
+                #: A claim outlives the request unless every exit settles it,
+                #: including a client disconnect, which arrives as a
+                #: BaseException no except clause names.
+                settled = False
                 try:
                     translation = await translator.translate(payload.question)
+                    settle_spend(reserve, translation.cost_usd)
+                    settled = True
                     translated_query = ObservatoryQuery(
                         operation=translation.operation,
                         scope=payload.scope,
                     )
-                    translated = answer(
+                    translated = await asyncio.to_thread(
+                        answer,
                         payload.model_copy(
                             update={
                                 "query": translated_query,
@@ -1024,7 +1178,6 @@ def create_app(
                         experiment_executor,
                         knowledge_source,
                     )
-                    model_spend += translation.cost_usd
                     result = translated.model_copy(
                         update={
                             "tier": (
@@ -1039,6 +1192,9 @@ def create_app(
                     )
                 except (httpx.HTTPError, ValueError):
                     pass
+                finally:
+                    if not settled:
+                        settle_spend(reserve, 0)
         if (
             payload.allow_summary
             and translator is not None
@@ -1049,7 +1205,9 @@ def create_app(
                 2_000 * active.copilot_input_rate
                 + 160 * active.copilot_output_rate
             ) / 1_000_000
-            if model_spend + reserve <= active.copilot_spend_cap:
+            if reserve_spend(reserve):
+                #: Same settlement rule as the translation claim above.
+                settled = False
                 try:
                     summary = await translator.summarize(
                         question=payload.question,
@@ -1064,7 +1222,8 @@ def create_app(
                         ),
                         missing=result.missing,
                     )
-                    model_spend += summary.cost_usd
+                    settle_spend(reserve, summary.cost_usd)
+                    settled = True
                     result = result.model_copy(
                         update={
                             "tier": "model_summarized",
@@ -1085,6 +1244,9 @@ def create_app(
                     )
                 except (httpx.HTTPError, ValueError):
                     pass
+                finally:
+                    if not settled:
+                        settle_spend(reserve, 0)
         return JSONResponse(result.model_dump(mode="json"))
 
     async def index(_request: Request) -> Response:
@@ -1117,6 +1279,11 @@ def create_app(
             Route(
                 "/api/sessions/{session:str}/investigation",
                 session_investigation,
+            ),
+            Route("/api/sessions/{session:str}/changed", session_changed),
+            Route(
+                "/api/sessions/{session:str}/records/{record:str}/fields",
+                session_record_fields,
             ),
             Route(
                 "/api/sessions/{session:str}/wire/{sequence:int}",
@@ -1191,6 +1358,28 @@ def create_app(
             Route("/", index),
             Route("/{path:path}", index),
         ]
+    )
+
+
+def _incident_capsule(
+    payload: IncidentExportRequest,
+    result: RecordedSessionInvestigation,
+    knowledge_source: KnowledgeSource,
+    benchmark: BenchmarkSource,
+    recorded: RecordedSessionSource,
+    revision: str,
+) -> IncidentCapsule:
+    """Read every source one capsule needs in one worker thread."""
+    return build_capsule(
+        payload,
+        result,
+        knowledge_source.read(result.player_id),
+        diagnostic_history(
+            benchmark,
+            recorded=recorded,
+            player_id=result.player_id,
+        ),
+        revision,
     )
 
 

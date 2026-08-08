@@ -66,8 +66,9 @@ function investigation(): SessionInvestigation {
       iteration: 1,
       turn: 1,
       fields: {
-        messages: [{ role: "user", content: "Find the north gate." }],
-        tools: ["tbamud__command"],
+        last_message: { role: "user", content: "Find the north gate." },
+        message_count: 1,
+        tool_count: 1,
       },
     }),
     record({
@@ -503,6 +504,7 @@ describe("SessionsWorkspace", () => {
     await user.click(screen.getByRole("button", {
       name: "Select Goal 1: Find the north gate",
     }));
+    await user.click(screen.getByRole("button", { name: /^Turn 1/ }));
 
     expect(screen.getByText("Input available to the model"))
       .toBeInTheDocument();
@@ -660,9 +662,9 @@ describe("SessionsWorkspace", () => {
     const goalTwo = screen.getByRole("region", {
       name: "Goal 2: Practice at the warrior guild",
     });
-    expect(within(goalOne).queryByRole("heading", { name: "Turn 1" }))
+    expect(within(goalOne).queryByRole("region", { name: "Turn 1" }))
       .not.toBeInTheDocument();
-    expect(within(goalTwo).queryByRole("heading", { name: "Turn 2" }))
+    expect(within(goalTwo).queryByRole("region", { name: "Turn 2" }))
       .not.toBeInTheDocument();
 
     await user.click(within(goalOne).getByRole("button", {
@@ -672,7 +674,7 @@ describe("SessionsWorkspace", () => {
       level: 1,
       name: "Find the north gate",
     })).toBeInTheDocument();
-    expect(within(goalOne).getByRole("heading", { name: "Turn 1" }))
+    expect(within(goalOne).getByRole("region", { name: "Turn 1" }))
       .toBeInTheDocument();
 
     await user.click(within(goalTwo).getByRole("button", {
@@ -682,24 +684,26 @@ describe("SessionsWorkspace", () => {
       level: 1,
       name: "Practice at the warrior guild",
     })).toBeInTheDocument();
-    const nudge = within(goalTwo).getByRole("region", {
-      name: "Nudge: Return through the western gate",
+    const turnTwo = within(goalTwo).getByRole("region", { name: "Turn 2" });
+    const turnTwoToggle = within(turnTwo).getByRole("button", {
+      name: /^Turn 2/,
     });
-    expect(within(nudge).queryByRole("heading", { name: "Turn 2" }))
-      .not.toBeInTheDocument();
+    // The heading names what started the turn, not every instruction inside it.
+    expect(turnTwoToggle).toHaveAccessibleName(
+      /Turn 2GoalPractice at the warrior guild/,
+    );
+    expect(turnTwoToggle).toHaveAttribute("aria-expanded", "false");
 
-    await user.click(within(nudge).getByRole("button", { name: /^Nudge/ }));
-    expect(within(nudge).getByRole("heading", { name: "Turn 2" }))
-      .toBeInTheDocument();
+    await user.click(turnTwoToggle);
+    expect(turnTwoToggle).toHaveAttribute("aria-expanded", "true");
 
-    await user.click(within(nudge).getByRole("button", { name: /^Nudge/ }));
-    expect(within(nudge).queryByRole("heading", { name: "Turn 2" }))
-      .not.toBeInTheDocument();
+    await user.click(turnTwoToggle);
+    expect(turnTwoToggle).toHaveAttribute("aria-expanded", "false");
 
     await user.click(within(goalOne).getByRole("button", {
       name: "Select Goal 1: Find the north gate",
     }));
-    expect(within(goalOne).queryByRole("heading", { name: "Turn 1" }))
+    expect(within(goalOne).queryByRole("region", { name: "Turn 1" }))
       .not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Map" }));
@@ -800,6 +804,7 @@ describe("SessionsWorkspace", () => {
     await user.click(screen.getByRole("button", {
       name: "Select Goal 1: Find the north gate",
     }));
+    await user.click(screen.getByRole("button", { name: /^Turn 1/ }));
     await user.click(screen.getByText("Transport path and timing"));
     await user.click(screen.getByText(/Wire in · 12 bytes/));
     await user.click(screen.getByRole("button", {
@@ -814,6 +819,57 @@ describe("SessionsWorkspace", () => {
     );
   });
 
+  it("reads the collapsed prompt preview from the last message", async () => {
+    const user = userEvent.setup();
+    renderWorkspace();
+
+    await user.click(screen.getByRole("button", {
+      name: "Select Goal 1: Find the north gate",
+    }));
+    await user.click(screen.getByRole("button", { name: /^Turn 1/ }));
+
+    expect(screen.getByText("Find the north gate.")).toBeInTheDocument();
+    expect(screen.getByText("User")).toBeInTheDocument();
+  });
+
+  it("loads the withheld request body only when it is asked for", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        version: 1,
+        record_id: "agent:4",
+        source_ref: "agent.jsonl line 4",
+        kind: "prompt",
+        fields: {
+          messages: [{ role: "user", content: "Find the north gate." }],
+          tools: ["tbamud__command"],
+        },
+      }),
+    } as Response));
+    renderWorkspace();
+
+    await user.click(screen.getByRole("button", {
+      name: "Select Goal 1: Find the north gate",
+    }));
+    await user.click(screen.getByRole("button", { name: /^Turn 1/ }));
+    await user.click(screen.getByText(
+      "Exact model request, system prompt, messages, and tool schemas",
+    ));
+
+    expect(fetch).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", {
+      name: "Open the exact body",
+    }));
+
+    expect(await screen.findByText("1 available tool")).toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/sessions/session-1/records/agent%3A4/fields",
+      { cache: "no-store" },
+    );
+  });
+
   it("shows raw MUD, parser input, and delivered result as connected stages", async () => {
     const user = userEvent.setup();
     renderWorkspace();
@@ -821,6 +877,7 @@ describe("SessionsWorkspace", () => {
     await user.click(screen.getByRole("button", {
       name: "Select Goal 1: Find the north gate",
     }));
+    await user.click(screen.getByRole("button", { name: /^Turn 1/ }));
     expect(screen.getByText("\u001b[33mA North Gate\u001b[0m"))
       .toBeInTheDocument();
     expect(screen.getByText("Parser input")).toBeInTheDocument();

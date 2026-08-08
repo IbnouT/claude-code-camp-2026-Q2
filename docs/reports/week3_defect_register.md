@@ -68,6 +68,10 @@ record claiming the auto-flee threshold had been set.
   the ordering that keeps sacrificing safe is not enforced when a name
   fails to parse.
 - Presence lines never expire, so something killed stays listed.
+- Gateway record fields reach the Observatory unsanitised. Agent fields
+  pass through `sanitize_evidence` and gateway fields are copied
+  straight from the payload at `runtime_session.py:348`, so redaction
+  depends on which side produced the record.
 
 ## What was sound
 

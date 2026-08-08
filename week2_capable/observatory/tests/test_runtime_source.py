@@ -557,25 +557,74 @@ async def test_runtime_investigation_exposes_complete_model_exchange(
         for record in payload["records"]
         if record["source"] == "agent"
     }
-    assert by_kind["session_start"]["fields"]["system"] == (
-        "Observe every retained interaction."
-    )
-    assert by_kind["model_request"]["fields"]["request"]["messages"][0] == {
-        "role": "user",
-        "content": "Explore as Beta",
-    }
-    assert by_kind["model_request"]["fields"]["request"]["api_key"] == "[REDACTED]"
     assert by_kind["response"]["fields"]["content"][0]["text"] == (
         "I will explore as Beta."
     )
-    assert by_kind["provider_response"]["fields"]["response"]["content"][0][
-        "text"
-    ] == "I will explore as Beta."
+    assert by_kind["prompt"]["fields"]["last_message"] == {
+        "role": "user",
+        "content": [{"type": "text", "text": "Explore as Beta"}],
+    }
     stages = by_kind["tool_result"]["fields"]["stages"]
     assert json.loads(stages["mcp_result"])["trace_id"] == "trace-look-1"
     assert stages["result_mode"] == "minimal"
     assert stages["rendered_result"] == "The Pet Shop"
     assert stages["model_input"] == "The Pet Shop"
+    withheld = {"messages", "request", "response", "tools", "system"}
+    assert all(
+        withheld.isdisjoint(record["fields"])
+        for record in payload["records"]
+        if record["source"] == "agent"
+    )
+
+
+async def test_record_fields_serve_the_withheld_members_sanitized(
+    tmp_path: Path,
+):
+    root = runtime_root(tmp_path)
+    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        payload = (
+            await client.get("/api/sessions/session-beta/investigation")
+        ).json()
+        by_kind = {
+            record["kind"]: record["id"]
+            for record in payload["records"]
+            if record["source"] == "agent"
+        }
+        fields = {
+            kind: (
+                await client.get(
+                    f"/api/sessions/session-beta/records/{record_id}/fields"
+                )
+            ).json()
+            for kind, record_id in by_kind.items()
+        }
+        unknown = await client.get(
+            "/api/sessions/session-beta/records/agent:9999/fields"
+        )
+        gateway = await client.get(
+            "/api/sessions/session-beta/records/gateway:1/fields"
+        )
+
+    assert fields["session_start"]["fields"]["system"] == (
+        "Observe every retained interaction."
+    )
+    assert fields["model_request"]["fields"]["request"]["messages"][0] == {
+        "role": "user",
+        "content": "Explore as Beta",
+    }
+    assert fields["model_request"]["fields"]["request"]["api_key"] == "[REDACTED]"
+    assert fields["provider_response"]["fields"]["response"]["content"][0][
+        "text"
+    ] == "I will explore as Beta."
+    assert fields["model_request"]["source_ref"] == "agent.jsonl line 3"
+    assert fields["model_request"]["kind"] == "model_request"
+    assert unknown.status_code == 404
+    assert gateway.status_code == 404
 
 
 async def test_wire_evidence_drills_to_integrity_checked_bytes(tmp_path: Path):
@@ -939,6 +988,68 @@ async def test_live_snapshot_separates_agent_thought_from_concise_belief(
     }
     assert "agent_thought_not_observed" not in latest["capture_gaps"]
     assert "agent_belief_not_observed" not in latest["capture_gaps"]
+
+
+async def test_live_snapshot_holds_the_completion_a_turn_ended_on(
+    tmp_path: Path,
+):
+    root = runtime_root(tmp_path)
+    agent_log = (
+        root
+        / "profiles"
+        / "alpha"
+        / "sessions"
+        / "session-alpha"
+        / "agent.jsonl"
+    )
+    identity = {
+        "player_id": "alpha",
+        "agent_id": "agent-alpha",
+        "session_id": "session-alpha",
+        "gateway_session_id": "gateway-alpha",
+    }
+    with agent_log.open("a", encoding="utf-8") as handle:
+        for event in (
+            {
+                "phase": "plan",
+                "text": "Found the fountain. Now I will drink from it.",
+                "at": "1970-01-01T00:00:01.600+00:00",
+                **identity,
+            },
+            {
+                "phase": "response",
+                "text": "(tool use: 1 call)",
+                "stop_reason": "tool_use",
+                "at": "1970-01-01T00:00:01.700+00:00",
+                **identity,
+            },
+            {
+                "phase": "response",
+                "text": "I drank from the fountain in the Midgaard temple.",
+                "stop_reason": "end_turn",
+                "at": "1970-01-01T00:00:01.800+00:00",
+                **identity,
+            },
+        ):
+            handle.write(json.dumps(event) + "\n")
+
+    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        latest = (
+            await client.get("/api/sessions/session-alpha/snapshot")
+        ).json()
+
+    assert latest["agent_thought"] == {
+        "text": "I drank from the fountain in the Midgaard temple.",
+        "phase": "completion",
+        "observed_at": "1970-01-01T00:00:01.800+00:00",
+        "line": 8,
+        "evidence": "agent log line 8",
+    }
 
 
 async def test_live_voice_uses_exact_thought_prefix_and_external_cache(
@@ -2617,3 +2728,209 @@ def test_a_running_row_with_a_live_process_is_live(tmp_path: Path) -> None:
     sessions = {session.id: session for session in source.sessions()}
 
     assert sessions["session-here"].live is True
+
+
+async def investigation_payload(
+    root: Path,
+    dist: Path,
+    session: str = "session-beta",
+) -> dict:
+    app = create_app(Settings(runtime_root=root, web_dist=dist))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        return (
+            await client.get(f"/api/sessions/{session}/investigation")
+        ).json()
+
+
+async def test_agent_log_tolerates_a_line_still_being_written(
+    tmp_path: Path,
+):
+    root = runtime_root(tmp_path)
+    agent_log = (
+        root
+        / "profiles"
+        / "alpha"
+        / "sessions"
+        / "session-alpha"
+        / "agent.jsonl"
+    )
+    with agent_log.open("a", encoding="utf-8") as handle:
+        handle.write('{"phase": "response", "session_id": "session-a')
+
+    payload = await investigation_payload(root, tmp_path, "session-alpha")
+
+    references = {record["source_ref"] for record in payload["records"]}
+    assert payload["run"]["responses"] == 1
+    assert "agent.jsonl line 5" in references
+    assert "agent.jsonl line 6" not in references
+
+
+async def test_agent_log_tolerates_a_character_cut_in_half(tmp_path: Path):
+    root = runtime_root(tmp_path)
+    agent_log = (
+        root
+        / "profiles"
+        / "alpha"
+        / "sessions"
+        / "session-alpha"
+        / "agent.jsonl"
+    )
+    line = json.dumps(
+        {
+            "phase": "response",
+            "text": "the fountain\u306e\u6c34",
+            "session_id": "session-alpha",
+            "player_id": "alpha",
+            "at": "1970-01-01T00:00:02+00:00",
+        },
+        ensure_ascii=False,
+    ).encode("utf-8")
+    with agent_log.open("ab") as handle:
+        handle.write(line[: line.rfind(b"\xe6") + 1])
+
+    payload = await investigation_payload(root, tmp_path, "session-alpha")
+
+    references = {record["source_ref"] for record in payload["records"]}
+    assert payload["run"]["responses"] == 1
+    assert "agent.jsonl line 6" not in references
+
+
+async def test_ended_agent_log_keeps_a_last_line_without_a_newline(
+    tmp_path: Path,
+):
+    root = runtime_root(tmp_path)
+    agent_log = (
+        root / "profiles" / "beta" / "sessions" / "session-beta" / "agent.jsonl"
+    )
+    with agent_log.open("a", encoding="utf-8") as handle:
+        handle.write(
+            json.dumps(
+                {
+                    "phase": "response",
+                    "model": "test-model",
+                    "text": "I stopped exploring.",
+                    "session_id": "session-beta",
+                    "player_id": "beta",
+                    "at": "1970-01-01T00:00:02+00:00",
+                },
+                separators=(",", ":"),
+            )
+        )
+
+    payload = await investigation_payload(root, tmp_path)
+
+    references = {record["source_ref"] for record in payload["records"]}
+    assert payload["run"]["responses"] == 2
+    assert "agent.jsonl line 6" in references
+
+
+async def test_agent_log_lines_end_only_at_a_newline(tmp_path: Path):
+    """A separator elsewhere in Unicode is prose, not the end of a record."""
+    root = runtime_root(tmp_path)
+    session_dir = root / "profiles" / "beta" / "sessions" / "session-beta"
+    with (session_dir / "agent.jsonl").open("a", encoding="utf-8") as handle:
+        handle.write(
+            json.dumps(
+                {
+                    "phase": "response",
+                    "model": "test-model",
+                    "text": "the sign reads:\u2028follow the water",
+                    "session_id": "session-beta",
+                    "player_id": "beta",
+                    "at": "1970-01-01T00:00:02+00:00",
+                },
+                ensure_ascii=False,
+                separators=(",", ":"),
+            )
+            + "\n"
+        )
+    source = RuntimeSource(root)
+    session = source.session("session-beta")
+    assert session is not None
+
+    records = source.agent_events(session)
+
+    assert [record["line"] for record in records] == [1, 2, 3, 4, 5, 6]
+    assert records[5] == source.agent_record(session, 6)
+
+
+async def test_agent_record_ignores_a_line_cut_in_half(tmp_path: Path):
+    root = runtime_root(tmp_path)
+    session_dir = root / "profiles" / "beta" / "sessions" / "session-beta"
+    with (session_dir / "agent.jsonl").open("ab") as handle:
+        handle.write(b'{"phase": "response", "text": "\xe6\xb0')
+    source = RuntimeSource(root)
+    session = source.session("session-beta")
+    assert session is not None
+
+    assert source.agent_record(session, 6) is None
+    assert source.agent_record(session, 3) is not None
+
+
+async def test_change_signal_moves_while_the_model_is_called(tmp_path: Path):
+    root = runtime_root(tmp_path)
+    agent_log = (
+        root
+        / "profiles"
+        / "alpha"
+        / "sessions"
+        / "session-alpha"
+        / "agent.jsonl"
+    )
+    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        before = (
+            await client.get("/api/sessions/session-alpha/changed")
+        ).json()
+        with agent_log.open("a", encoding="utf-8") as handle:
+            handle.write(
+                json.dumps({
+                    "phase": "model_request",
+                    "model": "test-model",
+                    "request": {"messages": []},
+                    "at": "1970-01-01T00:00:02+00:00",
+                    "player_id": "alpha",
+                    "session_id": "session-alpha",
+                })
+                + "\n"
+            )
+        after = (
+            await client.get("/api/sessions/session-alpha/changed")
+        ).json()
+        unknown = await client.get("/api/sessions/session-missing/changed")
+
+    assert before["live"] is True
+    assert after["latest_seq"] == before["latest_seq"]
+    assert after["agent_log_size"] > before["agent_log_size"]
+    assert unknown.status_code == 404
+
+
+async def test_change_signal_reads_a_missing_agent_log_as_zero(
+    tmp_path: Path,
+):
+    root = runtime_root(tmp_path)
+    (
+        root / "profiles" / "beta" / "sessions" / "session-beta" / "agent.jsonl"
+    ).unlink()
+    app = create_app(Settings(runtime_root=root, web_dist=tmp_path))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        payload = (
+            await client.get("/api/sessions/session-beta/changed")
+        ).json()
+
+    assert payload["agent_log_size"] == 0
+    assert payload["latest_seq"] == 2
+    assert payload["live"] is False
+

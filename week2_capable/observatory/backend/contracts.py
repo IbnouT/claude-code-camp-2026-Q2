@@ -151,7 +151,7 @@ class LiveAgentExcerpt(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     text: str
-    phase: Literal["reasoning", "plan", "tool_call"]
+    phase: Literal["reasoning", "plan", "tool_call", "completion"]
     observed_at: str
     line: int
     evidence: str
@@ -853,6 +853,30 @@ class RuntimeSessionInvestigation(BaseModel):
     world: WorldProjection
     cost: SessionCostLedger
     capture_gaps: tuple[str, ...]
+
+
+class RuntimeSessionChange(BaseModel):
+    """What a live view polls instead of asking for the whole story."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    version: int = 1
+    session_id: str
+    latest_seq: int
+    agent_log_size: int
+    live: bool
+
+
+class RuntimeSessionRecordFields(BaseModel):
+    """The withheld members of one record, sanitized on the way out."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    version: int = 1
+    record_id: str
+    source_ref: str
+    kind: str
+    fields: dict[str, Any] = Field(default_factory=dict)
 
 
 class RuntimeSessionWireEvidence(BaseModel):

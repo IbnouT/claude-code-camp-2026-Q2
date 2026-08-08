@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import re
 import sys
+import threading
 import time
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
@@ -79,6 +80,9 @@ class AtlasSource:
         self._zone_labels: dict[int, str] | None = None
         self._source_digest: str | None = None
         self._load_ms = 0.0
+        #: Handlers answer from worker threads, so two requests can reach
+        #: an unfilled cache at once and would otherwise both parse it.
+        self._lock = threading.Lock()
 
     @property
     def available(self) -> bool:
@@ -224,88 +228,94 @@ class AtlasSource:
     def _load(self) -> dict[int, AtlasRoom]:
         if self._rooms is not None:
             return self._rooms
-        started = time.perf_counter()
-        rooms: dict[int, AtlasRoom] = {}
-        digest = hashlib.sha256()
-        assert self._root is not None
-        for path in sorted(self._root.glob("*.wld")):
-            try:
-                text = path.read_text(encoding="utf-8", errors="replace")
-            except OSError:
-                continue
-            digest.update(path.name.encode())
-            digest.update(text.encode())
-            rooms.update(_parse(text))
-        semantic_enabled = (
-            self._override_path is not None
-            and self._override_path.is_file()
-        )
-        overrides = load_sector_overrides(self._override_path)
-        if semantic_enabled:
-            digest.update(self._override_path.read_bytes())
-        for vnum, override in overrides.items():
-            room = rooms.get(vnum)
-            if room is None:
-                continue
-            if room.sector != override.original_sector:
-                raise ValueError(
-                    f"Atlas sector override {vnum} expected "
-                    f"{override.original_sector!r}, found {room.sector!r}."
-                )
-        if semantic_enabled:
-            rooms = {
-                vnum: AtlasRoom(
+        with self._lock:
+            if self._rooms is not None:
+                return self._rooms
+            started = time.perf_counter()
+            rooms: dict[int, AtlasRoom] = {}
+            digest = hashlib.sha256()
+            assert self._root is not None
+            for path in sorted(self._root.glob("*.wld")):
+                try:
+                    text = path.read_text(encoding="utf-8", errors="replace")
+                except OSError:
+                    continue
+                digest.update(path.name.encode())
+                digest.update(text.encode())
+                rooms.update(_parse(text))
+            semantic_enabled = (
+                self._override_path is not None
+                and self._override_path.is_file()
+            )
+            overrides = load_sector_overrides(self._override_path)
+            if semantic_enabled:
+                digest.update(self._override_path.read_bytes())
+            for vnum, override in overrides.items():
+                room = rooms.get(vnum)
+                if room is None:
+                    continue
+                if room.sector != override.original_sector:
+                    raise ValueError(
+                        f"Atlas sector override {vnum} expected "
+                        f"{override.original_sector!r}, found {room.sector!r}."
+                    )
+            if semantic_enabled:
+                rooms = {
+                    vnum: AtlasRoom(
+                        vnum=room.vnum,
+                        title=room.title,
+                        zone=room.zone,
+                        sector=default_sector_category(room.sector),
+                        exits=room.exits,
+                    )
+                    for vnum, room in rooms.items()
+                }
+            for vnum, override in overrides.items():
+                room = rooms.get(vnum)
+                if room is None:
+                    continue
+                rooms[vnum] = AtlasRoom(
                     vnum=room.vnum,
                     title=room.title,
                     zone=room.zone,
-                    sector=default_sector_category(room.sector),
+                    sector=override.corrected_category,
                     exits=room.exits,
                 )
-                for vnum, room in rooms.items()
-            }
-        for vnum, override in overrides.items():
-            room = rooms.get(vnum)
-            if room is None:
-                continue
-            rooms[vnum] = AtlasRoom(
-                vnum=room.vnum,
-                title=room.title,
-                zone=room.zone,
-                sector=override.corrected_category,
-                exits=room.exits,
-            )
-        self._load_ms = round((time.perf_counter() - started) * 1_000, 3)
-        self._rooms = rooms
-        self._source_digest = digest.hexdigest()[:20]
-        return rooms
+            self._load_ms = round((time.perf_counter() - started) * 1_000, 3)
+            self._rooms = rooms
+            self._source_digest = digest.hexdigest()[:20]
+            return rooms
 
     def _load_zone_labels(self) -> dict[int, str]:
         if self._zone_labels is not None:
             return self._zone_labels
-        labels: dict[int, str] = {}
-        if self._root is None:
+        with self._lock:
+            if self._zone_labels is not None:
+                return self._zone_labels
+            labels: dict[int, str] = {}
+            if self._root is None:
+                return labels
+            candidates = (
+                self._root.parent / "zon"
+                if self._root.name == "wld"
+                else self._root / "zon"
+            )
+            zone_root = candidates if candidates.is_dir() else self._root
+            digest = hashlib.sha256()
+            digest.update((self._source_digest or "").encode())
+            for path in sorted(zone_root.glob("*.zon")):
+                try:
+                    text = path.read_text(encoding="utf-8", errors="replace")
+                except OSError:
+                    continue
+                digest.update(path.name.encode())
+                digest.update(text.encode())
+                parsed = _parse_zone_label(text)
+                if parsed is not None:
+                    labels[parsed[0]] = parsed[1]
+            self._zone_labels = labels
+            self._source_digest = digest.hexdigest()[:20]
             return labels
-        candidates = (
-            self._root.parent / "zon"
-            if self._root.name == "wld"
-            else self._root / "zon"
-        )
-        zone_root = candidates if candidates.is_dir() else self._root
-        digest = hashlib.sha256()
-        digest.update((self._source_digest or "").encode())
-        for path in sorted(zone_root.glob("*.zon")):
-            try:
-                text = path.read_text(encoding="utf-8", errors="replace")
-            except OSError:
-                continue
-            digest.update(path.name.encode())
-            digest.update(text.encode())
-            parsed = _parse_zone_label(text)
-            if parsed is not None:
-                labels[parsed[0]] = parsed[1]
-        self._zone_labels = labels
-        self._source_digest = digest.hexdigest()[:20]
-        return labels
 
 
 def find_world(start: Path | None = None) -> Path | None:

@@ -67,12 +67,19 @@ export type StoryIteration = {
   objectiveEpoch: number;
 };
 
+export type StoryTurnInstruction = {
+  kind: "goal" | "nudge";
+  text: string;
+  record: SessionEvidenceRecord;
+};
+
 export type StoryTurn = {
   number: number;
   startedAt: string;
   endedAt: string;
   durationMs: number;
   costUsd: number;
+  instruction: StoryTurnInstruction | null;
   iterations: StoryIteration[];
 };
 
@@ -166,6 +173,11 @@ export function projectSessionStory(
     ...iteration,
     objectiveEpoch: epochByIteration.get(iteration.id) ?? 1,
   }));
+  const turnBoundaries = new Map(
+    records
+      .filter((record) => record.kind === "turn" && record.turn !== null)
+      .map((record) => [record.turn as number, record]),
+  );
   const turnNumbers = [...new Set(attributedIterations.map((iteration) => iteration.turn))]
     .sort((left, right) => left - right);
   const turns = turnNumbers.map((number) => {
@@ -182,6 +194,12 @@ export function projectSessionStory(
       endedAt,
       durationMs: elapsed(startedAt, endedAt),
       costUsd: sum(turnIterations.map((iteration) => iteration.costUsd)),
+      instruction: projectTurnInstruction(
+        turnBoundaries.get(number) ?? null,
+        operatorMessages,
+        number,
+        turnIterations[0]?.number ?? null,
+      ),
       iterations: turnIterations,
     };
   });
@@ -324,6 +342,34 @@ function projectOperatorMessage(
     : record.preview.trim();
   if (!instruction) return null;
   return { record, action, instruction };
+}
+
+function projectTurnInstruction(
+  boundary: SessionEvidenceRecord | null,
+  messages: StoryOperatorMessage[],
+  turn: number,
+  firstIteration: number | null,
+): StoryTurnInstruction | null {
+  // An operator message lands on the iteration boundary it was applied at.
+  // Landing on the turn's first iteration means it started the turn, and its
+  // own text is the operator's words rather than the wrapped prompt line.
+  const starter = messages.find((message) => (
+    message.record.turn === turn
+    && message.record.iteration !== null
+    && message.record.iteration === firstIteration
+  ));
+  if (starter !== undefined) {
+    return {
+      kind: starter.action === "guide" ? "nudge" : "goal",
+      text: starter.instruction,
+      record: starter.record,
+    };
+  }
+  const typed = typeof boundary?.fields.instruction === "string"
+    ? boundary.fields.instruction.trim()
+    : "";
+  if (boundary === null || !typed) return null;
+  return { kind: "goal", text: typed, record: boundary };
 }
 
 function projectObjectiveEpochs(

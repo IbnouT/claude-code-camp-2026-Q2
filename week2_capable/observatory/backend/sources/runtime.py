@@ -24,6 +24,10 @@ class RuntimeSourceError(RuntimeError):
     """The local runtime registry or one selected journal cannot be read."""
 
 
+#: Lifecycle states in which a row claims its session is still running.
+CLAIMED_STATES = frozenset({"starting", "running", "draining", "quarantined"})
+
+
 def _process_alive(pid: int | None) -> bool:
     """True when a process with that id exists and we may signal it."""
     if pid is None:
@@ -75,13 +79,7 @@ class RuntimeSession:
         the row alone shows a session as live for days after the process
         that owned it has gone.
         """
-        claimed = self.state in {
-            "starting",
-            "running",
-            "draining",
-            "quarantined",
-        }
-        return claimed and _process_alive(self.pid)
+        return self.state in CLAIMED_STATES and _process_alive(self.pid)
 
     def public(self) -> dict[str, Any]:
         return {
@@ -105,6 +103,21 @@ class RuntimeSession:
             "goal_count": self.goal_count,
             "nudge_count": self.nudge_count,
         }
+
+
+@dataclass(frozen=True)
+class RuntimeSessionActivity:
+    """What one session has produced, measured without parsing any of it."""
+
+    latest_seq: int
+    agent_log_size: int
+    live: bool
+
+    def __str__(self) -> str:
+        return (
+            f"<RuntimeSessionActivity latest_seq={self.latest_seq} "
+            f"agent_log_size={self.agent_log_size} live={self.live}>"
+        )
 
 
 class RuntimeSource:
@@ -150,42 +163,67 @@ class RuntimeSource:
             return ()
         try:
             with self._database(registry) as database:
-                columns = {
-                    str(row["name"])
-                    for row in database.execute("PRAGMA table_info(sessions)")
-                }
-                stop_mode = (
-                    "stop_mode"
-                    if "stop_mode" in columns
-                    else "NULL AS stop_mode"
-                )
                 rows = database.execute(
-                    f"""
-                    SELECT session_id, player_id, character,
-                           gateway_session_id, state, capture_status,
-                           created_at, updated_at, ended_at, {stop_mode},
-                           legacy, session_dir, pid
-                    FROM sessions
-                    ORDER BY
-                      CASE state
-                        WHEN 'running' THEN 0
-                        WHEN 'starting' THEN 1
-                        WHEN 'draining' THEN 2
-                        WHEN 'quarantined' THEN 3
-                        ELSE 4
-                      END,
-                      created_at DESC,
-                      session_id
-                    """
+                    self._session_query(
+                        database,
+                        """
+                        ORDER BY
+                          CASE state
+                            WHEN 'running' THEN 0
+                            WHEN 'starting' THEN 1
+                            WHEN 'draining' THEN 2
+                            WHEN 'quarantined' THEN 3
+                            ELSE 4
+                          END,
+                          created_at DESC,
+                          session_id
+                        """,
+                    )
                 ).fetchall()
         except sqlite3.Error as error:
             raise RuntimeSourceError("runtime registry is unreadable") from error
         return tuple(self._session(row, root) for row in rows)
 
     def session(self, session_id: str) -> RuntimeSession | None:
-        return next(
-            (session for session in self.sessions() if session.id == session_id),
-            None,
+        """Read one registered session by its key instead of by sweeping."""
+        for root in self._roots():
+            registry = root / "registry.db"
+            if not registry.is_file():
+                continue
+            try:
+                with self._database(registry) as database:
+                    row = database.execute(
+                        self._session_query(database, "WHERE session_id = ?"),
+                        (session_id,),
+                    ).fetchone()
+            except sqlite3.Error as error:
+                raise RuntimeSourceError(
+                    "runtime registry is unreadable"
+                ) from error
+            if row is not None:
+                return self._session(row, root)
+        return None
+
+    def activity(self, session_id: str) -> RuntimeSessionActivity | None:
+        """Report what a session has produced without reading any of it.
+
+        The agent log is measured and never opened, so a log growing
+        through a model call is seen for the price of one stat.
+        """
+        located = self._locate(session_id)
+        if located is None:
+            return None
+        row, directory = located
+        _count, latest = self._journal_summary(directory / "gateway.db")
+        try:
+            size = (directory / "agent.jsonl").stat().st_size
+        except OSError:
+            size = 0
+        pid = None if row["pid"] is None else int(row["pid"])
+        return RuntimeSessionActivity(
+            latest_seq=latest,
+            agent_log_size=size,
+            live=str(row["state"]) in CLAIMED_STATES and _process_alive(pid),
         )
 
     def events(
@@ -297,42 +335,107 @@ class RuntimeSource:
             )
         return event, body
 
-    def agent_events(self, session_id: str) -> list[dict[str, Any]]:
-        session = self.session(session_id)
-        if session is None:
-            raise RuntimeSourceError(f"unknown runtime session {session_id!r}")
-        source = self._session_dir(session_id) / "agent.jsonl"
+    def agent_events(self, session: RuntimeSession) -> list[dict[str, Any]]:
+        """Read every complete agent record the selected session has written.
+
+        A live run is written to while it is read, so its tail can be half
+        a line, or half a character of one. Both end after the last
+        newline, so a live log is read up to there and the rest belongs to
+        the next read. An ended log gains nothing more, so its last line is
+        a whole record with or without a closing newline.
+        """
+        source = self._session_dir(session.id) / "agent.jsonl"
         if not source.is_file():
             return []
         records: list[dict[str, Any]] = []
         try:
-            lines = source.read_text(encoding="utf-8").splitlines()
+            raw = source.read_bytes()
         except OSError as error:
             raise RuntimeSourceError(
-                f"session {session_id!r} agent log is unreadable"
+                f"session {session.id!r} agent log is unreadable"
             ) from error
+        end = raw.rfind(b"\n") + 1 if session.live else len(raw)
+        try:
+            text = raw[:end].decode("utf-8")
+        except UnicodeDecodeError as error:
+            raise RuntimeSourceError(
+                f"session {session.id!r} agent log is not valid text"
+            ) from error
+        # Line numbers are record ids that cross to agent_record, which
+        # seeks by them, so both must split lines the same way: on \n
+        # alone, the JSONL separator.
+        lines = text.split("\n")
+        if lines and lines[-1] == "":
+            lines.pop()
         for index, line in enumerate(lines, start=1):
             try:
                 value = json.loads(line)
             except json.JSONDecodeError as error:
                 raise RuntimeSourceError(
-                    f"session {session_id!r} agent log line {index} is invalid"
+                    f"session {session.id!r} agent log line {index} is invalid"
                 ) from error
-            if not isinstance(value, dict):
-                raise RuntimeSourceError(
-                    f"session {session_id!r} agent log line {index} "
-                    "is not an object"
-                )
-            if value.get("session_id") != session.id:
-                raise RuntimeSourceError(
-                    f"session {session_id!r} agent log identity mismatch"
-                )
-            if value.get("player_id") not in {None, session.player_id}:
-                raise RuntimeSourceError(
-                    f"session {session_id!r} agent log player mismatch"
-                )
-            records.append({"line": index, **value})
+            records.append(self._agent_record(session, value, index))
         return records
+
+    def agent_record(
+        self,
+        session: RuntimeSession,
+        line: int,
+    ) -> dict[str, Any] | None:
+        """Read one agent record by seeking its line in the log.
+
+        The file is streamed and only the matching line is parsed, so one
+        record costs the same whatever the log has grown to.
+        """
+        if line < 1:
+            return None
+        source = self._session_dir(session.id) / "agent.jsonl"
+        if not source.is_file():
+            return None
+        try:
+            with source.open("rb") as handle:
+                # Binary iteration ends lines on \n alone, the JSONL
+                # separator, numbering them exactly as agent_events numbers
+                # them: the same line is the same record id on both sides.
+                for index, raw in enumerate(handle, start=1):
+                    if index < line:
+                        continue
+                    if index > line or not raw.endswith(b"\n"):
+                        return None
+                    try:
+                        value = json.loads(raw.decode("utf-8"))
+                    except (json.JSONDecodeError, UnicodeDecodeError) as error:
+                        raise RuntimeSourceError(
+                            f"session {session.id!r} agent log line {line} "
+                            "is invalid"
+                        ) from error
+                    return self._agent_record(session, value, line)
+        except OSError as error:
+            raise RuntimeSourceError(
+                f"session {session.id!r} agent log is unreadable"
+            ) from error
+        return None
+
+    @staticmethod
+    def _agent_record(
+        session: RuntimeSession,
+        value: Any,
+        line: int,
+    ) -> dict[str, Any]:
+        """Accept one parsed agent line only under the session it claims."""
+        if not isinstance(value, dict):
+            raise RuntimeSourceError(
+                f"session {session.id!r} agent log line {line} is not an object"
+            )
+        if value.get("session_id") != session.id:
+            raise RuntimeSourceError(
+                f"session {session.id!r} agent log identity mismatch"
+            )
+        if value.get("player_id") not in {None, session.player_id}:
+            raise RuntimeSourceError(
+                f"session {session.id!r} agent log player mismatch"
+            )
+        return {"line": line, **value}
 
     def operator_messages(self, session_id: str) -> list[dict[str, Any]]:
         """Read the agent-owned durable operator message history."""
@@ -569,7 +672,7 @@ class RuntimeSource:
         if source.is_file():
             try:
                 value = json.loads(source.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError):
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError):
                 value = None
             raw = value.get("messages") if isinstance(value, dict) else None
             if isinstance(raw, list):
@@ -599,11 +702,12 @@ class RuntimeSource:
         if not source.is_file():
             return None
         try:
-            lines = source.read_text(encoding="utf-8").splitlines()
-        except OSError:
+            raw = source.read_bytes()
+            text = raw[: raw.rfind(b"\n") + 1].decode("utf-8")
+        except (OSError, UnicodeDecodeError):
             return None
         first_turn: str | None = None
-        for line in lines:
+        for line in text.splitlines():
             try:
                 event = json.loads(line)
             except json.JSONDecodeError:
@@ -621,15 +725,36 @@ class RuntimeSource:
                     first_turn = instruction.strip()
         return first_turn
 
-    def _session_dir(self, session_id: str) -> Path:
-        roots = self._roots()
-        if not roots:
-            raise RuntimeSourceError("runtime registry is unavailable")
-        for root in roots:
+    @staticmethod
+    def _session_query(database: sqlite3.Connection, tail: str) -> str:
+        """Select every row field one session is derived from.
+
+        A registry written before stop_mode existed has no such column,
+        and reads as a session that never named how it stopped.
+        """
+        columns = {
+            str(row["name"])
+            for row in database.execute("PRAGMA table_info(sessions)")
+        }
+        stop_mode = (
+            "stop_mode" if "stop_mode" in columns else "NULL AS stop_mode"
+        )
+        return (
+            "SELECT session_id, player_id, character, gateway_session_id, "
+            "state, capture_status, created_at, updated_at, ended_at, "
+            f"{stop_mode}, legacy, session_dir, pid FROM sessions {tail}"
+        )
+
+    def _locate(self, session_id: str) -> tuple[sqlite3.Row, Path] | None:
+        """Find one registry row and the directory it is allowed to own."""
+        for root in self._roots():
+            registry = root / "registry.db"
+            if not registry.is_file():
+                continue
             try:
-                with self._database(root / "registry.db") as database:
+                with self._database(registry) as database:
                     row = database.execute(
-                        "SELECT session_id, player_id, session_dir "
+                        "SELECT session_id, player_id, session_dir, state, pid "
                         "FROM sessions WHERE session_id = ?",
                         (session_id,),
                     ).fetchone()
@@ -637,14 +762,23 @@ class RuntimeSource:
                 raise RuntimeSourceError(
                     "runtime registry is unreadable"
                 ) from error
-            if row is not None:
-                return self._safe_session_dir(
-                    str(row["session_id"]),
-                    str(row["player_id"]),
-                    Path(str(row["session_dir"])),
-                    root,
-                )
-        raise RuntimeSourceError(f"unknown runtime session {session_id!r}")
+            if row is None:
+                continue
+            return row, self._safe_session_dir(
+                str(row["session_id"]),
+                str(row["player_id"]),
+                Path(str(row["session_dir"])),
+                root,
+            )
+        return None
+
+    def _session_dir(self, session_id: str) -> Path:
+        if not self._roots():
+            raise RuntimeSourceError("runtime registry is unavailable")
+        located = self._locate(session_id)
+        if located is None:
+            raise RuntimeSourceError(f"unknown runtime session {session_id!r}")
+        return located[1]
 
     def _safe_session_dir(
         self,
@@ -671,7 +805,7 @@ class RuntimeSource:
     def _object(path: Path) -> dict[str, Any]:
         try:
             value = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as error:
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
             raise RuntimeSourceError(f"{path.name} is unreadable") from error
         if not isinstance(value, dict):
             raise RuntimeSourceError(f"{path.name} is not an object")
@@ -686,7 +820,7 @@ class RuntimeSource:
                 continue
             try:
                 value = json.loads(projection.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError):
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError):
                 states.append("capture_gap")
                 continue
             state = value.get("state") if isinstance(value, dict) else None
@@ -717,7 +851,7 @@ class RuntimeSource:
             manifest = json.loads(
                 (session_dir / "session.json").read_text(encoding="utf-8")
             )
-        except (OSError, json.JSONDecodeError):
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
             return False
         if not isinstance(manifest, dict):
             return False

@@ -1715,8 +1715,19 @@ def _objective_contexts(
 def _agent_thought(
     events: list[dict[str, Any]],
 ) -> LiveAgentExcerpt | None:
+    """The agent's latest statement in its own voice.
+
+    Planning while a turn runs, and the prose a turn ends on once it reaches
+    one, so a finished goal reads differently from a stalled one. The
+    completion holds until newer planning follows it.
+    """
     for event in reversed(events):
         phase = _text(event.get("phase"))
+        if phase == "response":
+            completion = _completion_text(event)
+            if completion is None:
+                continue
+            return _agent_excerpt(event, "completion", completion)
         if phase not in {"reasoning", "plan"}:
             continue
         if phase == "reasoning" and event.get("redacted") is True:
@@ -1726,6 +1737,20 @@ def _agent_thought(
             continue
         return _agent_excerpt(event, phase, text.strip())
     return None
+
+
+def _completion_text(event: dict[str, Any]) -> str | None:
+    """The prose a model response ended its turn on.
+
+    A response that stops to call tools carries a placeholder instead of
+    prose, so only ``end_turn`` counts.
+    """
+    if _text(event.get("stop_reason")) != "end_turn":
+        return None
+    text = _text(event.get("text"))
+    if text is None or not text.strip():
+        return None
+    return text.strip()
 
 
 def _agent_belief(
@@ -1757,7 +1782,7 @@ def _agent_belief(
 
 def _agent_excerpt(
     event: dict[str, Any],
-    phase: Literal["reasoning", "plan", "tool_call"],
+    phase: Literal["reasoning", "plan", "tool_call", "completion"],
     text: str,
 ) -> LiveAgentExcerpt:
     line = _integer(event.get("line"))

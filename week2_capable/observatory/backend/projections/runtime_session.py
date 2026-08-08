@@ -22,6 +22,21 @@ from ..redaction import sanitize_evidence
 from ..sources.runtime import RuntimeSession
 from .live import project_live
 
+#: Agent-log members that carry the conversation and grow with the run.
+#: The story withholds them and one endpoint serves them per record.
+WITHHELD_FIELDS = ("messages", "request", "response", "tools", "system")
+
+
+def withheld_agent_fields(event: dict[str, Any]) -> dict[str, Any]:
+    """Sanitize the members one record withholds from the session story."""
+    return sanitize_evidence(
+        {
+            key: value
+            for key, value in event.items()
+            if key in WITHHELD_FIELDS
+        }
+    )
+
 
 def project_runtime_session(
     session: RuntimeSession,
@@ -655,13 +670,9 @@ def _agent_fields(event: dict[str, Any]) -> dict[str, Any]:
         "error",
         "context_window",
         "message_count",
-        "messages",
-        "request",
         "content",
-        "response",
         "data",
         "tool_count",
-        "tools",
         "text",
         "result",
         "stages",
@@ -669,7 +680,6 @@ def _agent_fields(event: dict[str, Any]) -> dict[str, Any]:
         "instruction",
         "objective",
         "schema",
-        "system",
         "max_iterations",
         "max_turn_tokens",
         "max_turn_cost",
@@ -682,9 +692,30 @@ def _agent_fields(event: dict[str, Any]) -> dict[str, Any]:
         "state",
         "iteration",
     }
-    return sanitize_evidence(
-        {key: value for key, value in event.items() if key in allowed}
-    )
+    carried = {key: value for key, value in event.items() if key in allowed}
+    last_message = _last_message(event)
+    if last_message is not None:
+        carried["last_message"] = last_message
+    return sanitize_evidence(carried)
+
+
+def _last_message(event: dict[str, Any]) -> dict[str, Any] | None:
+    """Carry the final message so a collapsed prompt still reads.
+
+    It is built into the dictionary that is sanitized rather than beside
+    it, so it carries the same redaction as every other member.
+    """
+    messages = event.get("messages")
+    if not isinstance(messages, list) or not messages:
+        return None
+    last = messages[-1]
+    if not isinstance(last, dict):
+        return {"role": "message", "content": last}
+    role = last.get("role")
+    return {
+        "role": role if isinstance(role, str) else "message",
+        "content": last.get("content"),
+    }
 
 
 def _agent_status(event: dict[str, Any], phase: str) -> str:

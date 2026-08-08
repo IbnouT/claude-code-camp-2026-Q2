@@ -9,10 +9,34 @@ from ..contracts import (
     EvidenceCitation,
     ObservatoryQuery,
     QueryStep,
+    RuntimeSessionChange,
 )
 from ..projections.live import project_live
 from ..sources.runtime import RuntimeSource, RuntimeSourceError
 from .common import missing, search_terms, values_match_filters
+
+
+def session_change(
+    runtime: RuntimeSource,
+    session_id: str,
+) -> RuntimeSessionChange | None:
+    """Report whether a session moved, without reading what it produced.
+
+    The journal's latest sequence covers everything the gateway records.
+    The agent log's size covers the phase the journal is quiet through,
+    because a model request, a plan and a response arrive with no
+    gateway event beside them. A log that is absent has produced
+    nothing, and reads as zero rather than failing.
+    """
+    activity = runtime.activity(session_id)
+    if activity is None:
+        return None
+    return RuntimeSessionChange(
+        session_id=session_id,
+        latest_seq=activity.latest_seq,
+        agent_log_size=activity.agent_log_size,
+        live=activity.live,
+    )
 
 
 def summarize(
@@ -257,7 +281,7 @@ def _selection(
                 session.id,
                 through=request.scope.through_sequence,
             ),
-            runtime.agent_events(session.id),
+            runtime.agent_events(session),
             through=request.scope.through_sequence,
         )
     except RuntimeSourceError:

@@ -18,13 +18,8 @@ export function LiveThoughtDock({
   thought,
   onToggle,
 }: Props) {
-  const phase = thought?.phase === "reasoning"
-    ? "Thinking"
-    : thought?.phase === "plan"
-      ? "Planning"
-      : thought === null
-        ? "Planning"
-        : "Acting";
+  const finished = thought?.phase === "completion";
+  const phase = phaseLabel(thought);
   return (
     <aside
       aria-label="Agent thought"
@@ -32,6 +27,7 @@ export function LiveThoughtDock({
         "live-map-dock",
         "live-thought-dock",
         expanded ? "is-expanded" : "is-collapsed",
+        ...(finished ? ["is-finished"] : []),
       ].join(" ")}
       data-map-marker-occluder="true"
     >
@@ -70,6 +66,20 @@ export function LiveThoughtDock({
       ) : null}
     </aside>
   );
+}
+
+function phaseLabel(thought: LiveAgentExcerpt | null): string {
+  if (thought === null) return "Planning";
+  switch (thought.phase) {
+    case "reasoning":
+      return "Thinking";
+    case "plan":
+      return "Planning";
+    case "completion":
+      return "Finished";
+    default:
+      return "Acting";
+  }
 }
 
 function formatHistoricalTime(value: string): string {

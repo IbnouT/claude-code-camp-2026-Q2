@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   Catalog,
   SessionInvestigation,
@@ -114,6 +114,10 @@ const investigation: SessionInvestigation = {
 };
 
 describe("SessionRoute", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(() => {
     window.history.replaceState(
       null,
@@ -331,6 +335,175 @@ describe("SessionRoute", () => {
     );
     expect(within(finder).getByText("Goal 1")).toBeInTheDocument();
     expect(within(finder).queryByText("Goal 7")).not.toBeInTheDocument();
+  });
+
+  it("refetches the story only when the change signal moves", async () => {
+    vi.useFakeTimers();
+    const liveCatalog: Catalog = {
+      ...catalog,
+      sessions: [{
+        ...catalog.sessions[0],
+        id: "live-1",
+        state: "running",
+        ended_at: null,
+        live: true,
+      }],
+    };
+    const liveInvestigation: SessionInvestigation = {
+      ...investigation,
+      run: { ...investigation.run, id: "live-1", lifecycle: "running" },
+      agent_session_id: "live-1",
+    };
+    let signal = {
+      version: 1 as const,
+      session_id: "live-1",
+      latest_seq: 4,
+      agent_log_size: 1_024,
+      live: true,
+    };
+    const requested: string[] = [];
+    window.history.replaceState(
+      null,
+      "",
+      "/sessions?player=poucet&session=live-1",
+    );
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(
+      (input: RequestInfo | URL) => {
+        const url = String(input);
+        requested.push(url);
+        if (url === "/api/sessions") {
+          return Promise.resolve({
+            ok: true,
+            json: async () => liveCatalog,
+          } as Response);
+        }
+        if (url === "/api/sessions/live-1/investigation") {
+          return Promise.resolve({
+            ok: true,
+            json: async () => liveInvestigation,
+          } as Response);
+        }
+        if (url === "/api/sessions/live-1/changed") {
+          return Promise.resolve({
+            ok: true,
+            json: async () => signal,
+          } as Response);
+        }
+        return Promise.reject(new Error(`Unexpected request: ${url}`));
+      },
+    ));
+
+    const settle = async (ms = 0): Promise<void> => {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(ms);
+      });
+    };
+    render(<SessionRoute theme="dark" onThemeChange={vi.fn()} />);
+    await settle();
+    await settle();
+    const stories = (): number => requested.filter(
+      (url) => url.endsWith("/investigation"),
+    ).length;
+    expect(stories()).toBe(1);
+
+    await settle(2_000);
+    expect(stories()).toBe(2);
+
+    await settle(2_000);
+    expect(stories()).toBe(2);
+
+    signal = { ...signal, agent_log_size: 4_096 };
+    await settle(2_000);
+    expect(stories()).toBe(3);
+
+    expect(requested.filter((url) => url === "/api/sessions")).toHaveLength(1);
+    vi.useRealTimers();
+  });
+
+  it("stops polling once the change signal reports the session ended", async () => {
+    vi.useFakeTimers();
+    const liveCatalog: Catalog = {
+      ...catalog,
+      sessions: [{
+        ...catalog.sessions[0],
+        id: "live-1",
+        state: "running",
+        ended_at: null,
+        live: true,
+      }],
+    };
+    const liveInvestigation: SessionInvestigation = {
+      ...investigation,
+      run: { ...investigation.run, id: "live-1", lifecycle: "running" },
+      agent_session_id: "live-1",
+    };
+    let signal = {
+      version: 1 as const,
+      session_id: "live-1",
+      latest_seq: 4,
+      agent_log_size: 1_024,
+      live: true,
+    };
+    const requested: string[] = [];
+    window.history.replaceState(
+      null,
+      "",
+      "/sessions?player=poucet&session=live-1",
+    );
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(
+      (input: RequestInfo | URL) => {
+        const url = String(input);
+        requested.push(url);
+        if (url === "/api/sessions") {
+          return Promise.resolve({
+            ok: true,
+            json: async () => liveCatalog,
+          } as Response);
+        }
+        if (url === "/api/sessions/live-1/investigation") {
+          return Promise.resolve({
+            ok: true,
+            json: async () => liveInvestigation,
+          } as Response);
+        }
+        if (url === "/api/sessions/live-1/changed") {
+          return Promise.resolve({
+            ok: true,
+            json: async () => signal,
+          } as Response);
+        }
+        return Promise.reject(new Error(`Unexpected request: ${url}`));
+      },
+    ));
+
+    const settle = async (ms = 0): Promise<void> => {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(ms);
+      });
+    };
+    const polls = (): number => requested.filter(
+      (url) => url.endsWith("/changed"),
+    ).length;
+    render(<SessionRoute theme="dark" onThemeChange={vi.fn()} />);
+    await settle();
+    await settle();
+
+    await settle(2_000);
+    expect(polls()).toBe(1);
+
+    signal = { ...signal, latest_seq: 9, live: false };
+    await settle(2_000);
+    expect(polls()).toBe(2);
+    const stories = requested.filter(
+      (url) => url.endsWith("/investigation"),
+    ).length;
+
+    await settle(10_000);
+    expect(polls()).toBe(2);
+    expect(
+      requested.filter((url) => url.endsWith("/investigation")).length,
+    ).toBe(stories);
+    vi.useRealTimers();
   });
 
   it("refreshes the selected session when the page becomes active", async () => {

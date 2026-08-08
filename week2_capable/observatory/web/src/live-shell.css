@@ -1399,6 +1399,15 @@
   color: var(--color-cyan);
 }
 
+.live-thought-dock.is-finished {
+  border-color:
+    color-mix(in srgb, var(--color-green) 46%, var(--color-line-strong));
+}
+
+.live-thought-dock.is-finished .live-map-dock-toggle {
+  color: var(--color-green);
+}
+
 .live-thought-dock-body {
   max-height: 108px;
   overflow-y: auto;

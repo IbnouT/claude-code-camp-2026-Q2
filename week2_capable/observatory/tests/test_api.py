@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import hashlib
 import sqlite3
+from collections.abc import Callable
 from pathlib import Path
 
 import httpx
+import pytest
 from mud_gateway.journal import Event
 from mud_gateway.knowledge import EvidenceRef, KnowledgeStore
 
@@ -1254,3 +1257,123 @@ def test_parser_counterfactual_replays_the_exact_recorded_frames(tmp_path):
     assert replay.frames == 1
     assert replay.typed_delta == 0
     assert replay.recorded_miss_rate == replay.replayed_miss_rate
+
+
+def _spend_probe_root(tmp_path: Path) -> Path:
+    """One recorded attempt, enough for a question to have somewhere to land."""
+    ledger = tmp_path / "benchmarks" / "spend-probe"
+    attempt = ledger / "attempts" / "a1"
+    attempt.mkdir(parents=True)
+    (ledger / "attempts.jsonl").write_text(
+        '{"attempt_id":"a1","journey_id":"J2","status":"complete",'
+        '"profile_id":"poucet","success":false,"stop_reason":"completed",'
+        '"iterations":2,"cost_usd":0.02,"result_mode":"full",'
+        '"parse_misses":0}\n'
+    )
+    (attempt / "agent.jsonl").write_text(
+        '{"phase":"response","at":"now","text":"I am done.","cost_usd":0.01,'
+        '"stop_reason":"end_turn"}\n'
+        '{"phase":"turn_end","at":"now","cost_usd":0.02}\n'
+    )
+    return tmp_path / "benchmarks"
+
+
+def _spend_probe_app(
+    tmp_path: Path,
+    handler: Callable[[httpx.Request], httpx.Response],
+):
+    """A copilot whose cap has room for exactly one translation at a time."""
+    return create_app(
+        Settings(
+            gateway_url="http://127.0.0.1:1",
+            benchmark_root=_spend_probe_root(tmp_path),
+            web_dist=tmp_path,
+            copilot_model="test-model",
+            copilot_api_key="test-token",
+            copilot_spend_cap=0.002,
+            copilot_input_rate=1,
+            copilot_output_rate=5,
+        ),
+        copilot_transport=httpx.MockTransport(handler),
+    )
+
+
+def _translation_response() -> httpx.Response:
+    return httpx.Response(
+        200,
+        json={
+            "content": [{
+                "type": "text",
+                "text": '```json\n{"operation":"diagnose_stop"}\n```',
+            }],
+            "usage": {"input_tokens": 100, "output_tokens": 10},
+        },
+    )
+
+
+async def _ask_autopsy(client: httpx.AsyncClient, run_id: str):
+    return await client.post(
+        "/api/ask",
+        json={
+            "question": "I need an autopsy of the final decision",
+            "scope": {"space": "sessions", "run_id": run_id},
+            "allow_model": True,
+        },
+    )
+
+
+async def test_a_cancelled_translation_returns_its_spend_reservation(tmp_path):
+    """A client that disconnects mid-call must not hold the cap closed."""
+    attempts: list[int] = []
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        attempts.append(1)
+        if len(attempts) == 1:
+            raise asyncio.CancelledError
+        return _translation_response()
+
+    app = _spend_probe_app(tmp_path, handler)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://observatory",
+    ) as client:
+        run_id = (await client.get("/api/runs")).json()["runs"][0]["id"]
+        with pytest.raises(asyncio.CancelledError):
+            await _ask_autopsy(client, run_id)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://observatory",
+    ) as client:
+        after = await _ask_autopsy(client, run_id)
+
+    assert len(attempts) == 2
+    assert after.json()["tier"] == "model_translated"
+
+
+async def test_an_unnamed_translation_failure_returns_its_reservation(tmp_path):
+    """A failure no except clause names must still settle the claim."""
+    attempts: list[int] = []
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        attempts.append(1)
+        if len(attempts) == 1:
+            raise RuntimeError("the copilot transport collapsed")
+        return _translation_response()
+
+    app = _spend_probe_app(tmp_path, handler)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://observatory",
+    ) as client:
+        run_id = (await client.get("/api/runs")).json()["runs"][0]["id"]
+        with pytest.raises(RuntimeError):
+            await _ask_autopsy(client, run_id)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://observatory",
+    ) as client:
+        after = await _ask_autopsy(client, run_id)
+
+    assert len(attempts) == 2
+    assert after.json()["tier"] == "model_translated"
