@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import socket
 import sqlite3
 import tempfile
@@ -21,6 +22,22 @@ from mud_gateway.reset_client import (
 
 class RuntimeSourceError(RuntimeError):
     """The local runtime registry or one selected journal cannot be read."""
+
+
+def _process_alive(pid: int | None) -> bool:
+    """True when a process with that id exists and we may signal it."""
+    if pid is None:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        # It exists and belongs to somebody else, which still counts.
+        return True
+    except OSError:
+        return False
+    return True
 
 
 @dataclass(frozen=True)
@@ -42,18 +59,29 @@ class RuntimeSession:
     event_count: int
     latest_seq: int
     legacy: bool
+    #: The process the launcher recorded. A row can outlive its process,
+    #: so this is what tells a stale claim from a running one.
+    pid: int | None
     objective: str | None
     goal_count: int
     nudge_count: int
 
     @property
     def live(self) -> bool:
-        return self.state in {
+        """Running, and the process saying so is still there.
+
+        A run killed outright never writes its ending, so its row keeps
+        claiming to be running for as long as the file survives. Trusting
+        the row alone shows a session as live for days after the process
+        that owned it has gone.
+        """
+        claimed = self.state in {
             "starting",
             "running",
             "draining",
             "quarantined",
         }
+        return claimed and _process_alive(self.pid)
 
     def public(self) -> dict[str, Any]:
         return {
@@ -136,7 +164,7 @@ class RuntimeSource:
                     SELECT session_id, player_id, character,
                            gateway_session_id, state, capture_status,
                            created_at, updated_at, ended_at, {stop_mode},
-                           legacy, session_dir
+                           legacy, session_dir, pid
                     FROM sessions
                     ORDER BY
                       CASE state
@@ -525,6 +553,7 @@ class RuntimeSource:
             event_count=count,
             latest_seq=latest,
             legacy=bool(row["legacy"]),
+            pid=None if row["pid"] is None else int(row["pid"]),
             objective=objective,
             goal_count=goal_count,
             nudge_count=nudge_count,

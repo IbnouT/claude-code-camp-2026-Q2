@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import os
 import json
 import socket
 import sqlite3
@@ -151,6 +152,7 @@ def add_session(
     gateway_session: str,
     state: str,
     cost: float,
+    pid: int | None = None,
 ) -> Path:
     session_dir = root / "profiles" / player / "sessions" / session
     session_dir.mkdir(parents=True)
@@ -289,7 +291,7 @@ def add_session(
             gateway_session_id, experiment_id, run_id, session_dir,
             manifest_path, control_socket, state, pid, created_at,
             updated_at, ended_at, exit_code, capture_status, legacy
-        ) VALUES (?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, NULL, ?, ?, ?, 0, ?, 0)
+        ) VALUES (?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 0)
         """,
         (
             session,
@@ -301,6 +303,11 @@ def add_session(
             str(session_dir / "session.json"),
             str(root / f"{session}.sock"),
             state,
+            # A row claiming to run is only believed while its process is
+            # there, so a session meant to read as live carries a real one.
+            (os.getpid() if pid is None else pid)
+            if state in {"starting", "running", "draining", "quarantined"}
+            else None,
             f"2026-07-30T00:00:0{1 if player == 'alpha' else 2}Z",
             "2026-07-30T00:01:00Z",
             None if state == "running" else "2026-07-30T00:02:00Z",
@@ -2561,3 +2568,52 @@ def test_a_measured_session_reads_from_its_own_tree(tmp_path: Path):
 
     assert session is not None
     assert str(attempt) in str(source._session_dir("session-measured"))
+
+
+def test_a_running_row_whose_process_is_gone_is_not_live(tmp_path: Path) -> None:
+    """A run killed outright never writes its ending, so its row keeps
+    saying it runs. Believing the row showed a session as live for two
+    days after the process owning it had gone."""
+    root = tmp_path / ".boukensha"
+    root.mkdir()
+    database = sqlite3.connect(root / "registry.db")
+    database.executescript(REGISTRY_SCHEMA)
+    database.close()
+    add_session(
+        root,
+        player="ghost",
+        character="Ghost",
+        session="session-ghost",
+        gateway_session="gateway-ghost",
+        state="running",
+        cost=0.0,
+        pid=999_999_999,
+    )
+    source = RuntimeSource(root)
+    sessions = {session.id: session for session in source.sessions()}
+
+    ghost = sessions["session-ghost"]
+    assert ghost.state == "running", "the row still claims to be running"
+    assert ghost.live is False, "and it is not believed"
+
+
+def test_a_running_row_with_a_live_process_is_live(tmp_path: Path) -> None:
+    root = tmp_path / ".boukensha"
+    root.mkdir()
+    database = sqlite3.connect(root / "registry.db")
+    database.executescript(REGISTRY_SCHEMA)
+    database.close()
+    add_session(
+        root,
+        player="here",
+        character="Here",
+        session="session-here",
+        gateway_session="gateway-here",
+        state="running",
+        cost=0.0,
+        pid=os.getpid(),
+    )
+    source = RuntimeSource(root)
+    sessions = {session.id: session for session in source.sessions()}
+
+    assert sessions["session-here"].live is True
