@@ -7,26 +7,25 @@ better than it started.
 
 ## Why this order
 
-A day of work sits uncommitted in one tree: five separate landings, none
-of them recorded. That is the only thing here that can lose work, so it
-goes first. After that the Observatory is unusable for minutes at a time
-while a session runs, which blocks every kind of verification, so it
-goes second. Only then is it worth making today's new records visible.
+Committing first, because a day of work was sitting unrecorded and that
+was the only thing here that could lose work. Then the Observatory,
+which is unusable for minutes at a time while a session runs and so
+blocks every kind of verification. Only then is it worth making the new
+records visible, and only after that the register's remainder.
 
-## Unit 1. Commit what exists, as five commits
+## Unit 1. Commit what exists
 
-Nothing is committed. Split by landing, not by file:
+Done. Three commits on `week3/capable`, pushed:
 
-| Commit | Contents |
-| --- | --- |
-| 1 | The routine time bound: settings ceiling, `deadline_margin`, `_out_of_time`, stop-by-default dispatch, `needs_rest`, cancellation record, `tests/test_navigation_bounds.py`, `routine_bounds.md`, README, journal |
-| 2 | Rooms keyed by the game's number: `observer.py`, the session hook, the projection change, `tests/test_observer.py`, the deletion of `identity.py` and the graph's identity machinery |
-| 3 | The gateway cleanup: `truth.py`, `rules.py`, `rules.yaml`, `walk.py`, `progress.py` kept, `retract_layer`, the `derived` layer, `rules_file`, `record_room_numbers` |
-| 4 | The Observatory believing a process rather than a row: the pid check, the fixture that carried the same mistake, two tests |
-| 5 | One workspace: the root `pyproject.toml`, the path source becoming a member, one lockfile, the launchers, pytest aligned at 9.1.1 |
+- `935e15c` the gateway work, which had interleaved into one change
+- `8ee9440` the Observatory believing a process rather than a row
+- `04ddd39` one uv workspace
 
-Approved messages are at the end of this document. Verify the suite is
-green before each commit and never push.
+The gateway work was meant to be three commits and could no longer be
+split: fifteen hours of it had accumulated in one tree, and the three
+landings share forty one hunks across the same three files. The lesson
+is the boundary, not the history. A landing is committed when it is
+reviewed and green, before the next one starts.
 
 ## Unit 2. The Observatory stops wedging
 
@@ -115,90 +114,14 @@ each its own commit:
    and reach agreement. Nothing is left unfixed by decision alone.
 4. Run every suite. Never leave the tree red.
 5. Commit with its tests, its README if touched, and its journal
-   observation.
+   observation, then push.
 
 Stop on: a suite that will not go green, a change needing a decision
-that is not written here, or anything destructive. Never push. Never
-delete or edit data that is evidence for a fix that has not yet been
-proven against it.
+that is not written here, or anything destructive. Never delete or
+edit data that is evidence for a fix that has not yet been proven
+against it.
 
-## The approved commit messages
+## Commit messages
 
-```
-Bound a routine to the call that carries it
-
-A routine stopped after sixty steps, inside a call abandoned after
-thirty seconds, and the two bounds had never been compared. Two of
-three sweeps spent 237 of a run's 281 commands and reported nothing.
-
-A routine now works back from the agent's own per-call timeout, read
-from the settings entry that spawns this gateway, and stops a margin
-early with an ordinary report. Routines no longer rest, since a rest
-outlasts any call and recovery arrives on the game's tick. A routine
-cut off despite the deadline records what it covered.
-
-Stopping is now the default for any outcome a sweep does not
-recognise. Reading an unknown outcome as carry on would spin without
-awaiting, so nothing would yield and the call could not be cancelled.
-```
-
-```
-Key rooms by the number the game gives them
-
-Room identity was inferred from a candidate key of title, exits and
-description, folded by a union-find until stable. It cost five hundred
-lines and still left rooms duplicated and a map that did not join
-across runs.
-
-An immortal connection now joins each session as an invisible observer
-and answers where the character is. That answer is the room's number,
-so the same room carries the same subject in every run. Two rooms
-sharing a title are separate without anything having to tell them
-apart.
-
-The observer asks only when the room can have changed, reads twice and
-believes the answer only when both agree, and reconnects when a reset
-takes its character. Nothing it learns reaches the agent.
-```
-
-```
-Take out of the gateway what was never gateway work
-
-Four modules had no caller and one had no business being there. The
-authored rules were loaded and never read, a second copy of the file
-the agent already reads. Observer truth was superseded by the observer
-itself. A scripted walk was launcher work that had wandered in.
-
-Removed with them: the layer identity computed into, the retraction
-written for that layer, and two settings nothing read.
-
-Kept: the progress reader, which is unwired rather than dead, and has
-no substitute anywhere.
-```
-
-```
-Believe the process, not the row
-
-A run killed outright never writes its ending, so its row keeps saying
-it runs. The Observatory read liveness from that column alone and
-showed a session as live for two days after the process owning it had
-gone.
-
-Liveness now needs the row and the process. The fixture carried the
-same mistake, asserting a session was live while recording no process
-at all, so it was passing for the wrong reason.
-```
-
-```
-One workspace, so no package runs a stale copy of another
-
-The Observatory imports the gateway as a library and installed it as a
-copy, so every session started from the Observatory ran gateway code
-that had not been tested. Nothing signalled the difference.
-
-The packages become one workspace on one lockfile. Members resolve
-each other from source, so there is no copy to go stale. Aligning
-pytest at 9.1.1 was required to resolve, and is worth having: three
-versions were installed and a test could pass in one package and fail
-in another for reasons nobody would see.
-```
+One concise sentence each, naming the change. No paragraphs. The detail
+belongs in this plan, the journal and the code, which already carry it.

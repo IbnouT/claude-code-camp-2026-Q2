@@ -222,3 +222,45 @@ work survives whatever comes next.
   and the benchmark path fix. Four defects were found in that batch by
   hand within an hour, so the rest of it should be assumed to hold more
   until a review says otherwise.
+
+## The Observatory wedges because the live view polls its most expensive read
+
+Measured and reproduced, and long-standing rather than new.
+
+- `/api/sessions/{id}/investigation` costs 2.4s of CPU and returns
+  19.5 MB, uncached. The session view re-requests it every 2 seconds
+  while a run is live. Work arriving every 2.0s that takes 2.4s never
+  drains, which is the whole of the hang.
+- Reproduced by driving that poll alone: `/api/health` goes from
+  0.0008s to 4.1s and recovers the instant polling stops.
+- Every handler is `async def` with its work inline, so one slow read
+  blocks the event loop and the app stops answering anything at all.
+- 1.5s of the 1.7s projection is redaction: 1.75 million regex calls by
+  volume, not backtracking. The patterns themselves are linear at
+  66 MB/s and are not worth changing.
+- It worsens over a run because `agent.jsonl` is quadratic: every model
+  request embeds the conversation so far, so 1154 records are 16.9 MB
+  against 1.28 MB flat.
+- Looking up one session linearly scans all 122, opening each database
+  and parsing each agent log, twice per request. An indexed lookup
+  already exists in the same file and is unused.
+- Nothing caches anywhere. Three identical calls: 2.52s, 2.10s, 2.56s.
+
+Ruled out: the room number work, the issuer field and the new event
+kinds. No Observatory code references any of them.
+
+## A quadratic pattern that has never been seen
+
+`TOGGLE_ENTRY` in `survival.py` is unanchored, so every position inside
+a run of letters is a legal start and each scans forward and backtracks.
+Measured: 10 KB 0.52s, 25 KB 3.24s, 50 KB 12.91s. A real toggle reply is
+under a kilobyte and costs nothing, which is why it has never fired. It
+needs one large reply to become a hang.
+
+## Where the mission stands, against all of this
+
+Every measured run still ends at level 1 with no kills and no gold.
+Room identity, the Observatory and the workspace are infrastructure and
+move none of that. F10 combat, F12 the leveling loop, F13 equipment and
+economy, and F14 verified plan conditions are unstarted, and they are
+what the mission fails on.
