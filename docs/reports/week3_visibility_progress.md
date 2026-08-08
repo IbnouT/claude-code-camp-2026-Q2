@@ -249,6 +249,64 @@ Measured and reproduced, and long-standing rather than new.
 Ruled out: the room number work, the issuer field and the new event
 kinds. No Observatory code references any of them.
 
+## The state block reaches the model in no run
+
+Measured on session `6df1300b`, at the level of what was actually sent:
+0 state blocks across 144 model requests.
+
+- The block would appear in `agent.jsonl` as a user message beginning
+  `[state]`, inside each request's `messages`. The log records the full
+  `messages` and `system`, so its absence is the block's absence, not a
+  gap in the record.
+- It has no source. `run_dsl.py:351` yields one only when the knowledge
+  capability is on and a `recall_state` tool is registered. That run
+  offered 25 tools, all `tbamud__*`, and none of them was `recall_state`.
+- The system prompt that did go out is 1343 characters of generic
+  advice, naming no standing rule.
+
+So the agent played 144 model calls with no knowledge state and no
+authored rules. Every claim about what the rules do to behaviour is
+untested, because the rules have never been in front of the model.
+
+## The Observatory answers while a session runs, and a target that cost more than it bought
+
+Measured on session `6df1300b`, the largest recorded, through the
+running app.
+
+| Measure | Before | After |
+| --- | ---: | ---: |
+| `/investigation` | 2.4 s, 19.3 MB | 0.535 s, 3.57 MB |
+| Fetched | every 2.0 s | only when the session changed |
+| `_agent_fields`, sanitised and returned | 0.601 s | 0.014 s |
+| One session lookup, paid three times | 1.04 s | ~0.01 s |
+| `/api/health` under that poll | 4.1 s | ~0.3 ms |
+
+What fixed it was not making the answer smaller. It was not asking: the
+view polls a 5 ms change signal and fetches the story only when it
+moves.
+
+Two designs were built or drafted to make the response smaller, and both
+were withdrawn on measurement.
+
+- A record window returning the most recent 200 of 4845 records reached
+  210 ms and 0.29 MB. It also opened the story at Turn 2 with its first
+  iteration numbered 122, and every heading counting iterations counted
+  the loaded ones, reporting 11 against 143. Review then found its
+  boundary rule failing on real data: 1314 records carry no iteration
+  scope and sort inside one, so 362 of 1180 window sizes cut
+  mid-iteration and displayed $0.000000 against $0.000325 actual.
+- An outline of every turn and iteration, always whole, with contents
+  loading forwards. Rejected before it was built: every figure the
+  outline carries is an aggregate over the records it replaces, so it is
+  0.0008 s of the 0.370 s projection and each contents request pays that
+  projection again. It multiplies server work to save transfer.
+
+The 300 ms target both served was written into the plan by the person
+doing the work and never put to anyone. Recorded because the defect it
+produced was not slowness, it was a story that no longer began at its
+beginning, and it survived two review gates before a person opened the
+page.
+
 ## A quadratic pattern that has never been seen
 
 `TOGGLE_ENTRY` in `survival.py` is unanchored, so every position inside
