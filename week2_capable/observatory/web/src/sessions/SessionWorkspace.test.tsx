@@ -256,6 +256,8 @@ function investigation(): SessionInvestigation {
           mcp_result: "A North Gate",
           rendered_result: "A North Gate",
           model_input: "A North Gate",
+          result_mode: "full",
+          truncated_chars: 1200,
         },
       },
     }),
@@ -866,6 +868,52 @@ describe("SessionsWorkspace", () => {
     expect(await screen.findByText("1 available tool")).toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith(
       "/api/sessions/session-1/records/agent%3A4/fields",
+      { cache: "no-store" },
+    );
+  });
+
+  it("says how a tool result was presented and what was cut", async () => {
+    const user = userEvent.setup();
+    renderWorkspace();
+
+    await user.click(screen.getByRole("button", {
+      name: "Select Goal 1: Find the north gate",
+    }));
+    await user.click(screen.getByRole("button", { name: /^Turn 1/ }));
+
+    expect(screen.getByText(
+      /Open each tool result transformation · presented full · 1,200 characters cut/,
+    )).toBeInTheDocument();
+
+    await user.click(screen.getByText(/Open each tool result transformation/));
+    expect(screen.getByText("1,200 characters cut before the model"))
+      .toBeInTheDocument();
+  });
+
+  it("opens the system prompt from the session start card", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        version: 1,
+        record_id: "agent:1",
+        source_ref: "agent.jsonl line 1",
+        kind: "session_start",
+        fields: { system: "# Role\n\nYou are a MUD Journey Player Agent." },
+      }),
+    } as Response));
+    renderWorkspace();
+
+    expect(fetch).not.toHaveBeenCalled();
+    await user.click(screen.getByText("Standing instructions given to the model"));
+    await user.click(screen.getByRole("button", {
+      name: "Open the system prompt",
+    }));
+
+    expect(await screen.findByText(/You are a MUD Journey Player Agent/))
+      .toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/sessions/session-1/records/agent%3A1/fields",
       { cache: "no-store" },
     );
   });

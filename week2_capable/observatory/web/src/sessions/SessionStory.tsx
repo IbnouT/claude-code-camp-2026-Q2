@@ -219,6 +219,10 @@ export function SessionStory({
             {" "}The run used {investigation.model ?? "an unlabelled model"} with
             {" "}{toolCountAtStart(story.startRecords)} available tools.
           </p>
+          <StandingInstructions
+            investigation={investigation}
+            records={story.startRecords}
+          />
         </article>
         <button className={cx("story-cost-card")}  type="button" onClick={onOpenCost}>
           <span>Model activity</span>
@@ -1020,13 +1024,28 @@ function TransformationStages({ stages }: { stages: Record<string, unknown> }) {
     ["After result presentation", stages.rendered_result],
     ["Exact model input", stages.model_input],
   ] as const;
+  const mode = typeof stages.result_mode === "string"
+    ? stages.result_mode
+    : null;
+  const cut = typeof stages.truncated_chars === "number"
+    ? stages.truncated_chars
+    : 0;
   return (
     <details className={cx("story-detail")} >
-      <summary>Open each tool result transformation</summary>
+      <summary>
+        Open each tool result transformation
+        {mode === null ? "" : ` · presented ${mode}`}
+        {cut > 0 ? ` · ${formatInteger(cut)} characters cut` : ""}
+      </summary>
       <div className={cx("story-detail-body", "story-record-stack")} >
         {pairs.map(([label, value]) => (
           <article className={cx("story-raw-record")}  key={label}>
-            <header><strong>{label}</strong></header>
+            <header>
+              <strong>{label}</strong>
+              {cut > 0 && label === "Exact model input" ? (
+                <time>{formatInteger(cut)} characters cut before the model</time>
+              ) : null}
+            </header>
             <pre>{typeof value === "string" ? value : "Unavailable"}</pre>
           </article>
         ))}
@@ -1070,6 +1089,36 @@ function runtimeSessionId(investigation: SessionInvestigation): string | null {
   return investigation.source_kind === "runtime_session"
     ? investigation.run.id
     : null;
+}
+
+function StandingInstructions({
+  investigation,
+  records,
+}: {
+  investigation: SessionInvestigation;
+  records: SessionEvidenceRecord[];
+}) {
+  const sessionId = runtimeSessionId(investigation);
+  const start = records.find((record) => record.kind === "session_start");
+  if (sessionId === null || start === undefined) return null;
+  return (
+    <details className={cx("story-detail")}>
+      <summary>Standing instructions given to the model</summary>
+      <div className={cx("story-detail-body")}>
+        <StoryRecordFields
+          record={start}
+          sessionId={sessionId}
+          label="the system prompt"
+        >
+          {(detail: SessionRecordFields) => (
+            typeof detail.fields.system === "string"
+              ? <pre>{detail.fields.system}</pre>
+              : <p>No system prompt was retained for this run.</p>
+          )}
+        </StoryRecordFields>
+      </div>
+    </details>
+  );
 }
 
 function Provenance({ record }: { record: SessionEvidenceRecord }) {

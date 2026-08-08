@@ -22,10 +22,15 @@ const notCaptured: Record<string, string> = {
 type Props = {
   record: SessionEvidenceRecord;
   sessionId: string;
+  /** What the button offers to open, when it is not the record's body. */
+  label?: string;
   children: (detail: RecordFields) => React.ReactNode;
 };
 
-export function StoryRecordFields({ record, sessionId, children }: Props) {
+export function StoryRecordFields(
+  { record, sessionId, label, children }: Props,
+) {
+  const opens = label ?? "the exact body";
   const [detail, setDetail] = useState<RecordFields | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -70,7 +75,7 @@ export function StoryRecordFields({ record, sessionId, children }: Props) {
       <div className={cx("story-wire-load")}>
         <button disabled={loading} type="button" onClick={load}>
           <FileJson2 size={15} />
-          {loading ? "Loading the exact body…" : "Open the exact body"}
+          {loading ? `Loading ${opens}…` : `Open ${opens}`}
         </button>
         {error ? <p role="alert">{error}</p> : null}
       </div>
