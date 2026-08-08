@@ -124,8 +124,9 @@ stays inside the session directory and never reaches the browser.
 The Observatory submits every Goal and Nudge through this endpoint and queues
 a retained REPL wake envelope. A directive that reaches an active checkpoint
 is applied there. If the turn ends first, the wake starts the next turn and
-that turn's first checkpoint applies it. The envelope never enters model
-context. Goal replaces objective context only after application. Nudge remains
+that turn's first checkpoint applies it. The turn record states that
+directive's instruction, so a turn a wake started names what it was started
+to do. The envelope never enters model context. Goal replaces objective context only after application. Nudge remains
 guidance and does not become objective metadata.
 
 The gateway's typed result envelopes stay intact in model context and session

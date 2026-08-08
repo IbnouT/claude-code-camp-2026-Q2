@@ -251,6 +251,8 @@ def test_operator_wakeup_starts_a_turn_without_polluting_the_prompt(
     prompt_text = prompt["messages"][-1]["content"][-1]["text"]
     assert "Find a peacekeeper." in prompt_text
     assert "operator_message" not in prompt_text
+    turn = next(record for record in records if record["phase"] == "turn")
+    assert turn["instruction"] == "Find a peacekeeper."
     history = json.loads(
         (session_dir / "operator-messages.json").read_text(encoding="utf-8")
     )

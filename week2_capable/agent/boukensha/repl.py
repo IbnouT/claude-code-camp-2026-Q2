@@ -377,12 +377,17 @@ class Repl:
             self._retain_initial_operator_objective(text)
         self._run_turn(text)
 
-    def _run_turn(self, text: str | None) -> None:
-        """Run a normal turn or an operator-only wake turn."""
+    def _run_turn(self, text: str | None, instruction: str | None = None) -> None:
+        """Run a normal turn or an operator-only wake turn.
+
+        A wake turn has no transcript line, so ``instruction`` states what the
+        turn was started to do: the operator's own words, which otherwise live
+        only in the ``operator_control`` record.
+        """
         self._turn += 1
         if text is not None:
             self._apply_stdin_operator_message(text)
-        self._logger.turn(n=self._turn, instruction=text)
+        self._logger.turn(n=self._turn, instruction=text or instruction)
         if text is not None:
             self._context.add(Message.user(text))
 
@@ -457,7 +462,15 @@ class Repl:
         if self._operator is None:
             self._writeln("[error] retained operator message has no control channel")
             return True
-        self._run_turn(None)
+        retained_instruction = retained.get("instruction")
+        self._run_turn(
+            None,
+            instruction=(
+                retained_instruction.strip() or None
+                if isinstance(retained_instruction, str)
+                else None
+            ),
+        )
         return True
 
     def _retained_operator_message(
