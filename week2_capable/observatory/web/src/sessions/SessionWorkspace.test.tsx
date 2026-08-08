@@ -890,32 +890,29 @@ describe("SessionsWorkspace", () => {
       .toBeInTheDocument();
   });
 
-  it("opens the system prompt from the session start card", async () => {
-    const user = userEvent.setup();
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        version: 1,
-        record_id: "agent:1",
-        source_ref: "agent.jsonl line 1",
-        kind: "session_start",
-        fields: { system: "# Role\n\nYou are a MUD Journey Player Agent." },
-      }),
-    } as Response));
-    renderWorkspace();
+  it("carries the system prompt on the session start card, collapsed", async () => {
+    const payload = investigation();
+    payload.records = payload.records.map((item) => (
+      item.kind === "session_start"
+        ? {
+          ...item,
+          fields: {
+            ...item.fields,
+            system: "# Role\n\nYou are a MUD Journey Player Agent.",
+          },
+        }
+        : item
+    ));
+    renderWorkspace(payload);
 
-    expect(fetch).not.toHaveBeenCalled();
-    await user.click(screen.getByText("Standing instructions given to the model"));
-    await user.click(screen.getByRole("button", {
-      name: "Open the system prompt",
-    }));
-
-    expect(await screen.findByText(/You are a MUD Journey Player Agent/))
-      .toBeInTheDocument();
-    expect(fetch).toHaveBeenCalledWith(
-      "/api/sessions/session-1/records/agent%3A1/fields",
-      { cache: "no-store" },
+    const summary = screen.getByText(
+      "System prompt · the standing instructions given to the model",
     );
+    expect(summary).toBeInTheDocument();
+    // Collapsed by default: the text is present but its details is shut.
+    expect(summary.closest("details")).not.toHaveAttribute("open");
+    expect(screen.getByText(/You are a MUD Journey Player Agent/))
+      .toBeInTheDocument();
   });
 
   it("shows raw MUD, parser input, and delivered result as connected stages", async () => {

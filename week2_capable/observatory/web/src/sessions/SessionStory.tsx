@@ -1098,24 +1098,16 @@ function StandingInstructions({
   investigation: SessionInvestigation;
   records: SessionEvidenceRecord[];
 }) {
-  const sessionId = runtimeSessionId(investigation);
   const start = records.find((record) => record.kind === "session_start");
-  if (sessionId === null || start === undefined) return null;
+  const system = start?.fields.system;
+  if (typeof system !== "string" || system.trim() === "") return null;
   return (
-    <details className={cx("story-detail")}>
-      <summary>Standing instructions given to the model</summary>
+    <details className={cx("story-detail", "story-standing")}>
+      <summary>
+        System prompt · the standing instructions given to the model
+      </summary>
       <div className={cx("story-detail-body")}>
-        <StoryRecordFields
-          record={start}
-          sessionId={sessionId}
-          label="the system prompt"
-        >
-          {(detail: SessionRecordFields) => (
-            typeof detail.fields.system === "string"
-              ? <pre>{detail.fields.system}</pre>
-              : <p>No system prompt was retained for this run.</p>
-          )}
-        </StoryRecordFields>
+        <pre>{system}</pre>
       </div>
     </details>
   );

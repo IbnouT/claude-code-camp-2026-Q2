@@ -573,8 +573,13 @@ async def test_runtime_investigation_exposes_complete_model_exchange(
     assert all(
         withheld.isdisjoint(record["fields"])
         for record in payload["records"]
-        if record["source"] == "agent"
+        if record["source"] == "agent" and record["kind"] != "session_start"
     )
+    # The system prompt appears once for the whole session, so it is carried
+    # rather than withheld, and nothing else about session start is.
+    start = by_kind["session_start"]["fields"]
+    assert start["system"] == "Observe every retained interaction."
+    assert {"messages", "request", "response", "tools"}.isdisjoint(start)
 
 
 async def test_record_fields_serve_the_withheld_members_sanitized(

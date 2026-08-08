@@ -693,6 +693,13 @@ def _agent_fields(event: dict[str, Any]) -> dict[str, Any]:
         "iteration",
     }
     carried = {key: value for key, value in event.items() if key in allowed}
+    # The system prompt is withheld everywhere it repeats, and carried here
+    # because it appears once for the whole session and is what the model was
+    # told to be.
+    if event.get("phase") == "session_start":
+        system = event.get("system")
+        if isinstance(system, str):
+            carried["system"] = system
     last_message = _last_message(event)
     if last_message is not None:
         carried["last_message"] = last_message

@@ -941,3 +941,18 @@
     transform: rotate(90deg);
   }
 }
+
+.story-standing {
+  margin-top: 13px;
+}
+
+.story-standing pre {
+  max-height: 260px;
+  margin: 7px 0 0;
+  padding: 13px;
+  overflow: auto;
+  border-radius: 8px;
+  background: #05090c;
+  color: var(--session-text);
+  white-space: pre-wrap;
+}
