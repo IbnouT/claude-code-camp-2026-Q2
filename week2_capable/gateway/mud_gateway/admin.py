@@ -42,14 +42,21 @@ class AdminSession:
         password: str,
         host: str = "127.0.0.1",
         port: int = 4000,
+        session_id: str | None = None,
     ) -> None:
+        # Serving a session means writing into that session's flow. An id
+        # of its own would split one session's record in two, and the half
+        # holding the immortal traffic is the half nobody thinks to read
+        # when an immortal command is what went wrong.
         self.session = Session(
             journal,
             name=name,
             password=password,
             host=host,
             port=port,
-            session_id=f"admin-{name}",
+            session_id=session_id or f"admin-{name}",
+            issuer="gateway-admin",
+            observes=False,
         )
         self.journal = journal
 

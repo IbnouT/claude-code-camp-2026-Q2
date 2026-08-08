@@ -227,3 +227,32 @@ def test_unknown_capability_is_rejected(
     )
     with pytest.raises(GatewaySettingsError):
         GatewaySettings.load()
+
+
+def test_a_launched_session_reads_the_secret_file_it_was_given(tmp_path, monkeypatch):
+    """The launcher hands a child the file to read. Without this the
+    immortal connection has no credential and never opens."""
+    from mud_gateway.settings import GatewaySettings
+
+    secrets = tmp_path / "admin.env"
+    secrets.write_text("MUD_ADMIN_PASSWORD=from-the-file\n", encoding="utf-8")
+    monkeypatch.delenv("MUD_ADMIN_PASSWORD", raising=False)
+    monkeypatch.setenv("BOUKENSHA_ADMIN_SECRET_FILE", str(secrets))
+    settings = GatewaySettings(config_dir=tmp_path, session_id="a-session")
+
+    assert settings.admin_password == "from-the-file"
+
+
+def test_a_launched_session_reads_no_file_it_was_not_given(tmp_path, monkeypatch):
+    """Falling back to the configuration directory would let a child read
+    a secret the launcher chose not to hand it."""
+    from mud_gateway.settings import GatewaySettings
+
+    (tmp_path / ".env").write_text(
+        "MUD_ADMIN_PASSWORD=not-for-you\n", encoding="utf-8"
+    )
+    monkeypatch.delenv("MUD_ADMIN_PASSWORD", raising=False)
+    monkeypatch.delenv("BOUKENSHA_ADMIN_SECRET_FILE", raising=False)
+    settings = GatewaySettings(config_dir=tmp_path, session_id="a-session")
+
+    assert settings.admin_password is None

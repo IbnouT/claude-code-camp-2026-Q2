@@ -56,7 +56,11 @@ mcp_servers:
 
     prefix: tbamud               # agent-side tool-name prefix (tbamud__look)
     required: true               # true: a failed spawn stops boot. false: warn and continue tool-less
-    #timeout: 30                 # per-call ceiling in seconds (default 30)
+    # Per-call ceiling in seconds. The agent gives up waiting here, and the
+    # gateway reads the same number to bound its own routines below it, so a
+    # sweep reports rather than being cut off. A real key, not a comment: an
+    # attempt's settings are rebuilt by a YAML parse, which keeps no comments.
+    timeout: 30
 
     # These are agent-side visibility filters applied after MCP discovery.
     # They do not grant gateway permission. Names are the server's unprefixed
@@ -186,3 +190,16 @@ observatory:
 #   MUD_PASSWORD_TESTER=... (example tester profile above)
 # A player secret may instead live in .boukensha/profiles/<profile>/.env
 # under the profile's configured password_env name.
+
+# === capabilities: the week 3 capability master flags. ======================
+# Each capability has exactly one flag, and every number it needs is a setting
+# under its block. A capability absent here is off, and off means behavior
+# byte-identical to the measured baseline.
+capabilities:
+  navigation:
+    enabled: false
+    # Seconds held back from the call's ceiling, so a step already walking
+    # when the deadline passes still finishes inside the call. The slowest
+    # four-command step measured is 1.21s. The rest is insurance against
+    # what one quiet local run cannot show.
+    deadline_margin: 4.0

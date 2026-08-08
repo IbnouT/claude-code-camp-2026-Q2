@@ -7,11 +7,23 @@ from mud_gateway.commands import IMMORTAL
 from mud_gateway.profiles import PROFILES, Surface
 
 PACKAGE = Path(__file__).resolve().parents[1] / "mud_gateway"
-# The mortal runtime is the WHOLE package except admin.py, which holds the typed
-# immortal operations and is imported only by the separate admin_process. Scanning
-# the package dynamically means a future mortal module cannot quietly reach admin
-# code without this invariant catching it.
-MORTAL_MODULES = tuple(sorted(p.name for p in PACKAGE.glob("*.py") if p.name != "admin.py"))
+# What has to hold is that the agent cannot reach immortal powers, and that
+# nothing immortal reaches the agent. Which module imports what is a stand-in
+# for the first, and a useful one: a module that cannot see admin code cannot
+# expose it. Two modules are excused and named, because they exist to use an
+# immortal connection on the harness's behalf and never on the agent's.
+#
+#   admin.py    the typed immortal operations themselves
+#   observer.py reads the room number the game states, and asks nothing else
+#
+# The second half, that no immortal value reaches the agent, is not an import
+# question at all, and is asserted below over the payloads themselves.
+EXCUSED = {"admin.py", "observer.py"}
+MORTAL_MODULES = tuple(sorted(
+    str(path.relative_to(PACKAGE))
+    for path in PACKAGE.rglob("*.py")
+    if path.name not in EXCUSED
+))
 FORBIDDEN_LEAVES = {"admin", "admin_server", "reset"}
 FORBIDDEN_ROOTS = {"admin_process"}
 

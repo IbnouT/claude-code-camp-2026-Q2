@@ -422,8 +422,8 @@ earlier look had earned. Room identity is keyed partly on that text, so
 the keys flip on every step and rooms with the same title merge and come
 apart again. The map stops growing. The sweep walks the same four rooms
 in a circle for twenty six moves. Three commands per step against a
-thirty second limit on the call blows the limit, so the model is told
-its sweep failed while the routine keeps walking. Nothing cancels it.
+thirty second limit on the call blows the limit, so the sweep is cut off
+and the model is told only that its tool failed.
 Its own rest reflex sits the character down underneath the model, which
 spends its last five turns trying to walk a character it cannot see is
 resting, because the block does not mention posture.
@@ -444,6 +444,87 @@ What I take from it: cheap is not free, and four cheap things landed in
 one afternoon interact in ways that no one of them predicts. The rule I
 would give myself is that anything which changes what is recorded, not
 just what is displayed, has to be run before the next such change lands.
+
+### 12. A bound in steps, inside a call bounded in seconds
+
+The sweep that circled for twenty six moves had a second problem
+underneath the first, and it is the more interesting one. A routine
+stops after sixty steps. The call carrying it is abandoned after thirty
+seconds. Nobody had ever put those two numbers next to each other.
+
+The run says what happens when you do. Of three sweeps, one finished and
+reported. The other two issued 149 and 88 commands, left no stop record
+at all, and returned nothing: 237 of the run's 281 commands, four fifths
+of everything the character did, invisible to the model that asked for
+it.
+
+I first wrote that the abandoned sweeps kept walking unattended. That
+was wrong, and the review that caught it made the defect clearer rather
+than smaller. Both sweeps stop at the same instant, 29.85s after their
+call, because the agent does send a cancellation and the server library
+does honour it. Control is never lost. What is lost is the report, which
+is the only thing the model ever sees.
+
+Reaching the honest number took three attempts and I got it wrong each
+time in the same way. I measured the gap between one journal event and
+the next and called it the cost of a command. The gaps hold whatever was
+waiting: a turn boundary carrying the model's own thinking time, a pause
+while the character is reset, a rest sleeping through six seconds. My
+first margin was built on a 1.995s "slowest command" that was setup work,
+a `score` arriving two seconds after a reset pause had ended, before any
+routine existed. Restricted to commands inside a routine, the slowest gap
+is 0.303s, and measured properly at the wire, send to reply, the slowest
+command in the entire run is 0.114s. The margin I had derived was twice
+what the evidence supported, which is four seconds of every call, six or
+seven steps of walkable ground thrown away.
+
+So the margin is now two numbers that are named separately: a measured
+worst step of 1.21s, four commands because a step stands the character
+first, and an authored factor of about three that the run cannot justify
+and the document says so. Insurance is allowed. Insurance dressed as
+measurement is not.
+
+The other thing the run settled is that a routine cannot rest. The rest
+loop sleeps up to 120 seconds against a 30 second call, and the one rest
+in the record recovered nothing at all: movement was 14 before it and 14
+after 12.6 seconds of sitting, because regeneration lands on the game's
+tick and not on ours. Worse, the cut arrived between the command that
+sits the character down and the one that stands it up, so the character
+stayed seated, the next order was refused, and the run ended that way.
+There is no honest repair for that from inside a cancelled call, since
+every wait fails at once. The repair is to never sit down: a routine
+that finds movement low now stops and says so, and the model rests
+between calls with the command it already had.
+
+One more thing surfaced only because a reviewer asked what a missed case
+would do. Making the deadline a new stop reason is safe only if every
+place that reads an outcome stops on reasons it does not recognise. The
+sweep did the opposite, listing what stops and letting the rest fall
+through, and a step refused on the deadline returns without waiting for
+anything, so a loop that carried on would spin without ever yielding.
+Nothing would run, the connection would never be read, and the
+cancellation that ends the call could not even be delivered. A missed
+entry would not be a wrong answer, it would be a gateway that has to be
+killed.
+
+I proved that on purpose. Reverting the dispatch to its old shape and
+running the new tests did not fail them, it hung the suite, and the
+timeout I had wrapped around the test could not fire either, for exactly
+the same reason. The tests now cap the refusals and fail with a sentence
+instead. Two of them, written first, had passed against the reverted
+code because both reached the one dispatch site that was already
+correct.
+
+Evidence: [the plan](../plans/week3_capable/features.md), [the
+design](../plans/week3_capable/routine_bounds.md), and
+`week2_capable/gateway/tests/test_navigation_bounds.py`. Against the
+live game, three sweeps now pair start to stop with none past the
+ceiling, and with the deadline moved in deliberately close, all three
+stop on it and report.
+
+What I take from it: a bound is only a bound in the unit the caller
+measures in. Steps are not seconds, and the two had never been compared
+because they lived in different packages.
 
 ## Technical Conclusions
 

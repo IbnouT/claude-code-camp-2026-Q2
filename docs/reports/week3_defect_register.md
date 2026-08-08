@@ -21,10 +21,15 @@ record claiming the auto-flee threshold had been set.
 
 ## Critical
 
-- A sweep can outlive its own tool timeout and keep issuing commands
-  while the model believes it failed. Sixty steps at three commands each
-  cannot fit thirty seconds. Two of three sweeps ended with no stop
-  record at all.
+- A sweep's step bound spans the time its call is given rather than
+  sitting under it, so being cut off is the normal ending, and a cut-off
+  sweep reports nothing. Sixty steps at three commands and 0.2s a
+  command needs 36s against a 30s ceiling, and the measured sweeps ran
+  at three commands a step. Two of three ended with no stop record and
+  no result, having spent 237 of the run's 281 commands. The character
+  is not left walking: the agent sends `notifications/cancelled` and the
+  server library honours it, which is why both sweeps stop at the same
+  instant. What is lost is the report, not control.
 - The look meant to happen once happens on every arrival, because the
   arrival frame overwrites the stored description with an empty one
   before the check runs, and the other guard reads a field that does not

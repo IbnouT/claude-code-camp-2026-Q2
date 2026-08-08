@@ -35,73 +35,38 @@ class Room:
         return frozenset(self.exits - self.links.keys())
 
 
-_IDENTITY_CACHE: dict[int, dict[str, str]] = {}
-
-
-def _live_identity(
-    store: KnowledgeStore, facts: list[Any]
-) -> dict[str, str]:
-    """The place-to-room mapping for the facts as they stand right now.
-
-    Identity is computed here rather than read from what was recorded,
-    because a place first seen in this run would otherwise belong to no
-    room until the run ended, which is precisely when the agent needs to
-    know that the room it is standing in is one it has walked before.
-
-    The answer is kept until the store changes, so building the map many
-    times in one routine costs one computation.
-    """
-    from .. import identity as identity_module
-
-    cursor = store.last_change_seq()
-    cached = _IDENTITY_CACHE.get(cursor)
-    if cached is not None:
-        return cached
-    bound = {
-        binding.place_id: binding.room_id
-        for binding in identity_module.resolve(
-            identity_module.places_from_facts(facts)
-        )
-    }
-    _IDENTITY_CACHE.clear()
-    _IDENTITY_CACHE[cursor] = bound
-    return bound
-
-
 @dataclass
 class WorldGraph:
     """Every known room, with the places each was observed as."""
 
     rooms: dict[str, Room]
-    identity: dict[str, str] = field(default_factory=dict)
 
     def room_of(self, place_id: str | None) -> str | None:
-        """The room a place belongs to, or the place when it stands alone."""
-        if place_id is None:
-            return None
-        return self.identity.get(place_id, place_id)
+        """The room a subject names. A subject is already one room."""
+        return place_id
 
     @classmethod
     def from_store(cls, store: KnowledgeStore) -> "WorldGraph":
-        """The map, over rooms when identity was recorded, else over places.
+        """The map, one entry per room the game named.
 
-        Identity joins the places one room was seen as, so a route can
-        cross a session boundary. Without it every run holds a separate
-        copy of the same ground and the map never joins.
+        A room recorded under the game's own number is the same subject in
+        every run, so the map joins across sessions with nothing to work
+        out afterwards.
         """
         facts = list(store.current_facts(layer="learned"))
-        identity = _live_identity(store, facts)
+        # A store written before rooms were numbered holds subjects that
+        # never joined across runs and cannot join now. Once any numbered
+        # room exists, those are left out rather than counted as ground:
+        # mixing them reports a frontier no route can reach.
+        numbered = any(fact.subject.startswith("room:") for fact in facts)
+        prefix = "room:" if numbered else "place:"
         rooms: dict[str, Room] = {}
 
-        def named(place_id: str) -> str:
-            return identity.get(place_id, place_id)
-
         def room(place_id: str) -> Room:
-            key = named(place_id)
-            return rooms.setdefault(key, Room(key))
+            return rooms.setdefault(place_id, Room(place_id))
 
         for fact in facts:
-            if not fact.subject.startswith("place:"):
+            if not fact.subject.startswith(prefix):
                 continue
             if fact.predicate == "title" and isinstance(fact.value, str):
                 room(fact.subject).title = fact.value
@@ -120,8 +85,8 @@ class WorldGraph:
                     fact.predicate.removeprefix("exit.")
                 )
                 if direction is not None:
-                    room(fact.subject).links[direction] = named(fact.value)
-        return cls(rooms, dict(identity))
+                    room(fact.subject).links[direction] = fact.value
+        return cls(rooms)
 
     def by_title(self, title: str) -> list[Room]:
         """Learned rooms matching a remembered title.

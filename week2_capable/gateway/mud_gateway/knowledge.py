@@ -243,32 +243,6 @@ class KnowledgeStore:
             )
         return Snapshot(snapshot_id, high_water, reason, digest, generation, now)
 
-    def retract_layer(self, layer: str, *, reason: str) -> int:
-        """Withdraw every current fact of one layer. Returns how many.
-
-        Written for the derived layer, which holds conclusions computed
-        from other facts: when the facts underneath move, the conclusions
-        are dropped whole and computed again rather than edited.
-        """
-        self._writable()
-        if layer not in LAYERS:
-            raise KnowledgeError(f"unknown knowledge layer {layer!r}")
-        if not reason.strip():
-            raise KnowledgeError("a retraction reason must not be empty")
-        rows = self._db.execute(
-            "SELECT f.fact_id, f.current_assertion_id, a.* "
-            "FROM facts AS f JOIN assertions AS a "
-            "ON a.assertion_id = f.current_assertion_id "
-            "WHERE f.layer = ?",
-            (layer,),
-        ).fetchall()
-        tx = uuid.uuid4().hex
-        now = time.time()
-        with self._transaction():
-            for row in rows:
-                self._retract_row(row, method=reason, now=now, tx=tx)
-        return len(rows)
-
     def _retract_row(self, row: Any, *, method: str, now: float,
                      tx: str) -> None:
         """Append one retraction and clear the fact's current assertion."""
@@ -557,6 +531,24 @@ class KnowledgeStore:
             self._assertion(str(row["assertion_id"]))
             for row in self._db.execute(sql, args)
         ]
+
+    def current_fact(
+        self, subject: str, predicate: str, *, layer: str
+    ) -> Assertion | None:
+        """One current fact, read by its own key.
+
+        Walking every fact to answer a question about one of them costs
+        the whole store on every arrival, and the store only grows.
+        """
+        row = self._db.execute(
+            "SELECT current_assertion_id FROM facts "
+            "WHERE subject = ? AND predicate = ? AND layer = ? "
+            "AND current_assertion_id IS NOT NULL",
+            (subject, predicate, layer),
+        ).fetchone()
+        if row is None:
+            return None
+        return self._assertion(str(row["current_assertion_id"]))
 
     def assertions(self, *, fact_id: str | None = None) -> list[Assertion]:
         """Return immutable assertion history for observability and rebuilds."""

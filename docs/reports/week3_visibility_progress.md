@@ -128,6 +128,54 @@ re-tread rate, or travel-by-title is well defined until identity is.
   proven different, 188 correct merges blocked. The fix changes future
   runs only. Repairing the recorded past needs journal replay.
 
+## A routine now stops before its call is abandoned
+
+- The measured defect: of three sweeps in the newbie-zone attempt, one
+  reported and two were cut at 29.85s having issued 149 and 88 commands,
+  leaving no stop record and no result. 237 of the run's 281 commands
+  reported nothing.
+- Cancellation was never the problem. The agent sends it and the library
+  honours it, which is why both sweeps stop at the same instant. The
+  report is what was lost.
+- Three measurements of command cost were wrong the same way before one
+  was right. An event-to-event gap holds whatever was waiting: a turn
+  boundary, a reset pause, a rest. The margin was first built on a 1.995s
+  "command" that was setup work, a `score` two seconds after a reset
+  pause had ended. Inside a routine the slowest gap is 0.303s, and at the
+  wire the slowest command in the run is 0.114s.
+- The margin is therefore stated in two parts: a measured worst step of
+  1.21s, four commands because a step stands the character first, and an
+  authored factor of about three that the run cannot justify.
+- Resting moved out of routines entirely. The loop sleeps up to 120s
+  against a 30s call, the one rest on record recovered nothing in 12.6s,
+  and the cut landed between sitting down and standing up, which is how
+  the run ended seated.
+- Found only by asking what a missed case would do: the sweep listed the
+  outcomes that stop and let others fall through, and a step refused on
+  the deadline returns without awaiting. One missed entry would spin
+  without yielding, so the connection would never be read and the call
+  could not even be cancelled. A hang, not a wrong answer.
+- Proven by reverting the dispatch and running the new tests: the suite
+  hung rather than failing, and the timeout wrapped around the test could
+  not fire either. Two tests written first had passed against the
+  reverted code, because both reached the one dispatch site already
+  correct. The tests now cap refusals and fail with a sentence.
+- Live verification without a model, since no API key is configured:
+  three sweeps against the running game pair start to stop with none past
+  the ceiling, and with the deadline moved deliberately close all three
+  stop on it and report.
+- A negative margin passed the first guard and put the deadline past the
+  ceiling, which is this defect returning through a one-character typo.
+  The guard was written as the way the bound had been seen to fail rather
+  than as what a usable bound is. Stated as a range it refuses negative,
+  zero, and a value that is not a number, all of which leave the deadline
+  unable to fire.
+- Outstanding, not skipped: the configuration unit has no measurement
+  against baseline. That needs the same journey run with the capability
+  off and on, which needs model calls, and an attempt dies at the first
+  one with a 401 because no API key is configured. Nothing here claims a
+  measured effect on the mission.
+
 ## Open defects and missing pieces, as of the newbie-zone run
 
 Found by hand during one live run, not by tests. Recorded here so the

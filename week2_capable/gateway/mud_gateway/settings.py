@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 import re
 from dataclasses import dataclass, field
@@ -28,6 +29,10 @@ CAPABILITIES = (
     "economy",
     "campaign",
 )
+
+# The command the agent spawns for this gateway. It identifies our own
+# entry among the configured MCP servers, whatever that entry is called.
+GATEWAY_COMMAND = "boukensha-gateway"
 
 
 @dataclass(frozen=True)
@@ -62,13 +67,6 @@ class GatewaySettings:
     reset_pause_timeout: float = 15.0
     reset_child_timeout: float = 30.0
     reset_client_timeout: float = 45.0
-    # Observer instrumentation, never agent knowledge: when on, the game's
-    # own room number is read on a separate immortal connection and stored
-    # where the agent cannot read it, so identity and coverage can be
-    # graded against truth rather than against our own conclusions.
-    record_room_numbers: bool = False
-    # The authored advice the agent carries. Editing it never touches code.
-    rules_file: Path = Path(__file__).resolve().parent / "rules.yaml"
     capabilities: Mapping[str, bool] = field(default_factory=lambda: {
         name: False for name in CAPABILITIES
     })
@@ -82,6 +80,11 @@ class GatewaySettings:
     run_id: str | None = None
     session_dir: Path | None = None
     control_socket: Path | None = None
+    # Seconds the agent waits for one tool call before abandoning it. A
+    # routine bounds itself below this, so it reports instead of being cut
+    # off. None when the settings file does not state it, which stops the
+    # routines rather than substituting a number of our own.
+    call_ceiling: float | None = None
 
     @classmethod
     def load(cls) -> "GatewaySettings":
@@ -152,7 +155,6 @@ class GatewaySettings:
                 "gateway.reset.client_timeout_seconds",
             ),
             capabilities=flags,
-            record_room_numbers=bool(observer.get("record_room_numbers")),
             capability_settings=capability_blocks,
             agent_id=os.environ.get("BOUKENSHA_AGENT_ID"),
             session_id=os.environ.get("BOUKENSHA_SESSION_ID"),
@@ -161,6 +163,7 @@ class GatewaySettings:
             run_id=os.environ.get("BOUKENSHA_RUN_ID"),
             session_dir=_environment_path("BOUKENSHA_SESSION_DIR"),
             control_socket=_environment_path("BOUKENSHA_CONTROL_SOCKET"),
+            call_ceiling=_call_ceiling(config_dir / "settings.yaml"),
         )
 
     @property
@@ -173,8 +176,22 @@ class GatewaySettings:
 
     @property
     def admin_password(self) -> str | None:
+        """The immortal secret, from the environment or the file named for it.
+
+        A launched session is handed the file to read rather than left to
+        find one, which is why it never falls back to the configuration
+        directory: the launcher decides what a child may see.
+        """
+        direct = _secret(self.admin_password_env, os.environ)
+        if direct:
+            return direct
+        named = os.environ.get("BOUKENSHA_ADMIN_SECRET_FILE")
+        if named:
+            return dotenv_values(
+                Path(named).expanduser()
+            ).get(self.admin_password_env)
         if self.session_id:
-            return _secret(self.admin_password_env, os.environ)
+            return None
         return _secret(
             self.admin_password_env,
             os.environ,
@@ -259,6 +276,73 @@ def _load(path: Path) -> dict[str, Any]:
     for name, keys in sections.items():
         _known(_mapping(configured, name), keys, f"gateway.{name}")
     return configured
+
+
+def _call_ceiling(path: Path) -> float | None:
+    """Seconds the agent waits for one tool call, or None when unstated.
+
+    A routine has to finish inside the call that carries it, so the
+    gateway needs the same number the agent uses to give up. It is read
+    from the entry that spawns this gateway rather than from a key named
+    by convention, because a renamed entry would otherwise hand back some
+    other server's ceiling without a word.
+    """
+    if not path.is_file():
+        return None
+    loaded = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(loaded, dict):
+        return None
+    servers = loaded.get("mcp_servers") or {}
+    if not isinstance(servers, dict):
+        return None
+    stated: dict[str, Any] = {}
+    for name, entry in servers.items():
+        if not isinstance(entry, dict):
+            continue
+        if Path(str(entry.get("command") or "")).name == GATEWAY_COMMAND:
+            stated[str(name)] = entry.get("timeout")
+    if not stated:
+        return None
+    if all(value is None for value in stated.values()):
+        return None
+    # Several entries can spawn this same gateway, and a running gateway
+    # cannot tell which of them started it. They are compared as the
+    # numbers they mean rather than as they are written, so 30 and "30.0"
+    # agree. One that disagrees, or one that says nothing beside one that
+    # does, is refused rather than resolved by the order of the file.
+    seconds = {
+        name: _ceiling_seconds(value) for name, value in stated.items()
+    }
+    if len(set(seconds.values())) > 1:
+        raise GatewaySettingsError(
+            f"settings.yaml: entries {sorted(stated)} all run "
+            f"{GATEWAY_COMMAND} but do not state the same timeout, and the "
+            "gateway cannot tell which one started it"
+        )
+    return next(iter(seconds.values()))
+
+
+def _ceiling_seconds(value: Any) -> float | None:
+    """One stated timeout as seconds, refusing anything unusable."""
+    if value is None:
+        return None
+    try:
+        seconds = float(value)
+    except (TypeError, ValueError):
+        raise GatewaySettingsError(
+            f"settings.yaml: 'mcp_servers' timeout for {GATEWAY_COMMAND} "
+            f"must be a number, not {value!r}"
+        ) from None
+    # Written as what a usable ceiling is. A timeout that is not a finite
+    # number above zero leaves a routine with no bound to work back from,
+    # and this spelling refuses a NaN too, since nothing compares greater
+    # than one.
+    if not (seconds > 0 and math.isfinite(seconds)):
+        raise GatewaySettingsError(
+            f"settings.yaml: 'mcp_servers' timeout for {GATEWAY_COMMAND} "
+            f"must be a finite number of seconds above zero, not {value!r}"
+        )
+    return seconds
 
 
 def _capabilities(

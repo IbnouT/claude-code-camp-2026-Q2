@@ -28,7 +28,7 @@ from typing import Any, AsyncIterator
 from .journal import Journal
 from .knowledge_projection import KnowledgeProjector
 from .observation_pipeline import ObservationPipeline
-from .observe import Observation, WireReference
+from .observe import Observation, RoomObservation, WireReference, parse
 from .position import PositionObservation
 from .wire import PROMPT, NotConnected, Transport, WireEvent, strip_ansi
 
@@ -37,6 +37,15 @@ NAME_PROMPT = re.compile(rb"by what name|name:", re.I)
 PASSWORD_PROMPT = re.compile(rb"password", re.I)
 MENU_PROMPT = re.compile(rb"make your choice", re.I)
 WRONG_PASSWORD = re.compile(rb"wrong password", re.I)
+
+#: Commands that can put the character somewhere else. The six directions
+#: move it, fleeing moves it, and recall, entering and following all end
+#: somewhere new. Anything else leaves the room it was in.
+RELOCATING = frozenset({
+    "north", "south", "east", "west", "up", "down",
+    "n", "s", "e", "w", "u", "d",
+    "flee", "recall", "enter", "follow",
+})
 
 #: The menu option that enters the game.
 ENTER_GAME = "1"
@@ -97,6 +106,8 @@ class Session:
     def __init__(self, journal: Journal, *, name: str, password: str,
                  host: str = "127.0.0.1", port: int = 4000, timeout: float = 25.0,
                  session_id: str | None = None,
+                 issuer: str = "gateway",
+                 observes: bool = True,
                  knowledge: KnowledgeProjector | None = None) -> None:
         self.id = session_id or f"{name}-{uuid.uuid4().hex[:8]}"
         self.name = name
@@ -108,6 +119,24 @@ class Session:
         self._command_lock = asyncio.Lock()
         self._control_state = "running"
         self.trace_id: str | None = None
+        # Who a command was sent for. The agent when a tool call it made
+        # results in one, the gateway when the gateway decided on its own.
+        # The gateway decides for the immortal connection too, so that is
+        # "gateway-admin": same decision, a connection that never touches
+        # the character. Without it a count of what a session did includes
+        # the work nobody asked for.
+        self.issuer = issuer
+        # Set by the harness when an immortal connection is watching. It
+        # answers which room this is, and it is never reachable by the
+        # agent. Left as None, nothing about a run changes.
+        self.observer: Any = None
+        #: The room number last read, reused while nothing can have moved us.
+        self._room: int | None = None
+        self._reused = False
+        # An immortal connection sees a different room from a different
+        # character. Parsing its replies into the player's observations
+        # would put another character's world into this one's record.
+        self.observes = observes
         self.observations = ObservationPipeline(
             journal,
             self.id,
@@ -165,12 +194,20 @@ class Session:
 
     # -- commands -----------------------------------------------------------
 
-    async def command(self, line: str, *, trace_id: str | None = None) -> Reply:
+    async def command(
+        self,
+        line: str,
+        *,
+        trace_id: str | None = None,
+        issuer: str | None = None,
+    ) -> Reply:
         """Send one line and collect its reply, with the window aligned first."""
         self._assert_commands_allowed()
         async with self._command_lock:
             self._assert_commands_allowed()
-            return await self._command_unlocked(line, trace_id=trace_id)
+            return await self._command_unlocked(
+                line, trace_id=trace_id, issuer=issuer
+            )
 
     async def poll(self, *, trace_id: str | None = None) -> Reply:
         """Return unsolicited output without sending a game command."""
@@ -181,6 +218,7 @@ class Session:
             async with self._capture_trace(trace):
                 source_after = self.journal.last_seq(self.id)
                 pending = await self.transport.drain_pending()
+                number = await self._room_number("", ())
                 event = self.journal.append(
                     self.id,
                     "poll",
@@ -194,6 +232,7 @@ class Session:
                 observations, position = self.observations.ingest(
                     pending,
                     wire_ref,
+                    room_number=number,
                     trace_id=trace,
                 )
                 return Reply(
@@ -206,6 +245,80 @@ class Session:
                     observations=observations,
                     position=position,
                 )
+
+    async def _room_number(
+        self,
+        line: str,
+        parsed: tuple[Observation, ...],
+    ) -> int | None:
+        """What the observer says this room is, or None when none watches.
+
+        Each ask costs two immortal round trips, so it is worth deciding.
+        The number in hand is reused only when the character cannot have
+        gone anywhere: no command that relocates, nothing arriving
+        unbidden, and a reply naming the room we are already holding or
+        naming no room at all.
+
+        Reading the reply rather than trusting the command is what catches
+        being moved without asking. Dying in a fight ends in the Temple,
+        and the command for that was an attack.
+
+        What arrives unbidden is judged the same way, by what it says. A
+        fight sends a line every round and moves nobody, so only the one
+        that names a different room is worth an immortal round trip.
+        """
+        observer = self.observer
+        if observer is None:
+            return None
+        self._reused = False
+        if self._room is None:
+            return await self._ask(observer)
+        first_word = line.casefold().split()[0:1]
+        if first_word and first_word[0] in RELOCATING:
+            return await self._ask(observer)
+        arrived = next(
+            (o for o in parsed if isinstance(o, RoomObservation)), None
+        )
+        if arrived is None:
+            self._reused = True
+            return self._room
+        here = getattr(self.observations.room, "title", None)
+        if here is not None and arrived.title == here:
+            self._reused = True
+            return self._room
+        return await self._ask(observer)
+
+    async def _ask(self, observer: Any) -> int | None:
+        """The number for the frame being recorded, or None.
+
+        When the character moved between the observer's two readings, the
+        frame belongs to the room it was read in and the character now
+        stands in the other. The frame keeps the first, and what we hold
+        becomes the second.
+        """
+        # An unanswered ask means we no longer know where we are. Keeping
+        # the last number would attach the next room's title and exits to
+        # the room we were in before, in the store, for good.
+        number = await observer.room_number()
+        moved = getattr(observer, "moved_to", None)
+        self._room = number if moved is None else moved
+        return number
+
+    def _note_room_number(self, number, position: Any, trace: str) -> None:
+        # Only what was read, not what was carried forward. A record of
+        # every command claiming to have read the room says the immortal
+        # connection was asked when it was not.
+        if number is None or self._reused:
+            return
+        self.journal.append(
+            self.id,
+            "room_number",
+            {
+                "number": number,
+                "title": getattr(position, "title", None),
+            },
+            trace_id=trace,
+        )
 
     @asynccontextmanager
     async def pause(self, *, timeout: float) -> AsyncIterator[None]:
@@ -272,15 +385,17 @@ class Session:
         line: str,
         *,
         trace_id: str | None = None,
+        issuer: str | None = None,
     ) -> Reply:
         trace = trace_id or self.trace_id
         async with self._capture_trace(trace):
-            return await self._captured_command(line, trace)
+            return await self._captured_command(line, trace, issuer)
 
     async def _captured_command(
         self,
         line: str,
         trace: str | None,
+        issuer: str | None = None,
     ) -> Reply:
         source_after = self.journal.last_seq(self.id)
         pending = b""
@@ -304,11 +419,21 @@ class Session:
                 unsolicited.seq,
                 pending,
             )
-            self.observations.ingest(
-                pending,
-                pending_ref,
-                trace_id=trace,
-            )
+            # The game speaking on its own is how a death, a recall or a
+            # trap arrives, so this frame is the one most likely to be
+            # somewhere new. A connection that does not observe skips it
+            # whole: its unbidden output is another character's world.
+            if self.observes:
+                number = await self._room_number(
+                    "", parse(pending, pending_ref)
+                )
+                self._note_room_number(number, None, trace)
+                self.observations.ingest(
+                    pending,
+                    pending_ref,
+                    room_number=number,
+                    trace_id=trace,
+                )
             source_after = self.journal.last_seq(self.id)
         if reconnect_required or self.transport.closed:
             await self._reconnect("connection_lost_before_command")
@@ -320,6 +445,7 @@ class Session:
             "command",
             {
                 "line": line,
+                "issuer": issuer or self.issuer,
                 "reply_bytes": len(raw),
                 "complete": bool(PROMPT.search(raw)),
                 "unsolicited_bytes": len(pending),
@@ -331,12 +457,29 @@ class Session:
             "north", "south", "east", "west", "up", "down",
             "n", "s", "e", "w", "u", "d",
         } else None
+        # Read first, then decide. The reply names the room we are now in
+        # and the pipeline still holds the one we were in, so the two can
+        # be compared before either is committed.
+        if not self.observes:
+            return Reply(
+                command=line,
+                raw=raw,
+                unsolicited=pending,
+                complete=bool(PROMPT.search(raw)),
+                seq=event.seq,
+                wire_ref=wire_ref,
+            )
+        parsed = parse(raw, wire_ref)
+        number = await self._room_number(line, parsed)
         observations, position = self.observations.ingest(
             raw,
             wire_ref,
             attempted_move=attempted_move,
+            room_number=number,
+            parsed=parsed,
             trace_id=trace,
         )
+        self._note_room_number(number, position, trace)
         return Reply(
             command=line,
             raw=raw,

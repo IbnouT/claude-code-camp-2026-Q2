@@ -52,6 +52,8 @@ class ObservationPipeline:
         wire_ref: WireReference,
         *,
         attempted_move: str | None = None,
+        room_number: int | None = None,
+        parsed: tuple | None = None,
         trace_id: str | None = None,
     ) -> tuple[tuple[Observation, ...], PositionObservation]:
         if attempted_move:
@@ -79,7 +81,7 @@ class ObservationPipeline:
             },
             trace_id=trace_id,
         )
-        observations = parse(raw, wire_ref)
+        observations = parse(raw, wire_ref) if parsed is None else parsed
         frame_coverage = Coverage()
         frame_coverage.add(observations)
         self.coverage.add(observations)
@@ -114,6 +116,7 @@ class ObservationPipeline:
                 observations,
                 position,
                 attempted_move=attempted_move,
+                room_number=room_number,
             )
             if last_change >= first_change:
                 self.journal.append(

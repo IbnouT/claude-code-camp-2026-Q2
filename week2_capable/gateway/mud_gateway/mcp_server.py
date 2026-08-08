@@ -13,11 +13,12 @@ import uuid
 from typing import Any, Callable
 
 from .commands import BY_NAME, IMMORTAL, Capability
-from . import identity, recall, rules
+from . import recall
 from .journal import Journal
 from .knowledge import KnowledgeStore
 from .knowledge_projection import KnowledgeProjector
 from .navigation import NavigationExecutor
+from .observer import RoomObserver
 from .navigation.graph import WorldGraph
 from .state_block import render_state_block
 from .campaign import mission_readiness, readiness_text
@@ -36,7 +37,11 @@ from .raw import Role, send_raw
 from .reset_control import ResetControlServer, ResetCoordinator
 from .results import CommandFailure, CommandObservation
 from .session import ReconnectFailed, Session
-from .settings import GatewaySettings
+from .settings import (
+    GATEWAY_COMMAND,
+    GatewaySettings,
+    GatewaySettingsError,
+)
 from .wire import NotConnected
 
 
@@ -57,6 +62,48 @@ async def seed_login_observations(session: Session, journal: Journal) -> None:
         await session.command(command, trace_id=trace_id)
 
 
+def _navigation_refusal(settings: GatewaySettings) -> str | None:
+    """Why routines cannot run, decided from settings alone, or None.
+
+    A routine has to stop before the call carrying it is abandoned, so it
+    needs the number the agent gives up after. Without it there is no
+    honest bound, and inventing one here would put a second copy of the
+    agent's timeout in a second package, free to drift in silence.
+    """
+    if not settings.capabilities.get("navigation"):
+        return None
+    if settings.call_ceiling is None:
+        return (
+            "navigation needs the agent's per-call timeout, so a routine can "
+            "stop before its call is abandoned. Set 'timeout' on the "
+            "settings.yaml mcp_servers entry whose command is "
+            f"{GATEWAY_COMMAND!r}"
+        )
+    stated = (
+        (settings.capability_settings.get("navigation") or {})
+        .get("deadline_margin", 4.0)
+    )
+    try:
+        margin = float(stated)
+    except (TypeError, ValueError):
+        return (
+            "navigation's deadline_margin must be a number of seconds, not "
+            f"{stated!r}"
+        )
+    # Written as what a usable margin is, rather than as the one way it
+    # was seen to fail. A negative margin puts the deadline past the
+    # ceiling and a NaN never compares true, and both of those bring back
+    # the silent overrun this bound exists to end.
+    if not 0 < margin < settings.call_ceiling:
+        return (
+            f"navigation's deadline_margin ({stated!r}) must be greater than "
+            f"zero and smaller than the agent's per-call timeout "
+            f"({settings.call_ceiling:g}s), or routines cannot stop inside "
+            "the call that carries them"
+        )
+    return None
+
+
 async def execute(
         session: Session | None,
         invocation: Invocation,
@@ -65,6 +112,7 @@ async def execute(
         journal: Journal,
         event_session: str,
         navigation: NavigationExecutor | None = None,
+        navigation_refused: str | None = None,
         state_reader: Callable[[], str] | None = None,
         state_notes: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
         service_notes: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
@@ -248,7 +296,9 @@ async def execute(
                 )
             if navigation is None:
                 raise CapabilityUnavailable(
-                    f"{capability.name!r} needs the navigation capability")
+                    navigation_refused
+                    or f"{capability.name!r} needs the navigation capability"
+                )
             if capability.name == "sweep":
                 report = await navigation.sweep()
             elif capability.name == "travel_to":
@@ -281,7 +331,9 @@ async def execute(
             )
         if capability.execution == "wire":
             command = capability.build(invocation.arguments)
-            reply = await session.command(command, trace_id=trace_id)
+            reply = await session.command(
+                command, trace_id=trace_id, issuer="agent"
+            )
         elif capability.execution == "poll":
             command = None
             reply = await session.poll(trace_id=trace_id)
@@ -449,9 +501,14 @@ async def serve(
     economy: Economy | None = None
     knowledge_reader: Any = None
     recall_reader: Callable[[str, Any], str] | None = None
+    # Decided from settings alone, before anything connects, so a run whose
+    # routines can never be bounded says so on the first call rather than
+    # after paying for a login and then reporting the wrong reason.
+    navigation_refused = _navigation_refusal(settings)
+    observer: RoomObserver | None = None
 
     async def game_session() -> Session:
-        nonlocal economy, knowledge_reader, knowledge_store, navigation, recall_reader, service_notes, session, state_notes, state_reader
+        nonlocal economy, knowledge_reader, knowledge_store, navigation, observer, recall_reader, service_notes, session, state_notes, state_reader
         if session is None:
             profile = settings.player(player_profile)
             password = settings.player_password(profile.id)
@@ -477,23 +534,19 @@ async def serve(
                 ),
             )
             record_profile(journal, session.id, surface)
-            if settings.capabilities.get("knowledge") and knowledge_store:
-                # Record what earlier runs saw as one map. The map the
-                # agent walks is computed live, so a failure here costs a
-                # report rather than the run.
-                try:
-                    bound = identity.record(
-                        knowledge_store,
-                        knowledge_store.current_facts(layer="learned"),
-                    )
-                    payload = {
-                        "phase": "start",
-                        "places": len(bound),
-                        "rooms": len(set(bound.values())),
-                    }
-                except Exception as error:
-                    payload = {"phase": "start", "failed": str(error)}
-                journal.append(session.id, "identity", payload)
+            # The observer joins before the character does, so the first
+            # room the character sees already has its number.
+            observer = RoomObserver(
+                journal,
+                character=settings.admin_character,
+                password=settings.admin_password,
+                host=settings.host,
+                port=settings.port,
+                watching=settings.player(player_profile).character,
+                session_id=session.id,
+            )
+            if await observer.open():
+                session.observer = observer
             await session.open()
             await seed_login_observations(session, journal)
             survival = None
@@ -503,12 +556,16 @@ async def serve(
                     knowledge_store,
                     settings.capability_settings.get("survival"),
                 )
-            if settings.capabilities.get("navigation") and knowledge_store:
+            if (
+                settings.capabilities.get("navigation")
+                and knowledge_store
+                and navigation_refused is None
+            ):
                 navigation = NavigationExecutor(
                     session,
                     knowledge_store,
                     settings.capability_settings.get("navigation"),
-                    reflexes=survival,
+                    call_ceiling=settings.call_ceiling,
                 )
             if survival is not None:
                 await survival.let_the_game_do_the_work()
@@ -602,6 +659,7 @@ async def serve(
                 journal=journal,
                 event_session=target.id if target is not None else run_id,
                 navigation=navigation,
+                navigation_refused=navigation_refused,
                 state_reader=state_reader,
                 recall_reader=recall_reader,
                 state_notes=state_notes,
@@ -647,23 +705,11 @@ async def serve(
     finally:
         if control is not None:
             await control.close()
+        if observer is not None:
+            await observer.close()
         if session is not None:
             await session.close()
         if knowledge_store is not None:
-            if settings.capabilities.get("knowledge"):
-                # Fold what this run saw into the joined map, so the next
-                # run starts from one map instead of re-learning ground.
-                try:
-                    identity.record(
-                        knowledge_store,
-                        knowledge_store.current_facts(layer="learned"),
-                    )
-                except Exception as error:
-                    journal.append(
-                        "gateway",
-                        "identity",
-                        {"phase": "end", "failed": str(error)},
-                    )
             knowledge_store.close()
         journal.close()
 

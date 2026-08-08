@@ -88,6 +88,28 @@ the `capabilities.navigation` settings flag.
   step stays journaled wire evidence, and they stop with a typed reason:
   arrived, frontier exhausted, a bound, a blocked or unexpected room, low
   movement, or a health drop between steps.
+- A routine also bounds itself in time, because the call carrying it is
+  abandoned after a fixed number of seconds and a cut-off routine reports
+  nothing. It stops with `time_limit` a margin before that, and the
+  margin is `deadline_margin` inside the block, four seconds by default.
+- The ceiling it works back from is the agent's own per-call timeout,
+  read from the `mcp_servers` entry whose command is `boukensha-gateway`,
+  so the two numbers cannot drift apart. Entries that disagree are
+  refused rather than resolved by the order the file lists them.
+- With no `timeout` stated, or a margin no smaller than the ceiling, the
+  routines do not run and say why as `capability_unavailable` on the
+  call. The decision is taken from settings before anything connects, so
+  it never costs a login first and never reports a different reason.
+- Every outcome other than a step taken or a route walked stops the
+  sweep, including reasons added later. Naming what continues, rather
+  than what stops, is what keeps a new reason from being read as "carry
+  on" at one of the three places outcomes are handled.
+- Routines never rest. A step that finds movement low stops with
+  `needs_rest`, since a rest outlasts any call and recovery arrives on
+  the game's tick. Resting is the model's to do between calls.
+- A routine cut off despite the deadline still records its stop with the
+  ground it covered, then lets the cancellation continue. No result can
+  reach the model on that path, so the record is for the reader.
 - With the flag off the advertised surface and its digest are unchanged.
 
 ## Knowledge capability
@@ -114,9 +136,9 @@ the `capabilities.knowledge` settings flag.
 - At session start the engine sets the game's own auto-flee threshold
   (`wimpy`) from the observed maximum hit points, and declines honestly
   when no maximum has been observed yet.
-- When movement falls below its floor during a routine, the engine rests,
-  polls recovery with a bounded wait, and stands back up. A timeout
-  surfaces as a typed stop instead of a stuck agent.
+- `recover_movement` rests, polls recovery with a bounded wait, and
+  stands back up. Routines do not call it: its full wait outlasts any one
+  tool call, so recovery belongs between calls rather than inside one.
 - Every reflex firing is journaled with its rule id, version, and the
   numbers that triggered it.
 

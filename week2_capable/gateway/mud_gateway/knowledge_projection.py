@@ -24,6 +24,11 @@ class KnowledgeProjector:
         self.store = store
         self.player_id = player_id
         self._last_place: str | None = None
+        # True once the game's own room numbers are in use, after which a
+        # room with no number is not recorded rather than recorded twice.
+        self._numbered = False
+        #: Frames dropped for want of a room number.
+        self.skipped = 0
         self._place_ids: dict[tuple[str, int], str] = {}
 
     def ingest(
@@ -32,6 +37,7 @@ class KnowledgeProjector:
         position: PositionObservation,
         *,
         attempted_move: str | None = None,
+        room_number: int | None = None,
         observed_at: float | None = None,
     ) -> tuple[int, int]:
         """Commit one observation frame and return its CDC range."""
@@ -94,7 +100,17 @@ class KnowledgeProjector:
                             transaction_id=transaction_id,
                         )
             elif isinstance(observation, RoomObservation):
-                room_id = self._room_id(position, observation)
+                room_id = self._room_id(position, observation, room_number)
+                if room_id is None:
+                    # Numbered rooms are in use and this frame has no
+                    # number, so there is no subject this room can honestly
+                    # be written under. A twin would be dropped by the map
+                    # and would drag its exit edge out with it. Recording
+                    # the gap matters: an observer that stays lost freezes
+                    # the map, and silence would look like standing still.
+                    self.skipped += 1
+                    self._note_skipped(observation)
+                    continue
                 self._learn_room(
                     room_id,
                     observation,
@@ -111,6 +127,8 @@ class KnowledgeProjector:
                         evidence=evidence,
                         transaction_id=transaction_id,
                     )
+                if room_id != self._last_place:
+                    self._count_visit(room_id, evidence, transaction_id)
                 self._last_place = room_id
 
         position_is_current = any(
@@ -197,7 +215,26 @@ class KnowledgeProjector:
         self,
         position: PositionObservation,
         observation: RoomObservation,
-    ) -> str:
+        room_number: int | None = None,
+    ) -> str | None:
+        # The game gives every room a number of its own, so when it has
+        # been read there is nothing to work out: the same room carries
+        # the same subject in this run and in every later one. Everything
+        # below is what has to be done when no number was available.
+        if room_number is not None:
+            self._numbered = True
+            return f"room:{room_number}"
+        # An unanswered observer used to mint a second subject for a room
+        # the character never left, and nothing merges subjects any more.
+        # Standing still under a numbered room keeps that room.
+        if (
+            self._last_place
+            and self._last_place.startswith("room:")
+            and self._same_room(observation)
+        ):
+            return self._last_place
+        if self._numbered:
+            return None
         if position.place is not None:
             key = (observation.wire_ref.source, position.place)
             return self._place_ids.setdefault(
@@ -215,7 +252,43 @@ class KnowledgeProjector:
         """The stable store identity of the last observed place, if any."""
         return self._last_place
 
+    def _same_room(self, observation: RoomObservation) -> bool:
+        """True when what is on screen is the room we last recorded."""
+        if not self._last_place:
+            return False
+        known = self.store.current_fact(
+            self._last_place, "title", layer="learned"
+        )
+        return known is not None and known.value == observation.title
+
+    def _note_skipped(self, observation: RoomObservation) -> None:
+        journal = getattr(self.store, "journal", None)
+        if journal is None:
+            return
+        journal.append(
+            getattr(self.store, "player_id", "gateway"),
+            "room_unnumbered",
+            {"title": observation.title, "skipped": self.skipped},
+        )
+
+    def _count_visit(self, room_id, evidence, transaction_id) -> None:
+        """One more arrival here, so the block can say how well we know it."""
+        current = self.store.current_fact(room_id, "visits", layer="parsed")
+        seen = current.value if current and isinstance(current.value, int) else 0
+        # How many times we have been here is a count that keeps moving,
+        # not something learned once, so it goes where a newer reading
+        # replaces the older one instead of contesting it.
+        self.store.assert_fact(
+            room_id, "visits", seen + 1, layer="parsed",
+            confidence="tracked", evidence=evidence,
+            transaction_id=transaction_id,
+        )
+
     def _position_place(self, position: PositionObservation) -> str | None:
+        # A room known by its number is already the subject everything
+        # else was written against, so it answers directly.
+        if self._last_place and self._last_place.startswith("room:"):
+            return self._last_place
         if position.place is None:
             return None
         return self._place_ids.get(

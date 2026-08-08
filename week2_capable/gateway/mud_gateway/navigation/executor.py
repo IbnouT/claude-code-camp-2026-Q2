@@ -8,6 +8,7 @@ each routine returns.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import uuid
 from dataclasses import dataclass
@@ -25,6 +26,18 @@ _DIRECTION_WORDS = {
 }
 # Postures a character can walk from. Anything else needs standing first.
 _WALKING_POSTURES = {"standing", "fighting"}
+
+# The only two outcomes a sweep continues from, and the two it treats as a
+# setback worth retrying elsewhere. Everything else stops it and reports.
+#
+# Naming what continues rather than what stops is what makes a new outcome
+# safe. Listing the stops instead means every new reason has to be added at
+# each place an outcome is read, and one that is missed does not stop the
+# sweep. That is a hang, not a wrong answer: a step refused on the deadline
+# returns without awaiting, so a loop that carries on from it never yields,
+# the connection is never read, and the call cannot even be cancelled.
+_CARRY_ON = frozenset({"moved", "walked"})
+_SETBACKS = frozenset({"blocked_exit", "unexpected_room"})
 
 
 @dataclass(frozen=True)
@@ -66,12 +79,20 @@ class NavigationExecutor:
         session: Any,
         store: Any,
         settings: Mapping[str, Any] | None = None,
-        reflexes: Any = None,
+        *,
+        call_ceiling: float | None = None,
+        clock: Any = None,
     ) -> None:
         block = dict(settings or {})
         self.session = session
         self.store = store
-        self.reflexes = reflexes
+        # A routine has to finish inside the call carrying it, so it stops
+        # itself a margin early rather than being cut off with nothing to
+        # report. The margin covers the slowest step that can already be
+        # walking when the deadline passes.
+        self.deadline_margin = float(block.get("deadline_margin", 4.0))
+        self.call_ceiling = call_ceiling
+        self.clock = clock or time.monotonic
         self.max_rooms = int(block.get("sweep_max_rooms", 30))
         self.max_steps = int(block.get("max_steps", 60))
         self.min_move_points = int(block.get("min_move_points", 15))
@@ -124,6 +145,11 @@ class NavigationExecutor:
             return
         await self.session.command("stand", trace_id=trace_id)
 
+    def _out_of_time(self, state: dict[str, Any]) -> bool:
+        """True once too little of the call is left to walk another step."""
+        deadline = state.get("deadline")
+        return deadline is not None and self.clock() >= deadline
+
     async def _step(
         self,
         direction: str,
@@ -134,6 +160,12 @@ class NavigationExecutor:
         """One walked step. Returns a typed outcome, never prose."""
         if direction not in _DIRECTION_WORDS:
             return "invalid_direction"
+        # Asked here rather than at each caller, because this is the one
+        # place every walked step passes through. Callers are written and
+        # rewritten, and a check they have to remember is a check that
+        # eventually goes missing from one of them.
+        if self._out_of_time(state):
+            return "time_limit"
         await self._ensure_standing(trace_id)
         graph = self._graph()
         origin_place = self._projector.current_place_id
@@ -158,16 +190,12 @@ class NavigationExecutor:
             if previous_hit is not None and vitals.hit < previous_hit:
                 return "interrupted"
             if vitals.move < self.min_move_points:
-                if self.reflexes is not None:
-                    recovered = await self.reflexes.recover_movement(
-                        vitals.move, trace_id
-                    )
-                    if recovered == "rested":
-                        state["move"] = None
-                    else:
-                        return "low_vitals"
-                else:
-                    return "low_vitals"
+                # Resting is not something a routine can do. The full loop
+                # sleeps for minutes against a call measured in seconds,
+                # and movement returns on the game's own tick, so a rest
+                # cut to fit sits the character down and gains nothing.
+                # The model has the command and the time between calls.
+                return "needs_rest"
         # Only a move that cost nothing is evidence of a way refusing. When
         # the cost is unknown, nothing is claimed: a wrong "shut door" is
         # remembered forever and steers every later route around a way that
@@ -342,6 +370,9 @@ class NavigationExecutor:
 
     def _start(self, routine: str, payload: dict[str, Any]) -> dict[str, Any]:
         trace_id = uuid.uuid4().hex
+        deadline = None
+        if self.call_ceiling is not None:
+            deadline = self.clock() + self.call_ceiling - self.deadline_margin
         self.session.journal.append(
             self.session.id,
             "routine_start",
@@ -353,6 +384,7 @@ class NavigationExecutor:
             "visited": set(),
             "known_at_start": frozenset(self._graph().rooms),
             "trace_id": trace_id,
+            "deadline": deadline,
         }
 
     # -- routines ----------------------------------------------------------
@@ -366,10 +398,23 @@ class NavigationExecutor:
                 "max_steps": self.max_steps,
             },
         )
+        try:
+            return await self._sweep(state)
+        except asyncio.CancelledError:
+            # The deadline makes this rare rather than impossible. When it
+            # happens the ground covered is still worth recording, and the
+            # record is all there is: the library has already answered the
+            # call, so nothing reaches the model on this path.
+            self._report("sweep", "cancelled", state)
+            raise
+
+    async def _sweep(self, state: dict[str, Any]) -> RoutineReport:
         setbacks = 0
         failed_rooms: set[str] = set()
         looked = False
         while True:
+            if self._out_of_time(state):
+                return self._report("sweep", "time_limit", state)
             if state["steps"] >= self.max_steps:
                 return self._report("sweep", "step_limit", state)
             if len(state["visited"]) >= self.max_rooms:
@@ -397,10 +442,9 @@ class NavigationExecutor:
                 outcome = await self._step(
                     direction, None, state, state["trace_id"]
                 )
-                if outcome in ("interrupted", "low_vitals",
-                               "position_uncertain", "position_unknown"):
+                if outcome not in _CARRY_ON and outcome not in _SETBACKS:
                     return self._report("sweep", outcome, state)
-                if outcome == "blocked_exit":
+                if outcome in _SETBACKS:
                     setbacks += 1
                     if setbacks > self.max_setbacks:
                         return self._report("sweep", "setback_limit", state)
@@ -410,10 +454,9 @@ class NavigationExecutor:
                 plan.steps[-1][1] if plan.steps else current
             )
             walked = await self._walk(plan, state, state["trace_id"])
-            if walked in ("interrupted", "low_vitals", "position_uncertain",
-                          "position_unknown", "step_limit"):
+            if walked not in _CARRY_ON and walked not in _SETBACKS:
                 return self._report("sweep", walked, state)
-            if walked in ("blocked_exit", "unexpected_room"):
+            if walked in _SETBACKS:
                 setbacks += 1
                 if setbacks > self.max_setbacks:
                     return self._report("sweep", "setback_limit", state)
@@ -421,10 +464,9 @@ class NavigationExecutor:
             outcome = await self._step(
                 direction, None, state, state["trace_id"]
             )
-            if outcome in ("interrupted", "low_vitals", "position_uncertain",
-                           "position_unknown"):
+            if outcome not in _CARRY_ON and outcome not in _SETBACKS:
                 return self._report("sweep", outcome, state)
-            if outcome == "blocked_exit":
+            if outcome in _SETBACKS:
                 failed_rooms.add(frontier_room)
                 setbacks += 1
                 if setbacks > self.max_setbacks:
@@ -433,6 +475,17 @@ class NavigationExecutor:
     async def travel(self, destination: str) -> RoutineReport:
         """Walk a computed route to a learned room named by its title."""
         state = self._start("travel", {"destination": destination})
+        try:
+            return await self._travel(destination, state)
+        except asyncio.CancelledError:
+            self._report(
+                "travel", "cancelled", state, destination=destination
+            )
+            raise
+
+    async def _travel(
+        self, destination: str, state: dict[str, Any]
+    ) -> RoutineReport:
         if not self.travel_enabled:
             return self._report(
                 "travel", "travel_disabled", state, destination=destination

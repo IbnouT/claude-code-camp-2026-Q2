@@ -114,4 +114,6 @@ async def send_raw(
         },
         trace_id=trace_id,
     )
-    return await session.command(validated.line, trace_id=trace_id)
+    return await session.command(
+        validated.line, trace_id=trace_id, issuer="agent"
+    )

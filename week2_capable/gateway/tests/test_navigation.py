@@ -363,22 +363,20 @@ def test_a_standing_character_is_not_told_to_stand(tmp_path: Path) -> None:
     assert "stand" not in session.commands
 
 
-def test_the_map_joins_rooms_when_identity_was_recorded(tmp_path: Path) -> None:
-    """Two runs of the same ground become one map, not two copies."""
-    from mud_gateway.identity import record
-
+def test_two_runs_of_the_same_ground_are_one_map(tmp_path: Path) -> None:
+    """The room number is the same in both runs, so nothing needs joining."""
     store = KnowledgeStore(tmp_path / "knowledge.db", player_id="tester")
     evidence = _evidence()
     for subject, predicate, value in (
-        ("place:s1:1:1", "title", "The Armory"),
-        ("place:s1:1:1", "exits", ["north"]),
-        ("place:s1:1:1", "exit.north", "place:s1:2:1"),
-        ("place:s1:2:1", "title", "Main Street"),
-        ("place:s1:2:1", "exits", ["south"]),
-        ("place:s2:1:1", "title", "The Armory"),
-        ("place:s2:1:1", "exits", ["north"]),
-        ("place:s2:9:1", "title", "The Bakery"),
-        ("place:s2:9:1", "exits", ["west"]),
+        ("room:3001", "title", "The Armory"),
+        ("room:3001", "exits", ["north"]),
+        ("room:3001", "exit.north", "room:3016"),
+        ("room:3016", "title", "Main Street"),
+        ("room:3016", "exits", ["south"]),
+        # a second run walks the same Armory and one room it never saw
+        ("room:3001", "exit.north", "room:3016"),
+        ("room:3099", "title", "The Bakery"),
+        ("room:3099", "exits", ["west"]),
     ):
         store.assert_fact(
             subject, predicate, value, layer="learned",
@@ -386,13 +384,12 @@ def test_the_map_joins_rooms_when_identity_was_recorded(tmp_path: Path) -> None:
         )
 
     graph = WorldGraph.from_store(store)
-    record(store, store.current_facts(layer="learned"))
     store.close()
 
     armories = [r for r in graph.rooms.values() if r.title == "The Armory"]
-    assert len(armories) == 1, "the two runs' Armory must be one room"
-    assert "north" in armories[0].links
-    assert graph.room_of("place:s1:1:1") == graph.room_of("place:s2:1:1")
+    assert len(armories) == 1, "one number, one room, across both runs"
+    assert armories[0].links["north"] == "room:3016"
+    assert graph.room_of("room:3001") == "room:3001"
 
 
 def test_a_place_seen_once_is_still_a_room_on_the_map(

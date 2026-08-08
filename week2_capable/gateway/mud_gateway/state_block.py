@@ -38,7 +38,7 @@ def render_state_block(
 
     lines: list[str] = []
     title = _title(room, known)
-    visits = _visits(store, graph, here)
+    visits = _visits(store, here)
     if title is None:
         lines.append("you have not seen where you are yet")
     elif visits > 1:
@@ -93,13 +93,14 @@ def _title(room: Any, known: Any) -> str | None:
     return None
 
 
-def _visits(store: Any, graph: WorldGraph, here: str | None) -> int:
-    """How many observed places this room has been seen as."""
+def _visits(store: Any, here: str | None) -> int:
+    """How many times the character has arrived in this room."""
     if here is None:
         return 0
-    return sum(
-        1 for place, room in graph.identity.items() if room == here
-    ) or 1
+    current = store.current_fact(here, "visits", layer="parsed")
+    if current is not None and isinstance(current.value, int):
+        return current.value
+    return 1
 
 
 def _ways(
