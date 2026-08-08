@@ -22,5 +22,5 @@ packages = ["boukensha"]
 
 [dependency-groups]
 dev = [
-    "pytest==9.0.2",
+    "pytest==9.1.1",
 ]

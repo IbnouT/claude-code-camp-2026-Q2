@@ -1,0 +1,6 @@
+# The week 2 packages are developed, tested and graded together, and three
+# of them depend on the gateway as a library. A workspace keeps them on one
+# lockfile and resolves members from source, so a package can never run a
+# stale copy of another.
+[tool.uv.workspace]
+members = ["agent", "benchmark", "gateway", "log_viewer", "observatory"]

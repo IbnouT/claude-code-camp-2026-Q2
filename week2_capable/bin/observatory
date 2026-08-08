@@ -16,5 +16,5 @@ export OBSERVATORY_REVISION="$(
   git -C "$project_root" rev-parse --short=12 HEAD 2>/dev/null || printf unknown
 )"
 export OBSERVATORY_WEB_DIST="$web_dist"
-cd "$project_root/week2_capable/observatory"
-exec uv run observatory "$@"
+cd "$project_root/week2_capable"
+exec uv run --package boukensha-observatory observatory "$@"
