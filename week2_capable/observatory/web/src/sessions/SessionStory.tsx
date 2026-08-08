@@ -1000,6 +1000,9 @@ function TransportPath({ cycle }: { cycle: StoryToolCycle }) {
         <MessageSquareText size={17} />
         <span>Command</span>
         <strong>{cycle.commands.map((record) => evidenceText(record)).join(", ") || "command body unavailable"}</strong>
+        {commandIssuers(cycle.commands).map((issuer) => (
+          <span className={cx("story-eyebrow")} key={issuer}>{issuer}</span>
+        ))}
       </div>
     </div>
   );
@@ -1222,6 +1225,17 @@ function extractTextField(value: string): string {
   return "";
 }
 
+function commandIssuers(records: SessionEvidenceRecord[]): string[] {
+  // The agent is the expected issuer, so naming it on every command would
+  // bury the ones it did not send.
+  const named = records
+    .map((record) => record.fields.issuer)
+    .filter((issuer): issuer is string => (
+      typeof issuer === "string" && issuer !== "" && issuer !== "agent"
+    ));
+  return [...new Set(named)];
+}
+
 function observationLabel(record: SessionEvidenceRecord): string {
   const kind = typeof record.fields.kind === "string"
     ? record.fields.kind
@@ -1230,6 +1244,15 @@ function observationLabel(record: SessionEvidenceRecord): string {
 }
 
 function observationValue(record: SessionEvidenceRecord): string {
+  // A room number is the game's own identity for the room, read on the
+  // immortal connection. It is shown with the title it was read against.
+  const number = record.fields.number;
+  if (typeof number === "number") {
+    const title = record.fields.title;
+    return typeof title === "string" && title.trim()
+      ? `#${number} · ${title}`
+      : `#${number}`;
+  }
   for (const key of ["title", "text", "place_id", "room_id"]) {
     const value = record.fields[key];
     if (typeof value === "string" && value.trim()) return value;

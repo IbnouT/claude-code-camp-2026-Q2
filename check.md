@@ -1,0 +1,76 @@
+- generic [ref=f12e2]:
+  - banner [ref=f12e3]:
+    - link "Boukensha Observatory launcher" [ref=f12e4] [cursor=pointer]:
+      - /url: /
+      - generic [ref=f12e14]:
+        - strong [ref=f12e15]: Boukensha
+        - generic [ref=f12e16]: Observatory
+    - navigation "Observatory spaces" [ref=f12e17]:
+      - button "Live" [disabled]
+      - button "Sessions" [ref=f12e18] [cursor=pointer]
+      - button "Experiments" [ref=f12e28] [cursor=pointer]
+      - button "Knowledge" [ref=f12e32] [cursor=pointer]
+    - generic [ref=f12e36]:
+      - button "View context, poucet, stopped, 6df1300b" [ref=f12e64] [cursor=pointer]:
+        - strong [ref=f12e39]: poucet
+        - generic [ref=f12e40]: ·
+        - generic [ref=f12e41]: stopped
+        - generic [ref=f12e42]: ·
+        - generic [ref=f12e43]: 6df1300b
+      - button "⌘K" [ref=f12e46] [cursor=pointer]
+      - button "Use light theme" [ref=f12e51] [cursor=pointer]
+  - main [ref=f12e65]:
+    - generic [ref=f12e67]:
+      - generic [ref=f12e68]:
+        - text: Goal 1 of 1
+        - heading "Find and drink at the midgaard temple fountain" [level=1] [ref=f12e69]
+        - paragraph [ref=f12e70]: "Aug 8, 2026 at 2:13:39 AM · stopped: stopped at 2:36:52 AM · Retained evidence with 1 explicit gap"
+      - generic [ref=f12e71]:
+        - generic [ref=f12e72]:
+          - term [ref=f12e73]: Duration
+          - definition [ref=f12e74]: 23m 13s
+        - generic [ref=f12e75]:
+          - term [ref=f12e76]: Iterations
+          - definition [ref=f12e77]: "143"
+        - generic [ref=f12e78]:
+          - term [ref=f12e79]: Total cost
+          - definition [ref=f12e80]: $0.068865
+    - generic [ref=f12e81]:
+      - navigation "Session views" [ref=f12e82]:
+        - button "Story" [ref=f12e83] [cursor=pointer]
+        - button "Map" [ref=f12e84] [cursor=pointer]
+        - button "Cost" [ref=f12e85] [cursor=pointer]
+      - paragraph [ref=f12e86]:
+        - strong [ref=f12e87]: Story
+        - text: is the complete chronological record. Expand only as deep as needed.
+      - searchbox "Filter Story evidence" [ref=f12e88]
+    - region "Complete session story" [ref=f12e90]:
+      - generic [ref=f12e91]:
+        - article [ref=f12e92]:
+          - generic [ref=f12e93]: Session start · 02:13:39.498
+          - heading "1 objective shaped this session" [level=2] [ref=f12e94]
+          - paragraph [ref=f12e95]: Find and drink at the midgaard temple fountain The run used claude-haiku-4-5 with 25 available tools.
+          - group [ref=f12e96]:
+            - generic "System prompt · the standing instructions given to the model ›" [ref=f12e97] [cursor=pointer]
+        - button "Model activity 144 responses 2,473,490 retained tokens Explore the $0.068865 cost →" [ref=f12e98] [cursor=pointer]:
+          - text: Model activity
+          - strong [ref=f12e99]: 144 responses
+          - generic [ref=f12e100]: 2,473,490 retained tokens
+          - generic [ref=f12e101]: Explore the $0.068865 cost →
+      - 'region "Goal 1: Find and drink at the midgaard temple fountain" [ref=f12e102]':
+        - generic [ref=f12e103]:
+          - 'button "Select Goal 1: Find and drink at the midgaard temple fountain" [ref=f12e104] [cursor=pointer]':
+            - generic [ref=f12e108]:
+              - generic [ref=f12e109]: Goal 1 · selected
+              - strong [ref=f12e110]: Find and drink at the midgaard temple fountain
+              - generic [ref=f12e111]: Applied 02:13:50.373 · 1 nudge · 143 iterations
+          - button "Expand Goal 1" [ref=f12e113] [cursor=pointer]: Expand
+      - generic [ref=f12e116]:
+        - text: End of session
+        - heading "stopped" [level=2] [ref=f12e117]
+        - paragraph [ref=f12e118]: Aug 8, 2026, 2:36:52 AM · stopped
+        - group [ref=f12e119]:
+          - generic "Terminal lifecycle evidence ›" [ref=f12e120] [cursor=pointer]
+        - generic [ref=f12e121]:
+          - strong [ref=f12e122]: Unavailable retained evidence
+          - generic [ref=f12e123]: The MUD zone was not observed.

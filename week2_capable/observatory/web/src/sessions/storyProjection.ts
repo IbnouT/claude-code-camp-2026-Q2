@@ -120,6 +120,7 @@ const stateKinds = new Set([
   "knowledge_change",
   "position",
   "parse_metric",
+  "room_number",
 ]);
 
 export function projectSessionStory(
@@ -294,13 +295,24 @@ function projectIteration(
             ? roomRecord.fields.text
             : roomRecord.preview || null
       );
+  // The game's own number for the room, read on the immortal connection. It
+  // arrives on its own trace rather than the agent's, so it is found by the
+  // iteration it was read during.
+  const numbered = ordered.filter((record) => (
+    record.kind === "room_number" && typeof record.fields.number === "number"
+  )).at(-1);
+  const roomNumber = numbered === undefined
+    ? null
+    : numbered.fields.number as number;
   const plan = ordered.find(
     (record) => record.kind === "plan" || record.kind === "reasoning",
   );
   const toolLabels = calls.map((call) => shortToolName(call)).filter(Boolean);
   const title = iterationTitle(number, roomTitle, toolLabels, plan);
   const subtitleParts = [
-    roomTitle,
+    roomNumber === null || roomTitle === null
+      ? roomTitle
+      : `${roomTitle} #${roomNumber}`,
     calls.length > 0 ? summarizeCalls(calls) : null,
   ].filter((value): value is string => Boolean(value));
   const responseIds = ordered

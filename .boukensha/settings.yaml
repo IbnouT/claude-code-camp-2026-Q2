@@ -203,3 +203,22 @@ capabilities:
     # four-command step measured is 1.21s. The rest is insurance against
     # what one quiet local run cannot show.
     deadline_margin: 4.0
+
+  knowledge:
+    # Off until a run proves what turning it on does. Absent behaves the same
+    # as false, which is why the state block was never built and the authored
+    # rules in rules.yaml reached no system prompt.
+    enabled: false
+
+    # Below this share of maximum health, resting is suggested before going
+    # on. The advice names the rule and the agent may overrule it.
+    fit_health_percent: 70
+
+    # Gold above this is worth banking, because what is carried is lost on
+    # death. The figure is what a rule quotes, not a limit anything enforces.
+    gold_carry_ceiling: 100
+
+    # A hunt's expected level, when a mission states one. Left unset because
+    # it is a property of the hunt rather than of the character, and an
+    # unset threshold makes the check say nothing rather than guess.
+    # hunt_level_floor: 5
